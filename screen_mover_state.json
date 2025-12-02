@@ -1,1 +1,5 @@
-{"screen_mover_enabled": true}
+{
+    "screen_mover_enabled": true,
+    "mmb_activation_enabled": true,
+    "shift_activation_enabled": false
+}

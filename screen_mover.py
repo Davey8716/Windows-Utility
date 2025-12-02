@@ -4,9 +4,15 @@ import time
 import tkinter as tk
 from pynput import mouse
 from pynput import keyboard
+from state_manager import load_state
+
 
 ACTIVATION_Y_MIN = 0
 ACTIVATION_Y_MAX = 40
+
+# ===================================================================
+#  Background Worker Object
+# ===================================================================
 
 # ===================================================================
 #  Background Worker Object
@@ -25,6 +31,8 @@ class ScreenMoverWorker:
         self.gesture_active = False
         self.keyboard_listener = None
         self.activation_method = None
+        self.enable_mmb = False
+        self.enable_shift = True
         self.lock = threading.Lock()
 
     # --------------------------------------------------------------
@@ -35,6 +43,11 @@ class ScreenMoverWorker:
 
             print("[INFO] Starting Screen-Tab Mover backend…")
             self.enabled = True
+
+            # Load current toggle settings
+            state = load_state()
+            self.enable_mmb = state["mmb_activation_enabled"]
+            self.enable_shift = state["shift_activation_enabled"]
 
             # start background worker thread
             self.thread = threading.Thread(target=self.worker_loop, daemon=True)
@@ -63,94 +76,85 @@ class ScreenMoverWorker:
             if self.mouse_listener:
                 self.mouse_listener.stop()
                 self.mouse_listener = None
-                
+
             if self.keyboard_listener:
                 self.keyboard_listener.stop()
                 self.keyboard_listener = None
 
-            # thread ends naturally when enabled becomes False
-            
     # --------------------------------------------------------------
-    # 🔵 ADD THESE RIGHT HERE
-    # -------------------------------------------------------------
-    
+    # Keyboard Hook
+    # --------------------------------------------------------------
     def on_key_press(self, key):
-        # Detect Shift pressed
         try:
-            if key == keyboard.Key.shift or key == keyboard.Key.shift_l or key == keyboard.Key.shift_r:
+            if key in (keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r):
                 self.shift_down = True
         except:
             pass
 
     def on_key_release(self, key):
-        # Detect Shift released
         try:
-            if key == keyboard.Key.shift or key == keyboard.Key.shift_l or key == keyboard.Key.shift_r:
+            if key in (keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r):
                 self.shift_down = False
         except:
             pass
 
     # =============================================================
-    #  MOUSE HOOK
+    #  Mouse Hook
     # =============================================================
-
     def on_mouse_click(self, x, y, button, pressed):
         if not self.enabled:
             return
 
-        # -------------------------
         # Track button state
-        # -------------------------
         if button == mouse.Button.middle:
             self.mmb_down = pressed
-
         if button == mouse.Button.left:
             self.lmb_down = pressed
 
         # ---------------------------------------------------------
-        #  CANCEL gesture if already active
+        #  CANCEL gesture (works for both MMB + Shift activations)
         # ---------------------------------------------------------
         if self.gesture_active:
 
-            # Cancel via Middle Mouse Button (always allowed)
-            if button == mouse.Button.middle and pressed:
+            # Cancel via MMB (toggle-off)
+            if self.enable_mmb and button == mouse.Button.middle and pressed:
                 print("[GESTURE] Cancelled → MMB")
                 self.end_gesture()
                 self.activation_method = None
                 return
 
-            # Cancel via Shift + Left Click (only if SHIFT activation)
-            if self.activation_method == "SHIFT":
-                if button == mouse.Button.left and pressed and self.shift_down:
+            # Cancel via LMB when SHIFT was the activation method
+            if self.activation_method == "SHIFT" and self.enable_shift:
+                if button == mouse.Button.left and pressed:  # shift NOT required for cancel
                     print("[GESTURE] Cancelled → Shift+LMB")
                     self.end_gesture()
                     self.activation_method = None
                     return
 
-            # While gesture is active, skip activation logic.
-            return
+            return  # gesture active → do not run activation logic
 
         # ---------------------------------------------------------
         #  ACTIVATE gesture (MMB)
         # ---------------------------------------------------------
-        
-        if button == mouse.Button.middle and pressed:
-            if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
-                print(f"[GESTURE] Activated → MMB at ({x},{y})")
-                self.activation_method = "MMB"
-                self.begin_gesture(x, y)
-                return
+        if self.enable_mmb:
+            if button == mouse.Button.middle and pressed:
+                if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
+                    print(f"[GESTURE] Activated → MMB at ({x},{y})")
+                    self.activation_method = "MMB"
+                    self.begin_gesture(x, y)
+                    return
 
         # ---------------------------------------------------------
         #  ACTIVATE gesture (Shift + Left Click)
         # ---------------------------------------------------------
-        
-        if button == mouse.Button.left and pressed and self.shift_down:
-            if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
-                print(f"[GESTURE] Activated → Shift+LMB at ({x},{y})")
-                self.activation_method = "SHIFT"
-                self.begin_gesture(x, y)
-                return
+        if self.enable_shift:
+            if button == mouse.Button.left and pressed and self.shift_down:
+                if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
+                    print(f"[GESTURE] Activated → Shift+LMB at ({x},{y})")
+                    self.activation_method = "SHIFT"
+                    self.begin_gesture(x, y)
+                    return
+
 
     # ==============================================================
     #  OVERLAY ICON (SMALL ARROW INDICATOR)

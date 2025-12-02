@@ -4,32 +4,12 @@
 # ===================================================================
 
 import customtkinter as ctk
-import json
-import os
 from screen_mover import SCREEN_MOVER
+from state_manager import load_state, save_state
 
 # Configure appearance
-ctk.set_appearance_mode("Dark")          # "System", "Dark", "Light"
-ctk.set_default_color_theme("blue")      # "blue", "green", "dark-blue"
-
-CONFIG_PATH = "screen_mover_state.json"
-
-def save_state(enabled: bool):
-    """Persist ON/OFF toggle across restarts."""
-    with open(CONFIG_PATH, "w") as f:
-        json.dump({"screen_mover_enabled": enabled}, f)
-
-
-def load_state() -> bool:
-    """Load saved state."""
-    if not os.path.exists(CONFIG_PATH):
-        return False
-    try:
-        with open(CONFIG_PATH, "r") as f:
-            data = json.load(f)
-            return data.get("screen_mover_enabled", False)
-    except:
-        return False
+ctk.set_appearance_mode("Dark")
+ctk.set_default_color_theme("blue")
 
 # ===================================================================
 #  Main App Gui
@@ -37,9 +17,12 @@ def load_state() -> bool:
 class UtilityControlApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+        
+        # Load saved state
+        state = load_state()
 
         self.title("Utility Control Panel")
-        self.geometry("300x300")
+        self.geometry("400x400")
         self.resizable(False, False)
 
         # ------------------------------------------------------------------
@@ -51,7 +34,7 @@ class UtilityControlApp(ctk.CTk):
         # ------------------------------------------------------------------
         #  Screen Tab Mover toggle
         # ------------------------------------------------------------------
-        self.screen_mover_var = ctk.BooleanVar(value=False)
+        self.screen_mover_var = ctk.BooleanVar(value=state["screen_mover_enabled"])
         self.screen_mover_switch = ctk.CTkSwitch(
             self,
             text="Screen-Tab Mover",
@@ -60,9 +43,30 @@ class UtilityControlApp(ctk.CTk):
             font=("Segoe UI", 16)
         )
         self.screen_mover_switch.pack(pady=10)
+        
+        # ------------------------------------------------------------------
+        #  Activation Method Toggles
+        # ------------------------------------------------------------------
+        self.mmb_var = ctk.BooleanVar(value=state["mmb_activation_enabled"])
+        self.mmb_switch = ctk.CTkSwitch(
+            self,
+            text="Enable Middle Mouse Activation",
+            variable=self.mmb_var,
+            command=self.save_all_settings
+        )
+        self.mmb_switch.pack(pady=5)
+
+        self.shift_var = ctk.BooleanVar(value=state["shift_activation_enabled"])
+        self.shift_switch = ctk.CTkSwitch(
+            self,
+            text="Enable Shift + LeftClick Activation",
+            variable=self.shift_var,
+            command=self.save_all_settings
+        )
+        self.shift_switch.pack(pady=5)
 
         # ------------------------------------------------------------------
-        #  USB Reminder Main Switch
+        #  USB Reminder Main Switch  (UNCHANGED)
         # ------------------------------------------------------------------
         self.usb_reminder_var = ctk.BooleanVar(value=False)
         self.usb_reminder_switch = ctk.CTkSwitch(
@@ -75,7 +79,7 @@ class UtilityControlApp(ctk.CTk):
         self.usb_reminder_switch.pack(pady=10)
 
         # ------------------------------------------------------------------
-        #  USB Reminder Sub-Options Frame
+        #  USB Reminder Sub-Options Frame  (UNCHANGED)
         # ------------------------------------------------------------------
         self.usb_frame = ctk.CTkFrame(self)
         self.usb_frame.pack(pady=10, padx=10, fill="x")
@@ -110,14 +114,17 @@ class UtilityControlApp(ctk.CTk):
         )
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
 
-        # Start with USB settings disabled
+        # Start with USB settings disabled (UNCHANGED)
         self.toggle_usb_options(False)
 
+        # Auto-start backend if saved state says it should be ON
+        if state["screen_mover_enabled"]:
+            SCREEN_MOVER.start()
+
     # ===================================================================
-    #  UI Logic Only — attach real backend later
+    #  UI Logic — USB Reminder Options  (UNCHANGED)
     # ===================================================================
     def toggle_usb_options(self, enable: bool):
-        """Enable/disable the sub-toggles under USB Reminder."""
         state = "normal" if enable else "disabled"
         self.opt_idle.configure(state=state)
         self.opt_download.configure(state=state)
@@ -129,22 +136,38 @@ class UtilityControlApp(ctk.CTk):
         print(f"[INFO] USB Reminder toggled → {enabled}")
         self.toggle_usb_options(enabled)
 
-    # ------------------------------------------------------------------
+    # ===================================================================
+    #  Screen Tab Mover Toggle Logic
+    # ===================================================================
     def on_screen_mover_toggle(self):
         enabled = self.screen_mover_var.get()
         print(f"[INFO] Screen-Tab Mover toggled → {enabled}")
 
-        # Save state
-        save_state(enabled)
+        # Save new value
+        self.save_all_settings()
 
-        # Activate/deactivate backend
+        # Start or stop backend worker
         if enabled:
             SCREEN_MOVER.start()
         else:
             SCREEN_MOVER.stop()
 
+    # ===================================================================
+    #  Save ALL toggle states to JSON
+    # ===================================================================
+    def save_all_settings(self):
+        current = load_state()
+        current["screen_mover_enabled"] = self.screen_mover_var.get()
+        current["mmb_activation_enabled"] = self.mmb_var.get()
+        current["shift_activation_enabled"] = self.shift_var.get()
+        save_state(current)
+        
+        # Update backend live
+        SCREEN_MOVER.enable_mmb = self.mmb_var.get()
+        SCREEN_MOVER.enable_shift = self.shift_var.get()
+
 # ===================================================================
-# Launch
+# Launch App
 # ===================================================================
 if __name__ == "__main__":
     app = UtilityControlApp()
