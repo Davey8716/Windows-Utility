@@ -7,7 +7,6 @@ def save_state(state: dict):
     with open(CONFIG_PATH, "w") as f:
         json.dump(state, f, indent=4)
 
-
 def load_state() -> dict:
     if not os.path.exists(CONFIG_PATH):
         # defaults

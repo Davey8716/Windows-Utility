@@ -5,14 +5,13 @@ import tkinter as tk
 from pynput import mouse
 from pynput import keyboard
 from state_manager import load_state
-
+import win32gui
+import win32con
+import win32api
+import pygetwindow as gw
 
 ACTIVATION_Y_MIN = 0
 ACTIVATION_Y_MAX = 40
-
-# ===================================================================
-#  Background Worker Object
-# ===================================================================
 
 # ===================================================================
 #  Background Worker Object
@@ -33,9 +32,14 @@ class ScreenMoverWorker:
         self.activation_method = None
         self.enable_mmb = False
         self.enable_shift = True
+        self.app_root = None
+        self.flick_start_x = None
+        self.flick_start_time = None
+        self.flick_threshold = 120      # pixels travelled
+        self.flick_speed_min = 0.25     # seconds max for the motion
+
         self.lock = threading.Lock()
 
-    # --------------------------------------------------------------
     def start(self):
         with self.lock:
             if self.enabled:
@@ -64,7 +68,6 @@ class ScreenMoverWorker:
             )
             self.keyboard_listener.start()
 
-    # --------------------------------------------------------------
     def stop(self):
         with self.lock:
             if not self.enabled:
@@ -84,6 +87,7 @@ class ScreenMoverWorker:
     # --------------------------------------------------------------
     # Keyboard Hook
     # --------------------------------------------------------------
+    
     def on_key_press(self, key):
         try:
             if key in (keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r):
@@ -101,6 +105,7 @@ class ScreenMoverWorker:
     # =============================================================
     #  Mouse Hook
     # =============================================================
+    
     def on_mouse_click(self, x, y, button, pressed):
         if not self.enabled:
             return
@@ -114,13 +119,14 @@ class ScreenMoverWorker:
         # ---------------------------------------------------------
         #  CANCEL gesture (works for both MMB + Shift activations)
         # ---------------------------------------------------------
+        
         if self.gesture_active:
 
             # Cancel via MMB (toggle-off)
             if self.enable_mmb and button == mouse.Button.middle and pressed:
                 print("[GESTURE] Cancelled → MMB")
                 self.end_gesture()
-                self.activation_method = None
+                
                 return
 
             # Cancel via LMB when SHIFT was the activation method
@@ -128,7 +134,7 @@ class ScreenMoverWorker:
                 if button == mouse.Button.left and pressed:  # shift NOT required for cancel
                     print("[GESTURE] Cancelled → Shift+LMB")
                     self.end_gesture()
-                    self.activation_method = None
+                    
                     return
 
             return  # gesture active → do not run activation logic
@@ -136,6 +142,7 @@ class ScreenMoverWorker:
         # ---------------------------------------------------------
         #  ACTIVATE gesture (MMB)
         # ---------------------------------------------------------
+        
         if self.enable_mmb:
             if button == mouse.Button.middle and pressed:
                 if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
@@ -143,10 +150,21 @@ class ScreenMoverWorker:
                     self.activation_method = "MMB"
                     self.begin_gesture(x, y)
                     return
+                
+        # ---------------------------------------------------------
+        # Cancel gesture on release (for MMB mode)
+        # ---------------------------------------------------------
+        
+        if not pressed and self.activation_method == "MMB":
+            if self.gesture_active:
+                print("[GESTURE] Cancel → MMB Release")
+                self.end_gesture()
+                return
 
         # ---------------------------------------------------------
         #  ACTIVATE gesture (Shift + Left Click)
         # ---------------------------------------------------------
+        
         if self.enable_shift:
             if button == mouse.Button.left and pressed and self.shift_down:
                 if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
@@ -155,69 +173,147 @@ class ScreenMoverWorker:
                     self.begin_gesture(x, y)
                     return
 
+    import tkinter as tk
 
     # ==============================================================
-    #  OVERLAY ICON (SMALL ARROW INDICATOR)
+    #  OVERLAY ICON (SAFE TKINTER VERSION)
     # ==============================================================
     
-    def show_overlay(self, x, y):
-        if self.overlay_root:
-            return  # already visible
+    def worker_loop(self):
+        while self.enabled:
+            if self.gesture_active:
+                # Get current cursor position
+                x, y = win32api.GetCursorPos()
 
-        # Make a tiny borderless window
-        self.overlay_root = tk.Tk()
+                # Detect flick
+                if self.check_flick(x):
+                    direction = "RIGHT" if x > self.flick_start_x else "LEFT"
+                    print(f"[FLICK] Detected {direction}")
+                    self.move_active_window(direction)
+                    self.end_gesture()
+                    continue
+
+        time.sleep(0.01)
+
+    def show_overlay(self, x, y):
+        """Create a small arrow overlay window safely on the main thread."""
+
+        if self.overlay_root:   # Already visible
+            return
+
+        # Create a borderless Toplevel window
+        self.overlay_root = tk.Toplevel()
         self.overlay_root.overrideredirect(True)
         self.overlay_root.attributes("-topmost", True)
+
+        # Position slightly offset from the mouse
         self.overlay_root.geometry(f"+{x+10}+{y+10}")
 
-        # Simple text-based arrow icon
-        # Later you can replace this with an actual PNG
-        self.overlay = tk.Label(self.overlay_root, text="↔", font=("Segoe UI", 32), bg="white", fg="black")
+        # Prevent the window from grabbing focus
+        self.overlay_root.attributes("-disabled", True)
+        self.overlay_root.lift()
+
+        # Arrow icon (text for now)
+        self.overlay = tk.Label(
+            self.overlay_root,
+            text="⇆",
+            font=("Segoe UI", 18, "bold"),
+            fg="white",
+            bg="#1f6aa5",
+            padx=10,
+            pady=5
+        )
+        self.overlay_root.configure(bg="#1f6aa5")
+        self.overlay_root.attributes("-alpha", 0.92)    
         self.overlay.pack()
 
-        # Run on separate thread so it doesn't block
-        threading.Thread(target=self._overlay_loop, daemon=True).start()
-
-    def _overlay_loop(self):
-        try:
-            self.overlay_root.mainloop()
-        except:
-            pass
-
     def hide_overlay(self):
-        if hasattr(self, "overlay_root") and self.overlay_root:
+        """Safely destroy the overlay window."""
+        if self.overlay_root is not None:
             try:
                 self.overlay_root.destroy()
             except:
                 pass
+
         self.overlay_root = None
         self.overlay = None
-        
+
     def begin_gesture(self, x, y):
-        """Enter gesture mode and show overlay."""
         self.gesture_active = True
-        self.show_overlay(x, y)
+        self.activation_method = self.activation_method or "UNKNOWN"
+
+        # Save flick starting data
+        self.flick_start_x = x
+        self.flick_start_time = time.time()
+
+        # schedule overlay creation
+        try:
+            self.app_root.after(0, lambda: self.show_overlay(x, y))
+        except:
+            self.show_overlay(x, y)
+
+    def check_flick(self, current_x):
+        if self.flick_start_x is None:
+            return False
+
+        distance = abs(current_x - self.flick_start_x)
+        elapsed = time.time() - self.flick_start_time
+
+        # Must be fast and far
+        return distance >= self.flick_threshold and elapsed <= self.flick_speed_min
+
+    def move_active_window(self, direction):
+        try:
+            win = gw.getActiveWindow()
+            if not win:
+                print("[MOVE] No active window")
+                return
+
+            hwnd = win._hWnd
+
+            # Get monitor info
+            monitors = win32api.EnumDisplayMonitors()
+            if len(monitors) < 2:
+                print("[MOVE] Only one monitor — skipping")
+                return
+
+            # Determine current monitor
+            current_monitor = win32api.MonitorFromWindow(hwnd)
+            monitor_order = [m[0] for m in monitors]
+            idx = monitor_order.index(current_monitor)
+
+            # Determine target monitor
+            if direction == "RIGHT":
+                target_idx = (idx + 1) % len(monitors)
+            else:
+                target_idx = (idx - 1) % len(monitors)
+
+            target_rect = win32api.GetMonitorInfo(monitor_order[target_idx])["Work"]
+
+            # Move and maximize
+            win32gui.SetWindowPos(
+                hwnd, win32con.HWND_TOP,
+                target_rect[0], target_rect[1],
+                target_rect[2] - target_rect[0],
+                target_rect[3] - target_rect[1],
+                0
+            )
+
+            win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+            print(f"[MOVE] Window moved to monitor {target_idx}")
+
+        except Exception as e:
+            print(f"[ERROR] move_active_window: {e}")
 
     def end_gesture(self):
-        """Exit gesture mode and hide overlay."""
+        """End the gesture and hide the overlay."""
         self.gesture_active = False
-        self.hide_overlay()
+        self.activation_method
 
-    def worker_loop(self):
-        """Runs continually when enabled."""
-        print("[THREAD] Screen mover loop started.")
-
-        while self.enabled:
-            # Placeholder for:
-            # • detect when mouse is in browser tab region
-            # • show overlay icon
-            # • detect mouse flick velocity
-            # • determine target monitor
-            # • move window
-
-            time.sleep(0.01)
-
-        print("[THREAD] Screen mover loop ended.")
+        try:
+            self.app_root.after(0, self.hide_overlay)
+        except:
+            self.hide_overlay()
 
 # global instance (created after class definition)
 SCREEN_MOVER = ScreenMoverWorker()
