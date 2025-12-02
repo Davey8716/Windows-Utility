@@ -1,5 +1,9 @@
 {
     "screen_mover_enabled": true,
     "mmb_activation_enabled": true,
-    "shift_activation_enabled": false
+    "shift_activation_enabled": true,
+    "usb_enabled": true,
+    "usb_idle_enabled": true,
+    "usb_download_enabled": true,
+    "usb_plug_enabled": true
 }
