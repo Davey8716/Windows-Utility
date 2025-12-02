@@ -127,20 +127,13 @@ class ScreenMoverWorker:
                     self.activation_method = None
                     return
 
-            # SHIFT activation does NOT cancel on release.
-            # MMB activation DOES cancel on release.
-            if not pressed and self.activation_method == "MMB":
-                print("[GESTURE] Cancelled → MMB Release")
-                self.end_gesture()
-                self.activation_method = None
-                return
-
             # While gesture is active, skip activation logic.
             return
 
         # ---------------------------------------------------------
         #  ACTIVATE gesture (MMB)
         # ---------------------------------------------------------
+        
         if button == mouse.Button.middle and pressed:
             if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
                 print(f"[GESTURE] Activated → MMB at ({x},{y})")
@@ -151,6 +144,7 @@ class ScreenMoverWorker:
         # ---------------------------------------------------------
         #  ACTIVATE gesture (Shift + Left Click)
         # ---------------------------------------------------------
+        
         if button == mouse.Button.left and pressed and self.shift_down:
             if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
                 print(f"[GESTURE] Activated → Shift+LMB at ({x},{y})")
