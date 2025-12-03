@@ -1,6 +1,6 @@
 {
-    "screen_mover_enabled": false,
-    "mmb_activation_enabled": false,
+    "screen_mover_enabled": true,
+    "mmb_activation_enabled": true,
     "usb_enabled": false,
     "usb_idle_enabled": false,
     "usb_download_enabled": false,
