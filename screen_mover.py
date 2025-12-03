@@ -21,7 +21,7 @@ class ScreenMoverWorker:
         self.enabled = False
         self.thread = None
         self.mouse_listener = None
-        self.auto_align_enabled = False   # NEW
+        self.auto_align_enabled = False  
         self.last_rect = None
         self.last_move_time = 0
 
@@ -35,8 +35,8 @@ class ScreenMoverWorker:
         # Flick tracking
         self.flick_start_x = None
         self.flick_start_time = None
-        self.flick_threshold_px = 25  # distance in pixels
-        self.flick_max_time = 0.35      # seconds max for a flick
+        self.flick_threshold_px = 25  
+        self.flick_max_time = 0.35  
 
         # Activation toggles (GUI controls these)
         self.enable_mmb = False
@@ -151,7 +151,6 @@ class ScreenMoverWorker:
         except Exception:
             return False
 
-    
     def worker_loop(self):
         """Background loop: checks for flicks while a gesture is active."""
         print("[THREAD] Screen mover loop started.")
@@ -249,6 +248,7 @@ class ScreenMoverWorker:
             # ------------------------------------------------------------------
             # Enumerate monitors
             # ------------------------------------------------------------------
+            
             monitors = win32api.EnumDisplayMonitors()
             if len(monitors) < 2:
                 print("[MOVE] Only one monitor detected — skipping move.")
@@ -275,6 +275,7 @@ class ScreenMoverWorker:
             # ------------------------------------------------------------------
             # Current window placement
             # ------------------------------------------------------------------
+            
             placement = win32gui.GetWindowPlacement(hwnd)
             show_cmd = placement[1]
 
@@ -291,6 +292,7 @@ class ScreenMoverWorker:
             # ------------------------------------------------------------------
             # STEP 0: Restore if minimized OR maximized
             # ------------------------------------------------------------------
+            
             if show_cmd in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 time.sleep(0.02)
@@ -303,6 +305,7 @@ class ScreenMoverWorker:
             # ------------------------------------------------------------------
             # STEP 1: MOVE ONLY — keep original size
             # ------------------------------------------------------------------
+            
             win32gui.SetWindowPos(
                 hwnd,
                 win32con.HWND_TOP,
@@ -318,6 +321,7 @@ class ScreenMoverWorker:
             # ------------------------------------------------------------------
             # STEP 2: If originally maximized → re-maximize on new monitor
             # ------------------------------------------------------------------
+            
             if was_maximized:
                 win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
 
@@ -326,7 +330,10 @@ class ScreenMoverWorker:
         except Exception as e:
             print(f"[ERROR] move_active_window: {e}")
             
-            
+    #===================================================================
+    #================ Window Nudger
+    #===================================================================
+    
     def _soft_auto_align_active_window(self):
         """
         Gently nudge the active window upward so its title bar stays inside the
@@ -361,7 +368,6 @@ class ScreenMoverWorker:
             if top <= threshold:
                 return
 
-
             # Target top = slightly below the top of the screen (e.g., 10px)
             new_top = 10
             new_left = left  # keep horizontal position
@@ -381,6 +387,11 @@ class ScreenMoverWorker:
 
         except Exception as e:
             print("[AUTO-ALIGN] Exception:", e)
+            
+            
+    #===================================================================
+    #===================  Gesture ender
+    #===================================================================
 
     def end_gesture(self):
         """Exit gesture mode and hide overlay."""
@@ -391,6 +402,10 @@ class ScreenMoverWorker:
         self.flick_start_time = None
 
         self.hide_overlay()
+        
+    #===================================================================
+    #===================  Overlay hider
+    #===================================================================
         
     def hide_overlay(self):
         if self.overlay_hwnd and win32gui.IsWindow(self.overlay_hwnd):
@@ -470,7 +485,6 @@ class ScreenMoverWorker:
             win32con.SWP_SHOWWINDOW
         )
 
-
     def _overlay_paint(self, hwnd, msg, wparam, lparam):
         """Custom paint handler for transparent arrow-only overlay."""
         hdc, paint = win32gui.BeginPaint(hwnd)
@@ -499,7 +513,6 @@ class ScreenMoverWorker:
 
         win32gui.EndPaint(hwnd, paint)
         return 0
-
 
 # global instance (created after class definition)
 SCREEN_MOVER = ScreenMoverWorker()

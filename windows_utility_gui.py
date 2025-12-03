@@ -1,6 +1,6 @@
 # ===================================================================
 #  Screen Tab Mover + USB Reminder Control Panel
-#  Modern 400x400 UI using CustomTkinter
+#  Modern UI using CustomTkinter
 # ===================================================================
 
 import customtkinter as ctk
@@ -214,7 +214,6 @@ class UtilityControlApp(ctk.CTk):
         # -------------------------
         
         save_state(new)
-
 
     # ===================================================================
     #  USB Reminder UI Logic (placeholder for future backend)
