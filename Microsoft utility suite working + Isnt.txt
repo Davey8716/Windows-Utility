@@ -1,0 +1,13 @@
+Utility Suite
+
+what's working and what isn't.
+
+So the utility starts up properly and the gui shows and is moveable!
+the enable/disable screen-tab mover toggle works, when its on it allows for mmb and left click + shift to enable!
+The mouse pointer tracking is working for mmb!
+
+Mouse pointer screen switching is working for mmb press!
+
+Mouse pointer tracking is not working for left shift + left click
+Mouse pointer is not showing the overlay though
+Its mostly working but these things aren't working here.
