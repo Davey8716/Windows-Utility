@@ -7,7 +7,6 @@ import customtkinter as ctk
 from screen_mover import SCREEN_MOVER
 from state_manager import load_state, save_state
 from PIL import Image, ImageDraw
-
 import threading
 import pystray
 
@@ -173,7 +172,6 @@ class UtilityControlApp(ctk.CTk):
         SCREEN_MOVER.enable_mmb = self.mmb_var.get()
         SCREEN_MOVER.enable_shift = self.shift_var.get()
 
-
     # ===================================================================
     #  USB Reminder UI Logic (placeholder for future backend)
     # ===================================================================
@@ -297,6 +295,7 @@ class UtilityControlApp(ctk.CTk):
         self.tray_thread.start()
 
     # ---------------- Tray menu callbacks (run in tray thread) ----------
+    
     def tray_menu_show(self, icon, item):
         # Schedule GUI work on Tk main thread
         self.after(0, self._show_window)
@@ -318,6 +317,7 @@ class UtilityControlApp(ctk.CTk):
         self.after(0, self._quit_from_tray)
 
     # ---------------- Helpers that run on Tk main thread ----------------
+    
     def _show_window(self):
         self.deiconify()
         self.lift()

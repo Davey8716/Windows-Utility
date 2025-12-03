@@ -117,6 +117,7 @@ class ScreenMoverWorker:
     # =============================================================
     #  Mouse Hook
     # =============================================================
+    
     def on_mouse_click(self, x, y, button, pressed):
         if not self.enabled:
             return
@@ -124,6 +125,7 @@ class ScreenMoverWorker:
         # ---------------------------------------------------------
         # Track button state
         # ---------------------------------------------------------
+        
         if button == mouse.Button.middle:
             self.mmb_down = pressed
         elif button == mouse.Button.left:
@@ -132,6 +134,7 @@ class ScreenMoverWorker:
         # ---------------------------------------------------------
         #  CANCEL gesture (same logic for both activation types)
         # ---------------------------------------------------------
+        
         if self.gesture_active:
 
             # --- MMB mode: MMB release or press toggles off ---
@@ -165,6 +168,7 @@ class ScreenMoverWorker:
         # ---------------------------------------------------------
         #  ACTIVATE gesture (MMB)
         # ---------------------------------------------------------
+        
         if self.enable_mmb:
             if button == mouse.Button.middle and pressed:
                 if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
@@ -176,6 +180,7 @@ class ScreenMoverWorker:
         # ---------------------------------------------------------
         #  ACTIVATE gesture (Shift + Left Click)
         # ---------------------------------------------------------
+        
         if self.enable_shift:
             if button == mouse.Button.left and pressed and self.shift_down:
                 if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
@@ -183,9 +188,6 @@ class ScreenMoverWorker:
                     self.activation_method = "SHIFT"
                     self.begin_gesture(x, y)
                     return
-
-    
-
 
 
     # ==============================================================
@@ -243,7 +245,7 @@ class ScreenMoverWorker:
         return distance >= self.flick_threshold_px
 
     def move_active_window(self, direction: str):
-        """Move the currently active window to the next monitor in the given direction."""
+        """Move the active window to another monitor using a safe two-step move+resize (no snap, no white flash)."""
         try:
             win = gw.getActiveWindow()
             if not win:
@@ -267,6 +269,7 @@ class ScreenMoverWorker:
                 print("[MOVE] Could not find current monitor in list.")
                 return
 
+            # Decide target monitor index
             if direction == "RIGHT":
                 target_idx = (idx + 1) % len(monitors)
             else:
@@ -275,26 +278,57 @@ class ScreenMoverWorker:
             target_info = win32api.GetMonitorInfo(monitor_handles[target_idx])
             work_left, work_top, work_right, work_bottom = target_info["Work"]
 
-            width = work_right - work_left
-            height = work_bottom - work_top
+            # Current window rect (for current width/height)
+            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+            cur_width = right - left
+            cur_height = bottom - top
 
-            # Move and resize
+            # Desired full size on target monitor
+            full_width = work_right - work_left
+            full_height = work_bottom - work_top
+
+            # ------------------------------------------------------------------
+            # STEP 0: If minimized, restore first so move/resize works cleanly
+            # ------------------------------------------------------------------
+            placement = win32gui.GetWindowPlacement(hwnd)
+            show_cmd = placement[1]
+            if show_cmd == win32con.SW_SHOWMINIMIZED:
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
+            # ------------------------------------------------------------------
+            # STEP 1: Move ONLY (keep current size)
+            # ------------------------------------------------------------------
             win32gui.SetWindowPos(
                 hwnd,
                 win32con.HWND_TOP,
                 work_left,
                 work_top,
-                width,
-                height,
-                0
+                cur_width,
+                cur_height,
+                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
             )
 
-            # Maximize
-            win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+            # Small delay to let Windows/GPU settle the move before resizing
+            time.sleep(0.02)
+
+            # ------------------------------------------------------------------
+            # STEP 2: Resize ONLY (fill the work area on target monitor)
+            # ------------------------------------------------------------------
+            win32gui.SetWindowPos(
+                hwnd,
+                win32con.HWND_TOP,
+                work_left,
+                work_top,
+                full_width,
+                full_height,
+                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+            )
+
             print(f"[MOVE] Window moved to monitor index {target_idx} ({direction}).")
 
         except Exception as e:
             print(f"[ERROR] move_active_window: {e}")
+
 
     def end_gesture(self):
         """Exit gesture mode and hide overlay."""
