@@ -345,23 +345,22 @@ class ScreenMoverWorker:
     # ==============================================================
 
     def _safe_show_overlay(self, x, y):
-        """Create a small topmost WinAPI window near the cursor (safe version)."""
+        """Create the small topmost WinAPI window near the cursor (bold block ⇐ ⇒ arrows)."""
 
         # If already visible, do nothing
         if self.overlay_hwnd and win32gui.IsWindow(self.overlay_hwnd):
             return
 
-        # Small rectangle near cursor
-        width, height = 60, 30
-        pos_x = int(x + 10)
-        pos_y = int(y + 10)
+        width, height = 70, 34
+        pos_x = int(x + 12)
+        pos_y = int(y + 12)
 
         hinstance = win32api.GetModuleHandle(None)
 
-        # Green arrow character (wide Unicode symbol for visibility)
-        ARROW_SYMBOL = "🟢⇆🟢"   # <-- VERY visible on any background
+        # NEW bold block arrows (thick ⇐ ⇒)
+        ARROW_SYMBOL = "⇐ ⇒"
 
-        # Create the STATIC window
+        # Create STATIC window
         self.overlay_hwnd = win32gui.CreateWindowEx(
             win32con.WS_EX_TOPMOST | win32con.WS_EX_TOOLWINDOW,
             "STATIC",
@@ -376,27 +375,30 @@ class ScreenMoverWorker:
             hinstance,
             None
         )
-        
-        # Set a dark background + green text
-        win32gui.SetBkColor(self.overlay_hwnd, win32api.RGB(30, 30, 30))   # dark grey
-        win32gui.SetTextColor(self.overlay_hwnd, win32api.RGB(0, 255, 0)) # bright green text
 
         if not self.overlay_hwnd:
-            print("[OVERLAY] Failed to create window")
+            print("[OVERLAY] Failed to create overlay window")
             return
 
-        # Set font (Segoe UI Symbol)
+        # Background: dark grey
+        win32gui.SetBkColor(self.overlay_hwnd, win32api.RGB(25, 25, 25))
+
+        # Bright green arrow text
+        win32gui.SetTextColor(self.overlay_hwnd, win32api.RGB(0, 255, 0))
+
+        # Bold readable font
         LOGFONT = win32gui.LOGFONT()
-        LOGFONT.lfHeight = 28
+        LOGFONT.lfHeight = 24
+        LOGFONT.lfWeight = 700
         LOGFONT.lfFaceName = "Segoe UI Symbol"
         hfont = win32gui.CreateFontIndirect(LOGFONT)
 
         try:
             win32gui.SendMessage(self.overlay_hwnd, win32con.WM_SETFONT, hfont, True)
         except Exception as e:
-            print("[OVERLAY] Failed WM_SETFONT:", e)
+            print("[OVERLAY] WM_SETFONT failed:", e)
 
-        # Position window safely
+        # Show window safely
         if win32gui.IsWindow(self.overlay_hwnd):
             win32gui.SetWindowPos(
                 self.overlay_hwnd,
