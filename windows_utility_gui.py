@@ -24,12 +24,11 @@ class UtilityControlApp(ctk.CTk):
         
         SCREEN_MOVER.app_root = self   # <-- correct location
 
-        
         # Load saved state
         state = load_state()
 
         self.title("Utility Control Panel")
-        self.geometry("500x450")
+        self.geometry("600x600")
         self.resizable(False, False)
         
         # Tray-related attributes
@@ -60,7 +59,7 @@ class UtilityControlApp(ctk.CTk):
         self.screen_mover_var = ctk.BooleanVar(value=state["screen_mover_enabled"])
         self.screen_mover_switch = ctk.CTkSwitch(
             self,
-            text="Enable Screen-Tab Mover",
+            text="Enable Screen Drag Flick",
             variable=self.screen_mover_var,
             command=self.on_screen_mover_toggle,
             font=("Segoe UI", 16)
@@ -86,14 +85,37 @@ class UtilityControlApp(ctk.CTk):
         
         mover_help = ctk.CTkLabel(
             self.mover_frame,
-            text="Click and hold the middle mouse at the top edge of the screen, \nan arrow icon will show indicating its active\nthen flick left or right to move the window to a different screen.",
+            text="Click and hold the middle mouse at the top of any program screen\nIn blank space an arrow icon will show indicating its active\nThen flick left or right to move the program to a different screen.",
             font=("Segoe UI", 16),
             justify="left"
         )
         mover_help.pack(anchor="w", padx=10, pady=(0, 4))
 
+        # NEW: Keep Windows in Flick Zone toggle
+        self.auto_align_var = ctk.BooleanVar(value=state.get("auto_align_enabled", False))
+        self.auto_align_switch = ctk.CTkSwitch(
+            self.mover_frame,
+            text="Keep Windows In Flick Zone",
+            variable=self.auto_align_var,
+            command=self.save_all_settings,
+            font=("Segoe UI", 16)
+        )
+        self.auto_align_switch.pack(anchor="w", padx=10, pady=(8, 2))
+
+        # NEW: Explanation label under the toggle (Variant B)
+        self.auto_align_label = ctk.CTkLabel(
+            self.mover_frame,
+            text=(
+                "Ensures the flick gesture always works by keeping window title bars inside the\n"
+                "activation zone. Adjustments only happen after a drag, never during."
+            ),
+            font=("Segoe UI", 16),
+            justify="left"
+        )
+        self.auto_align_label.pack(anchor="w", padx=10, pady=(0, 4))
         # Start Mover sub-options in correct state
         self.toggle_mover_options(self.screen_mover_var.get())
+
 
         # ------------------------------------------------------------------
         #  USB Reminder Main Switch  (UNCHANGED)
@@ -149,22 +171,50 @@ class UtilityControlApp(ctk.CTk):
         # Start with USB settings disabled (UNCHANGED)
         self.toggle_usb_options(False)
 
-        # Auto-start backend if saved state says it should be ON
-        if state["screen_mover_enabled"]:
-            SCREEN_MOVER.start()
-
     # ===================================================================
     #  Save ALL toggle states to JSON
     # ===================================================================
     
     def save_all_settings(self):
-        current = load_state()
-        current["screen_mover_enabled"] = self.screen_mover_var.get()
-        current["mmb_activation_enabled"] = self.mmb_var.get()
-        save_state(current)
+        old = load_state()   # previous saved values
+
+        new = {}
+
+        # -------------------------
+        # Screen Mover settings
+        # -------------------------
         
-        # Update backend live
-        SCREEN_MOVER.enable_mmb = self.mmb_var.get()
+        new["screen_mover_enabled"]   = self.screen_mover_var.get()
+        new["mmb_activation_enabled"] = self.mmb_var.get()
+        new["auto_align_enabled"]     = self.auto_align_var.get()    # NEW
+
+        # Live update backend
+        SCREEN_MOVER.enable_mmb        = new["mmb_activation_enabled"]
+        SCREEN_MOVER.auto_align_enabled = new["auto_align_enabled"]  # NEW
+
+        # -------------------------
+        # USB settings
+        # -------------------------
+        
+        new["usb_enabled"]          = self.usb_reminder_var.get()
+        new["usb_idle_enabled"]     = self.opt_idle_var.get()
+        new["usb_download_enabled"] = self.opt_download_var.get()
+        new["usb_plug_enabled"]     = self.opt_plug_var.get()
+
+        # -------------------------
+        # Debug only changed keys
+        # -------------------------
+        
+        for key, value in new.items():
+            if key not in old or old[key] != value:
+                print(f"[DEBUG] {key} → {value}")
+
+        # -------------------------
+        # Save JSON
+        # -------------------------
+        
+        save_state(new)
+
 
     # ===================================================================
     #  USB Reminder UI Logic (placeholder for future backend)
@@ -184,6 +234,7 @@ class UtilityControlApp(ctk.CTk):
     def toggle_mover_options(self, enable: bool):
         state = "normal" if enable else "disabled"
         self.mmb_switch.configure(state=state)
+        self.auto_align_switch.configure(state=state)   # NEW
 
     # ===================================================================
     #  Screen Tab Mover Logic
@@ -204,46 +255,6 @@ class UtilityControlApp(ctk.CTk):
             SCREEN_MOVER.start()
         else:
             SCREEN_MOVER.stop()
-
-    def save_all_settings(self):
-        old = load_state()   # previous saved values
-
-        new = {}
-
-        # -------------------------
-        # Screen Mover settings
-        # -------------------------
-        
-        new["screen_mover_enabled"] = self.screen_mover_var.get()
-        new["mmb_activation_enabled"] = self.mmb_var.get()
-
-
-        # Live update backend
-        SCREEN_MOVER.enable_mmb = new["mmb_activation_enabled"]
-
-
-        # -------------------------
-        # USB settings
-        # -------------------------
-        
-        new["usb_enabled"] = self.usb_reminder_var.get()
-        new["usb_idle_enabled"] = self.opt_idle_var.get()
-        new["usb_download_enabled"] = self.opt_download_var.get()
-        new["usb_plug_enabled"] = self.opt_plug_var.get()
-
-        # -------------------------
-        # Debug only changed keys
-        # -------------------------
-        
-        for key, value in new.items():
-            if key not in old or old[key] != value:
-                print(f"[DEBUG] {key} → {value}")
-
-        # -------------------------
-        # Save JSON
-        # -------------------------
-        
-        save_state(new)
 
     # ===================================================================
     #  Tray Icon Logic
@@ -269,8 +280,6 @@ class UtilityControlApp(ctk.CTk):
         # Tray menu
         menu = pystray.Menu(
             pystray.MenuItem("Toggle Window", self.tray_menu_toggle, default=True),
-            pystray.MenuItem("Show", self.tray_menu_show),
-            pystray.MenuItem("Hide", self.tray_menu_hide),
             pystray.MenuItem("Quit", self.tray_menu_quit)
         )
 
@@ -288,13 +297,6 @@ class UtilityControlApp(ctk.CTk):
         self.tray_thread.start()
 
     # ---------------- Tray menu callbacks (run in tray thread) ----------
-    
-    def tray_menu_show(self, icon, item):
-        # Schedule GUI work on Tk main thread
-        self.after(0, self._show_window)
-
-    def tray_menu_hide(self, icon, item):
-        self.after(0, self.withdraw)
         
     def tray_menu_toggle(self, icon, item):
         """Double-click → toggle window show/hide."""
@@ -313,11 +315,12 @@ class UtilityControlApp(ctk.CTk):
     
     def _show_window(self):
         self.deiconify()
-        self.lift()
+        self.after(10, self.lift)
         try:
             self.focus_force()
         except:
             pass
+
 
     def _quit_from_tray(self):
         print("[INFO] Quitting from tray…")

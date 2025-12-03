@@ -1,0 +1,28 @@
+**Utility Suite**
+
+
+
+**what's working and what isn't.**
+
+
+
+**So the utility starts up properly and the gui shows and is moveable!**
+
+**the enable/disable screen-tab mover toggle works, when its on it allows for mmb and left click + shift to enable!**
+
+**The mouse pointer tracking is working for mmb!**
+
+**Mouse pointer screen switching is working for mmb press!**
+
+**Minimize to tray works!**
+
+**Clicking in tray brings up the GUI!**
+
+**Xing it out keeps it running in tray!**
+
+**Show in tray shows it !**
+
+**Hide in tray hides it if its open !**
+
+**Quit in tray kills it!**
+
