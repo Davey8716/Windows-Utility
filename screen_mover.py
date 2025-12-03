@@ -2,7 +2,6 @@
 import threading
 import time
 from pynput import mouse
-from pynput import keyboard
 from state_manager import load_state
 import win32gui
 import win32con
@@ -21,25 +20,23 @@ class ScreenMoverWorker:
         self.enabled = False
         self.thread = None
         self.mouse_listener = None
-        self.keyboard_listener = None
 
         self.overlay_hwnd = None
 
         self.mmb_down = False
         self.lmb_down = False
-        self.shift_down = False
         self.gesture_active = False
         self.activation_method = None
 
         # Flick tracking
         self.flick_start_x = None
         self.flick_start_time = None
-        self.flick_threshold_px = 180   # distance in pixels
+        self.flick_threshold_px = 25  # distance in pixels
         self.flick_max_time = 0.35      # seconds max for a flick
 
         # Activation toggles (GUI controls these)
         self.enable_mmb = False
-        self.enable_shift = True
+
 
         self.lock = threading.Lock()
 
@@ -54,7 +51,7 @@ class ScreenMoverWorker:
             # Load current toggle settings
             state = load_state()
             self.enable_mmb = state["mmb_activation_enabled"]
-            self.enable_shift = state["shift_activation_enabled"]
+            
 
             # start background worker thread
             self.thread = threading.Thread(target=self.worker_loop, daemon=True)
@@ -63,13 +60,6 @@ class ScreenMoverWorker:
             # start global mouse hook
             self.mouse_listener = mouse.Listener(on_click=self.on_mouse_click)
             self.mouse_listener.start()
-
-            # start global keyboard hook
-            self.keyboard_listener = keyboard.Listener(
-                on_press=self.on_key_press,
-                on_release=self.on_key_release
-            )
-            self.keyboard_listener.start()
 
     def stop(self):
         with self.lock:
@@ -82,37 +72,6 @@ class ScreenMoverWorker:
             if self.mouse_listener:
                 self.mouse_listener.stop()
                 self.mouse_listener = None
-
-            if self.keyboard_listener:
-                self.keyboard_listener.stop()
-                self.keyboard_listener = None
-
-    # --------------------------------------------------------------
-    # Keyboard Hook
-    # --------------------------------------------------------------
-    
-    def on_key_press(self, key):
-        """Track when Shift is pressed."""
-        try:
-            if key in (keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r):
-                self.shift_down = True
-        except Exception:
-            pass
-
-
-    def on_key_release(self, key):
-        """Track when Shift is released and cancel Shift-based gesture."""
-        try:
-            if key in (keyboard.Key.shift, keyboard.Key.shift_l, keyboard.Key.shift_r):
-                self.shift_down = False
-
-                # If we were in a Shift-based gesture, cancel it when Shift is released
-                if self.gesture_active and self.activation_method == "SHIFT":
-                    print("[GESTURE] Cancelled → Shift released")
-                    self.end_gesture()
-                    self.activation_method = None
-        except Exception:
-            pass
 
     # =============================================================
     #  Mouse Hook
@@ -154,14 +113,6 @@ class ScreenMoverWorker:
                     self.activation_method = None
                     return
 
-            # --- SHIFT MODE: LMB release ends gesture ---
-            if self.activation_method == "SHIFT":
-                if button == mouse.Button.left and not pressed:
-                    print("[GESTURE] Cancelled → LMB released (Shift mode)")
-                    self.end_gesture()
-                    self.activation_method = None
-                    return
-
             # No re-activation while active
             return
 
@@ -176,19 +127,6 @@ class ScreenMoverWorker:
                     self.activation_method = "MMB"
                     self.begin_gesture(x, y)
                     return
-
-        # ---------------------------------------------------------
-        #  ACTIVATE gesture (Shift + Left Click)
-        # ---------------------------------------------------------
-        
-        if self.enable_shift:
-            if button == mouse.Button.left and pressed and self.shift_down:
-                if ACTIVATION_Y_MIN <= y <= ACTIVATION_Y_MAX:
-                    print(f"[GESTURE] Activated → Shift+LMB at ({x},{y})")
-                    self.activation_method = "SHIFT"
-                    self.begin_gesture(x, y)
-                    return
-
 
     # ==============================================================
     #  OVERLAY ICON (SAFE TKINTER VERSION)
@@ -351,14 +289,14 @@ class ScreenMoverWorker:
         if self.overlay_hwnd and win32gui.IsWindow(self.overlay_hwnd):
             return
 
-        width, height = 70, 34
-        pos_x = int(x + 12)
-        pos_y = int(y + 12)
+        width, height = 50, 50
+        pos_x = int(x + 50)
+        pos_y = int(y + 50)
 
         hinstance = win32api.GetModuleHandle(None)
 
         # NEW bold block arrows (thick ⇐ ⇒)
-        ARROW_SYMBOL = "⇐ ⇒"
+        ARROW_SYMBOL = "⮜  ⮞"
 
         # Create STATIC window
         self.overlay_hwnd = win32gui.CreateWindowEx(
@@ -388,8 +326,8 @@ class ScreenMoverWorker:
 
         # Bold readable font
         LOGFONT = win32gui.LOGFONT()
-        LOGFONT.lfHeight = 24
-        LOGFONT.lfWeight = 700
+        LOGFONT.lfHeight = 800
+        LOGFONT.lfWeight = 800
         LOGFONT.lfFaceName = "Segoe UI Symbol"
         hfont = win32gui.CreateFontIndirect(LOGFONT)
 

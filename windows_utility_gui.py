@@ -29,7 +29,7 @@ class UtilityControlApp(ctk.CTk):
         state = load_state()
 
         self.title("Utility Control Panel")
-        self.geometry("400x400")
+        self.geometry("500x450")
         self.resizable(False, False)
         
         # Tray-related attributes
@@ -63,7 +63,7 @@ class UtilityControlApp(ctk.CTk):
             text="Enable Screen-Tab Mover",
             variable=self.screen_mover_var,
             command=self.on_screen_mover_toggle,
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 16)
         )
         self.screen_mover_switch.pack(pady=10)
         
@@ -74,28 +74,24 @@ class UtilityControlApp(ctk.CTk):
         self.mover_frame = ctk.CTkFrame(self)
         self.mover_frame.pack(pady=10, padx=10, fill="x")
 
-        mover_label = ctk.CTkLabel(self.mover_frame, text="Screen-Tab Mover", font=("Segoe UI", 14))
-        mover_label.pack(pady=(5, 5))
-
         self.mmb_var = ctk.BooleanVar(value=state["mmb_activation_enabled"])
         self.mmb_switch = ctk.CTkSwitch(
             self.mover_frame,
-            text="Middle Mouse Activation",
+            text="Use Middle Mouse To Flick",
             variable=self.mmb_var,
             command=self.save_all_settings,
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 16)
         )
         self.mmb_switch.pack(anchor="w", padx=10, pady=2)
-
-        self.shift_var = ctk.BooleanVar(value=state["shift_activation_enabled"])
-        self.shift_switch = ctk.CTkSwitch(
+        
+        mover_help = ctk.CTkLabel(
             self.mover_frame,
-            text="Shift + Left Click Activation",
-            variable=self.shift_var,
-            command=self.save_all_settings,
-            font=("Segoe UI", 13)
+            text="Click and hold the middle mouse at the top edge of the screen, \nan arrow icon will show indicating its active\nthen flick left or right to move the window to a different screen.",
+            font=("Segoe UI", 16),
+            justify="left"
         )
-        self.shift_switch.pack(anchor="w", padx=10, pady=2)
+        mover_help.pack(anchor="w", padx=10, pady=(0, 4))
+
         # Start Mover sub-options in correct state
         self.toggle_mover_options(self.screen_mover_var.get())
 
@@ -109,7 +105,7 @@ class UtilityControlApp(ctk.CTk):
             text="USB Reminder",
             variable=self.usb_reminder_var,
             command=self.on_usb_reminder_toggle,
-            font=("Segoe UI", 16)
+            font=("Segoe UI", 24)
         )
         self.usb_reminder_switch.pack(pady=10)
 
@@ -120,7 +116,7 @@ class UtilityControlApp(ctk.CTk):
         self.usb_frame = ctk.CTkFrame(self)
         self.usb_frame.pack(pady=10, padx=10, fill="x")
 
-        usb_label = ctk.CTkLabel(self.usb_frame, text="Reminder Options:", font=("Segoe UI", 14))
+        usb_label = ctk.CTkLabel(self.usb_frame, text="Reminder Options:", font=("Segoe UI", 16))
         usb_label.pack(pady=(5, 5))
 
         self.opt_idle_var = ctk.BooleanVar(value=False)
@@ -128,7 +124,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Idle-plugged Reminder",
             variable=self.opt_idle_var,
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 16)
         )
         self.opt_idle.pack(anchor="w", padx=10, pady=2)
 
@@ -137,7 +133,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Download-finished Reminder",
             variable=self.opt_download_var,
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 16)
         )
         self.opt_download.pack(anchor="w", padx=10, pady=2)
 
@@ -146,7 +142,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Plug / Unplug Notification",
             variable=self.opt_plug_var,
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 16)
         )
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
 
@@ -165,12 +161,10 @@ class UtilityControlApp(ctk.CTk):
         current = load_state()
         current["screen_mover_enabled"] = self.screen_mover_var.get()
         current["mmb_activation_enabled"] = self.mmb_var.get()
-        current["shift_activation_enabled"] = self.shift_var.get()
         save_state(current)
         
         # Update backend live
         SCREEN_MOVER.enable_mmb = self.mmb_var.get()
-        SCREEN_MOVER.enable_shift = self.shift_var.get()
 
     # ===================================================================
     #  USB Reminder UI Logic (placeholder for future backend)
@@ -190,7 +184,6 @@ class UtilityControlApp(ctk.CTk):
     def toggle_mover_options(self, enable: bool):
         state = "normal" if enable else "disabled"
         self.mmb_switch.configure(state=state)
-        self.shift_switch.configure(state=state)
 
     # ===================================================================
     #  Screen Tab Mover Logic
@@ -223,11 +216,11 @@ class UtilityControlApp(ctk.CTk):
         
         new["screen_mover_enabled"] = self.screen_mover_var.get()
         new["mmb_activation_enabled"] = self.mmb_var.get()
-        new["shift_activation_enabled"] = self.shift_var.get()
+
 
         # Live update backend
         SCREEN_MOVER.enable_mmb = new["mmb_activation_enabled"]
-        SCREEN_MOVER.enable_shift = new["shift_activation_enabled"]
+
 
         # -------------------------
         # USB settings

@@ -167,7 +167,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Idle-plugged Reminder",
             variable=self.opt_idle_var,
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 16)
         )
         self.opt_idle.pack(anchor="w", padx=10, pady=2)
 
@@ -176,7 +176,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Download-finished Reminder",
             variable=self.opt_download_var,
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 16)
         )
         self.opt_download.pack(anchor="w", padx=10, pady=2)
 
@@ -185,7 +185,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Plug / Unplug Notification",
             variable=self.opt_plug_var,
-            font=("Segoe UI", 13)
+            font=("Segoe UI", 16)
         )
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
 
