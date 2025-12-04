@@ -110,8 +110,7 @@ class UtilityControlApp(ctk.CTk):
         self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
         switch_theme(self.theme_var.get())
 
-
-        self.title("Utility Control Panel")
+        self.title("Utility Suite")
         self.geometry("400x500")
         self.resizable(False, False)
 
