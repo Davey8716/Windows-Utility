@@ -5,6 +5,7 @@
 # ---------------------------------------------------------------
 #  Grey out / enable the three sub-toggles
 # ---------------------------------------------------------------
+
 def toggle_usb_options(self, enable: bool):
     state = "normal" if enable else "disabled"
     self.opt_idle.configure(state=state)
@@ -26,8 +27,3 @@ def toggle_mover_options(app, enable: bool):
     state = "normal" if enable else "disabled"
     app.mmb_switch.configure(state=state)
     app.auto_align_switch.configure(state=state)   # NEW stays here
-
-def on_usb_reminder_toggle(self):
-    enabled = self.screen_mover_var.get()
-    on_usb_toggle(self, enabled)
-    self.save_all_settings()
