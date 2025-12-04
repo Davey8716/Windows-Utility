@@ -2,6 +2,30 @@
 
 
 
+**Shutdown Restart Sleep Lock Switch user**
+
+
+
+**Task manager,Device manager, Drivers**
+
+
+
+**Driver space shower**
+
+
+
+**Disable windows snapping bs** 
+
+
+
+**Add brave exporter to it**
+
+
+
+**Add desktop screen shotter**
+
+
+
 **what's working and what isn't.**
 
 
@@ -25,4 +49,10 @@
 **Hide in tray hides it if its open !**
 
 **Quit in tray kills it!**
+
+**Dark light mode tab!**
+
+**Max/min all opened program windows!**
+
+**redesign explainers to become tooltips!**
 
