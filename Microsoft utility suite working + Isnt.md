@@ -6,19 +6,19 @@
 
 
 
-**Task manager,Device manager, Drivers**
+**Task manager, Device manager, Drivers,Driver space shower, settings**
 
 
 
-**Driver space shower**
-
-
-
-**Disable windows snapping bs** 
+**Disable windows snapping bs**
 
 
 
 **Add brave exporter to it**
+
+
+
+**Add desktop icons organizer placement with possible network default for schools to all have uniform icons?**
 
 
 
@@ -27,6 +27,18 @@
 
 
 **what's working and what isn't.**
+
+
+
+**If windows keep windows in flick zone is on middle mouse to flick should be on by default but not other way around**
+
+
+
+**If a program is open and not in the flick zone before keep window in flick zone is on it wont jump until interacted with**
+
+
+
+**flicker should show above gui even though gui is on top to make it consistent with other programs**
 
 
 

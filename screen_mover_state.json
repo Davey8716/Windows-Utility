@@ -1,7 +1,7 @@
 {
     "mmb_activation_enabled": true,
-    "auto_align_enabled": false,
-    "minimize_all_enabled": false,
+    "auto_align_enabled": true,
+    "minimize_all_enabled": true,
     "usb_idle_enabled": false,
     "usb_download_enabled": false,
     "usb_plug_enabled": false,
