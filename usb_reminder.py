@@ -2,19 +2,12 @@
 #  USB Reminder – UI Helpers (pure GUI logic, safe to import anywhere)
 # ===================================================================
 
-# ---------------------------------------------------------------
-#  Grey out / enable the three sub-toggles
-# ---------------------------------------------------------------
-
 def toggle_usb_options(self, enable: bool):
     state = "normal" if enable else "disabled"
     self.opt_idle.configure(state=state)
     self.opt_download.configure(state=state)
     self.opt_plug.configure(state=state)
 
-# ---------------------------------------------------------------
-#  Used when main USB switch is clicked
-# ---------------------------------------------------------------
 
 def on_usb_toggle(app, enabled: bool):
     print(f"[INFO] USB Reminder toggled → {enabled}")

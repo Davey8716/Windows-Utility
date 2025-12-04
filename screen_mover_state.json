@@ -1,5 +1,5 @@
 {
-    "mmb_activation_enabled": false,
+    "mmb_activation_enabled": true,
     "auto_align_enabled": false,
     "minimize_all_enabled": false,
     "usb_idle_enabled": false,
