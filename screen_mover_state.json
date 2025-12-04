@@ -1,10 +1,10 @@
 {
-    "screen_mover_enabled": true,
-    "mmb_activation_enabled": true,
-    "auto_align_enabled": true,
+    "screen_mover_enabled": false,
+    "mmb_activation_enabled": false,
+    "auto_align_enabled": false,
     "usb_enabled": false,
     "usb_idle_enabled": false,
     "usb_download_enabled": false,
     "usb_plug_enabled": false,
-    "theme_dark": true
+    "theme_dark": false
 }
