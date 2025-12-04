@@ -9,7 +9,7 @@ from state_manager import load_state, save_state
 from PIL import Image, ImageDraw
 import threading
 import pystray
-from usb_reminder import toggle_usb_options, toggle_mover_options, on_usb_reminder_toggle
+from usb_reminder import toggle_usb_options, toggle_mover_options
 from theme_manager import switch_theme   # add at top with other imports
 
 # Configure appearance
@@ -32,7 +32,10 @@ class UtilityControlApp(ctk.CTk):
         # Restore theme mode on startup
         self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
         switch_theme(self.theme_var.get())
-
+        
+        self.usb_main_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_enabled", True)
+        )
 
         self.title("Utility Control Panel")
         self.geometry("600x600")
@@ -53,13 +56,13 @@ class UtilityControlApp(ctk.CTk):
         # --------------------------------------------------------------
         # Title
         # --------------------------------------------------------------
+        
         title = ctk.CTkLabel(self, text="Utility Suite", font=("Segoe UI", 24))
         title.pack(pady=10)
 
         # --------------------------------------------------------------
         # Dark / Light Mode Toggle  (correctly placed)
         # --------------------------------------------------------------
-        self.theme_var = ctk.BooleanVar(value=True)
 
         self.theme_switch = ctk.CTkSwitch(
             self,
@@ -150,12 +153,15 @@ class UtilityControlApp(ctk.CTk):
         #  USB Reminder Main Switch  (UNCHANGED)
         # ------------------------------------------------------------------
         
-        self.usb_reminder_var = ctk.BooleanVar(value=False)
+        self.usb_reminder_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_enabled", True)
+        )
+
         self.usb_reminder_switch = ctk.CTkSwitch(
             self,
             text="USB Reminder",
             variable=self.usb_reminder_var,
-            command=self.usb_reminder_var.get,
+            command=self.on_usb_reminder_toggle,
             font=("Segoe UI", 24)
         )
         self.usb_reminder_switch.pack(pady=10)
@@ -176,38 +182,61 @@ class UtilityControlApp(ctk.CTk):
         usb_label = ctk.CTkLabel(self.usb_frame, text="Reminder Options:", font=("Segoe UI", 16))
         usb_label.pack(pady=(5, 5))
 
-        self.opt_idle_var = ctk.BooleanVar(value=False)
+        
+        # USB sub-toggle initializers (load from JSON)
+        self.opt_idle_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_idle_enabled", True)
+        )
+        
         self.opt_idle = ctk.CTkSwitch(
             self.usb_frame,
             text="Idle-plugged Reminder",
             variable=self.opt_idle_var,
+            command=self.save_all_settings,
             font=("Segoe UI", 16)
         )
         self.opt_idle.pack(anchor="w", padx=10, pady=2)
 
-        self.opt_download_var = ctk.BooleanVar(value=False)
+        self.opt_download_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_download_enabled", True)
+        )
+        
         self.opt_download = ctk.CTkSwitch(
             self.usb_frame,
             text="Download-finished Reminder",
             variable=self.opt_download_var,
+            command=self.save_all_settings,
             font=("Segoe UI", 16)
         )
         self.opt_download.pack(anchor="w", padx=10, pady=2)
 
-        self.opt_plug_var = ctk.BooleanVar(value=False)
+        self.opt_plug_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_plug_enabled", True)
+        )
+        
         self.opt_plug = ctk.CTkSwitch(
             self.usb_frame,
             text="Plug / Unplug Notification",
             variable=self.opt_plug_var,
+            command=self.save_all_settings,
             font=("Segoe UI", 16)
+            
         )
+        
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
         # Start with USB settings disabled
         toggle_usb_options(self, False)
+        
+        
+    def on_usb_reminder_toggle(self):
+        enabled = self.usb_reminder_var.get()
+        toggle_usb_options(self, enabled)
+        self.save_all_settings()
 
     # --------------------------------------------------------------
     # Theme Toggle Handler (correct indentation and import)
     # --------------------------------------------------------------
+    
     def on_theme_toggle(self):
         enabled = self.theme_var.get()
         switch_theme(enabled)
