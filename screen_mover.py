@@ -500,7 +500,7 @@ class ScreenMoverWorker:
         font = win32gui.CreateFontIndirect(logfont)
         win32gui.SelectObject(hdc, font)
 
-        win32gui.SetTextColor(hdc, win32api.RGB(255, 50, 50))
+        win32gui.SetTextColor(hdc, win32api.RGB(115, 232, 255))
 
         win32gui.DrawText(
             hdc,
