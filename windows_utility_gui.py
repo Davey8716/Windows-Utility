@@ -17,12 +17,89 @@ ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
 # ===================================================================
+# Simple Tooltip for CustomTkinter widgets
+# ====================================================================
+
+import tkinter as tk
+
+class CtkTooltip:
+    def __init__(self, widget, text, delay=500):
+        self.widget = widget
+        self.text = text
+        self.delay = delay
+        self.tip_window = None
+        self.after_id = None
+
+        # Find the actual clickable canvas of CTkSwitch
+        target = getattr(widget, "_canvas", widget)
+
+        # Bind ONLY to the switch button component
+        target.bind("<Enter>", self.schedule, add="+")
+        target.bind("<Leave>", self.hide, add="+")
+
+        
+    def schedule(self, event=None):
+        self.after_id = self.widget.after(self.delay, self.show)
+
+    def show(self):
+        if self.tip_window:
+            return
+
+        # Tooltip position
+        x = self.widget.winfo_rootx() + 40
+        y = self.widget.winfo_rooty() + 25
+
+        # Create tooltip
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+
+        # Make sure tooltip is above CTk window
+        tw.lift()
+        tw.attributes("-topmost", True)
+
+        # Tooltip look (dark mode compatible)
+        label = tk.Label(
+            tw,
+            text=self.text,
+            background="#1E1E1E",
+            foreground="white",
+            relief="solid",
+            borderwidth=1,
+            padx=6,
+            pady=4,
+            font=("Segoe UI", 14)
+        )
+        label.pack()
+
+    def hide(self, event=None):
+        if self.after_id:
+            self.widget.after_cancel(self.after_id)
+            self.after_id = None
+
+        if self.tip_window:
+            self.tip_window.destroy()
+            self.tip_window = None
+
+# ===================================================================
 #  Main App Gui
 # ===================================================================
 
 class UtilityControlApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+        
+        # Always keep GUI on top
+        self.attributes("-topmost", True)
+
+        # WinAPI reinforcement
+        import ctypes
+        ctypes.windll.user32.SetWindowPos(
+            self.winfo_id(),
+            -1,   # HWND_TOPMOST
+            0, 0, 0, 0,
+            0x0003  # SWP_NOSIZE | SWP_NOMOVE
+        )
         
         SCREEN_MOVER.app_root = self
 
@@ -32,13 +109,10 @@ class UtilityControlApp(ctk.CTk):
         # Restore theme mode on startup
         self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
         switch_theme(self.theme_var.get())
-        
-        self.usb_main_var = ctk.BooleanVar(
-            value=self.saved_state.get("usb_enabled", True)
-        )
+
 
         self.title("Utility Control Panel")
-        self.geometry("600x600")
+        self.geometry("400x500")
         self.resizable(False, False)
 
         # Tray
@@ -47,8 +121,8 @@ class UtilityControlApp(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self.on_close_to_tray)
 
         # Auto-start backend if saved state says it should be ON
-        if self.saved_state["screen_mover_enabled"]:
-            SCREEN_MOVER.start()
+        SCREEN_MOVER.start()
+
 
         # System tray icon
         self.create_tray_icon()
@@ -71,6 +145,13 @@ class UtilityControlApp(ctk.CTk):
             command=self.on_theme_toggle,
             font=("Segoe UI", 16)
         )
+        
+        # Adjust initial text based on saved theme
+        if self.theme_var.get():
+            self.theme_switch.configure(text="Dark Mode Enabled")
+        else:
+            self.theme_switch.configure(text="Light Mode Enabled")
+
 
         self.theme_switch.pack(
             anchor="w",     # ← aligns to the left edge
@@ -78,32 +159,51 @@ class UtilityControlApp(ctk.CTk):
             pady=(5, 5)
         )
         
-        # ------------------------------------------------------------------
-        #  Screen-Tab Mover Group Box
-        # ------------------------------------------------------------------
-        
-        self.screen_mover_var = ctk.BooleanVar(value=self.saved_state["screen_mover_enabled"])
-        
-        self.screen_mover_switch = ctk.CTkSwitch(
+        # --------------------------------------------------------------
+        # Minimize All Windows Toggle (NEW)
+        # --------------------------------------------------------------
+
+        self.minimize_all_var = ctk.BooleanVar(
+            value=self.saved_state.get("minimize_all_enabled", False)
+        )
+
+        self.minimize_all_switch = ctk.CTkSwitch(
             self,
-            text="Enable Screen Drag Flick",
-            variable=self.screen_mover_var,
-            command=self.Enable_Screen_Drag_Flick,
+            text="Max/Min All Opened Program Windows",
+            variable=self.minimize_all_var,
+            command=self.on_minimize_all_toggle,
             font=("Segoe UI", 16)
         )
-        
-        self.screen_mover_switch.pack(
-            anchor="w",     # ← aligns to the left edge
-            padx=18,        # ← add optional padding so it isn’t touching the border
+
+        self.minimize_all_switch.pack(
+            anchor="w",
+            padx=18,
             pady=(5, 5)
         )
         
+        # Add tooltip
+        CtkTooltip(
+            self.minimize_all_switch,
+            "When off all opened tabs are visible.\n"
+            "When toggled on all screens are minimized.\n"
+            "The App Gui itself stays maximized and in front of all other programs.\n"
+        )
+
+
         # ------------------------------------------------------------------
         #  Screen-Tab Mover Group Box(frame)
         # ------------------------------------------------------------------
         
         self.mover_frame = ctk.CTkFrame(self)
         self.mover_frame.pack(pady=10, padx=10, fill="x")
+
+        mover_label = ctk.CTkLabel(
+            self.mover_frame,
+            text="🖱 Grab Zone Flick Options:",
+            font=("Segoe UI", 16,),
+        )
+        mover_label.pack(pady=(0, 0))
+
 
         self.mmb_var = ctk.BooleanVar(value=self.saved_state["mmb_activation_enabled"])
         self.mmb_switch = ctk.CTkSwitch(
@@ -115,13 +215,15 @@ class UtilityControlApp(ctk.CTk):
         )
         self.mmb_switch.pack(anchor="w", padx=10, pady=2)
         
-        mover_help = ctk.CTkLabel(
-            self.mover_frame,
-            text="Click and hold the middle mouse at the top of any program screen\nIn blank space an arrow icon will show indicating its active\nThen flick left or right to move the program to a different screen.",
-            font=("Segoe UI", 16),
-            justify="left"
+        # Add tooltip
+        CtkTooltip(
+            self.mmb_switch,
+            "Click and hold the middle mouse\n"
+            "at the top of any program window.\n"
+            "When the arrow appears, flick left or right\n"
+            "to move the window to another screen."
         )
-        mover_help.pack(anchor="w", padx=10, pady=(0, 4))
+
 
         # NEW: Keep Windows in Flick Zone toggle
         self.auto_align_var = ctk.BooleanVar(value=self.saved_state.get("auto_align_enabled", False))
@@ -134,43 +236,14 @@ class UtilityControlApp(ctk.CTk):
         )
         self.auto_align_switch.pack(anchor="w", padx=10, pady=(8, 2))
 
-        # NEW: Explanation label under the toggle (Variant B)
-        self.auto_align_label = ctk.CTkLabel(
-            self.mover_frame,
-            text=(
-                "Ensures the flick gesture always works by keeping window title bars inside the\n"
-                "activation zone. Adjustments only happen after a drag, never during."
-            ),
-            font=("Segoe UI", 16),
-            justify="left"
-        )
-        self.auto_align_label.pack(anchor="w", padx=10, pady=(0, 4))
-        # Start Mover sub-options in correct state
-        # Start Mover sub-options in correct state
-        toggle_mover_options(self, self.screen_mover_var.get())
-
-        # ------------------------------------------------------------------
-        #  USB Reminder Main Switch  (UNCHANGED)
-        # ------------------------------------------------------------------
-        
-        self.usb_reminder_var = ctk.BooleanVar(
-            value=self.saved_state.get("usb_enabled", True)
+        CtkTooltip(
+            self.auto_align_switch,
+            "Keeps window title bars inside the flick activation zone.\n"
+            "Only activates after you finish dragging a window.\n"
+            "Never interferes during movement."
         )
 
-        self.usb_reminder_switch = ctk.CTkSwitch(
-            self,
-            text="USB Reminder",
-            variable=self.usb_reminder_var,
-            command=self.on_usb_reminder_toggle,
-            font=("Segoe UI", 24)
-        )
-        self.usb_reminder_switch.pack(pady=10)
-        
-        self.usb_reminder_switch.pack(
-            anchor="w",     # ← aligns to the left edge
-            padx=18,        # ← add optional padding so it isn’t touching the border
-            pady=(5, 5)
-        )
+        toggle_mover_options(self, True)
 
         # ------------------------------------------------------------------
         #  USB Reminder Sub-Options Frame  (UNCHANGED)
@@ -179,7 +252,7 @@ class UtilityControlApp(ctk.CTk):
         self.usb_frame = ctk.CTkFrame(self)
         self.usb_frame.pack(pady=10, padx=10, fill="x")
 
-        usb_label = ctk.CTkLabel(self.usb_frame, text="Reminder Options:", font=("Segoe UI", 16))
+        usb_label = ctk.CTkLabel(self.usb_frame, text="🔌USB Reminder Options:", font=("Segoe UI", 16))
         usb_label.pack(pady=(5, 5))
 
         
@@ -225,9 +298,53 @@ class UtilityControlApp(ctk.CTk):
         
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
         # Start with USB settings disabled
-        toggle_usb_options(self, False)
+        toggle_usb_options(self, True)
+        
+        # ------------------------------------------------------------------
+        #  Windows Utilities Section
+        # ------------------------------------------------------------------
+
+        self.win_utils_frame = ctk.CTkFrame(self)
+        self.win_utils_frame.pack(pady=10, padx=10, fill="x")
+
+        win_utils_label = ctk.CTkLabel(
+            self.win_utils_frame,
+            text="⚙️ Windows Utilities:",
+            font=("Segoe UI", 16)
+        )
+        win_utils_label.pack(pady=(5, 5))
+
+        placeholder_text = ctk.CTkLabel(
+            self.win_utils_frame,
+            text="No code yet — this section will contain buttons\n"
+                "to open common Windows tools like Device Manager,\n"
+                "Task Manager, Drives, and other quick-access utilities.",
+            font=("Segoe UI", 14),
+            justify="left"
+        )
+        placeholder_text.pack(anchor="w", padx=10, pady=(0, 8))
+
         
         
+    def on_minimize_all_toggle(self):
+        from minimize_all import minimize_all_except_gui, restore_all_except_gui
+        import ctypes
+
+        enabled = self.minimize_all_var.get()
+        print(f"[INFO] Min/Max All toggled → {enabled}")
+
+        # Get real top-level HWND of GUI
+        child = self.winfo_id()
+        parent = ctypes.windll.user32.GetParent(child)
+        real_hwnd = parent if parent else child
+
+        if enabled:
+            minimize_all_except_gui(real_hwnd)
+        else:
+            restore_all_except_gui(real_hwnd)
+
+        self.save_all_settings()
+
     def on_usb_reminder_toggle(self):
         enabled = self.usb_reminder_var.get()
         toggle_usb_options(self, enabled)
@@ -240,6 +357,13 @@ class UtilityControlApp(ctk.CTk):
     def on_theme_toggle(self):
         enabled = self.theme_var.get()
         switch_theme(enabled)
+        
+        # ⬅️ Update label depending on mode
+        if enabled:
+            self.theme_switch.configure(text="Dark Mode Enabled")
+        else:
+            self.theme_switch.configure(text="Light Mode Enabled")
+    
         self.save_all_settings()
 
     # ===================================================================
@@ -255,19 +379,19 @@ class UtilityControlApp(ctk.CTk):
         # Screen Mover settings
         # -------------------------
         
-        new["screen_mover_enabled"]   = self.screen_mover_var.get()
         new["mmb_activation_enabled"] = self.mmb_var.get()
-        new["auto_align_enabled"]     = self.auto_align_var.get()    # NEW
+        new["auto_align_enabled"]     = self.auto_align_var.get()
+        new["minimize_all_enabled"] = self.minimize_all_var.get()
+
 
         # Live update backend
         SCREEN_MOVER.enable_mmb        = new["mmb_activation_enabled"]
-        SCREEN_MOVER.auto_align_enabled = new["auto_align_enabled"]  # NEW
+        SCREEN_MOVER.auto_align_enabled = new["auto_align_enabled"]  
 
         # -------------------------
         # USB settings
         # -------------------------
-        
-        new["usb_enabled"]          = self.usb_reminder_var.get()
+
         new["usb_idle_enabled"]     = self.opt_idle_var.get()
         new["usb_download_enabled"] = self.opt_download_var.get()
         new["usb_plug_enabled"]     = self.opt_plug_var.get()
@@ -291,26 +415,6 @@ class UtilityControlApp(ctk.CTk):
         # -------------------------
         
         save_state(new)
-
-    # ===================================================================
-    #  Screen Tab Mover Logic
-    # ===================================================================
-    
-    def Enable_Screen_Drag_Flick(self):
-        enabled = self.screen_mover_var.get()
-        print(f"[INFO] Screen-Tab Mover toggled → {enabled}")
-
-        # Grey/enable activation options
-        toggle_mover_options(self, enabled)
-
-        # Save new value
-        self.save_all_settings()
-
-        # Start or stop backend worker
-        if enabled:
-            SCREEN_MOVER.start()
-        else:
-            SCREEN_MOVER.stop()
 
     # ===================================================================
     #  Tray Icon Logic
@@ -359,7 +463,7 @@ class UtilityControlApp(ctk.CTk):
         self.after(0, self._toggle_window)
         
     def _toggle_window(self):
-        if self.saved_state() == "withdrawn":
+        if self.state() == "withdrawn":
             self._show_window()
         else:
             self.withdraw()
@@ -376,6 +480,17 @@ class UtilityControlApp(ctk.CTk):
             self.focus_force()
         except:
             pass
+        self.attributes("-topmost", True)
+        try:
+            import ctypes
+            ctypes.windll.user32.SetWindowPos(
+                self.winfo_id(),
+                -1,
+                0, 0, 0, 0,
+                0x0003
+            )
+        except Exception as e:
+            print("[TOPMOST] WinAPI failed:", e)
 
 
     def _quit_from_tray(self):
