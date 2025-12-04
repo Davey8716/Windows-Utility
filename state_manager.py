@@ -17,7 +17,8 @@ def load_state() -> dict:
             "usb_enabled": True,                  
             "usb_idle_enabled": True,
             "usb_download_enabled": True,
-            "usb_plug_enabled": True
+            "usb_plug_enabled": True,
+            "theme_dark": True    # NEW DEFAULT
         }
     try:
         with open(CONFIG_PATH, "r") as f:
@@ -31,7 +32,7 @@ def load_state() -> dict:
         data.setdefault("usb_idle_enabled", True)
         data.setdefault("usb_download_enabled", True)
         data.setdefault("usb_plug_enabled", True)
-
+        data.setdefault("theme_dark", True)
         return data
     except:
         return {
@@ -41,5 +42,6 @@ def load_state() -> dict:
             "usb_enabled": True,
             "usb_idle_enabled": True,
             "usb_download_enabled": True,
-            "usb_plug_enabled": True
+            "usb_plug_enabled": True,
+            "theme_dark": True
         }

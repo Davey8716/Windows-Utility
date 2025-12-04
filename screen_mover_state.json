@@ -5,5 +5,6 @@
     "usb_enabled": false,
     "usb_idle_enabled": false,
     "usb_download_enabled": false,
-    "usb_plug_enabled": false
+    "usb_plug_enabled": false,
+    "theme_dark": true
 }

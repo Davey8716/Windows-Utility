@@ -9,6 +9,8 @@ from state_manager import load_state, save_state
 from PIL import Image, ImageDraw
 import threading
 import pystray
+from usb_reminder import toggle_usb_options, toggle_mover_options, on_usb_reminder_toggle
+from theme_manager import switch_theme   # add at top with other imports
 
 # Configure appearance
 ctk.set_appearance_mode("Dark")
@@ -22,49 +24,76 @@ class UtilityControlApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        SCREEN_MOVER.app_root = self   # <-- correct location
+        SCREEN_MOVER.app_root = self
 
         # Load saved state
-        state = load_state()
+        self.saved_state = load_state()
+        
+        # Restore theme mode on startup
+        self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
+        switch_theme(self.theme_var.get())
+
 
         self.title("Utility Control Panel")
         self.geometry("600x600")
         self.resizable(False, False)
-        
-        # Tray-related attributes
+
+        # Tray
         self.tray_icon = None
         self.tray_thread = None
-        
-        # When user clicks the window close button → hide to tray
         self.protocol("WM_DELETE_WINDOW", self.on_close_to_tray)
-        
+
         # Auto-start backend if saved state says it should be ON
-        if state["screen_mover_enabled"]:
+        if self.saved_state["screen_mover_enabled"]:
             SCREEN_MOVER.start()
 
-        # Create system tray icon (runs in background thread)
+        # System tray icon
         self.create_tray_icon()
 
-        # ------------------------------------------------------------------
-        #  Title Label
-        # ------------------------------------------------------------------
-        
+        # --------------------------------------------------------------
+        # Title
+        # --------------------------------------------------------------
         title = ctk.CTkLabel(self, text="Utility Suite", font=("Segoe UI", 24))
         title.pack(pady=10)
 
+        # --------------------------------------------------------------
+        # Dark / Light Mode Toggle  (correctly placed)
+        # --------------------------------------------------------------
+        self.theme_var = ctk.BooleanVar(value=True)
+
+        self.theme_switch = ctk.CTkSwitch(
+            self,
+            text="Dark Mode",
+            variable=self.theme_var,
+            command=self.on_theme_toggle,
+            font=("Segoe UI", 16)
+        )
+
+        self.theme_switch.pack(
+            anchor="w",     # ← aligns to the left edge
+            padx=18,        # ← add optional padding so it isn’t touching the border
+            pady=(5, 5)
+        )
+        
         # ------------------------------------------------------------------
         #  Screen-Tab Mover Group Box
         # ------------------------------------------------------------------
         
-        self.screen_mover_var = ctk.BooleanVar(value=state["screen_mover_enabled"])
+        self.screen_mover_var = ctk.BooleanVar(value=self.saved_state["screen_mover_enabled"])
+        
         self.screen_mover_switch = ctk.CTkSwitch(
             self,
             text="Enable Screen Drag Flick",
             variable=self.screen_mover_var,
-            command=self.on_screen_mover_toggle,
+            command=self.Enable_Screen_Drag_Flick,
             font=("Segoe UI", 16)
         )
-        self.screen_mover_switch.pack(pady=10)
+        
+        self.screen_mover_switch.pack(
+            anchor="w",     # ← aligns to the left edge
+            padx=18,        # ← add optional padding so it isn’t touching the border
+            pady=(5, 5)
+        )
         
         # ------------------------------------------------------------------
         #  Screen-Tab Mover Group Box(frame)
@@ -73,7 +102,7 @@ class UtilityControlApp(ctk.CTk):
         self.mover_frame = ctk.CTkFrame(self)
         self.mover_frame.pack(pady=10, padx=10, fill="x")
 
-        self.mmb_var = ctk.BooleanVar(value=state["mmb_activation_enabled"])
+        self.mmb_var = ctk.BooleanVar(value=self.saved_state["mmb_activation_enabled"])
         self.mmb_switch = ctk.CTkSwitch(
             self.mover_frame,
             text="Use Middle Mouse To Flick",
@@ -92,7 +121,7 @@ class UtilityControlApp(ctk.CTk):
         mover_help.pack(anchor="w", padx=10, pady=(0, 4))
 
         # NEW: Keep Windows in Flick Zone toggle
-        self.auto_align_var = ctk.BooleanVar(value=state.get("auto_align_enabled", False))
+        self.auto_align_var = ctk.BooleanVar(value=self.saved_state.get("auto_align_enabled", False))
         self.auto_align_switch = ctk.CTkSwitch(
             self.mover_frame,
             text="Keep Windows In Flick Zone",
@@ -114,8 +143,8 @@ class UtilityControlApp(ctk.CTk):
         )
         self.auto_align_label.pack(anchor="w", padx=10, pady=(0, 4))
         # Start Mover sub-options in correct state
-        self.toggle_mover_options(self.screen_mover_var.get())
-
+        # Start Mover sub-options in correct state
+        toggle_mover_options(self, self.screen_mover_var.get())
 
         # ------------------------------------------------------------------
         #  USB Reminder Main Switch  (UNCHANGED)
@@ -126,10 +155,16 @@ class UtilityControlApp(ctk.CTk):
             self,
             text="USB Reminder",
             variable=self.usb_reminder_var,
-            command=self.on_usb_reminder_toggle,
+            command=self.usb_reminder_var.get,
             font=("Segoe UI", 24)
         )
         self.usb_reminder_switch.pack(pady=10)
+        
+        self.usb_reminder_switch.pack(
+            anchor="w",     # ← aligns to the left edge
+            padx=18,        # ← add optional padding so it isn’t touching the border
+            pady=(5, 5)
+        )
 
         # ------------------------------------------------------------------
         #  USB Reminder Sub-Options Frame  (UNCHANGED)
@@ -167,9 +202,16 @@ class UtilityControlApp(ctk.CTk):
             font=("Segoe UI", 16)
         )
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
+        # Start with USB settings disabled
+        toggle_usb_options(self, False)
 
-        # Start with USB settings disabled (UNCHANGED)
-        self.toggle_usb_options(False)
+    # --------------------------------------------------------------
+    # Theme Toggle Handler (correct indentation and import)
+    # --------------------------------------------------------------
+    def on_theme_toggle(self):
+        enabled = self.theme_var.get()
+        switch_theme(enabled)
+        self.save_all_settings()
 
     # ===================================================================
     #  Save ALL toggle states to JSON
@@ -200,6 +242,12 @@ class UtilityControlApp(ctk.CTk):
         new["usb_idle_enabled"]     = self.opt_idle_var.get()
         new["usb_download_enabled"] = self.opt_download_var.get()
         new["usb_plug_enabled"]     = self.opt_plug_var.get()
+        
+        #-------------
+        # Theme saver
+        #-------------
+        
+        new["theme_dark"] = self.theme_var.get()
 
         # -------------------------
         # Debug only changed keys
@@ -216,35 +264,15 @@ class UtilityControlApp(ctk.CTk):
         save_state(new)
 
     # ===================================================================
-    #  USB Reminder UI Logic (placeholder for future backend)
-    # ===================================================================
-    
-    def toggle_usb_options(self, enable: bool):
-        state = "normal" if enable else "disabled"
-        self.opt_idle.configure(state=state)
-        self.opt_download.configure(state=state)
-        self.opt_plug.configure(state=state)
-
-    def on_usb_reminder_toggle(self):
-        enabled = self.usb_reminder_var.get()
-        print(f"[INFO] USB Reminder toggled → {enabled}")
-        self.toggle_usb_options(enabled)
-    
-    def toggle_mover_options(self, enable: bool):
-        state = "normal" if enable else "disabled"
-        self.mmb_switch.configure(state=state)
-        self.auto_align_switch.configure(state=state)   # NEW
-
-    # ===================================================================
     #  Screen Tab Mover Logic
     # ===================================================================
     
-    def on_screen_mover_toggle(self):
+    def Enable_Screen_Drag_Flick(self):
         enabled = self.screen_mover_var.get()
         print(f"[INFO] Screen-Tab Mover toggled → {enabled}")
-        
+
         # Grey/enable activation options
-        self.toggle_mover_options(enabled)
+        toggle_mover_options(self, enabled)
 
         # Save new value
         self.save_all_settings()
@@ -302,7 +330,7 @@ class UtilityControlApp(ctk.CTk):
         self.after(0, self._toggle_window)
         
     def _toggle_window(self):
-        if self.state() == "withdrawn":
+        if self.saved_state() == "withdrawn":
             self._show_window()
         else:
             self.withdraw()
