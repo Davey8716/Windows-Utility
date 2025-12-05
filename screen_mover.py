@@ -422,9 +422,21 @@ class ScreenMoverWorker:
     # ==============================================================
 
     def _safe_show_overlay(self, x, y):
-        """Create a modern rounded-corner overlay with bright red arrows."""
+        """Overlay is ALWAYS topmost, independent of GUI always-on-top state."""
+        try:
+            import win32api, win32con, win32gui
+        except Exception:
+            print("[OVERLAY] WinAPI missing")
+            return
 
+        # Already exists → raise it
         if self.overlay_hwnd and win32gui.IsWindow(self.overlay_hwnd):
+            win32gui.SetWindowPos(
+                self.overlay_hwnd,
+                win32con.HWND_TOPMOST,
+                0, 0, 0, 0,
+                win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+            )
             return
 
         width, height = 150, 75
@@ -433,7 +445,6 @@ class ScreenMoverWorker:
 
         hinstance = win32api.GetModuleHandle(None)
 
-        # Register a custom window class for drawing
         class_name = "FlickOverlayClass"
         wndclass = win32gui.WNDCLASS()
         wndclass.hInstance = hinstance
@@ -442,12 +453,14 @@ class ScreenMoverWorker:
 
         try:
             win32gui.RegisterClass(wndclass)
-        except Exception:
-            pass  # Already registered
+        except:
+            pass
 
-        # Create a layered transparent popup window
+        # Independent topmost popup window (NOT tied to GUI)
         self.overlay_hwnd = win32gui.CreateWindowEx(
-            win32con.WS_EX_TOPMOST | win32con.WS_EX_LAYERED | win32con.WS_EX_TOOLWINDOW,
+            win32con.WS_EX_TOPMOST
+            | win32con.WS_EX_TOOLWINDOW
+            | win32con.WS_EX_LAYERED,
             class_name,
             "",
             win32con.WS_POPUP,
@@ -455,34 +468,28 @@ class ScreenMoverWorker:
             pos_y,
             width,
             height,
-            0,
+            0,   # no parent (critical)
             0,
             hinstance,
             None
-        ) 
-
-        if not self.overlay_hwnd:
-            print("[OVERLAY] Failed to create overlay window")
-            return
-
-        # Set alpha for full transparency
-        win32gui.SetLayeredWindowAttributes(
-            self.overlay_hwnd,
-            0,
-            255,
-            win32con.LWA_ALPHA
         )
 
-        # Show window
+        if not self.overlay_hwnd:
+            print("[OVERLAY] Failed to create overlay")
+            return
+
+        win32gui.SetLayeredWindowAttributes(
+            self.overlay_hwnd, 0, 255, win32con.LWA_ALPHA
+        )
+
+        # FINAL reinforcement
         win32gui.SetWindowPos(
             self.overlay_hwnd,
             win32con.HWND_TOPMOST,
-            pos_x,
-            pos_y,
-            width,
-            height,
-            win32con.SWP_SHOWWINDOW
+            pos_x, pos_y, width, height,
+            win32con.SWP_SHOWWINDOW | win32con.SWP_NOACTIVATE
         )
+
 
     def _overlay_paint(self, hwnd, msg, wparam, lparam):
         """Custom paint handler for transparent arrow-only overlay."""

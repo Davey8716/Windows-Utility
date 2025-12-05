@@ -111,7 +111,7 @@ class UtilityControlApp(ctk.CTk):
         switch_theme(self.theme_var.get())
 
         self.title("Utility Suite")
-        self.geometry("400x500")
+        self.geometry("400x700")
         self.resizable(False, False)
 
         # Tray
@@ -157,6 +157,31 @@ class UtilityControlApp(ctk.CTk):
             padx=18,        # ← add optional padding so it isn’t touching the border
             pady=(5, 5)
         )
+        
+                # --------------------------------------------------------------
+        # Always On Top Toggle (GUI only)
+        # --------------------------------------------------------------
+
+        self.always_on_top_var = ctk.BooleanVar(
+            value=self.saved_state.get("always_on_top_enabled", True)
+        )
+
+        # Apply saved setting on startup
+        self.apply_always_on_top(self.always_on_top_var.get())
+
+        self.always_on_top_switch = ctk.CTkSwitch(
+            self,
+            text="Always On Top",
+            variable=self.always_on_top_var,
+            command=self.on_always_on_top_toggle,
+            font=("Rubik UI", 16)
+        )
+        self.always_on_top_switch.pack(
+            anchor="w",
+            padx=18,
+            pady=(5, 5)
+        )
+
         
         # --------------------------------------------------------------
         # Minimize All Windows Toggle (NEW)
@@ -364,6 +389,30 @@ class UtilityControlApp(ctk.CTk):
             self.theme_switch.configure(text="Light Mode Enabled")
     
         self.save_all_settings()
+        
+    def apply_always_on_top(self, enabled: bool):
+        """Apply the topmost flag ONLY to the GUI window, never to overlay."""
+        try:
+            # Tkinter topmost
+            self.attributes("-topmost", enabled)
+
+            # WinAPI reinforcement
+            import ctypes
+            ctypes.windll.user32.SetWindowPos(
+                self.winfo_id(),
+                -1 if enabled else -2,  # HWND_TOPMOST or HWND_NOTOPMOST
+                0, 0, 0, 0,
+                0x0003  # SWP_NOMOVE | SWP_NOSIZE
+            )
+        except Exception as e:
+            print("[AOT] Failed:", e)
+            
+    def on_always_on_top_toggle(self):
+        enabled = self.always_on_top_var.get()
+        self.apply_always_on_top(enabled)
+        self.save_all_settings()
+
+
 
     # ===================================================================
     #  Save ALL toggle states to JSON
@@ -400,6 +449,7 @@ class UtilityControlApp(ctk.CTk):
         #-------------
         
         new["theme_dark"] = self.theme_var.get()
+        new["always_on_top_enabled"] = self.always_on_top_var.get()
 
         # -------------------------
         # Debug only changed keys
