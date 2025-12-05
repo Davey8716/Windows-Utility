@@ -9,6 +9,8 @@ from state_manager import load_state, save_state
 from PIL import Image, ImageDraw
 import threading
 import pystray
+import tkinter as tk
+import os
 from usb_reminder import toggle_usb_options, toggle_mover_options
 from theme_manager import switch_theme   # add at top with other imports
 
@@ -20,7 +22,6 @@ ctk.set_default_color_theme("blue")
 # Simple Tooltip for CustomTkinter widgets
 # ====================================================================
 
-import tkinter as tk
 
 class CtkTooltip:
     def __init__(self, widget, text, delay=500):
@@ -323,32 +324,129 @@ class UtilityControlApp(ctk.CTk):
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
         # Start with USB settings disabled
         toggle_usb_options(self, True)
-        
-        # ------------------------------------------------------------------
-        #  Windows Utilities Section
-        # ------------------------------------------------------------------
 
+
+        # ---------------------------------------------
+        # Windows Utilities - Two Column Layout
+        # ---------------------------------------------
+        
         self.win_utils_frame = ctk.CTkFrame(self)
         self.win_utils_frame.pack(pady=10, padx=10, fill="x")
 
         win_utils_label = ctk.CTkLabel(
             self.win_utils_frame,
             text="⚙️ Windows Utilities:",
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         win_utils_label.pack(pady=(5, 5))
 
-        placeholder_text = ctk.CTkLabel(
-            self.win_utils_frame,
-            text="No code yet — this section will contain buttons\n"
-                "to open common Windows tools like Device Manager,\n"
-                "Task Manager, Drives, and other quick-access utilities.",
-            font=("Segoe UI", 14),
-            justify="left"
-        )
-        placeholder_text.pack(anchor="w", padx=10, pady=(0, 8))
+        btn_width = 120
 
-        
+        util_grid = ctk.CTkFrame(self.win_utils_frame, fg_color="transparent", corner_radius=8)
+        util_grid.pack(fill="x", padx=10, pady=5)
+
+        util_grid.columnconfigure(0, weight=1)
+        util_grid.columnconfigure(1, weight=1)
+
+        # ==========================
+        # LEFT COLUMN
+        # ==========================
+
+        self.btn_settings = ctk.CTkButton(
+            util_grid,
+            text="⚙️ System Settings",
+            width=btn_width,
+            command=lambda: os.system("start ms-settings:"),
+            font=("Rubik UI", 15)
+        )
+        self.btn_settings.grid(row=0, column=0, sticky="w", pady=3)
+
+        self.btn_device_mgr = ctk.CTkButton(
+            util_grid,
+            text="🧰 Device Manager",
+            width=btn_width,
+            command=lambda: os.system("devmgmt.msc"),
+            font=("Rubik UI", 15),
+        )
+        self.btn_device_mgr.grid(row=1, column=0, sticky="w", pady=3)
+
+        self.btn_task_mgr = ctk.CTkButton(
+            util_grid,
+            text="🧠 Task Manager",
+            width=btn_width,
+            command=lambda: os.system("taskmgr"),
+            font=("Rubik UI", 15),
+        )
+        self.btn_task_mgr.grid(row=2, column=0, sticky="w", pady=3)
+
+        self.btn_router = ctk.CTkButton(
+            util_grid,
+            text="📡 Router Login",
+            width=btn_width,
+            command=self._open_router_page,
+            font=("Rubik UI", 15),
+        )
+        self.btn_router.grid(row=3, column=0, sticky="w", pady=3)
+
+        # ==========================
+        # RIGHT COLUMN
+        # ==========================
+
+        self.btn_lock = ctk.CTkButton(
+            util_grid,
+            text="🔒 Lock PC",
+            width=btn_width,
+            command=lambda: ctypes.windll.user32.LockWorkStation(),
+            font=("Rubik UI", 15),
+        )
+        self.btn_lock.grid(row=0, column=1, sticky="e", pady=3)
+
+        self.btn_restart = ctk.CTkButton(
+            util_grid,
+            text="🔁 Restart",
+            width=btn_width,
+            command=lambda: os.system("shutdown /r /t 0"),
+            font=("Rubik UI", 15),
+        )
+        self.btn_restart.grid(row=1, column=1, sticky="e", pady=3)
+
+        self.btn_shutdown = ctk.CTkButton(
+            util_grid,
+            text="⏻ Shutdown",
+            width=btn_width,
+            command=lambda: os.system("shutdown /s /t 0"),
+            font=("Rubik UI", 15),
+        )
+        self.btn_shutdown.grid(row=2, column=1, sticky="e", pady=3)
+
+    def _open_router_page(self):
+        """Auto-detect default gateway and open router page in browser."""
+        try:
+            import subprocess
+            import webbrowser
+
+            # Get routing info
+            result = subprocess.check_output("ipconfig", text=True, errors="ignore")
+
+            gateway = None
+            for line in result.splitlines():
+                if "Default Gateway" in line:
+                    parts = line.split(":")
+                    if len(parts) > 1:
+                        gw = parts[1].strip()
+                        if gw and gw != "0.0.0.0":
+                            gateway = gw
+                            break
+
+            if gateway:
+                webbrowser.open(f"http://{gateway}")
+                print(f"[ROUTER] Opening router at {gateway}")
+            else:
+                print("[ROUTER] No default gateway found")
+
+        except Exception as e:
+            print("[ROUTER] Failed:", e)
+
         
     def on_minimize_all_toggle(self):
         from minimize_all import minimize_all_except_gui, restore_all_except_gui
