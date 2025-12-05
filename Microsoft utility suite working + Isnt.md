@@ -2,15 +2,7 @@
 
 
 
-**Shutdown Restart Sleep Lock Switch user**
-
-
-
-**Task manager, Device manager, Drivers,Driver space shower, settings**
-
-
-
-**Disable windows snapping bs**
+**Space shower**
 
 
 
@@ -23,22 +15,6 @@
 
 
 **Add desktop screen shotter**
-
-
-
-**what's working and what isn't.**
-
-
-
-**If windows keep windows in flick zone is on middle mouse to flick should be on by default but not other way around**
-
-
-
-**If a program is open and not in the flick zone before keep window in flick zone is on it wont jump until interacted with**
-
-
-
-**flicker should show above gui even though gui is on top to make it consistent with other programs**
 
 
 
@@ -67,4 +43,12 @@
 **Max/min all opened program windows!**
 
 **redesign explainers to become tooltips!**
+
+**Shutdown Restart Sleep Lock!**
+
+**Task manager, Device manager, Drivers, settings!**
+
+**flicker should show above gui even though gui is on top to make it consistent with other programs!**
+
+**If a program is open and not in the flick zone before keep window in flick zone it jumps now correctly when toggle is turned on!**
 

@@ -1,2 +1,12 @@
 screen_mover_state.json
 screen_mover_state.json
+__pycache__/screen_mover.cpython-314.pyc
+__pycache__/screen_mover.cpython-314.pyc
+__pycache__/state_manager.cpython-314.pyc
+/__pycache__
+__pycache__/theme_manager.cpython-314.pyc
+__pycache__/minimize_all.cpython-314.pyc
+/__pycache__
+/__pycache__
+*.pyc
+*.pyc
