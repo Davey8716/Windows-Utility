@@ -8,7 +8,6 @@ def toggle_usb_options(self, enable: bool):
     self.opt_download.configure(state=state)
     self.opt_plug.configure(state=state)
 
-
 def on_usb_toggle(app, enabled: bool):
     print(f"[INFO] USB Reminder toggled → {enabled}")
     toggle_usb_options(app, enabled)

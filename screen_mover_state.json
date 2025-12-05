@@ -2,9 +2,10 @@
     "mmb_activation_enabled": true,
     "auto_align_enabled": true,
     "minimize_all_enabled": false,
-    "usb_idle_enabled": false,
-    "usb_download_enabled": false,
-    "usb_plug_enabled": false,
+    "usb_idle_enabled": true,
+    "usb_download_enabled": true,
+    "usb_plug_enabled": true,
     "theme_dark": true,
-    "always_on_top_enabled": false
+    "always_on_top_enabled": false,
+    "show_power_buttons": true
 }

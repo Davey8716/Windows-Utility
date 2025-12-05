@@ -2,7 +2,7 @@
 
 
 
-**Space shower**
+**Drive Space shower**
 
 
 
@@ -15,6 +15,26 @@
 
 
 **Add desktop screen shotter**
+
+
+
+**Add collapsible toggles for each frame and make them persist in json and startup for each user**
+
+
+
+**Frame the top 3 buttons as miscellaneous?**
+
+
+
+**Possible sidebar? with airplane mode etc in it** 
+
+
+
+**Folder creator, value input field and "folder to desktop" button that's it**
+
+
+
+**Turn off tooltips button**
 
 
 

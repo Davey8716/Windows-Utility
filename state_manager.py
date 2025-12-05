@@ -18,7 +18,8 @@ def load_state() -> dict:
             "usb_plug_enabled": True,
             "theme_dark": True,    # NEW DEFAULT
             "minimize_all_enabled": False,
-            "always_on_top_enabled": True
+            "always_on_top_enabled": True,
+            "show_power_buttons": False
 
         }
     try:
@@ -34,6 +35,7 @@ def load_state() -> dict:
         data.setdefault("theme_dark", True)
         data.setdefault("minimize_all_enabled", False)
         data.setdefault("always_on_top_enabled", True)
+        data.setdefault("show_power_buttons", False)
         
         return data
     except:
@@ -45,6 +47,7 @@ def load_state() -> dict:
             "usb_plug_enabled": True,
             "theme_dark": True,
             "minimize_all_enabled": False,
-            "always_on_top_enabled": True
+            "always_on_top_enabled": True,
+            "show_power_buttons": False
 
         }

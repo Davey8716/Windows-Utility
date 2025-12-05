@@ -110,8 +110,10 @@ class UtilityControlApp(ctk.CTk):
         # Restore theme mode on startup
         self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
         switch_theme(self.theme_var.get())
+        
 
-        self.title("🦉Problem Gone")
+
+        self.title("🦉Problem? Gone!")
         self.geometry("400x700")
         self.resizable(False, False)
 
@@ -131,7 +133,7 @@ class UtilityControlApp(ctk.CTk):
         # Title
         # --------------------------------------------------------------
         
-        title = ctk.CTkLabel(self, text="🦉 Problem Gone", font=("Rubik UI", 24))
+        title = ctk.CTkLabel(self, text="🦉 Problem? Gone!", font=("Rubik UI", 24))
         title.pack(pady=10)
 
         # --------------------------------------------------------------
@@ -161,7 +163,7 @@ class UtilityControlApp(ctk.CTk):
         
         CtkTooltip(
             self.theme_switch,
-            "Light and Dark mode. Try Them!.\n"
+            "Light and dark mode. Try them!.\n"
             
         )
         
@@ -223,9 +225,8 @@ class UtilityControlApp(ctk.CTk):
             self.minimize_all_switch,
             "When off all opened tabs are visible.\n"
             "When toggled on all screens are minimized.\n"
-            "The App Gui itself stays maximized and in front of all other programs.\n"
+            "The app gui itself stays maximized and in front of all other programs.\n"
         )
-
 
         # ------------------------------------------------------------------
         #  Screen-Tab Mover Group Box(frame)
@@ -236,7 +237,7 @@ class UtilityControlApp(ctk.CTk):
 
         mover_label = ctk.CTkLabel(
             self.mover_frame,
-            text="🖱 Grab Zone Flick Options:",
+            text="🖱 Quick app/browser screen changer:",
             font=("Rubik UI", 16,),
         )
         mover_label.pack(pady=(0, 0))
@@ -255,10 +256,10 @@ class UtilityControlApp(ctk.CTk):
         # Add tooltip
         CtkTooltip(
             self.mmb_switch,
-            "Click and hold the middle mouse\n"
-            "at the top of any program window.\n"
+            "Click and hold the middle mouse.\n"
+            "At the top of any program window.\n"
             "When the arrow appears, flick left or right\n"
-            "to move the window to another screen."
+            "To move the window to another screen."
         )
 
 
@@ -337,7 +338,6 @@ class UtilityControlApp(ctk.CTk):
         # Start with USB settings disabled
         toggle_usb_options(self, True)
 
-
         # ---------------------------------------------
         # Windows Utilities - Two Column Layout
         # ---------------------------------------------
@@ -345,15 +345,41 @@ class UtilityControlApp(ctk.CTk):
         self.win_utils_frame = ctk.CTkFrame(self)
         self.win_utils_frame.pack(pady=10, padx=10, fill="x")
 
+        # Header
         win_utils_label = ctk.CTkLabel(
             self.win_utils_frame,
             text="⚙️ Windows Utilities:",
             font=("Rubik UI", 16)
         )
-        win_utils_label.pack(pady=(5, 5))
+        win_utils_label.pack(anchor="w", padx=100, pady=(5, 0))
 
+        # Toggle ABOVE the grid (safe)
+        self.power_toggle_var = ctk.BooleanVar(
+            value=self.saved_state.get("show_power_buttons", False)
+        )
+
+
+        self.power_toggle = ctk.CTkSwitch(
+            self.win_utils_frame,
+            text="Show Power Buttons",
+            variable=self.power_toggle_var,
+            command=self._toggle_power_buttons,
+            font=("Rubik UI", 15)
+        )
+        self.power_toggle.pack(anchor="w", padx=10, pady=(2, 5))
+        
+        CtkTooltip(
+            self.power_toggle,
+            "⚠️⚠️ Toggles on off power options ⚠️⚠️.\n"
+            "Made for clumsy people who might shutdown by mistake etc.\n"
+            "Remembers if its on or off on startup.\n"
+            
+        )
+
+        # --- NOW define btn_width ---
         btn_width = 120
 
+        # --- NOW define util_grid ---
         util_grid = ctk.CTkFrame(self.win_utils_frame, fg_color="transparent", corner_radius=8)
         util_grid.pack(fill="x", padx=10, pady=5)
 
@@ -403,6 +429,15 @@ class UtilityControlApp(ctk.CTk):
         # ==========================
         # RIGHT COLUMN
         # ==========================
+        
+        self.btn_sleep = ctk.CTkButton(
+            util_grid,
+            text="💤 Sleep",
+            width=btn_width,
+            command=lambda: os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0"),
+            font=("Rubik UI", 15),
+        )
+        self.btn_sleep.grid(row=0, column=1, sticky="e", pady=3)
 
         self.btn_lock = ctk.CTkButton(
             util_grid,
@@ -411,8 +446,8 @@ class UtilityControlApp(ctk.CTk):
             command=lambda: ctypes.windll.user32.LockWorkStation(),
             font=("Rubik UI", 15),
         )
-        self.btn_lock.grid(row=0, column=1, sticky="e", pady=3)
-
+        self.btn_lock.grid(row=1, column=1, sticky="e", pady=3)
+        
         self.btn_restart = ctk.CTkButton(
             util_grid,
             text="🔁 Restart",
@@ -420,7 +455,7 @@ class UtilityControlApp(ctk.CTk):
             command=lambda: os.system("shutdown /r /t 0"),
             font=("Rubik UI", 15),
         )
-        self.btn_restart.grid(row=1, column=1, sticky="e", pady=3)
+        self.btn_restart.grid(row=2, column=1, sticky="e", pady=3)
 
         self.btn_shutdown = ctk.CTkButton(
             util_grid,
@@ -429,7 +464,36 @@ class UtilityControlApp(ctk.CTk):
             command=lambda: os.system("shutdown /s /t 0"),
             font=("Rubik UI", 15),
         )
-        self.btn_shutdown.grid(row=2, column=1, sticky="e", pady=3)
+        self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
+        
+        self._toggle_power_buttons()
+        
+    def _toggle_power_buttons(self):
+        """Show or hide the right-side power buttons and save state."""
+        enabled = self.power_toggle_var.get()
+
+        # Save state immediately
+        self.save_all_settings()
+
+        # If buttons are not ready yet, exit safely
+        if not hasattr(self, "btn_shutdown"):
+            return
+
+        widgets = [
+            self.btn_shutdown,
+            self.btn_restart,
+            self.btn_sleep,
+            self.btn_lock,
+        ]
+
+        for w in widgets:
+            try:
+                if enabled:
+                    w.grid()          # Restore to previous grid position
+                else:
+                    w.grid_remove()   # Hide but preserve grid info
+            except Exception:
+                pass
 
     def _open_router_page(self):
         """Auto-detect default gateway and open router page in browser."""
@@ -575,6 +639,7 @@ class UtilityControlApp(ctk.CTk):
         
         new["theme_dark"] = self.theme_var.get()
         new["always_on_top_enabled"] = self.always_on_top_var.get()
+        new["show_power_buttons"] = self.power_toggle_var.get()
 
         # -------------------------
         # Debug only changed keys
