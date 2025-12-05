@@ -550,7 +550,7 @@ class ScreenMoverWorker:
             )
             return
 
-        width, height = 150, 75
+        width, height = 110, 50
         pos_x = int(x + 20)
         pos_y = int(y + 20)
 
@@ -584,6 +584,13 @@ class ScreenMoverWorker:
             hinstance,
             None
         )
+        
+        # Apply rounded corners to overlay window
+        rgn = win32gui.CreateRoundRectRgn(
+            0, 0, width, height,
+            16, 16  # corner radius (X, Y)
+        )
+        win32gui.SetWindowRgn(self.overlay_hwnd, rgn, True)
 
         if not self.overlay_hwnd:
             print("[OVERLAY] Failed to create overlay")
@@ -601,35 +608,41 @@ class ScreenMoverWorker:
             win32con.SWP_SHOWWINDOW | win32con.SWP_NOACTIVATE
         )
 
-
     def _overlay_paint(self, hwnd, msg, wparam, lparam):
         """Custom paint handler for transparent arrow-only overlay."""
         hdc, paint = win32gui.BeginPaint(hwnd)
 
-        # Transparent background
+        # Transparent background mode for text
         win32gui.SetBkMode(hdc, win32con.TRANSPARENT)
 
-        # --- Draw bright red arrows only (no rectangle) ---
+        # Fill whole window with BLACK so color key makes it invisible
+        rect = win32gui.GetClientRect(hwnd)
+        brush = win32gui.CreateSolidBrush(win32api.RGB(0, 0, 0))
+        win32gui.FillRect(hdc, rect, brush)
+
+        # --- Draw bright cyan arrows ---
         logfont = win32gui.LOGFONT()
         logfont.lfHeight = -48
         logfont.lfWeight = 900
-        logfont.lfFaceName = "Segoe UI Symbol"
+        logfont.lfFaceName = "Rubik UI Symbol"
+        logfont.lfQuality = win32con.ANTIALIASED_QUALITY
 
         font = win32gui.CreateFontIndirect(logfont)
         win32gui.SelectObject(hdc, font)
 
-        win32gui.SetTextColor(hdc, win32api.RGB(115, 232, 255))
+        win32gui.SetTextColor(hdc, win32api.RGB(0, 178, 255))
 
         win32gui.DrawText(
             hdc,
             "⮜   ⮞",
             -1,
-            (0, 0, 150, 75),
+            (0, 0, 110, 50),
             win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE
         )
 
         win32gui.EndPaint(hwnd, paint)
         return 0
+
 
 # global instance (created after class definition)
 SCREEN_MOVER = ScreenMoverWorker()
