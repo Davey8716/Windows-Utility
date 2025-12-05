@@ -69,7 +69,7 @@ class CtkTooltip:
             borderwidth=1,
             padx=6,
             pady=4,
-            font=("Segoe UI", 14)
+            font=("Rubik UI", 14)
         )
         label.pack()
 
@@ -111,7 +111,7 @@ class UtilityControlApp(ctk.CTk):
         self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
         switch_theme(self.theme_var.get())
 
-        self.title("Utility Suite")
+        self.title("🦉Problem Gone")
         self.geometry("400x700")
         self.resizable(False, False)
 
@@ -131,7 +131,7 @@ class UtilityControlApp(ctk.CTk):
         # Title
         # --------------------------------------------------------------
         
-        title = ctk.CTkLabel(self, text="Utility Suite", font=("Segoe UI", 24))
+        title = ctk.CTkLabel(self, text="🦉 Problem Gone", font=("Rubik UI", 24))
         title.pack(pady=10)
 
         # --------------------------------------------------------------
@@ -143,7 +143,7 @@ class UtilityControlApp(ctk.CTk):
             text="Dark Mode",
             variable=self.theme_var,
             command=self.on_theme_toggle,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         
         # Adjust initial text based on saved theme
@@ -157,6 +157,12 @@ class UtilityControlApp(ctk.CTk):
             anchor="w",     # ← aligns to the left edge
             padx=18,        # ← add optional padding so it isn’t touching the border
             pady=(5, 5)
+        )
+        
+        CtkTooltip(
+            self.theme_switch,
+            "Light and Dark mode. Try Them!.\n"
+            
         )
         
         # --------------------------------------------------------------
@@ -182,6 +188,13 @@ class UtilityControlApp(ctk.CTk):
             padx=18,
             pady=(5, 5)
         )
+        
+        CtkTooltip(
+            self.always_on_top_switch,
+            "When off Problem Gone will show below other apps if they are maximized.\n"
+            "When on Problem Gone will always show on top of other apps.\n"
+            
+        )
 
         # --------------------------------------------------------------
         # Minimize All Windows Toggle (NEW)
@@ -196,7 +209,7 @@ class UtilityControlApp(ctk.CTk):
             text="Max/Min All Opened Program Windows",
             variable=self.minimize_all_var,
             command=self.on_minimize_all_toggle,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
 
         self.minimize_all_switch.pack(
@@ -224,7 +237,7 @@ class UtilityControlApp(ctk.CTk):
         mover_label = ctk.CTkLabel(
             self.mover_frame,
             text="🖱 Grab Zone Flick Options:",
-            font=("Segoe UI", 16,),
+            font=("Rubik UI", 16,),
         )
         mover_label.pack(pady=(0, 0))
 
@@ -235,7 +248,7 @@ class UtilityControlApp(ctk.CTk):
             text="Use Middle Mouse To Flick",
             variable=self.mmb_var,
             command=self.save_all_settings,   # <-- correct handler
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.mmb_switch.pack(anchor="w", padx=10, pady=2)
         
@@ -256,7 +269,7 @@ class UtilityControlApp(ctk.CTk):
             text="Keep Windows In Flick Zone",
             variable=self.auto_align_var,
             command=self.on_auto_align_toggle,     # <-- THIS WAS MISSING
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.auto_align_switch.pack(anchor="w", padx=10, pady=(8, 2))
 
@@ -276,7 +289,7 @@ class UtilityControlApp(ctk.CTk):
         self.usb_frame = ctk.CTkFrame(self)
         self.usb_frame.pack(pady=10, padx=10, fill="x")
 
-        usb_label = ctk.CTkLabel(self.usb_frame, text="🔌USB Reminder Options:", font=("Segoe UI", 16))
+        usb_label = ctk.CTkLabel(self.usb_frame, text="🔌USB Reminder Options:", font=("Rubik UI", 16))
         usb_label.pack(pady=(5, 5))
 
         
@@ -290,7 +303,7 @@ class UtilityControlApp(ctk.CTk):
             text="Idle-plugged Reminder",
             variable=self.opt_idle_var,
             command=self.save_all_settings,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.opt_idle.pack(anchor="w", padx=10, pady=2)
 
@@ -303,7 +316,7 @@ class UtilityControlApp(ctk.CTk):
             text="Download-finished Reminder",
             variable=self.opt_download_var,
             command=self.save_all_settings,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.opt_download.pack(anchor="w", padx=10, pady=2)
 
@@ -316,7 +329,7 @@ class UtilityControlApp(ctk.CTk):
             text="Plug / Unplug Notification",
             variable=self.opt_plug_var,
             command=self.save_all_settings,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
             
         )
         
@@ -508,8 +521,7 @@ class UtilityControlApp(ctk.CTk):
         enabled = self.always_on_top_var.get()
         self.apply_always_on_top(enabled)
         self.save_all_settings()
-        
-    
+
     def on_auto_align_toggle(self):
         enabled = self.auto_align_var.get()
 
