@@ -361,7 +361,7 @@ class ScreenMoverWorker:
 
                 if exe in (
                     "taskmgr.exe",              # Task Manager
-                    "mmc.exe",                  # Device Manager, Event Viewer
+                    "mmc.exe",                  # Device Manager / Event Viewer
                     "systemsettings.exe",       # Windows Settings app
                     "dwm.exe",                  # Desktop Window Manager
                     "explorer.exe",             # Explorer shell windows
@@ -382,7 +382,7 @@ class ScreenMoverWorker:
             width = right - left
 
             # Only care if the top edge is below the flick band
-            threshold = ACTIVATION_Y_MAX + 5  # a little below the band
+            threshold = ACTIVATION_Y_MAX + 5
             if top <= threshold:
                 return
 
@@ -391,20 +391,26 @@ class ScreenMoverWorker:
             new_left = left
 
             # Move window without resizing
-            win32gui.SetWindowPos(
-                hwnd,
-                win32con.HWND_TOP,
-                new_left,
-                new_top,
-                width,
-                height,
-                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
-            )
+            try:
+                win32gui.SetWindowPos(
+                    hwnd,
+                    win32con.HWND_TOP,
+                    new_left,
+                    new_top,
+                    width,
+                    height,
+                    win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+                )
+            except Exception as e:
+                # Windows blocks SetWindowPos on protected windows → safely ignore
+                if "Access is denied" in str(e):
+                    return
+                print("[AUTO-ALIGN] Exception:", e)
 
-            print(f"[AUTO-ALIGN] Nudge window up from top={top} to {new_top}")
+        except Exception as outer_error:
+            # A final safety net so the worker thread never crashes
+            print("[AUTO-ALIGN] Outer Exception:", outer_error)
 
-        except Exception as e:
-            print("[AUTO-ALIGN] Exception:", e)
 
 
     #===================================================================
