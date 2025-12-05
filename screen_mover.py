@@ -351,6 +351,25 @@ class ScreenMoverWorker:
             if hwnd == self.overlay_hwnd:
                 return
 
+            # -------------------------------------------------------------
+            # Skip protected/elevated/system windows (Task Manager, MMC, etc.)
+            # -------------------------------------------------------------
+            try:
+                import psutil, win32process
+                tid, pid = win32process.GetWindowThreadProcessId(hwnd)
+                exe = psutil.Process(pid).name().lower()
+
+                if exe in (
+                    "taskmgr.exe",              # Task Manager
+                    "mmc.exe",                  # Device Manager, Event Viewer
+                    "systemsettings.exe",       # Windows Settings app
+                    "dwm.exe",                  # Desktop Window Manager
+                    "explorer.exe",             # Explorer shell windows
+                ):
+                    return
+            except Exception:
+                return
+
             # Check window placement (skip minimized/maximized)
             placement = win32gui.GetWindowPlacement(hwnd)
             show_cmd = placement[1]
@@ -363,14 +382,13 @@ class ScreenMoverWorker:
             width = right - left
 
             # Only care if the top edge is below the flick band
-            # (add a small margin to avoid micro-jitter)
-            threshold = ACTIVATION_Y_MAX + 5  # 45px, a little below the band
+            threshold = ACTIVATION_Y_MAX + 5  # a little below the band
             if top <= threshold:
                 return
 
-            # Target top = slightly below the top of the screen (e.g., 10px)
+            # Target top
             new_top = 10
-            new_left = left  # keep horizontal position
+            new_left = left
 
             # Move window without resizing
             win32gui.SetWindowPos(
@@ -387,6 +405,7 @@ class ScreenMoverWorker:
 
         except Exception as e:
             print("[AUTO-ALIGN] Exception:", e)
+
 
     #===================================================================
     #===================  Gesture ender
