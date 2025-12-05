@@ -12,7 +12,7 @@ def load_state() -> dict:
         # defaults
         return {
             "mmb_activation_enabled": True,
-            "auto_align_enabled": True,                           
+            "auto_align_enabled": False,                           
             "usb_idle_enabled": True,
             "usb_download_enabled": True,
             "usb_plug_enabled": True,
@@ -27,7 +27,7 @@ def load_state() -> dict:
 
         # ensure missing keys don't break old configs
         data.setdefault("mmb_activation_enabled", True)
-        data.setdefault("auto_align_enabled", True)      
+        data.setdefault("auto_align_enabled", False)      
         data.setdefault("usb_idle_enabled", True)
         data.setdefault("usb_download_enabled", True)
         data.setdefault("usb_plug_enabled", True)
@@ -39,7 +39,7 @@ def load_state() -> dict:
     except:
         return {
             "mmb_activation_enabled": True,
-            "auto_align_enabled": True,           
+            "auto_align_enabled": False,           
             "usb_idle_enabled": True,
             "usb_download_enabled": True,
             "usb_plug_enabled": True,
