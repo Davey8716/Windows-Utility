@@ -124,7 +124,7 @@ class UtilityControlApp(ctk.CTk):
         # ------------------------------------------------------------------
         #  Title Label
         # ------------------------------------------------------------------
-        title = ctk.CTkLabel(self, text="Utility Suite", font=("Segoe UI", 24))
+        title = ctk.CTkLabel(self, text="Utility Suite", font=("Rubik UI", 24))
         title.pack(pady=10)
 
         # ------------------------------------------------------------------
@@ -136,7 +136,7 @@ class UtilityControlApp(ctk.CTk):
             text="Screen-Tab Mover",
             variable=self.screen_mover_var,
             command=self.on_screen_mover_toggle,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.screen_mover_switch.pack(pady=10)
 
@@ -149,7 +149,7 @@ class UtilityControlApp(ctk.CTk):
             text="USB Reminder",
             variable=self.usb_reminder_var,
             command=self.on_usb_reminder_toggle,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.usb_reminder_switch.pack(pady=10)
 
@@ -159,7 +159,7 @@ class UtilityControlApp(ctk.CTk):
         self.usb_frame = ctk.CTkFrame(self)
         self.usb_frame.pack(pady=10, padx=10, fill="x")
 
-        usb_label = ctk.CTkLabel(self.usb_frame, text="Reminder Options:", font=("Segoe UI", 14))
+        usb_label = ctk.CTkLabel(self.usb_frame, text="Reminder Options:", font=("Rubik UI", 14))
         usb_label.pack(pady=(5, 5))
 
         self.opt_idle_var = ctk.BooleanVar(value=False)
@@ -167,7 +167,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Idle-plugged Reminder",
             variable=self.opt_idle_var,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.opt_idle.pack(anchor="w", padx=10, pady=2)
 
@@ -176,7 +176,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Download-finished Reminder",
             variable=self.opt_download_var,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.opt_download.pack(anchor="w", padx=10, pady=2)
 
@@ -185,7 +185,7 @@ class UtilityControlApp(ctk.CTk):
             self.usb_frame,
             text="Plug / Unplug Notification",
             variable=self.opt_plug_var,
-            font=("Segoe UI", 16)
+            font=("Rubik UI", 16)
         )
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
 
