@@ -159,7 +159,7 @@ class UtilityControlApp(ctk.CTk):
             pady=(5, 5)
         )
         
-                # --------------------------------------------------------------
+        # --------------------------------------------------------------
         # Always On Top Toggle (GUI only)
         # --------------------------------------------------------------
 
@@ -183,7 +183,6 @@ class UtilityControlApp(ctk.CTk):
             pady=(5, 5)
         )
 
-        
         # --------------------------------------------------------------
         # Minimize All Windows Toggle (NEW)
         # --------------------------------------------------------------
@@ -235,7 +234,7 @@ class UtilityControlApp(ctk.CTk):
             self.mover_frame,
             text="Use Middle Mouse To Flick",
             variable=self.mmb_var,
-            command=self.save_all_settings,
+            command=self.save_all_settings,   # <-- correct handler
             font=("Segoe UI", 16)
         )
         self.mmb_switch.pack(anchor="w", padx=10, pady=2)
@@ -256,7 +255,7 @@ class UtilityControlApp(ctk.CTk):
             self.mover_frame,
             text="Keep Windows In Flick Zone",
             variable=self.auto_align_var,
-            command=self.save_all_settings,
+            command=self.on_auto_align_toggle,     # <-- THIS WAS MISSING
             font=("Segoe UI", 16)
         )
         self.auto_align_switch.pack(anchor="w", padx=10, pady=(8, 2))
@@ -509,7 +508,23 @@ class UtilityControlApp(ctk.CTk):
         enabled = self.always_on_top_var.get()
         self.apply_always_on_top(enabled)
         self.save_all_settings()
+        
+    
+    def on_auto_align_toggle(self):
+        enabled = self.auto_align_var.get()
 
+        # Update runtime state so screen_mover.py knows the toggle changed
+        SCREEN_MOVER.auto_align_enabled = enabled
+
+        # Save settings to JSON
+        self.save_all_settings()
+
+        # If turning ON → force align all windows immediately
+        if enabled:
+            try:
+                SCREEN_MOVER._force_align_all_windows()
+            except Exception as e:
+                print("[GUI] Force align failed:", e)
 
 
     # ===================================================================

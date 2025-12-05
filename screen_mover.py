@@ -333,13 +333,101 @@ class ScreenMoverWorker:
     #===================================================================
     #================ Window Nudger
     #===================================================================
-    
+    def _force_align_all_windows(self):
+        """
+        When auto-align is enabled, immediately scan all windows and gently move
+        any that are below the flick zone threshold back into the activation zone.
+        """
+        # Only run if auto-align is enabled
+        if not self.auto_align_enabled:
+            return
+
+        
+        try:
+            import win32gui, win32con, win32process, psutil
+
+            windows = []
+
+            def enum_handler(hwnd, ctx):
+                # Must be visible & not minimized
+                if not win32gui.IsWindowVisible(hwnd):
+                    return
+                if win32gui.IsIconic(hwnd):  # minimized
+                    return
+                windows.append(hwnd)
+
+            # Enumerate all top-level windows
+            win32gui.EnumWindows(enum_handler, None)
+
+            for hwnd in windows:
+                try:
+                    # Skip if it's the overlay
+                    if hasattr(self, "overlay_hwnd") and hwnd == self.overlay_hwnd:
+                        continue
+
+                    # Skip protected/elevated/system windows
+                    try:
+                        tid, pid = win32process.GetWindowThreadProcessId(hwnd)
+                        exe = psutil.Process(pid).name().lower()
+
+                        if exe in (
+                            "taskmgr.exe",
+                            "mmc.exe",
+                            "systemsettings.exe",
+                            "dwm.exe",
+                            "explorer.exe",
+                        ):
+                            continue
+                    except Exception:
+                        continue
+
+                    # Get position
+                    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+                    height = bottom - top
+                    width = right - left
+
+                    # If already above the flick zone threshold → skip
+                    threshold = ACTIVATION_Y_MAX + 5
+                    if top <= threshold:
+                        continue
+
+                    # Move window just slightly below the top edge
+                    new_top = 10
+                    new_left = left
+
+                    try:
+                        win32gui.SetWindowPos(
+                            hwnd,
+                            win32con.HWND_TOP,
+                            new_left,
+                            new_top,
+                            width,
+                            height,
+                            win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+                        )
+                    except Exception as e:
+                        # Protected or elevated windows may still block SetWindowPos
+                        if "Access is denied" in str(e):
+                            continue
+                        print("[FORCE-ALIGN] Exception:", e)
+
+                except Exception as inner_e:
+                    print("[FORCE-ALIGN] Inner Exception:", inner_e)
+
+        except Exception as outer_e:
+            print("[FORCE-ALIGN] Outer Exception:", outer_e)
+
     def _soft_auto_align_active_window(self):
         """
         Gently nudge the active window upward so its title bar stays inside the
         flick activation zone. This only runs after drags (no mouse buttons down),
         and never touches minimized or maximized windows.
         """
+        # Only run if auto-align is enabled
+        if not self.auto_align_enabled:
+            return
+
+
         try:
             win = gw.getActiveWindow()
             if not win:
@@ -410,8 +498,6 @@ class ScreenMoverWorker:
         except Exception as outer_error:
             # A final safety net so the worker thread never crashes
             print("[AUTO-ALIGN] Outer Exception:", outer_error)
-
-
 
     #===================================================================
     #===================  Gesture ender
