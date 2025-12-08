@@ -46,13 +46,31 @@ class UtilityActionsManager:
             self.app.btn_sleep,
             self.app.btn_lock,
         ]
+        
+        # -------------------------------------------
+        # NEW: Red danger styling when enabled
+        # -------------------------------------------
+        danger_fg     = "#FA0F0F"  # strong red
+        danger_hover  = "#CA0C0C"  # darker hover
+        normal_fg     = None       # CTk default blue
+        normal_hover  = None
 
         for w in widgets:
             try:
                 if enabled:
-                    w.grid()          # Restore previous grid position
+                    w.grid()
+                    w.configure(
+                        fg_color=danger_fg,
+                        hover_color=danger_hover,
+                        text_color="white"
+                    )
                 else:
-                    w.grid_remove()   # Hide while retaining layout info
+                    w.grid_remove()
+                    w.configure(
+                        fg_color=normal_fg,
+                        hover_color=normal_hover,
+                        text_color=None
+                    )
             except Exception:
                 pass
 
