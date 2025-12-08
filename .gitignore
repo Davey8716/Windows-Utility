@@ -10,3 +10,5 @@ __pycache__/minimize_all.cpython-314.pyc
 /__pycache__
 *.pyc
 *.pyc
+*.json
+screen_mover_state.json
