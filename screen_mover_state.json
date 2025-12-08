@@ -6,14 +6,16 @@
     "usb_download_enabled": false,
     "usb_plug_enabled": false,
     "theme_dark": true,
-    "always_on_top_enabled": true,
-    "show_power_buttons": true,
+    "always_on_top_enabled": false,
+    "show_power_buttons": false,
     "tooltips_enabled": false,
     "backup_folder_path": "C:/Users/davey/Desktop/lol",
     "section_states": {
         "misc": true,
         "mover": true,
         "usb": true,
-        "winutils": true
+        "winutils": true,
+        "organising": true,
+        "desktop_backup": true
     }
 }

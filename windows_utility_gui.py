@@ -224,7 +224,7 @@ class UtilityControlApp(ctk.CTk):
         switch_theme(self.theme_var.get())
     
         self.title("🦉Problem? Gone!")
-        self.geometry("450x1000")
+        self.geometry("450x1100")
         self.resizable(False, False) 
         
         from tray_toggles import TrayIconManager
@@ -665,15 +665,27 @@ class UtilityControlApp(ctk.CTk):
             "A new folder will appear instantly on your Desktop."
         )
 
+        # --------------------------------------------------------------
+        #  Desktop Backup  (NEW COLLAPSIBLE SECTION)
+        # --------------------------------------------------------------
+
+        desktop_backup_section = CollapsibleSection(
+            self,
+            "Desktop Backup Utilties:",
+            section_id="desktop_backup",
+            initial_open=self.saved_state.get("section_states", {}).get("desktop_backup", True)
+        )
+        self.collapsible_sections.append(desktop_backup_section)
+        self.desktop_backup_frame = desktop_backup_section.content
+
         # ===================================================================
-        #  Backup Pinned Shortcuts + Open Backup Folder  (TOP ROW)
+        #  Backup Taskbar + Open Backup
         # ===================================================================
 
         backup_buttons_frame = ctk.CTkFrame(
-        self.organise_frame,
-        fg_color="transparent"
+            self.desktop_backup_frame,
+            fg_color="transparent"
         )
-        # Keep it left-aligned and not stretched
         backup_buttons_frame.pack(anchor="w", padx=10, pady=(5, 2))
 
         # BACKUP BUTTON (top)
@@ -684,7 +696,7 @@ class UtilityControlApp(ctk.CTk):
             width=150,
             command=self.actions.backup_pinned_shortcuts
         )
-        self.btn_backup_pins.pack(anchor="w", pady=(0, 5))   # ← CHANGED
+        self.btn_backup_pins.pack(anchor="w", pady=(0, 5))
 
         CtkTooltip(
             self.btn_backup_pins,
@@ -700,57 +712,41 @@ class UtilityControlApp(ctk.CTk):
             width=150,
             command=self.actions.open_backup_folder
         )
-        self.btn_open_backup.pack(anchor="w")   # ← CHANGED
+        self.btn_open_backup.pack(anchor="w")
 
         CtkTooltip(
             self.btn_open_backup,
             "Opens backed up Taskbar icons folder location.\n"
         )
 
-
         # ===================================================================
         #  Backup Folder Path Display + Change Button
         # ===================================================================
 
-        path_row = ctk.CTkFrame(
-            self.organise_frame,
-            fg_color="transparent"
-        )
-        path_row.pack(fill="x", padx=10, pady=(8, 4))
-
-        lbl_path = ctk.CTkLabel(
-            path_row,
-            text="Backup Folder Path:",
-            font=("Rubik UI", 16, "bold")
-        )
-        lbl_path.pack(anchor="w", pady=(0, 3))
 
         path_inner = ctk.CTkFrame(
-        self.organise_frame,
-        fg_color="transparent"
+            self.desktop_backup_frame,
+            fg_color="transparent"
         )
         path_inner.pack(fill="x", padx=10, pady=(0, 8))
-        
-        # ---------- FIX IS THIS LINE ----------
-        # Create the variable BEFORE using it
+
+        # Variable must exist BEFORE entry
         self.backup_path_var = ctk.StringVar(
             value=self.saved_state.get("backup_folder_path", str(Path.home()))
         )
-        # ---------------------------------------
 
         self.btn_change_path = ctk.CTkButton(
             path_inner,
-            text="Change Folder",
+            text="📂 Change Folder",
             width=80,
             font=("Rubik UI", 16, "bold"),
             command=self.actions.change_backup_folder
         )
         self.btn_change_path.pack(side="left")
-        
+
         CtkTooltip(
             self.btn_change_path,
-            "Choses folder path for backing up Taskbar icons.\n"
-            
+            "Chooses folder path for backing up Taskbar icons.\n"
         )
 
         self.entry_backup_path = ctk.CTkEntry(
@@ -759,10 +755,8 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 16),
             state="readonly"
         )
-        self.entry_backup_path.pack(side="left", fill="x", expand=True, padx=(10,8))
+        self.entry_backup_path.pack(side="left", fill="x", expand=True, padx=(10, 8))
 
-        # Final window resize AFTER all sections (including Organising Utilities) exist
-        self.after(100, self.resize_to_fit)
 
     def update_collapsible_arrow_colours(self):
         """Called after theme change to recolour all section arrows."""
