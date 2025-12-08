@@ -116,7 +116,9 @@ class CollapsibleSection:
         self.label = ctk.CTkLabel(
             self.header,
             text=title_text,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 16, "bold"),
+            text_color="#008DFA"    # ← CTk Blue
+            
         )
         self.label.pack(side="left", padx=10)
 
@@ -265,7 +267,7 @@ class UtilityControlApp(ctk.CTk):
         
         misc_section = CollapsibleSection(
             self,
-            "🧰 Miscellaneous:",
+            "Miscellaneous:",
             section_id="misc",
             initial_open=self.saved_state["section_states"].get("misc", True)
         )
@@ -290,7 +292,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.theme_switch.pack(anchor="w", padx=12, pady=(2, 4))
 
-        CtkTooltip(self.theme_switch, "Light and Dark mode. Try Them!.")
+        CtkTooltip(self.theme_switch, "Light and Dark mode. Try Them!")
 
         # -------------------------
         # Always On Top Toggle
@@ -356,7 +358,7 @@ class UtilityControlApp(ctk.CTk):
         
         mover_section = CollapsibleSection(
             self,
-            "🖱 Quick app/browser screen changer:",
+            "Quick app/browser screen changer:",
             section_id="mover",
             initial_open=self.saved_state["section_states"].get("mover", True)
         )
@@ -405,7 +407,7 @@ class UtilityControlApp(ctk.CTk):
         
         usb_section = CollapsibleSection(
             self,
-            "🔌 USB Reminder Options:",
+            "Drive Reminder Options:",
             section_id="usb",
             initial_open=self.saved_state["section_states"].get("usb", True)
         )
@@ -457,7 +459,7 @@ class UtilityControlApp(ctk.CTk):
         
         winutil_section = CollapsibleSection(
             self,
-            "⚙️ Windows Utilities:",
+            "Windows Utilities:",
             section_id="winutils",
             initial_open=self.saved_state.get("section_states", {}).get("winutils", True)
         )
@@ -480,7 +482,7 @@ class UtilityControlApp(ctk.CTk):
 
         CtkTooltip(
             self.power_toggle,
-            "⚠️⚠️ Toggles on/off power options ⚠️⚠️.\n"
+            "⚠️⚠️ Toggles on/off power options ⚠️⚠️\n"
             "Made for clumsy people who might shutdown by mistake etc.\n"
             "Remembers if it's on or off on startup.\n"
         )
@@ -590,7 +592,7 @@ class UtilityControlApp(ctk.CTk):
 
         organising_section = CollapsibleSection(
             self,
-            "📁 Organising Utilities:",
+            "Organising Utilities:",
             section_id="organising",
             initial_open=self.saved_state.get("section_states", {}).get("organising", True)
         )

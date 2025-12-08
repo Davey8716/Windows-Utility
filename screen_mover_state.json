@@ -6,9 +6,9 @@
     "usb_download_enabled": false,
     "usb_plug_enabled": false,
     "theme_dark": true,
-    "always_on_top_enabled": false,
+    "always_on_top_enabled": true,
     "show_power_buttons": true,
-    "tooltips_enabled": false,
+    "tooltips_enabled": true,
     "backup_folder_path": "C:/Users/davey/Desktop/lol",
     "section_states": {
         "misc": true,
