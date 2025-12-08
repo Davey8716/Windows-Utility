@@ -6,13 +6,10 @@
 import customtkinter as ctk
 from screen_mover import SCREEN_MOVER
 from state_manager import load_state, save_state
-from PIL import Image, ImageDraw
-import threading
-import pystray
 import tkinter as tk
 import os
-from usb_reminder import toggle_usb_options, toggle_mover_options
-from theme_manager import switch_theme   # add at top with other imports
+from windows_utility_toggles import switch_theme   # add at top with other imports
+from windows_utility_toggles import UtilityActionsManager
 
 # Configure appearance
 ctk.set_appearance_mode("Dark")
@@ -22,7 +19,6 @@ ctk.set_default_color_theme("blue")
 # Simple Tooltip for CustomTkinter widgets
 # ====================================================================
 
-
 class CtkTooltip:
     def __init__(self, widget, text, delay=500):
         self.widget = widget
@@ -31,35 +27,51 @@ class CtkTooltip:
         self.tip_window = None
         self.after_id = None
 
+
         # Find the actual clickable canvas of CTkSwitch
         target = getattr(widget, "_canvas", widget)
 
         # Bind ONLY to the switch button component
         target.bind("<Enter>", self.schedule, add="+")
         target.bind("<Leave>", self.hide, add="+")
-
+        target.bind("<Button-1>", self.hide, add="+")  # hide on click
         
+        # ------------------------------------------------------
+    # Schedules showing the tooltip
+    # ------------------------------------------------------
     def schedule(self, event=None):
+        # Cancel previous timer
+        if self.after_id:
+            self.widget.after_cancel(self.after_id)
+            self.after_id = None
+
+        # Start new timer
         self.after_id = self.widget.after(self.delay, self.show)
 
+    # ------------------------------------------------------
+    # Shows the tooltip IF globally enabled
+    # ------------------------------------------------------
     def show(self):
+        # Global tooltip toggle (check root window)
+        root = self.widget.winfo_toplevel()
+        if hasattr(root, "tooltips_enabled"):
+            if not root.tooltips_enabled:
+                return
+
         if self.tip_window:
             return
 
-        # Tooltip position
+        # Position tooltip near cursor
         x = self.widget.winfo_rootx() + 40
         y = self.widget.winfo_rooty() + 25
 
-        # Create tooltip
+        # Create popup
         self.tip_window = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(True)
         tw.wm_geometry(f"+{x}+{y}")
-
-        # Make sure tooltip is above CTk window
         tw.lift()
         tw.attributes("-topmost", True)
 
-        # Tooltip look (dark mode compatible)
         label = tk.Label(
             tw,
             text=self.text,
@@ -81,6 +93,81 @@ class CtkTooltip:
         if self.tip_window:
             self.tip_window.destroy()
             self.tip_window = None
+
+# ===================================================================
+#  Collapsible Section with Auto-Theme Arrow Colour
+# ===================================================================
+class CollapsibleSection:
+    def __init__(self, parent, title_text, section_id, initial_open=True):
+        self.parent = parent
+        self.section_id = section_id   # NEW
+        self.open = initial_open
+
+        # A wrapper that keeps header + content together
+        self.wrapper = ctk.CTkFrame(parent, fg_color="transparent")
+        self.wrapper.pack(fill="x", pady=(10, 0))
+
+        # Header row
+        self.header = ctk.CTkFrame(self.wrapper, fg_color="transparent")
+        self.header.pack(fill="x")
+
+        self.label = ctk.CTkLabel(
+            self.header,
+            text=title_text,
+            font=("Rubik UI", 16)
+        )
+        self.label.pack(side="left", padx=10)
+
+        # Toggle button
+        self.button = ctk.CTkButton(
+            self.header,
+            text="▾" if initial_open else "▸",
+            width=30,
+            height=20,
+            command=self.toggle,
+            font=("Rubik UI", 18),
+            fg_color="transparent",
+            hover_color="#202020"
+        )
+        self.button.pack(side="right", padx=10)
+
+        # Apply correct arrow colour depending on theme
+        self.update_arrow_color()
+
+        # Content frame
+        self.content = ctk.CTkFrame(self.wrapper)
+
+        if initial_open:
+            self.content.pack(fill="x", pady=(0, 10), padx=10)
+
+    # ---------------------------------------------------------
+    # NEW: automatic arrow colour based on Dark/Light mode
+    # ---------------------------------------------------------
+    def update_arrow_color(self):
+        mode = ctk.get_appearance_mode()
+        if mode == "Dark":
+            self.button.configure(text_color="white")
+        else:
+            self.button.configure(text_color="black")
+
+    def toggle(self):
+        if self.open:
+            self.content.pack_forget()
+            self.button.configure(text="▸")
+        else:
+            self.content.pack(fill="x", pady=(0, 10), padx=10)
+            self.button.configure(text="▾")
+
+        self.open = not self.open
+
+        # 🔥 Notify app to save updated section states
+        try:
+            app = self.parent.winfo_toplevel()
+            if hasattr(app, "save_section_states"):
+                app.save_section_states()
+        except Exception:
+            pass
+
 
 # ===================================================================
 #  Main App Gui
@@ -106,28 +193,25 @@ class UtilityControlApp(ctk.CTk):
 
         # Load saved state
         self.saved_state = load_state()
-        
+    
+
+        self.actions = UtilityActionsManager(self)
         # Restore theme mode on startup
         self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
         switch_theme(self.theme_var.get())
-        
-
-
+    
         self.title("🦉Problem? Gone!")
-        self.geometry("400x700")
+        self.geometry("400x800")
         self.resizable(False, False)
 
-        # Tray
-        self.tray_icon = None
-        self.tray_thread = None
-        self.protocol("WM_DELETE_WINDOW", self.on_close_to_tray)
+        from tray_toggles import TrayIconManager
+
+        self.tray = TrayIconManager(self)
+        self.tray.create_tray_icon()
+        self.protocol("WM_DELETE_WINDOW", self.tray.on_close_to_tray)
 
         # Auto-start backend if saved state says it should be ON
         SCREEN_MOVER.start()
-
-
-        # System tray icon
-        self.create_tray_icon()
 
         # --------------------------------------------------------------
         # Title
@@ -135,117 +219,144 @@ class UtilityControlApp(ctk.CTk):
         
         title = ctk.CTkLabel(self, text="🦉 Problem? Gone!", font=("Rubik UI", 24))
         title.pack(pady=10)
-
+        
         # --------------------------------------------------------------
-        # Dark / Light Mode Toggle  (correctly placed)
+        #  Miscellaneous / General Options  (NEW GREY WRAPPER)
         # --------------------------------------------------------------
 
-        self.theme_switch = ctk.CTkSwitch(
-            self,
-            text="Dark Mode",
-            variable=self.theme_var,
-            command=self.on_theme_toggle,
-            font=("Rubik UI", 16)
+        # Restore theme mode on startup
+        self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
+        switch_theme(self.theme_var.get())
+
+        # NEW – Always On Top + Minimize All variables must be defined BEFORE UI elements
+        self.always_on_top_var = ctk.BooleanVar(
+            value=self.saved_state.get("always_on_top_enabled", True)
+        )
+
+        self.minimize_all_var = ctk.BooleanVar(
+            value=self.saved_state.get("minimize_all_enabled", False)
         )
         
-        # Adjust initial text based on saved theme
+        self.tooltips_enabled_var = ctk.BooleanVar(
+            value=self.saved_state.get("tooltips_enabled", True)
+        )
+
+        # Local runtime copy for CtkTooltip to read
+        self.tooltips_enabled = self.tooltips_enabled_var.get()
+
+        # --------------------------------------------------------------
+        #  Collapsible Sections Registry
+        # --------------------------------------------------------------
+        self.collapsible_sections = []        # <--- ADD THIS FIRST
+
+        # --------------------------------------------------------------
+        #  Miscellaneous / General Options
+        # --------------------------------------------------------------
+        
+        misc_section = CollapsibleSection(
+            self,
+            "🧰 Miscellaneous:",
+            section_id="misc",
+            initial_open=self.saved_state["section_states"].get("misc", True)
+        )
+        self.collapsible_sections.append(misc_section)
+
+        # -------------------------
+        # Dark Mode Toggle
+        # -------------------------
+
+        self.theme_switch = ctk.CTkSwitch(
+            misc_section.content,    # FIXED
+            text="Dark Mode",
+            variable=self.theme_var,
+            command=self.actions.theme_toggle,
+            font=("Rubik UI", 16)
+        )
+
         if self.theme_var.get():
             self.theme_switch.configure(text="Dark Mode Enabled")
         else:
             self.theme_switch.configure(text="Light Mode Enabled")
 
+        self.theme_switch.pack(anchor="w", padx=12, pady=(2, 4))
 
-        self.theme_switch.pack(
-            anchor="w",     # ← aligns to the left edge
-            padx=18,        # ← add optional padding so it isn’t touching the border
-            pady=(5, 5)
-        )
-        
-        CtkTooltip(
-            self.theme_switch,
-            "Light and dark mode. Try them!.\n"
-            
-        )
-        
-        # --------------------------------------------------------------
-        # Always On Top Toggle (GUI only)
-        # --------------------------------------------------------------
+        CtkTooltip(self.theme_switch, "Light and Dark mode. Try Them!.")
 
-        self.always_on_top_var = ctk.BooleanVar(
-            value=self.saved_state.get("always_on_top_enabled", True)
-        )
-
-        # Apply saved setting on startup
-        self.apply_always_on_top(self.always_on_top_var.get())
+        # -------------------------
+        # Always On Top Toggle
+        # -------------------------
 
         self.always_on_top_switch = ctk.CTkSwitch(
-            self,
+            misc_section.content,
             text="Always On Top",
             variable=self.always_on_top_var,
-            command=self.on_always_on_top_toggle,
+            command=self.actions.always_on_top_toggle,
             font=("Rubik UI", 16)
         )
-        self.always_on_top_switch.pack(
-            anchor="w",
-            padx=18,
-            pady=(5, 5)
-        )
-        
+        self.always_on_top_switch.pack(anchor="w", padx=12, pady=(4, 4))
+
         CtkTooltip(
             self.always_on_top_switch,
             "When off Problem Gone will show below other apps if they are maximized.\n"
             "When on Problem Gone will always show on top of other apps.\n"
-            
+        )
+        
+        # -------------------------
+        # Turn Off Tooltips Toggle
+        # -------------------------
+
+        self.tooltip_switch = ctk.CTkSwitch(
+            misc_section.content,  
+            text="Enable Tooltips",
+            variable=self.tooltips_enabled_var,
+            command=self.actions.tooltips_toggle,
+            font=("Rubik UI", 16)
+        )
+        self.tooltip_switch.pack(anchor="w", padx=12, pady=(4, 6))
+
+        CtkTooltip(
+            self.tooltip_switch,
+            "Enable all hover tooltips across the entire app."
         )
 
-        # --------------------------------------------------------------
-        # Minimize All Windows Toggle (NEW)
-        # --------------------------------------------------------------
 
-        self.minimize_all_var = ctk.BooleanVar(
-            value=self.saved_state.get("minimize_all_enabled", False)
-        )
+        # -------------------------
+        # Max/Min All Windows Toggle
+        # -------------------------
 
         self.minimize_all_switch = ctk.CTkSwitch(
-            self,
+            misc_section.content, 
             text="Max/Min All Opened Program Windows",
             variable=self.minimize_all_var,
-            command=self.on_minimize_all_toggle,
+            command=self.actions.minimize_all_toggle,
             font=("Rubik UI", 16)
         )
 
-        self.minimize_all_switch.pack(
-            anchor="w",
-            padx=18,
-            pady=(5, 5)
-        )
-        
-        # Add tooltip
+        self.minimize_all_switch.pack(anchor="w", padx=12, pady=(4, 8))
+
         CtkTooltip(
             self.minimize_all_switch,
             "When off all opened tabs are visible.\n"
             "When toggled on all screens are minimized.\n"
-            "The app gui itself stays maximized and in front of all other programs.\n"
+            "The App Gui itself stays maximized and in front of all other programs.\n"
         )
 
         # ------------------------------------------------------------------
         #  Screen-Tab Mover Group Box(frame)
         # ------------------------------------------------------------------
         
-        self.mover_frame = ctk.CTkFrame(self)
-        self.mover_frame.pack(pady=10, padx=10, fill="x")
-
-        mover_label = ctk.CTkLabel(
-            self.mover_frame,
-            text="🖱 Quick app/browser screen changer:",
-            font=("Rubik UI", 16,),
+        mover_section = CollapsibleSection(
+            self,
+            "🖱 Quick app/browser screen changer:",
+            section_id="mover",
+            initial_open=self.saved_state["section_states"].get("mover", True)
         )
-        mover_label.pack(pady=(0, 0))
+        self.collapsible_sections.append(mover_section)
 
 
         self.mmb_var = ctk.BooleanVar(value=self.saved_state["mmb_activation_enabled"])
         self.mmb_switch = ctk.CTkSwitch(
-            self.mover_frame,
+            mover_section.content,   # FIXED
             text="Use Middle Mouse To Flick",
             variable=self.mmb_var,
             command=self.save_all_settings,   # <-- correct handler
@@ -266,10 +377,10 @@ class UtilityControlApp(ctk.CTk):
         # NEW: Keep Windows in Flick Zone toggle
         self.auto_align_var = ctk.BooleanVar(value=self.saved_state.get("auto_align_enabled", False))
         self.auto_align_switch = ctk.CTkSwitch(
-            self.mover_frame,
+            mover_section.content,   # FIXED
             text="Keep Windows In Flick Zone",
             variable=self.auto_align_var,
-            command=self.on_auto_align_toggle,     # <-- THIS WAS MISSING
+            command=self.actions.auto_align_toggle,     # <-- THIS WAS MISSING
             font=("Rubik UI", 16)
         )
         self.auto_align_switch.pack(anchor="w", padx=10, pady=(8, 2))
@@ -281,26 +392,26 @@ class UtilityControlApp(ctk.CTk):
             "Never interferes during movement."
         )
 
-        toggle_mover_options(self, True)
-
         # ------------------------------------------------------------------
         #  USB Reminder Sub-Options Frame  (UNCHANGED)
         # ------------------------------------------------------------------
         
-        self.usb_frame = ctk.CTkFrame(self)
-        self.usb_frame.pack(pady=10, padx=10, fill="x")
+        usb_section = CollapsibleSection(
+            self,
+            "🔌 USB Reminder Options:",
+            section_id="usb",
+            initial_open=self.saved_state["section_states"].get("usb", True)
+        )
+        self.collapsible_sections.append(usb_section)
 
-        usb_label = ctk.CTkLabel(self.usb_frame, text="🔌USB Reminder Options:", font=("Rubik UI", 16))
-        usb_label.pack(pady=(5, 5))
 
-        
         # USB sub-toggle initializers (load from JSON)
         self.opt_idle_var = ctk.BooleanVar(
             value=self.saved_state.get("usb_idle_enabled", True)
         )
         
         self.opt_idle = ctk.CTkSwitch(
-            self.usb_frame,
+            usb_section.content,
             text="Idle-plugged Reminder",
             variable=self.opt_idle_var,
             command=self.save_all_settings,
@@ -313,7 +424,7 @@ class UtilityControlApp(ctk.CTk):
         )
         
         self.opt_download = ctk.CTkSwitch(
-            self.usb_frame,
+            usb_section.content,
             text="Download-finished Reminder",
             variable=self.opt_download_var,
             command=self.save_all_settings,
@@ -326,7 +437,7 @@ class UtilityControlApp(ctk.CTk):
         )
         
         self.opt_plug = ctk.CTkSwitch(
-            self.usb_frame,
+            usb_section.content, 
             text="Plug / Unplug Notification",
             variable=self.opt_plug_var,
             command=self.save_all_settings,
@@ -336,51 +447,47 @@ class UtilityControlApp(ctk.CTk):
         
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
         # Start with USB settings disabled
-        toggle_usb_options(self, True)
-
-        # ---------------------------------------------
-        # Windows Utilities - Two Column Layout
-        # ---------------------------------------------
         
-        self.win_utils_frame = ctk.CTkFrame(self)
-        self.win_utils_frame.pack(pady=10, padx=10, fill="x")
-
-        # Header
-        win_utils_label = ctk.CTkLabel(
-            self.win_utils_frame,
-            text="⚙️ Windows Utilities:",
-            font=("Rubik UI", 16)
+        
+        winutil_section = CollapsibleSection(
+            self,
+            "⚙️ Windows Utilities:",
+            section_id="winutils",
+            initial_open=self.saved_state.get("section_states", {}).get("winutils", True)
         )
-        win_utils_label.pack(anchor="w", padx=100, pady=(5, 0))
+        self.collapsible_sections.append(winutil_section)
+        self.win_utils_frame = winutil_section.content
 
         # Toggle ABOVE the grid (safe)
         self.power_toggle_var = ctk.BooleanVar(
             value=self.saved_state.get("show_power_buttons", False)
         )
 
-
         self.power_toggle = ctk.CTkSwitch(
             self.win_utils_frame,
             text="Show Power Buttons",
             variable=self.power_toggle_var,
-            command=self._toggle_power_buttons,
+            command=self.actions.toggle_power_buttons,
             font=("Rubik UI", 15)
         )
         self.power_toggle.pack(anchor="w", padx=10, pady=(2, 5))
-        
+
         CtkTooltip(
             self.power_toggle,
-            "⚠️⚠️ Toggles on off power options ⚠️⚠️.\n"
+            "⚠️⚠️ Toggles on/off power options ⚠️⚠️.\n"
             "Made for clumsy people who might shutdown by mistake etc.\n"
-            "Remembers if its on or off on startup.\n"
-            
+            "Remembers if it's on or off on startup.\n"
         )
 
         # --- NOW define btn_width ---
         btn_width = 120
 
         # --- NOW define util_grid ---
-        util_grid = ctk.CTkFrame(self.win_utils_frame, fg_color="transparent", corner_radius=8)
+        util_grid = ctk.CTkFrame(
+            self.win_utils_frame,
+            fg_color="transparent",
+            corner_radius=8
+        )
         util_grid.pack(fill="x", padx=10, pady=5)
 
         util_grid.columnconfigure(0, weight=1)
@@ -404,7 +511,7 @@ class UtilityControlApp(ctk.CTk):
             text="🧰 Device Manager",
             width=btn_width,
             command=lambda: os.system("devmgmt.msc"),
-            font=("Rubik UI", 15),
+            font=("Rubik UI", 15)
         )
         self.btn_device_mgr.grid(row=1, column=0, sticky="w", pady=3)
 
@@ -413,7 +520,7 @@ class UtilityControlApp(ctk.CTk):
             text="🧠 Task Manager",
             width=btn_width,
             command=lambda: os.system("taskmgr"),
-            font=("Rubik UI", 15),
+            font=("Rubik UI", 15)
         )
         self.btn_task_mgr.grid(row=2, column=0, sticky="w", pady=3)
 
@@ -421,21 +528,21 @@ class UtilityControlApp(ctk.CTk):
             util_grid,
             text="📡 Router Login",
             width=btn_width,
-            command=self._open_router_page,
-            font=("Rubik UI", 15),
+            command=self.actions.open_router_page,
+            font=("Rubik UI", 15)
         )
         self.btn_router.grid(row=3, column=0, sticky="w", pady=3)
 
         # ==========================
         # RIGHT COLUMN
         # ==========================
-        
+
         self.btn_sleep = ctk.CTkButton(
             util_grid,
             text="💤 Sleep",
             width=btn_width,
             command=lambda: os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0"),
-            font=("Rubik UI", 15),
+            font=("Rubik UI", 15)
         )
         self.btn_sleep.grid(row=0, column=1, sticky="e", pady=3)
 
@@ -444,16 +551,16 @@ class UtilityControlApp(ctk.CTk):
             text="🔒 Lock PC",
             width=btn_width,
             command=lambda: ctypes.windll.user32.LockWorkStation(),
-            font=("Rubik UI", 15),
+            font=("Rubik UI", 15)
         )
         self.btn_lock.grid(row=1, column=1, sticky="e", pady=3)
-        
+
         self.btn_restart = ctk.CTkButton(
             util_grid,
             text="🔁 Restart",
             width=btn_width,
             command=lambda: os.system("shutdown /r /t 0"),
-            font=("Rubik UI", 15),
+            font=("Rubik UI", 15)
         )
         self.btn_restart.grid(row=2, column=1, sticky="e", pady=3)
 
@@ -462,150 +569,60 @@ class UtilityControlApp(ctk.CTk):
             text="⏻ Shutdown",
             width=btn_width,
             command=lambda: os.system("shutdown /s /t 0"),
-            font=("Rubik UI", 15),
+            font=("Rubik UI", 15)
         )
         self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
-        
-        self._toggle_power_buttons()
-        
-    def _toggle_power_buttons(self):
-        """Show or hide the right-side power buttons and save state."""
-        enabled = self.power_toggle_var.get()
 
-        # Save state immediately
-        self.save_all_settings()
-
-        # If buttons are not ready yet, exit safely
-        if not hasattr(self, "btn_shutdown"):
-            return
-
-        widgets = [
-            self.btn_shutdown,
-            self.btn_restart,
-            self.btn_sleep,
-            self.btn_lock,
-        ]
-
-        for w in widgets:
-            try:
-                if enabled:
-                    w.grid()          # Restore to previous grid position
-                else:
-                    w.grid_remove()   # Hide but preserve grid info
-            except Exception:
-                pass
-
-    def _open_router_page(self):
-        """Auto-detect default gateway and open router page in browser."""
-        try:
-            import subprocess
-            import webbrowser
-
-            # Get routing info
-            result = subprocess.check_output("ipconfig", text=True, errors="ignore")
-
-            gateway = None
-            for line in result.splitlines():
-                if "Default Gateway" in line:
-                    parts = line.split(":")
-                    if len(parts) > 1:
-                        gw = parts[1].strip()
-                        if gw and gw != "0.0.0.0":
-                            gateway = gw
-                            break
-
-            if gateway:
-                webbrowser.open(f"http://{gateway}")
-                print(f"[ROUTER] Opening router at {gateway}")
-            else:
-                print("[ROUTER] No default gateway found")
-
-        except Exception as e:
-            print("[ROUTER] Failed:", e)
+        self.actions.toggle_power_buttons()
 
         
-    def on_minimize_all_toggle(self):
-        from minimize_all import minimize_all_except_gui, restore_all_except_gui
-        import ctypes
+    def update_collapsible_arrow_colours(self):
+        """Called after theme change to recolour all section arrows."""
+        for section in self.collapsible_sections:
+            section.update_arrow_color()
 
-        enabled = self.minimize_all_var.get()
-        print(f"[INFO] Min/Max All toggled → {enabled}")
 
-        # Get real top-level HWND of GUI
-        child = self.winfo_id()
-        parent = ctypes.windll.user32.GetParent(child)
-        real_hwnd = parent if parent else child
-
-        if enabled:
-            minimize_all_except_gui(real_hwnd)
-        else:
-            restore_all_except_gui(real_hwnd)
-
-        self.save_all_settings()
-
-    def on_usb_reminder_toggle(self):
-        enabled = self.usb_reminder_var.get()
-        toggle_usb_options(self, enabled)
-        self.save_all_settings()
-
-    # --------------------------------------------------------------
-    # Theme Toggle Handler (correct indentation and import)
-    # --------------------------------------------------------------
-    
-    def on_theme_toggle(self):
-        enabled = self.theme_var.get()
-        switch_theme(enabled)
-        
-        # ⬅️ Update label depending on mode
-        if enabled:
-            self.theme_switch.configure(text="Dark Mode Enabled")
-        else:
-            self.theme_switch.configure(text="Light Mode Enabled")
-    
-        self.save_all_settings()
-        
     def apply_always_on_top(self, enabled: bool):
-        """Apply the topmost flag ONLY to the GUI window, never to overlay."""
+        """Apply Always-on-Top state using both Tk and WinAPI."""
         try:
-            # Tkinter topmost
             self.attributes("-topmost", enabled)
+        except Exception as e:
+            print("[AlwaysOnTop] Tk error:", e)
 
-            # WinAPI reinforcement
+        try:
             import ctypes
+            hwnd = self.winfo_id()
+            hWndTopMost = -1 if enabled else -2
             ctypes.windll.user32.SetWindowPos(
-                self.winfo_id(),
-                -1 if enabled else -2,  # HWND_TOPMOST or HWND_NOTOPMOST
+                hwnd,
+                hWndTopMost,
                 0, 0, 0, 0,
-                0x0003  # SWP_NOMOVE | SWP_NOSIZE
+                0x0003  # SWP_NOSIZE | SWP_NOMOVE
             )
         except Exception as e:
-            print("[AOT] Failed:", e)
-            
-    def on_always_on_top_toggle(self):
-        enabled = self.always_on_top_var.get()
-        self.apply_always_on_top(enabled)
-        self.save_all_settings()
-
-    def on_auto_align_toggle(self):
-        enabled = self.auto_align_var.get()
-
-        # Update runtime state so screen_mover.py knows the toggle changed
-        SCREEN_MOVER.auto_align_enabled = enabled
-
-        # Save settings to JSON
-        self.save_all_settings()
-
-        # If turning ON → force align all windows immediately
-        if enabled:
-            try:
-                SCREEN_MOVER._force_align_all_windows()
-            except Exception as e:
-                print("[GUI] Force align failed:", e)
-
-
+            print("[AlwaysOnTop] WinAPI error:", e)
+        
     # ===================================================================
     #  Save ALL toggle states to JSON
     # ===================================================================
+    
+    def save_section_states(self):
+        """Save expanded/collapsed states of all collapsible sections."""
+        if not hasattr(self, "collapsible_sections"):
+            return
+
+        states = {}
+        for section in self.collapsible_sections:
+            states[section.section_id] = section.open
+
+        # Load current JSON
+        data = load_state()
+
+        # Update section states
+        data["section_states"] = states
+
+        save_state(data)
+
     
     def save_all_settings(self):
         old = load_state()   # previous saved values
@@ -619,7 +636,6 @@ class UtilityControlApp(ctk.CTk):
         new["mmb_activation_enabled"] = self.mmb_var.get()
         new["auto_align_enabled"]     = self.auto_align_var.get()
         new["minimize_all_enabled"] = self.minimize_all_var.get()
-
 
         # Live update backend
         SCREEN_MOVER.enable_mmb        = new["mmb_activation_enabled"]
@@ -640,6 +656,7 @@ class UtilityControlApp(ctk.CTk):
         new["theme_dark"] = self.theme_var.get()
         new["always_on_top_enabled"] = self.always_on_top_var.get()
         new["show_power_buttons"] = self.power_toggle_var.get()
+        new["tooltips_enabled"] = self.tooltips_enabled_var.get()
 
         # -------------------------
         # Debug only changed keys
@@ -648,67 +665,18 @@ class UtilityControlApp(ctk.CTk):
         for key, value in new.items():
             if key not in old or old[key] != value:
                 print(f"[DEBUG] {key} → {value}")
+                
+        # Retain collapsible section states
+        section_states = {}
+        for section in self.collapsible_sections:
+            section_states[section.section_id] = section.open
+        new["section_states"] = section_states
 
         # -------------------------
         # Save JSON
         # -------------------------
         
         save_state(new)
-
-    # ===================================================================
-    #  Tray Icon Logic
-    # ===================================================================
-    
-    def create_tray_icon(self):
-        """Create and start the system tray icon in a background thread."""
-
-        # Create a simple blue square icon (matches CTk blue theme)
-        def make_icon_image(size=64):
-            img = Image.new("RGBA", (size, size), (26, 115, 232, 255))  # blue-ish
-            draw = ImageDraw.Draw(img)
-            # Optional: draw a slightly lighter inner square
-            margin = size // 8
-            draw.rectangle(
-                [margin, margin, size - margin, size - margin],
-                fill=(41, 140, 255, 255)
-            )
-            return img
-
-        image = make_icon_image()
-
-        # Tray menu
-        menu = pystray.Menu(
-            pystray.MenuItem("Toggle Window", self.tray_menu_toggle, default=True),
-            pystray.MenuItem("Quit", self.tray_menu_quit)
-        )
-
-        self.tray_icon = pystray.Icon(
-            "WindowsUtility",
-            image,
-            "Utility Suite",
-            menu
-        )
-
-        def run_tray():
-            self.tray_icon.run()
-
-        self.tray_thread = threading.Thread(target=run_tray, daemon=True)
-        self.tray_thread.start()
-
-    # ---------------- Tray menu callbacks (run in tray thread) ----------
-        
-    def tray_menu_toggle(self, icon, item):
-        """Double-click → toggle window show/hide."""
-        self.after(0, self._toggle_window)
-        
-    def _toggle_window(self):
-        if self.state() == "withdrawn":
-            self._show_window()
-        else:
-            self.withdraw()
-
-    def tray_menu_quit(self, icon, item):
-        self.after(0, self._quit_from_tray)
 
     # ---------------- Helpers that run on Tk main thread ----------------
     
@@ -730,30 +698,6 @@ class UtilityControlApp(ctk.CTk):
             )
         except Exception as e:
             print("[TOPMOST] WinAPI failed:", e)
-
-
-    def _quit_from_tray(self):
-        print("[INFO] Quitting from tray…")
-        try:
-            SCREEN_MOVER.stop()
-        except:
-            pass
-
-        if self.tray_icon:
-            # Hide and stop tray icon loop
-            self.tray_icon.visible = False
-            self.tray_icon.stop()
-
-        self.destroy()
-
-    # ===================================================================
-    #  Hide-on-close behaviour
-    # ===================================================================
-    
-    def on_close_to_tray(self):
-        """User clicked the X → hide window instead of exiting."""
-        print("[INFO] Window hidden to tray")
-        self.withdraw()
 
 # ===================================================================
 # Launch App
