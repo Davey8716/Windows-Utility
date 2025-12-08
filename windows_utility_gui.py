@@ -885,6 +885,8 @@ class UtilityControlApp(ctk.CTk):
                 return
 
             os.makedirs(new_path)
+            
+            self.folder_name_var.set("")     # <-- clears the entry box
 
         except Exception as e:
             messagebox.showerror("Error", f"Could not create folder:\n{e}")

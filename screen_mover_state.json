@@ -11,9 +11,9 @@
     "tooltips_enabled": false,
     "backup_folder_path": "C:/Users/davey/Desktop/lol",
     "section_states": {
-        "misc": false,
-        "mover": false,
-        "usb": false,
-        "winutils": false
+        "misc": true,
+        "mover": true,
+        "usb": true,
+        "winutils": true
     }
 }
