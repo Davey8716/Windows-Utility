@@ -97,6 +97,7 @@ class CtkTooltip:
 # ===================================================================
 #  Collapsible Section with Auto-Theme Arrow Colour
 # ===================================================================
+
 class CollapsibleSection:
     def __init__(self, parent, title_text, section_id, initial_open=True):
         self.parent = parent
@@ -160,13 +161,22 @@ class CollapsibleSection:
 
         self.open = not self.open
 
-        # 🔥 Notify app to save updated section states
+        # Notify app to shrink/expand window
+        try:
+            app = self.parent.winfo_toplevel()
+            if hasattr(app, "resize_to_fit"):
+                app.resize_to_fit()
+        except Exception:
+            pass
+
+        # Save section states
         try:
             app = self.parent.winfo_toplevel()
             if hasattr(app, "save_section_states"):
                 app.save_section_states()
         except Exception:
             pass
+
 
 
 # ===================================================================
@@ -194,16 +204,15 @@ class UtilityControlApp(ctk.CTk):
         # Load saved state
         self.saved_state = load_state()
     
-
         self.actions = UtilityActionsManager(self)
         # Restore theme mode on startup
         self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
         switch_theme(self.theme_var.get())
     
         self.title("🦉Problem? Gone!")
-        self.geometry("400x800")
-        self.resizable(False, False)
-
+        self.geometry("400x900")
+        self.resizable(False, False) 
+        
         from tray_toggles import TrayIconManager
 
         self.tray = TrayIconManager(self)
@@ -318,7 +327,6 @@ class UtilityControlApp(ctk.CTk):
             self.tooltip_switch,
             "Enable all hover tooltips across the entire app."
         )
-
 
         # -------------------------
         # Max/Min All Windows Toggle
@@ -574,8 +582,57 @@ class UtilityControlApp(ctk.CTk):
         self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
 
         self.actions.toggle_power_buttons()
-
         
+        # --------------------------------------------------------------
+        #  Organising Utilities  (NEW GREY SECTION)
+        # --------------------------------------------------------------
+
+        from screenshot_tool import take_desktop_screenshot
+
+        organising_section = CollapsibleSection(
+            self,
+            "📁 Organising Utilities:",
+            section_id="organising",
+            initial_open=self.saved_state.get("section_states", {}).get("organising", True)
+        )
+        self.collapsible_sections.append(organising_section)
+
+        organising_frame = organising_section.content
+
+        # =============== Desktop Screenshotter Button =================
+
+        self.btn_desktop_screenshot = ctk.CTkButton(
+            organising_frame,
+            text="🖼 Desktop Screenshot",
+            width=200,
+            command=lambda: take_desktop_screenshot(self),
+            font=("Rubik UI", 15)
+        )
+        self.btn_desktop_screenshot.pack(anchor="w", padx=10, pady=(5, 5))
+
+        CtkTooltip(
+            self.btn_desktop_screenshot,
+            "Minimizes the app, takes a full desktop screenshot,\n"
+            "lets you choose a save location, then restores the window."
+        )
+
+        # =============== Folder Creator Placeholder ===================
+
+        self.btn_folder_creator = ctk.CTkButton(
+            organising_frame,
+            text="📂 Folder Creator",
+            width=200,
+            command=lambda: print('[TODO] Folder creator clicked'),
+            font=("Rubik UI", 15)
+        )
+        self.btn_folder_creator.pack(anchor="w", padx=10, pady=(5, 10))
+
+        CtkTooltip(
+            self.btn_folder_creator,
+            "Simple nested-folder builder will go here.\n"
+            "Instant 'Create on Desktop' support coming soon."
+        )
+
     def update_collapsible_arrow_colours(self):
         """Called after theme change to recolour all section arrows."""
         for section in self.collapsible_sections:
@@ -601,7 +658,17 @@ class UtilityControlApp(ctk.CTk):
             )
         except Exception as e:
             print("[AlwaysOnTop] WinAPI error:", e)
-        
+            
+            
+    def resize_to_fit(self):
+        """Force the window to resize itself to the natural height of its contents."""
+        self.update_idletasks()  # Recalculate layout
+        req_width = self.winfo_reqwidth()
+        req_height = self.winfo_reqheight()
+
+        # Apply new size
+        self.geometry(f"{req_width}x{req_height}")
+
     # ===================================================================
     #  Save ALL toggle states to JSON
     # ===================================================================
