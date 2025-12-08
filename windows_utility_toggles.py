@@ -1,7 +1,9 @@
 import subprocess
 import webbrowser
 import ctypes
-
+import win32gui
+import win32con
+import os 
 from screen_mover import SCREEN_MOVER
 import customtkinter as ctk
 
@@ -168,14 +170,116 @@ class UtilityActionsManager:
             except Exception as e:
                 print("[GUI] Force align failed:", e)
 
+    # ===================================================================
+    #  Organising Utilities - Backup Pinned Shortcuts (Placeholder)
+    # ===================================================================
+
+        # ===================================================================
+    #  Organising Utilities - Backup Pinned Shortcuts (REAL LOGIC)
+    # ===================================================================
+
+    def backup_pinned_shortcuts(self):
+        """Backs up Windows taskbar pinned shortcuts into the chosen folder."""
+        import shutil
+        from tkinter import messagebox
+
+        print("[BACKUP] Starting backup of pinned shortcuts…")
+
+        # 1. Get Windows pinned taskbar folder
+        pinned_path = os.path.join(
+            os.environ["APPDATA"],
+            r"Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
+        )
+
+        if not os.path.isdir(pinned_path):
+            messagebox.showerror(
+                "Backup Error",
+                "Windows pinned shortcuts folder was not found.\n"
+                "This version of Windows may not be supported."
+            )
+            print("[BACKUP] ERROR: Pinned folder not found:", pinned_path)
+            return
+
+        # 2. Get user's chosen backup folder
+        backup_folder = self.app.backup_path_var.get()
+
+        if not os.path.isdir(backup_folder):
+            try:
+                os.makedirs(backup_folder, exist_ok=True)
+            except Exception as e:
+                messagebox.showerror(
+                    "Backup Error",
+                    f"Could not create backup folder:\n{e}"
+                )
+                print("[BACKUP] ERROR: Cannot create backup folder:", backup_folder)
+                return
+
+        # 3. Copy .lnk files
+        count = 0
+        for file in os.listdir(pinned_path):
+            if file.lower().endswith(".lnk"):
+                src = os.path.join(pinned_path, file)
+                dst = os.path.join(backup_folder, file)
+
+                try:
+                    shutil.copy2(src, dst)
+                    print(f"[BACKUP] Copied: {file}")
+                    count += 1
+                except Exception as e:
+                    print(f"[BACKUP] Failed to copy {file}: {e}")
+
+        # 4. Finish message
+        if count > 0:
+            messagebox.showinfo(
+                "Backup Complete",
+                f"Successfully backed up {count} pinned shortcuts.\n\n"
+                f"Saved to:\n{backup_folder}"
+            )
+        else:
+            messagebox.showwarning(
+                "No Shortcuts Found",
+                "No pinned shortcuts were found to back up."
+            )
+
+        print(f"[BACKUP] Completed. {count} shortcuts copied.")
+
+
+    # ===================================================================
+    #  Organising Utilities - Open Backup Folder
+    # ===================================================================
+
+    def open_backup_folder(self):
+        """Opens the backup folder path stored in the GUI."""
+        try:
+            path = self.app.backup_path_var.get()
+            if os.path.isdir(path):
+                os.startfile(path)
+            else:
+                print("[DEBUG] open_backup_folder: path does not exist")
+        except Exception as e:
+            print(f"[ERROR] open_backup_folder: {e}")
+
+    # ===================================================================
+    #  Organising Utilities - Change Backup Folder Path
+    # ===================================================================
+
+    def change_backup_folder(self):
+        """Allows the user to select a folder and updates the JSON."""
+        import tkinter.filedialog as fd
+
+        try:
+            new_path = fd.askdirectory(title="Choose Backup Folder")
+            if new_path:
+                self.app.backup_path_var.set(new_path)
+                self.app.save_all_settings()
+                print(f"[DEBUG] Changed backup folder to: {new_path}")
+        except Exception as e:
+            print(f"[ERROR] change_backup_folder: {e}")
 
 
 # ===================================================================
 #  Minimize / Restore All Windows Except GUI
 # ===================================================================
-
-import win32gui
-import win32con
 
 # ------------------------------------------------------------
 #  Helper: Should we skip this hwnd?
