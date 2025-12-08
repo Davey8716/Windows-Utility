@@ -18,7 +18,7 @@ ctk.set_default_color_theme("blue")
 
 # ===================================================================
 # Simple Tooltip for CustomTkinter widgets
-# ====================================================================
+# ===================================================================
 
 class CtkTooltip:
     def __init__(self, widget, text, delay=500):
@@ -28,16 +28,29 @@ class CtkTooltip:
         self.tip_window = None
         self.after_id = None
 
+        # Gather all actual hoverable child widgets
+        targets = [widget]
 
-        # Find the actual clickable canvas of CTkSwitch
-        target = getattr(widget, "_canvas", widget)
+        for attr in ("_canvas", "_label", "_text_label", "_fg_label", "_border_frame"):
+            if hasattr(widget, attr):
+                obj = getattr(widget, attr)
+                if obj:
+                    targets.append(obj)
 
-        # Bind ONLY to the switch button component
-        target.bind("<Enter>", self.schedule, add="+")
-        target.bind("<Leave>", self.hide, add="+")
-        target.bind("<Button-1>", self.hide, add="+")  # hide on click
-        
-        # ------------------------------------------------------
+        if hasattr(widget, "_windows"):
+            for win in widget._windows:
+                targets.append(win)
+
+        # Apply bindings to all relevant sub-widgets
+        for t in targets:
+            try:
+                t.bind("<Enter>", self.schedule, add="+")
+                t.bind("<Leave>", self.hide, add="+")
+                t.bind("<Button-1>", self.hide, add="+")
+            except:
+                pass
+
+    # ------------------------------------------------------
     # Schedules showing the tooltip
     # ------------------------------------------------------
     def schedule(self, event=None):
@@ -180,8 +193,6 @@ class CollapsibleSection:
         except Exception:
             pass
 
-
-
 # ===================================================================
 #  Main App Gui
 # ===================================================================
@@ -213,7 +224,7 @@ class UtilityControlApp(ctk.CTk):
         switch_theme(self.theme_var.get())
     
         self.title("🦉Problem? Gone!")
-        self.geometry("475x1000")
+        self.geometry("450x1000")
         self.resizable(False, False) 
         
         from tray_toggles import TrayIconManager
@@ -286,9 +297,9 @@ class UtilityControlApp(ctk.CTk):
         )
 
         if self.theme_var.get():
-            self.theme_switch.configure(text="Dark Mode Enabled")
+            self.theme_switch.configure(text="Dark Mode")
         else:
-            self.theme_switch.configure(text="Light Mode Enabled")
+            self.theme_switch.configure(text="Light Mode")
 
         self.theme_switch.pack(anchor="w", padx=12, pady=(2, 4))
 
@@ -636,7 +647,7 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 16, "bold"),
             width=220
         )
-        self.folder_name_entry.pack(side="right", padx=6)
+        self.folder_name_entry.pack(side="right", padx=10)
 
         # --- 2) Create Folder button (left side, fixed) ---
         self.btn_create_folder = ctk.CTkButton(
@@ -659,27 +670,43 @@ class UtilityControlApp(ctk.CTk):
         # ===================================================================
 
         backup_buttons_frame = ctk.CTkFrame(
-            self.organise_frame,
-            fg_color="transparent"
+        self.organise_frame,
+        fg_color="transparent"
         )
-        backup_buttons_frame.pack(fill="x", padx=10, pady=(5, 2))
+        # Keep it left-aligned and not stretched
+        backup_buttons_frame.pack(anchor="w", padx=10, pady=(5, 2))
 
-        # Make the two buttons sit left/right using pack
+        # BACKUP BUTTON (top)
         self.btn_backup_pins = ctk.CTkButton(
             backup_buttons_frame,
             text="💾 Backup Taskbar",
             font=("Rubik UI", 15, "bold"),
+            width=150,
             command=self.actions.backup_pinned_shortcuts
         )
-        self.btn_backup_pins.pack(side="left", expand=True, fill="x", padx=(0, 5))
+        self.btn_backup_pins.pack(anchor="w", pady=(0, 5))   # ← CHANGED
 
+        CtkTooltip(
+            self.btn_backup_pins,
+            "Backs up Taskbar icons to a folder chosen\n"
+            "by Change Folder button.\n"
+        )
+
+        # OPEN BACKUP BUTTON (underneath)
         self.btn_open_backup = ctk.CTkButton(
             backup_buttons_frame,
-            text="📂 Open Backup Taskbar",
-            font=("Rubik UI", 16, "bold"),
+            text="📂 Open Backup",
+            font=("Rubik UI", 15, "bold"),
+            width=150,
             command=self.actions.open_backup_folder
         )
-        self.btn_open_backup.pack(side="right", expand=True, fill="x", padx=(5, 0))
+        self.btn_open_backup.pack(anchor="w")   # ← CHANGED
+
+        CtkTooltip(
+            self.btn_open_backup,
+            "Opens backed up Taskbar icons folder location.\n"
+        )
+
 
         # ===================================================================
         #  Backup Folder Path Display + Change Button
@@ -696,7 +723,7 @@ class UtilityControlApp(ctk.CTk):
             text="Backup Folder Path:",
             font=("Rubik UI", 16, "bold")
         )
-        lbl_path.pack(anchor="w", pady=(0, 8))
+        lbl_path.pack(anchor="w", pady=(0, 3))
 
         path_inner = ctk.CTkFrame(
         self.organise_frame,
@@ -719,14 +746,20 @@ class UtilityControlApp(ctk.CTk):
             command=self.actions.change_backup_folder
         )
         self.btn_change_path.pack(side="left")
+        
+        CtkTooltip(
+            self.btn_change_path,
+            "Choses folder path for backing up Taskbar icons.\n"
+            
+        )
 
         self.entry_backup_path = ctk.CTkEntry(
             path_inner,
             textvariable=self.backup_path_var,
-            font=("Rubik UI", 14),
+            font=("Rubik UI", 16),
             state="readonly"
         )
-        self.entry_backup_path.pack(side="left", fill="x", expand=True, padx=(0,8))
+        self.entry_backup_path.pack(side="left", fill="x", expand=True, padx=(10,8))
 
         # Final window resize AFTER all sections (including Organising Utilities) exist
         self.after(100, self.resize_to_fit)
