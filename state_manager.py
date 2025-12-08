@@ -1,6 +1,6 @@
 import json
 import os
-
+from pathlib import Path
 CONFIG_PATH = "screen_mover_state.json"
 
 def save_state(state: dict):
@@ -22,6 +22,7 @@ def load_state() -> dict:
         "always_on_top_enabled": True,
         "show_power_buttons": False,
         "tooltips_enabled": True,
+        "backup_folder_path": str(Path.home()),
 
         # NEW: Collapsible section states
         "section_states": {
