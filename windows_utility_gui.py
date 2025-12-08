@@ -583,6 +583,9 @@ class UtilityControlApp(ctk.CTk):
 
         self.actions.toggle_power_buttons()
         
+        # --- FINAL: Apply initial adaptive size based on collapsed/expanded sections ---
+        self.after(50, self.resize_to_fit)
+        
         # --------------------------------------------------------------
         #  Organising Utilities  (NEW GREY SECTION)
         # --------------------------------------------------------------
