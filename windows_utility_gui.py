@@ -140,7 +140,7 @@ class CollapsibleSection:
         self.content = ctk.CTkFrame(self.wrapper)
 
         if initial_open:
-            self.content.pack(fill="x", pady=(0, 10), padx=10)
+            self.content.pack(fill="x", expand=False, pady=(0, 10), padx=10)
 
     # ---------------------------------------------------------
     # NEW: automatic arrow colour based on Dark/Light mode
@@ -211,7 +211,7 @@ class UtilityControlApp(ctk.CTk):
         switch_theme(self.theme_var.get())
     
         self.title("🦉Problem? Gone!")
-        self.geometry("375x1000")
+        self.geometry("475x1000")
         self.resizable(False, False) 
         
         from tray_toggles import TrayIconManager
@@ -411,7 +411,6 @@ class UtilityControlApp(ctk.CTk):
         )
         self.collapsible_sections.append(usb_section)
 
-
         # USB sub-toggle initializers (load from JSON)
         self.opt_idle_var = ctk.BooleanVar(
             value=self.saved_state.get("usb_idle_enabled", True)
@@ -581,10 +580,8 @@ class UtilityControlApp(ctk.CTk):
         self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
 
         self.actions.toggle_power_buttons()
-        
-        # --- FINAL: Apply initial adaptive size based on collapsed/expanded sections ---
-        self.after(50, self.resize_to_fit)
-        
+
+
         # --------------------------------------------------------------
         #  Organising Utilities  (NEW GREY SECTION)
         # --------------------------------------------------------------
@@ -600,12 +597,10 @@ class UtilityControlApp(ctk.CTk):
         self.collapsible_sections.append(organising_section)
         self.organise_frame = organising_section.content   # <-- FIX HERE
 
-        organising_frame = organising_section.content
-
         # =============== Desktop Screenshotter Button =================
 
         self.btn_desktop_screenshot = ctk.CTkButton(
-            organising_frame,
+            self.organise_frame,
             text="🖼 Desktop Screenshot",
             width=200,
             command=lambda: take_desktop_screenshot(self),
@@ -656,8 +651,7 @@ class UtilityControlApp(ctk.CTk):
             "Type a folder name in the box → Click to create\n"
             "A new folder will appear instantly on your Desktop."
         )
-        
-        
+
         # ===================================================================
         #  Backup Pinned Shortcuts + Open Backup Folder  (TOP ROW)
         # ===================================================================
@@ -668,25 +662,22 @@ class UtilityControlApp(ctk.CTk):
         )
         backup_buttons_frame.pack(fill="x", padx=10, pady=(5, 2))
 
-        backup_buttons_frame.columnconfigure(0, weight=1)
-        backup_buttons_frame.columnconfigure(1, weight=1)
-
+        # Make the two buttons sit left/right using pack
         self.btn_backup_pins = ctk.CTkButton(
             backup_buttons_frame,
-            text="💾 Backup Pinned Shortcuts",
+            text="💾 Backup Taskbar",
             font=("Rubik UI", 15, "bold"),
-            command=self.actions.backup_pinned_shortcuts   # <-- handler you will add in toggles file
+            command=self.actions.backup_pinned_shortcuts
         )
-        self.btn_backup_pins.grid(row=0, column=0, sticky="ew", padx=(0, 5))
-
+        self.btn_backup_pins.pack(side="left", expand=True, fill="x", padx=(0, 5))
 
         self.btn_open_backup = ctk.CTkButton(
             backup_buttons_frame,
-            text="📂 Open Backup Folder",
+            text="📂 Open Backup Taskbar",
             font=("Rubik UI", 16, "bold"),
-            command=self.actions.open_backup_folder   # <-- handler you will add in toggles file
+            command=self.actions.open_backup_folder
         )
-        self.btn_open_backup.grid(row=0, column=1, sticky="ew", padx=(5, 0))
+        self.btn_open_backup.pack(side="right", expand=True, fill="x", padx=(5, 0))
 
         # ===================================================================
         #  Backup Folder Path Display + Change Button
@@ -703,30 +694,29 @@ class UtilityControlApp(ctk.CTk):
             text="Backup Folder Path:",
             font=("Rubik UI", 16, "bold")
         )
-        lbl_path.grid(row=0, column=0, sticky="w", pady=(0, 6))
+        lbl_path.pack(anchor="w", pady=(0, 8))
 
-
-        # Entry + change button row
         path_inner = ctk.CTkFrame(
-            self.organise_frame,
-            fg_color="transparent"
+        self.organise_frame,
+        fg_color="transparent"
         )
         path_inner.pack(fill="x", padx=10, pady=(0, 8))
-
-        path_inner.columnconfigure(1, weight=1)
-
+        
+        # ---------- FIX IS THIS LINE ----------
+        # Create the variable BEFORE using it
         self.backup_path_var = ctk.StringVar(
             value=self.saved_state.get("backup_folder_path", str(Path.home()))
         )
+        # ---------------------------------------
 
         self.btn_change_path = ctk.CTkButton(
             path_inner,
-            text="Change…",
+            text="Change Folder",
             width=80,
             font=("Rubik UI", 16, "bold"),
-            command=self.actions.change_backup_folder   # <-- handler you will add
+            command=self.actions.change_backup_folder
         )
-        self.btn_change_path.grid(row=0, column=0, padx=(0, 8), sticky="w")
+        self.btn_change_path.pack(side="left")
 
         self.entry_backup_path = ctk.CTkEntry(
             path_inner,
@@ -734,13 +724,15 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 14),
             state="readonly"
         )
-        self.entry_backup_path.grid(row=0, column=1, sticky="ew")
+        self.entry_backup_path.pack(side="left", fill="x", expand=True, padx=(0,8))
+
+        # Final window resize AFTER all sections (including Organising Utilities) exist
+        self.after(100, self.resize_to_fit)
 
     def update_collapsible_arrow_colours(self):
         """Called after theme change to recolour all section arrows."""
         for section in self.collapsible_sections:
             section.update_arrow_color()
-
 
     def apply_always_on_top(self, enabled: bool):
         """Apply Always-on-Top state using both Tk and WinAPI."""
@@ -761,16 +753,17 @@ class UtilityControlApp(ctk.CTk):
             )
         except Exception as e:
             print("[AlwaysOnTop] WinAPI error:", e)
-            
-            
+
     def resize_to_fit(self):
         """Force the window to resize itself to the natural height of its contents."""
         self.update_idletasks()  # Recalculate layout
-        req_width = self.winfo_reqwidth()
+
+        # Keep current width, only adjust height
+        current_width = self.winfo_width()
         req_height = self.winfo_reqheight()
 
-        # Apply new size
-        self.geometry(f"{req_width}x{req_height}")
+        # Apply new size: width fixed, height adaptive
+        self.geometry(f"{current_width}x{req_height}")
 
     # ===================================================================
     #  Save ALL toggle states to JSON
@@ -793,12 +786,10 @@ class UtilityControlApp(ctk.CTk):
 
         save_state(data)
 
-    
     def save_all_settings(self):
         old = load_state()   # previous saved values
 
         new = {}
-        
 
         # -------------------------
         # Screen Mover settings
