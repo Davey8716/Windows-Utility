@@ -223,8 +223,8 @@ class UtilityControlApp(ctk.CTk):
         self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
         switch_theme(self.theme_var.get())
     
-        self.title("🦉Problem? Gone!")
-        self.geometry("450x1100")
+        self.title("🦉 Daily Hassles? Gone!")
+        self.geometry("900x1150")
         self.resizable(False, False) 
         
         from tray_toggles import TrayIconManager
@@ -240,7 +240,7 @@ class UtilityControlApp(ctk.CTk):
         # Title
         # --------------------------------------------------------------
         
-        title = ctk.CTkLabel(self, text="🦉 Problem? Gone!", font=("Rubik UI", 24, "bold"))
+        title = ctk.CTkLabel(self, text="🦉 Daily Hassles? Gone!", font=("Rubik UI", 24, "bold"))
         title.pack(pady=10)
         
         # --------------------------------------------------------------
@@ -278,7 +278,7 @@ class UtilityControlApp(ctk.CTk):
         
         misc_section = CollapsibleSection(
             self,
-            "Miscellaneous:",
+            "User Interface:",
             section_id="misc",
             initial_open=self.saved_state["section_states"].get("misc", True)
         )
@@ -320,8 +320,8 @@ class UtilityControlApp(ctk.CTk):
 
         CtkTooltip(
             self.always_on_top_switch,
-            "When off Problem Gone will show below other apps if they are maximized.\n"
-            "When on Problem Gone will always show on top of other apps.\n"
+            "When off DHG will show below other apps if they are maximized.\n"
+            "When on DHG will always show on top of other apps.\n"
         )
         
         # -------------------------

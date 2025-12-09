@@ -144,9 +144,9 @@ class UtilityActionsManager:
 
         # Update label
         if enabled:
-            self.app.theme_switch.configure(text="Dark Mode Enabled")
+            self.app.theme_switch.configure(text="Dark Mode On")
         else:
-            self.app.theme_switch.configure(text="Light Mode Enabled")
+            self.app.theme_switch.configure(text="Light Mode On")
             
         # After switching theme, recolour collapse arrows
         self.app.update_collapsible_arrow_colours()
