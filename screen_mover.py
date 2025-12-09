@@ -333,6 +333,7 @@ class ScreenMoverWorker:
     #===================================================================
     #================ Window Nudger
     #===================================================================
+    
     def _force_align_all_windows(self):
         """
         When auto-align is enabled, immediately scan all windows and gently move
@@ -442,6 +443,7 @@ class ScreenMoverWorker:
             # -------------------------------------------------------------
             # Skip protected/elevated/system windows (Task Manager, MMC, etc.)
             # -------------------------------------------------------------
+            
             try:
                 import psutil, win32process
                 tid, pid = win32process.GetWindowThreadProcessId(hwnd)

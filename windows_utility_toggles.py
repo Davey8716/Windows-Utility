@@ -7,7 +7,6 @@ import os
 from screen_mover import SCREEN_MOVER
 import customtkinter as ctk
 
-
 # ===================================================================
 #  Utility Actions Manager (Monolithic Class)
 # ===================================================================
@@ -170,8 +169,6 @@ class UtilityActionsManager:
         self.app.apply_always_on_top(enabled)
         self.app.save_all_settings()
         
-
-
     # ===================================================================
     #  Auto-Align (Screen Mover)
     # ===================================================================
@@ -189,10 +186,6 @@ class UtilityActionsManager:
                 print("[GUI] Force align failed:", e)
 
     # ===================================================================
-    #  Organising Utilities - Backup Pinned Shortcuts (Placeholder)
-    # ===================================================================
-
-        # ===================================================================
     #  Organising Utilities - Backup Pinned Shortcuts (REAL LOGIC)
     # ===================================================================
 
@@ -260,7 +253,6 @@ class UtilityActionsManager:
             )
 
         print(f"[BACKUP] Completed. {count} shortcuts copied.")
-
 
     # ===================================================================
     #  Organising Utilities - Open Backup Folder

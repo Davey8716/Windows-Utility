@@ -53,6 +53,7 @@ class CtkTooltip:
     # ------------------------------------------------------
     # Schedules showing the tooltip
     # ------------------------------------------------------
+    
     def schedule(self, event=None):
         # Cancel previous timer
         if self.after_id:
@@ -65,6 +66,7 @@ class CtkTooltip:
     # ------------------------------------------------------
     # Shows the tooltip IF globally enabled
     # ------------------------------------------------------
+    
     def show(self):
         # Global tooltip toggle (check root window)
         root = self.widget.winfo_toplevel()
@@ -160,6 +162,7 @@ class CollapsibleSection:
     # ---------------------------------------------------------
     # NEW: automatic arrow colour based on Dark/Light mode
     # ---------------------------------------------------------
+    
     def update_arrow_color(self):
         mode = ctk.get_appearance_mode()
         if mode == "Dark":
@@ -270,6 +273,7 @@ class UtilityControlApp(ctk.CTk):
         # --------------------------------------------------------------
         #  Collapsible Sections Registry
         # --------------------------------------------------------------
+        
         self.collapsible_sections = []        # <--- ADD THIS FIRST
 
         # --------------------------------------------------------------
@@ -466,8 +470,7 @@ class UtilityControlApp(ctk.CTk):
         
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
         # Start with USB settings disabled
-        
-        
+
         winutil_section = CollapsibleSection(
             self,
             "Windows Utilities:",
@@ -593,7 +596,6 @@ class UtilityControlApp(ctk.CTk):
         self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
 
         self.actions.toggle_power_buttons()
-
 
         # --------------------------------------------------------------
         #  Organising Utilities  (NEW GREY SECTION)
@@ -883,6 +885,7 @@ class UtilityControlApp(ctk.CTk):
     # ===================================================================
     #  Create Folder On Desktop
     # ===================================================================
+    
     def _create_desktop_folder(self):
         import os
         import ctypes

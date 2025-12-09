@@ -18,6 +18,7 @@ def take_desktop_screenshot(app):
         # -------------------------------------------------------
         # 1) Minimize GUI
         # -------------------------------------------------------
+        
         app.withdraw()
         app.update()
         time.sleep(0.25)   # small pause ensures clean desktop
@@ -25,11 +26,13 @@ def take_desktop_screenshot(app):
         # -------------------------------------------------------
         # 2) Capture full desktop
         # -------------------------------------------------------
+        
         img = ImageGrab.grab()
 
         # -------------------------------------------------------
         # 3) Save dialog
         # -------------------------------------------------------
+        
         default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
 
         save_path = filedialog.asksaveasfilename(
@@ -50,8 +53,10 @@ def take_desktop_screenshot(app):
 
     finally:
         # -------------------------------------------------------
+        
         # 4) Restore GUI
         # -------------------------------------------------------
+        
         try:
             app.deiconify()
             app.after(50, app.lift)
