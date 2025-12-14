@@ -2,6 +2,10 @@
 
 
 
+**Rember to add mutex so it runs one singular instance only once the exe has been built + the listener code(can take from exe builder) to bring program to front if minimized and double clicked on exe icon.**
+
+
+
 **Restructure Ui to be two 450px boxes side by then 5 deep**
 
 
