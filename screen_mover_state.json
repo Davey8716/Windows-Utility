@@ -7,6 +7,7 @@
     "usb_plug_enabled": false,
     "theme_dark": true,
     "always_on_top_enabled": false,
+    
     "show_power_buttons": false,
     "tooltips_enabled": true,
     "backup_folder_path": "C:/Users/davey/Desktop/lol",
