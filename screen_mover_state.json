@@ -5,7 +5,7 @@
     "usb_idle_enabled": false,
     "usb_download_enabled": false,
     "usb_plug_enabled": false,
-    "theme_dark": false,
+    "theme_dark": true,
     "always_on_top_enabled": false,
     "show_power_buttons": false,
     "tooltips_enabled": true,
