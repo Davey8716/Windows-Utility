@@ -6,6 +6,46 @@
 
 
 
+**These are ideal candidates:**
+
+
+
+**sfc /scannow**
+
+
+
+**chkdsk (read-only or scheduled)**
+
+
+
+**DISM /Online /Cleanup-Image /RestoreHealth**
+
+
+
+**ipconfig /flushdns**
+
+
+
+**ipconfig /renew**
+
+
+
+**netsh winsock reset**
+
+
+
+**shutdown /r**
+
+
+
+**taskkill /f /im explorer.exe + restart**
+
+
+
+**cleanmgr (disk cleanup)**
+
+
+
 **Restructure Ui to be two 450px boxes side by then 5 deep**
 
 
@@ -131,8 +171,6 @@
 
 
 **Final UI polish**
-
-
 
 
 
