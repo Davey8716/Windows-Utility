@@ -34,7 +34,7 @@
 
 
 
-**Sidebar utilities**
+**Sidebar utilities:**
 
 
 

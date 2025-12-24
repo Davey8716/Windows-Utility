@@ -1,6 +1,6 @@
 {
     "mmb_activation_enabled": true,
-    "auto_align_enabled": true,
+    "auto_align_enabled": false,
     "minimize_all_enabled": false,
     "usb_idle_enabled": false,
     "usb_download_enabled": false,
@@ -12,6 +12,11 @@
     "backup_folder_path": "C:/Users/davey/Desktop/lol",
     "section_states": {
         "misc": true,
+        "advanced_1": true,
+        "advanced_2": true,
+        "advanced_3": true,
+        "advanced_4": true,
+        "advanced_5": false,
         "mover": true,
         "usb": true,
         "winutils": true,

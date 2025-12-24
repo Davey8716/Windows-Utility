@@ -199,62 +199,61 @@ class CollapsibleSection:
 # ===================================================================
 #  Main App Gui
 # ===================================================================
-
 class UtilityControlApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        
-        # Always keep GUI on top
+
+        # ==============================================================
+        # Window / Topmost
+        # ==============================================================
         self.attributes("-topmost", True)
 
-        # WinAPI reinforcement
         import ctypes
         ctypes.windll.user32.SetWindowPos(
             self.winfo_id(),
-            -1,   # HWND_TOPMOST
+            -1,
             0, 0, 0, 0,
-            0x0003  # SWP_NOSIZE | SWP_NOMOVE
+            0x0003
         )
-        
+
         SCREEN_MOVER.app_root = self
 
-        # Load saved state
+        # ==============================================================
+        # State / Actions
+        # ==============================================================
         self.saved_state = load_state()
-    
         self.actions = UtilityActionsManager(self)
-        # Restore theme mode on startup
-        self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
-        switch_theme(self.theme_var.get())
-    
-        self.title("🦉 Daily Hassles? Gone!")
-        self.geometry("900x1150")
-        self.resizable(False, False) 
-        
-        from tray_toggles import TrayIconManager
 
+        # ==============================================================
+        # Window geometry
+        # ==============================================================
+        self.COLLAPSED_WIDTH = 500
+        self.EXPANDED_WIDTH = 900
+        self.WINDOW_HEIGHT = 1150
+
+        self.geometry(f"{self.COLLAPSED_WIDTH}x{self.WINDOW_HEIGHT}")
+        self.expanded = False
+
+        self.resizable(False, False)
+
+        # ==============================================================
+        # Tray
+        # ==============================================================
+        from tray_toggles import TrayIconManager
         self.tray = TrayIconManager(self)
         self.tray.create_tray_icon()
         self.protocol("WM_DELETE_WINDOW", self.tray.on_close_to_tray)
 
-        # Auto-start backend if saved state says it should be ON
         SCREEN_MOVER.start()
 
-        # --------------------------------------------------------------
-        # Title
-        # --------------------------------------------------------------
-        
-        title = ctk.CTkLabel(self, text="🦉 Daily Hassles? Gone!", font=("Rubik UI", 24, "bold"))
-        title.pack(pady=10)
-        
-        # --------------------------------------------------------------
-        #  Miscellaneous / General Options  (NEW GREY WRAPPER)
-        # --------------------------------------------------------------
-
-        # Restore theme mode on startup
-        self.theme_var = ctk.BooleanVar(value=self.saved_state.get("theme_dark", True))
+        # ==============================================================
+        # Variables (DEFINE ONCE, BEFORE WIDGETS)
+        # ==============================================================
+        self.theme_var = ctk.BooleanVar(
+            value=self.saved_state.get("theme_dark", True)
+        )
         switch_theme(self.theme_var.get())
 
-        # NEW – Always On Top + Minimize All variables must be defined BEFORE UI elements
         self.always_on_top_var = ctk.BooleanVar(
             value=self.saved_state.get("always_on_top_enabled", True)
         )
@@ -262,38 +261,162 @@ class UtilityControlApp(ctk.CTk):
         self.minimize_all_var = ctk.BooleanVar(
             value=self.saved_state.get("minimize_all_enabled", False)
         )
-        
+
         self.tooltips_enabled_var = ctk.BooleanVar(
             value=self.saved_state.get("tooltips_enabled", True)
         )
-
-        # Local runtime copy for CtkTooltip to read
         self.tooltips_enabled = self.tooltips_enabled_var.get()
 
-        # --------------------------------------------------------------
-        #  Collapsible Sections Registry
-        # --------------------------------------------------------------
-        
-        self.collapsible_sections = []        # <--- ADD THIS FIRST
+        # ==============================================================
+        # Collapsible registry
+        # ==============================================================
+        self.collapsible_sections = []
 
-        # --------------------------------------------------------------
-        #  Miscellaneous / General Options
-        # --------------------------------------------------------------
+        # ==============================================================
+        # Root container (2 fixed columns, full height)
+        # ==============================================================
+        self.root_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.root_container.pack(fill="both", expand=True)
         
-        misc_section = CollapsibleSection(
-            self,
+        self.root_container.grid_propagate(False)
+        self.root_container.pack_propagate(False)
+
+        self.root_container.columnconfigure(0, weight=0, minsize=450)
+        self.root_container.columnconfigure(1, weight=0, minsize=450)
+        self.root_container.rowconfigure(0, weight=1)
+
+        # ==============================================================
+        # Main (left) panel — SCROLLABLE
+        # ==============================================================
+        self.main_frame = ctk.CTkScrollableFrame(
+            self.root_container,
+            width=450,
+            fg_color="transparent"
+        )
+        self.main_frame.grid(row=0, column=0, sticky="ns")
+
+        title = ctk.CTkLabel(
+            self.main_frame,
+            text="🦉 Daily Hassles? Gone!",
+            font=("Rubik UI", 24, "bold")
+        )
+        title.pack(pady=10)
+
+        # ==============================================================
+        # Side (right) panel — full height
+        # ==============================================================
+        self.side_frame = ctk.CTkFrame(
+            self.root_container,
+            width=450,
+            fg_color=("transparent")
+        )
+        self.side_frame.configure(width=450)
+        self.side_frame.grid_propagate(False)
+        # DO NOT grid yet
+        
+        # RIGHT COLUMN (hidden by default)
+        self.side_frame.grid(row=0, column=1, sticky="nsew")
+        self.side_frame.grid_remove()
+        
+        self.root_container.columnconfigure(0, weight=1)
+
+        # ==============================================================
+        # Collapsible sections
+        # ==============================================================
+        self.misc_section = CollapsibleSection(
+            self.main_frame,
             "User Interface:",
             section_id="misc",
-            initial_open=self.saved_state["section_states"].get("misc", True)
+            initial_open=self.saved_state.get("section_states", {}).get("misc", True)
         )
-        self.collapsible_sections.append(misc_section)
+        self.collapsible_sections.append(self.misc_section)
+        
+        # ==============================================================
+        # Right Column Header
+        # ==============================================================
+
+        self.advanced_title = ctk.CTkLabel(
+            self.side_frame,
+            text="⚠ Advanced Tools",
+            font=("Rubik UI", 22, "bold")
+        )
+        self.advanced_title.pack(anchor="w", padx=12, pady=(14, 10))
+    
+        # ==============================================================
+        # Right Column — Advanced Tool Sections (placeholders)
+        # ==============================================================
+
+        self.advanced_section_1 = CollapsibleSection(
+            self.side_frame,
+            "🧪 Experimental",
+            section_id="advanced_1",
+            initial_open=False
+        )
+        self.collapsible_sections.append(self.advanced_section_1)
+        self.advanced_section_1.wrapper.pack(fill="x", expand=True, padx=8)
+        
+        self.advanced_section_2 = CollapsibleSection(
+            self.side_frame,
+            "🧠 Power & System",
+            section_id="advanced_2",
+            initial_open=False
+        )
+        
+        self.collapsible_sections.append(self.advanced_section_2)
+        self.advanced_section_2.wrapper.pack(fill="x", expand=True, padx=8)
+
+        self.advanced_section_3 = CollapsibleSection(
+            self.side_frame,
+            "🛠 Debug / Maintenance",
+            section_id="advanced_3",
+            initial_open=False
+        )
+        self.collapsible_sections.append(self.advanced_section_3)
+        self.advanced_section_3.wrapper.pack(fill="x", expand=True, padx=8)
+
+        self.advanced_section_4 = CollapsibleSection(
+            self.side_frame,
+            "🔐 Privacy / Security",
+            section_id="advanced_4",
+            initial_open=False
+        )
+        
+        self.collapsible_sections.append(self.advanced_section_4)
+        self.advanced_section_4.wrapper.pack(fill="x", expand=True, padx=8)
+
+        self.advanced_section_5 = CollapsibleSection(
+            self.side_frame,
+            "⚙ Miscellaneous",
+            section_id="advanced_5",
+            initial_open=False
+        )
+        self.collapsible_sections.append(self.advanced_section_5)
+        self.advanced_section_5.wrapper.pack(fill="x", expand=True, padx=8)
+        
+
+
+        # ==============================================================
+        # Expand / Collapse button
+        # ==============================================================
+        self.expand_btn = ctk.CTkButton(
+            self,
+            text="▶",
+            width=28,
+            height=80,
+            corner_radius=8,
+            command=self.toggle_side_panel,
+            fg_color="#2a2a2a",
+            hover_color="#3a3a3a",
+            font=("Rubik UI", 18, "bold")
+        )
+        self.expand_btn.place(relx=1.0, rely=0.5, anchor="e")
 
         # -------------------------
         # Dark Mode Toggle
         # -------------------------
 
         self.theme_switch = ctk.CTkSwitch(
-            misc_section.content,    # FIXED
+            self.misc_section.content,    # FIXED
             text="Dark Mode",
             variable=self.theme_var,
             command=self.actions.theme_toggle,
@@ -314,7 +437,7 @@ class UtilityControlApp(ctk.CTk):
         # -------------------------
 
         self.always_on_top_switch = ctk.CTkSwitch(
-            misc_section.content,
+            self.misc_section.content,
             text="Always On Top",
             variable=self.always_on_top_var,
             command=self.actions.always_on_top_toggle,
@@ -333,7 +456,7 @@ class UtilityControlApp(ctk.CTk):
         # -------------------------
 
         self.tooltip_switch = ctk.CTkSwitch(
-            misc_section.content,  
+            self.misc_section.content,  
             text="Enable Tooltips",
             variable=self.tooltips_enabled_var,
             command=self.actions.tooltips_toggle,
@@ -351,7 +474,7 @@ class UtilityControlApp(ctk.CTk):
         # -------------------------
 
         self.minimize_all_switch = ctk.CTkSwitch(
-            misc_section.content, 
+            self.misc_section.content, 
             text="Max/Min All Opened Program Windows",
             variable=self.minimize_all_var,
             command=self.actions.minimize_all_toggle,
@@ -372,7 +495,7 @@ class UtilityControlApp(ctk.CTk):
         # ------------------------------------------------------------------
         
         mover_section = CollapsibleSection(
-            self,
+            self.main_frame,
             "Quick app/browser screen changer:",
             section_id="mover",
             initial_open=self.saved_state["section_states"].get("mover", True)
@@ -421,7 +544,7 @@ class UtilityControlApp(ctk.CTk):
         # ------------------------------------------------------------------
         
         usb_section = CollapsibleSection(
-            self,
+            self.main_frame,
             "Drive Reminder Options:",
             section_id="usb",
             initial_open=self.saved_state["section_states"].get("usb", True)
@@ -472,7 +595,7 @@ class UtilityControlApp(ctk.CTk):
         # Start with USB settings disabled
 
         winutil_section = CollapsibleSection(
-            self,
+            self.main_frame,
             "Windows Utilities:",
             section_id="winutils",
             initial_open=self.saved_state.get("section_states", {}).get("winutils", True)
@@ -604,7 +727,7 @@ class UtilityControlApp(ctk.CTk):
         from screenshot_tool import take_desktop_screenshot
 
         organising_section = CollapsibleSection(
-            self,
+            self.main_frame,
             "Organising Utilities:",
             section_id="organising",
             initial_open=self.saved_state.get("section_states", {}).get("organising", True)
@@ -672,7 +795,7 @@ class UtilityControlApp(ctk.CTk):
         # --------------------------------------------------------------
 
         desktop_backup_section = CollapsibleSection(
-            self,
+            self.main_frame,
             "Desktop Backup Utilties:",
             section_id="desktop_backup",
             initial_open=self.saved_state.get("section_states", {}).get("desktop_backup", True)
@@ -758,7 +881,22 @@ class UtilityControlApp(ctk.CTk):
             state="readonly"
         )
         self.entry_backup_path.pack(side="left", fill="x", expand=True, padx=(10, 8))
-
+        
+    # ==============================================================
+    # Side panel toggle (NO UI CREATION HERE)
+    # ==============================================================
+    
+    def toggle_side_panel(self):
+        if not self.expanded:
+            self.side_frame.grid(row=0, column=1, sticky="ns")
+            self.geometry(f"{self.EXPANDED_WIDTH}x{self.WINDOW_HEIGHT}")
+            self.expand_btn.configure(text="◀")
+            self.expanded = True
+        else:
+            self.side_frame.grid_remove()
+            self.geometry(f"{self.COLLAPSED_WIDTH}x{self.WINDOW_HEIGHT}")
+            self.expand_btn.configure(text="▶")
+            self.expanded = False
 
     def update_collapsible_arrow_colours(self):
         """Called after theme change to recolour all section arrows."""
@@ -786,15 +924,13 @@ class UtilityControlApp(ctk.CTk):
             print("[AlwaysOnTop] WinAPI error:", e)
 
     def resize_to_fit(self):
-        """Force the window to resize itself to the natural height of its contents."""
+        """Keep the window height locked; never auto-resize to content."""
         self.update_idletasks()  # Recalculate layout
 
-        # Keep current width, only adjust height
-        current_width = self.winfo_width()
-        req_height = self.winfo_reqheight()
+        # Lock to the configured size (width depends on expanded state)
+        width = self.EXPANDED_WIDTH if self.expanded else self.COLLAPSED_WIDTH
+        self.geometry(f"{width}x{self.WINDOW_HEIGHT}")
 
-        # Apply new size: width fixed, height adaptive
-        self.geometry(f"{current_width}x{req_height}")
 
     # ===================================================================
     #  Save ALL toggle states to JSON
