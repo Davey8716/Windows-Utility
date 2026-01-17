@@ -733,18 +733,20 @@ class UtilityControlApp(ctk.CTk):
             initial_open=self.saved_state.get("section_states", {}).get("organising", True)
         )
         self.collapsible_sections.append(organising_section)
-        self.organise_frame = organising_section.content   # <-- FIX HERE
+        self.organise_frame = organising_section.content
 
-        # =============== Desktop Screenshotter Button =================
+        # --------------------------------------------------------------
+        # Desktop Screenshot Button (top)
+        # --------------------------------------------------------------
 
         self.btn_desktop_screenshot = ctk.CTkButton(
             self.organise_frame,
-            text="🖼 Desktop Screenshot",
-            width=200,
+            text="Desktop Screenshot",
+            width=150,
             command=lambda: take_desktop_screenshot(self),
             font=("Rubik UI", 16, "bold")
         )
-        self.btn_desktop_screenshot.pack(anchor="w", padx=6, pady=(4, 8))
+        self.btn_desktop_screenshot.pack(anchor="w", pady=(5, 6))
 
         CtkTooltip(
             self.btn_desktop_screenshot,
@@ -752,19 +754,31 @@ class UtilityControlApp(ctk.CTk):
             "lets you choose a save location, then restores the window."
         )
 
-        # ===================================================================
-        #  Folder Creator Row
-        # ===================================================================
+        # --------------------------------------------------------------
+        # Folder Creator Row (button left, entry right)
+        # --------------------------------------------------------------
 
-        folder_row = ctk.CTkFrame(
-            organising_section.content,
-            fg_color="transparent"
+        folder_row = ctk.CTkFrame(self.organise_frame, fg_color="transparent")
+        folder_row.pack(anchor="w")
+
+        # Left: Create Folder button
+        self.btn_create_folder = ctk.CTkButton(
+            folder_row,
+            text="Folder To Desktop",
+            width=140,
+            font=("Rubik UI", 16, "bold"),
+            command=self._create_desktop_folder
         )
-        folder_row.pack(fill="x", padx=10, pady=(4, 8))
+        self.btn_create_folder.pack(side="left", padx=(5, 8))
 
-        # --- 1) Folder name entry (right side) ---
+        CtkTooltip(
+            self.btn_create_folder,
+            "Type a folder name in the box → Click to create\n"
+            "A new folder will appear instantly on your Desktop."
+        )
+
+        # Right: Folder name entry
         self.folder_name_var = ctk.StringVar()
-
         self.folder_name_entry = ctk.CTkEntry(
             folder_row,
             placeholder_text="Folder name…",
@@ -772,23 +786,7 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 16, "bold"),
             width=220
         )
-        self.folder_name_entry.pack(side="right", padx=10)
-
-        # --- 2) Create Folder button (left side, fixed) ---
-        self.btn_create_folder = ctk.CTkButton(
-            folder_row,
-            text="📁 Folder To Desktop",
-            width=140,
-            font=("Rubik UI", 16, "bold"),
-            command=self._create_desktop_folder
-        )
-        self.btn_create_folder.pack(side="left")
-
-        CtkTooltip(
-            self.btn_create_folder,
-            "Type a folder name in the box → Click to create\n"
-            "A new folder will appear instantly on your Desktop."
-        )
+        self.folder_name_entry.pack(side="left")
 
         # --------------------------------------------------------------
         #  Desktop Backup  (NEW COLLAPSIBLE SECTION)
@@ -816,9 +814,9 @@ class UtilityControlApp(ctk.CTk):
         # BACKUP BUTTON (top)
         self.btn_backup_pins = ctk.CTkButton(
             backup_buttons_frame,
-            text="💾 Backup Taskbar",
+            text="Backup Taskbar",
             font=("Rubik UI", 15, "bold"),
-            width=150,
+            width=100,
             command=self.actions.backup_pinned_shortcuts
         )
         self.btn_backup_pins.pack(anchor="w", pady=(0, 5))
@@ -832,12 +830,12 @@ class UtilityControlApp(ctk.CTk):
         # OPEN BACKUP BUTTON (underneath)
         self.btn_open_backup = ctk.CTkButton(
             backup_buttons_frame,
-            text="📂 Open Backup",
+            text="Open Backup",
             font=("Rubik UI", 15, "bold"),
-            width=150,
+            width=90,
             command=self.actions.open_backup_folder
         )
-        self.btn_open_backup.pack(anchor="w")
+        self.btn_open_backup.pack(anchor="w", pady = (0,5))
 
         CtkTooltip(
             self.btn_open_backup,
@@ -862,12 +860,12 @@ class UtilityControlApp(ctk.CTk):
 
         self.btn_change_path = ctk.CTkButton(
             path_inner,
-            text="📂 Change Folder",
+            text=" Change Folder",
             width=80,
             font=("Rubik UI", 16, "bold"),
             command=self.actions.change_backup_folder
         )
-        self.btn_change_path.pack(side="left")
+        self.btn_change_path.pack(anchor="w", pady = (0,5))
 
         CtkTooltip(
             self.btn_change_path,
