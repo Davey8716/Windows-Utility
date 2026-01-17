@@ -100,9 +100,9 @@ class ScreenMoverWorker:
             )
             return
 
-        width, height = 110, 50
+        width, height = 100, 50
         pos_x = int(x - 50)
-        pos_y = int(y - 20)
+        pos_y = int(y - 22)
 
         hinstance = win32api.GetModuleHandle(None)
 
@@ -178,7 +178,7 @@ class ScreenMoverWorker:
 
         # --- Draw bright cyan arrows ---
         logfont = win32gui.LOGFONT()
-        logfont.lfHeight = -48
+        logfont.lfHeight = -35
         logfont.lfWeight = 900
         logfont.lfFaceName = "Rubik UI Symbol"
         logfont.lfQuality = win32con.ANTIALIASED_QUALITY
@@ -192,7 +192,7 @@ class ScreenMoverWorker:
             hdc,
             "⮜   ⮞",
             -1,
-            (0, 0, 110, 50),
+            (0, 0, 100, 40),
             win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE
         )
 
