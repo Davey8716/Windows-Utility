@@ -271,7 +271,9 @@ class UtilityControlApp(ctk.CTk):
         )
         self.tooltips_enabled = self.tooltips_enabled_var.get()
         
-        self.brave_export_path_var = ctk.StringVar(value="")
+        self.brave_export_path_var = ctk.StringVar(
+            value=self.saved_state.get("brave_export_path", "")
+        )
 
 
         # ==============================================================
@@ -475,20 +477,19 @@ class UtilityControlApp(ctk.CTk):
         )
         self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
 
-        
 
         # --------------------------------------------------------------
         # Advanced Section 2 — Power & System
         # --------------------------------------------------------------
 
-        self.advanced_section_2 = CollapsibleSection(
-            self.side_frame,
-            "Drive Space Display",
-            section_id="advanced_2",
-            initial_open=False
-        )
-        self.collapsible_sections.append(self.advanced_section_2)
-        self.advanced_section_2.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        # self.advanced_section_2 = CollapsibleSection(
+        #     self.side_frame,
+        #     "Drive Space Display",
+        #     section_id="advanced_2",
+        #     initial_open=False
+        # )
+        # self.collapsible_sections.append(self.advanced_section_2)
+        # self.advanced_section_2.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
         # --------------------------------------------------------------
         # Advanced Section 3 — Universal Bookmarks Exporter
@@ -912,7 +913,7 @@ class UtilityControlApp(ctk.CTk):
             path_inner,
             textvariable=self.backup_path_var,
             font=("Rubik UI", 15),
-            width = 300,
+            width = 360,
             state="readonly"
         )
         self.entry_backup_path.pack(anchor="w", pady = (0,5))
@@ -920,14 +921,14 @@ class UtilityControlApp(ctk.CTk):
         # -------------------------------------------------
         # Final UI sync (ALL vars now exist)
         # -------------------------------------------------
-        self.actions.toggle_power_buttons()
+        # self.actions.toggle_power_buttons()
         
-        Desktop_icon_layout = CollapsibleSection(
-            self.main_frame,
-            "Desktop Icon Organiser:",
-            section_id="Organiser",
-        )
-        self.collapsible_sections.append(Desktop_icon_layout)
+        # Desktop_icon_layout = CollapsibleSection(
+        #     self.main_frame,
+        #     "Desktop Icon Organiser:",
+        #     section_id="Organiser",
+        # )
+        # self.collapsible_sections.append(Desktop_icon_layout)
         
     def _choose_brave_export_path(self):
         from tkinter import filedialog
@@ -946,7 +947,6 @@ class UtilityControlApp(ctk.CTk):
         if path:
             self.brave_export_path_var.set(path)
 
-
     def _run_brave_export(self):
         from tkinter import filedialog
         from datetime import datetime
@@ -960,15 +960,15 @@ class UtilityControlApp(ctk.CTk):
             initialfile=default_name,
             filetypes=[("HTML files", "*.html")]
         )
-
+        
         if not path:
             return
-
-        BraveBookmarksExporter().export_to_file(path)
-
-
-
         
+        if path:
+            self.brave_export_path_var.set(path)
+            self.save_all_settings()
+            BraveBookmarksExporter().export_to_file(path)
+
     # ==============================================================
     # Side panel toggle (NO UI CREATION HERE)
     # ==============================================================
@@ -1051,6 +1051,7 @@ class UtilityControlApp(ctk.CTk):
         new["mmb_activation_enabled"] = self.mmb_var.get()
         new["auto_align_enabled"]     = self.auto_align_var.get()
         new["minimize_all_enabled"] = self.minimize_all_var.get()
+        new["brave_export_path"] = self.brave_export_path_var.get()
 
         # Live update backend
         SCREEN_MOVER.enable_mmb        = new["mmb_activation_enabled"]

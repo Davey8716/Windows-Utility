@@ -15,6 +15,7 @@ def load_state() -> dict:
     
     DEFAULTS = {
         "mmb_activation_enabled": True,
+        "brave_export_path": "",
         "auto_align_enabled": False,                           
         "usb_idle_enabled": True,
         "usb_download_enabled": True,
