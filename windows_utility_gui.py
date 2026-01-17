@@ -6,10 +6,8 @@
 import customtkinter as ctk
 import tkinter as tk
 import os
-import ctypes
 from tkinter import messagebox
-from windows_utility_toggles import switch_theme   # add at top with other imports
-from windows_utility_toggles import UtilityActionsManager
+from windows_utility_toggles import switch_theme, UtilityActionsManager  # add at top with other imports
 from pathlib import Path
 from screen_mover import SCREEN_MOVER
 from state_manager import load_state, save_state
@@ -145,7 +143,7 @@ class CollapsibleSection:
         # Toggle button
         self.button = ctk.CTkButton(
             self.header,
-            text="▾" if initial_open else "▸",
+            text="▼" if initial_open else "▶",
             width=30,
             height=20,
             command=self.toggle,
@@ -178,10 +176,10 @@ class CollapsibleSection:
     def toggle(self):
         if self.open:
             self.content.pack_forget()
-            self.button.configure(text="▸")
+            self.button.configure(text="▶")
         else:
             self.content.pack(fill="x", pady=(0, 10), padx=10)
-            self.button.configure(text="▾")
+            self.button.configure(text="▼")
 
         self.open = not self.open
 
@@ -302,7 +300,7 @@ class UtilityControlApp(ctk.CTk):
 
         title = ctk.CTkLabel(
             self.main_frame,
-            text="🦉 Daily Hassles? Gone!",
+            text="Daily Hassles? Gone!",
             font=("Rubik UI", 24, "bold")
         )
         title.pack(pady=10)
@@ -322,7 +320,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.advanced_title = ctk.CTkLabel(
             self.side_frame,
-            text="⚠ Advanced Tools",
+            text="Advanced Tools",
             font=("Rubik UI", 22, "bold")
         )
         self.advanced_title.pack(padx=12, pady=(20, 20))
@@ -337,19 +335,149 @@ class UtilityControlApp(ctk.CTk):
             initial_open=self.saved_state.get("section_states", {}).get("misc", True)
         )
         self.collapsible_sections.append(self.misc_section)
+        
+        
+        
+        
+        # ==============================================================
+        # Right Column — Advanced Tool Sections
+        # ==============================================================
 
-        # ==============================================================
-        # Right Column — Advanced Tool Sections (placeholders)
-        # ==============================================================
+        # --------------------------------------------------------------
+        # Advanced Section 1 — Windows Utilities
+        # --------------------------------------------------------------
 
         self.advanced_section_1 = CollapsibleSection(
             self.side_frame,
-            "Experimental",
+            "Windows Utilities",
             section_id="advanced_1",
             initial_open=False
         )
         self.collapsible_sections.append(self.advanced_section_1)
         self.advanced_section_1.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+
+        parent = self.advanced_section_1.content
+
+        # Toggle ABOVE the grid
+        self.power_toggle_var = ctk.BooleanVar(
+            value=self.saved_state.get("show_power_buttons", False)
+        )
+
+        self.power_toggle = ctk.CTkSwitch(
+            parent,
+            text="Show Power Buttons",
+            variable=self.power_toggle_var,
+            command=self.actions.toggle_power_buttons,
+            font=("Rubik UI", 15, "bold")
+        )
+        self.power_toggle.pack(anchor="w", padx=10, pady=(2, 5))
+
+        CtkTooltip(
+            self.power_toggle,
+            "⚠️⚠️ Toggles on/off power options ⚠️⚠️\n"
+            "Made for clumsy people who might shutdown by mistake etc.\n"
+            "Remembers if it's on or off on startup.\n"
+        )
+
+        btn_width = 120
+
+        util_grid = ctk.CTkFrame(
+            parent,
+            fg_color="transparent",
+            corner_radius=8
+        )
+        util_grid.pack(fill="x", padx=10, pady=5)
+
+        util_grid.columnconfigure(0, weight=1)
+        util_grid.columnconfigure(1, weight=1)
+
+        # ==========================
+        # LEFT COLUMN
+        # ==========================
+
+        self.btn_settings = ctk.CTkButton(
+            util_grid,
+            text="System Settings",
+            width=btn_width,
+            command=lambda: os.system("start ms-settings:"),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.btn_settings.grid(row=0, column=0, sticky="w", pady=3)
+
+        self.btn_device_mgr = ctk.CTkButton(
+            util_grid,
+            text="Device Manager",
+            width=btn_width,
+            command=lambda: os.system("devmgmt.msc"),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.btn_device_mgr.grid(row=1, column=0, sticky="w", pady=3)
+
+        self.btn_task_mgr = ctk.CTkButton(
+            util_grid,
+            text="Task Manager",
+            width=btn_width,
+            command=lambda: os.system("taskmgr"),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.btn_task_mgr.grid(row=2, column=0, sticky="w", pady=3)
+
+        self.btn_router = ctk.CTkButton(
+            util_grid,
+            text="Router Login",
+            width=btn_width,
+            command=self.actions.open_router_page,
+            font=("Rubik UI", 15, "bold")
+        )
+        self.btn_router.grid(row=3, column=0, sticky="w", pady=3)
+
+        # ==========================
+        # RIGHT COLUMN
+        # ==========================
+
+        self.btn_sleep = ctk.CTkButton(
+            util_grid,
+            text="💤 Sleep",
+            width=btn_width,
+            command=lambda: os.system(
+                "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
+            ),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.btn_sleep.grid(row=0, column=1, sticky="e", pady=3)
+
+        self.btn_lock = ctk.CTkButton(
+            util_grid,
+            text="🔒 Lock PC",
+            width=btn_width,
+            command=lambda: ctypes.windll.user32.LockWorkStation(),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.btn_lock.grid(row=1, column=1, sticky="e", pady=3)
+
+        self.btn_restart = ctk.CTkButton(
+            util_grid,
+            text="🔁 Restart",
+            width=btn_width,
+            command=lambda: os.system("shutdown /r /t 0"),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.btn_restart.grid(row=2, column=1, sticky="e", pady=3)
+
+        self.btn_shutdown = ctk.CTkButton(
+            util_grid,
+            text="⏻ Shutdown",
+            width=btn_width,
+            command=lambda: os.system("shutdown /s /t 0"),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
+
+        
+
+        # --------------------------------------------------------------
+        # Advanced Section 2 — Power & System
+        # --------------------------------------------------------------
 
         self.advanced_section_2 = CollapsibleSection(
             self.side_frame,
@@ -360,6 +488,10 @@ class UtilityControlApp(ctk.CTk):
         self.collapsible_sections.append(self.advanced_section_2)
         self.advanced_section_2.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
+        # --------------------------------------------------------------
+        # Advanced Section 3 — Debug / Maintenance
+        # --------------------------------------------------------------
+
         self.advanced_section_3 = CollapsibleSection(
             self.side_frame,
             "Debug / Maintenance",
@@ -368,6 +500,10 @@ class UtilityControlApp(ctk.CTk):
         )
         self.collapsible_sections.append(self.advanced_section_3)
         self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+
+        # --------------------------------------------------------------
+        # Advanced Section 4 — Privacy / Security
+        # --------------------------------------------------------------
 
         self.advanced_section_4 = CollapsibleSection(
             self.side_frame,
@@ -378,6 +514,10 @@ class UtilityControlApp(ctk.CTk):
         self.collapsible_sections.append(self.advanced_section_4)
         self.advanced_section_4.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
+        # --------------------------------------------------------------
+        # Advanced Section 5 — Miscellaneous
+        # --------------------------------------------------------------
+
         self.advanced_section_5 = CollapsibleSection(
             self.side_frame,
             "Miscellaneous",
@@ -387,12 +527,28 @@ class UtilityControlApp(ctk.CTk):
         self.collapsible_sections.append(self.advanced_section_5)
         self.advanced_section_5.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
+                
+                
+                
+                
+                
+        
+
+        
+        
+        
+        
+        
+        
+        
+
+
         # ==============================================================
         # Expand / Collapse button
         # ==============================================================
         self.expand_btn = ctk.CTkButton(
             self,
-            text="▶",
+            text="▼",
             width=28,
             height=80,
             corner_radius=8,
@@ -504,6 +660,9 @@ class UtilityControlApp(ctk.CTk):
         )
         self.mmb_switch.pack(anchor="w", padx=10, pady=2)
         
+
+        
+                
         # Add tooltip
         CtkTooltip(
             self.mmb_switch,
@@ -586,131 +745,6 @@ class UtilityControlApp(ctk.CTk):
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
         # Start with USB settings disabled
 
-        winutil_section = CollapsibleSection(
-            self.main_frame,
-            "Windows Utilities:",
-            section_id="winutils",
-            initial_open=self.saved_state.get("section_states", {}).get("winutils", True)
-        )
-        self.collapsible_sections.append(winutil_section)
-        self.win_utils_frame = winutil_section.content
-
-        # Toggle ABOVE the grid (safe)
-        self.power_toggle_var = ctk.BooleanVar(
-            value=self.saved_state.get("show_power_buttons", False)
-        )
-
-        self.power_toggle = ctk.CTkSwitch(
-            self.win_utils_frame,
-            text="Show Power Buttons",
-            variable=self.power_toggle_var,
-            command=self.actions.toggle_power_buttons,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.power_toggle.pack(anchor="w", padx=10, pady=(2, 5))
-
-        CtkTooltip(
-            self.power_toggle,
-            "⚠️⚠️ Toggles on/off power options ⚠️⚠️\n"
-            "Made for clumsy people who might shutdown by mistake etc.\n"
-            "Remembers if it's on or off on startup.\n"
-        )
-
-        # --- NOW define btn_width ---
-        btn_width = 120
-
-        # --- NOW define util_grid ---
-        util_grid = ctk.CTkFrame(
-            self.win_utils_frame,
-            fg_color="transparent",
-            corner_radius=8
-        )
-        util_grid.pack(fill="x", padx=10, pady=5)
-
-        util_grid.columnconfigure(0, weight=1)
-        util_grid.columnconfigure(1, weight=1)
-
-        # ==========================
-        # LEFT COLUMN
-        # ==========================
-
-        self.btn_settings = ctk.CTkButton(
-            util_grid,
-            text="System Settings",
-            width=btn_width,
-            command=lambda: os.system("start ms-settings:"),
-            font=("Rubik UI", 15,"bold")
-        )
-        self.btn_settings.grid(row=0, column=0, sticky="w", pady=3)
-
-        self.btn_device_mgr = ctk.CTkButton(
-            util_grid,
-            text="Device Manager",
-            width=btn_width,
-            command=lambda: os.system("devmgmt.msc"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_device_mgr.grid(row=1, column=0, sticky="w", pady=3)
-
-        self.btn_task_mgr = ctk.CTkButton(
-            util_grid,
-            text="Task Manager",
-            width=btn_width,
-            command=lambda: os.system("taskmgr"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_task_mgr.grid(row=2, column=0, sticky="w", pady=3)
-
-        self.btn_router = ctk.CTkButton(
-            util_grid,
-            text="Router Login",
-            width=btn_width,
-            command=self.actions.open_router_page,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_router.grid(row=3, column=0, sticky="w", pady=3)
-
-        # ==========================
-        # RIGHT COLUMN
-        # ==========================
-
-        self.btn_sleep = ctk.CTkButton(
-            util_grid,
-            text="💤 Sleep",
-            width=btn_width,
-            command=lambda: os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_sleep.grid(row=0, column=1, sticky="e", pady=3)
-
-        self.btn_lock = ctk.CTkButton(
-            util_grid,
-            text="🔒 Lock PC",
-            width=btn_width,
-            command=lambda: ctypes.windll.user32.LockWorkStation(),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_lock.grid(row=1, column=1, sticky="e", pady=3)
-
-        self.btn_restart = ctk.CTkButton(
-            util_grid,
-            text="🔁 Restart",
-            width=btn_width,
-            command=lambda: os.system("shutdown /r /t 0"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_restart.grid(row=2, column=1, sticky="e", pady=3)
-
-        self.btn_shutdown = ctk.CTkButton(
-            util_grid,
-            text="⏻ Shutdown",
-            width=btn_width,
-            command=lambda: os.system("shutdown /s /t 0"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
-
-        self.actions.toggle_power_buttons()
 
         # --------------------------------------------------------------
         #  Organising Utilities  (NEW GREY SECTION)
@@ -871,6 +905,11 @@ class UtilityControlApp(ctk.CTk):
         )
         self.entry_backup_path.pack(anchor="w", pady = (0,5))
         
+        # -------------------------------------------------
+        # Final UI sync (ALL vars now exist)
+        # -------------------------------------------------
+        self.actions.toggle_power_buttons()
+        
     # ==============================================================
     # Side panel toggle (NO UI CREATION HERE)
     # ==============================================================
@@ -879,12 +918,12 @@ class UtilityControlApp(ctk.CTk):
         if not self.expanded:
             self.side_frame.grid(row=0, column=1, sticky="ns")
             self.geometry(f"{self.EXPANDED_WIDTH}x{self.WINDOW_HEIGHT}")
-            self.expand_btn.configure(text="◀")
+            self.expand_btn.configure(text="▶")
             self.expanded = True
         else:
             self.side_frame.grid_remove()
             self.geometry(f"{self.COLLAPSED_WIDTH}x{self.WINDOW_HEIGHT}")
-            self.expand_btn.configure(text="▶")
+            self.expand_btn.configure(text="▼")
             self.expanded = False
 
     def update_collapsible_arrow_colours(self):
