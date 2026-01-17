@@ -26,6 +26,8 @@ class ScreenMoverWorker:
         self.last_move_time = 0
 
         self.overlay_hwnd = None
+        self.gesture_hwnd = None
+
 
         self.mmb_down = False
         self.lmb_down = False
@@ -75,6 +77,127 @@ class ScreenMoverWorker:
             if self.mouse_listener:
                 self.mouse_listener.stop()
                 self.mouse_listener = None
+                
+    # ==============================================================
+    #  OVERLAY (WINAPI STATIC WINDOW) defines overlay location
+    # ==============================================================
+
+    def _safe_show_overlay(self, x, y):
+        """Overlay is ALWAYS topmost, independent of GUI always-on-top state."""
+        try:
+            import win32api, win32con, win32gui
+        except Exception:
+            print("[OVERLAY] WinAPI missing")
+            return
+
+        # Already exists → raise it
+        if self.overlay_hwnd and win32gui.IsWindow(self.overlay_hwnd):
+            win32gui.SetWindowPos(
+                self.overlay_hwnd,
+                win32con.HWND_TOPMOST,
+                0, 0, 0, 0,
+                win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+            )
+            return
+
+        width, height = 110, 50
+        pos_x = int(x - 50)
+        pos_y = int(y - 20)
+
+        hinstance = win32api.GetModuleHandle(None)
+
+        class_name = "FlickOverlayClass"
+        wndclass = win32gui.WNDCLASS()
+        wndclass.hInstance = hinstance
+        wndclass.lpszClassName = class_name
+        wndclass.lpfnWndProc = {win32con.WM_PAINT: self._overlay_paint}
+
+        try:
+            win32gui.RegisterClass(wndclass)
+        except:
+            pass
+
+        # Independent topmost popup window (NOT tied to GUI)
+        self.overlay_hwnd = win32gui.CreateWindowEx(
+            win32con.WS_EX_TOPMOST
+            | win32con.WS_EX_TOOLWINDOW
+            | win32con.WS_EX_LAYERED
+            | win32con.WS_EX_TRANSPARENT,
+            class_name,
+            "",
+            win32con.WS_POPUP,
+            pos_x,
+            pos_y,
+            width,
+            height,
+            0,   # no parent (critical)
+            0,
+            hinstance,
+            None
+        )
+        
+        # Apply rounded corners to overlay window
+        rgn = win32gui.CreateRoundRectRgn(
+            0, 0, width, height,
+            16, 16  # corner radius (X, Y)
+        )
+        win32gui.SetWindowRgn(self.overlay_hwnd, rgn, True)
+
+        if not self.overlay_hwnd:
+            print("[OVERLAY] Failed to create overlay")
+            return
+
+        win32gui.SetLayeredWindowAttributes(
+            self.overlay_hwnd, 0, 255, win32con.LWA_ALPHA
+        )
+
+        # FINAL reinforcement
+        win32gui.SetWindowPos(
+            self.overlay_hwnd,
+            win32con.HWND_TOPMOST,
+            pos_x, pos_y, width, height,
+            win32con.SWP_SHOWWINDOW | win32con.SWP_NOACTIVATE
+        )
+
+
+    #===================================================================
+    #===================  Paints the mover icon
+    #===================================================================
+    
+    def _overlay_paint(self, hwnd, msg, wparam, lparam):
+        """Custom paint handler for transparent arrow-only overlay."""
+        hdc, paint = win32gui.BeginPaint(hwnd)
+
+        # Transparent background mode for text
+        win32gui.SetBkMode(hdc, win32con.TRANSPARENT)
+
+        # Fill whole window with BLACK so color key makes it invisible
+        rect = win32gui.GetClientRect(hwnd)
+        brush = win32gui.CreateSolidBrush(win32api.RGB(0, 0, 0))
+        win32gui.FillRect(hdc, rect, brush)
+
+        # --- Draw bright cyan arrows ---
+        logfont = win32gui.LOGFONT()
+        logfont.lfHeight = -48
+        logfont.lfWeight = 900
+        logfont.lfFaceName = "Rubik UI Symbol"
+        logfont.lfQuality = win32con.ANTIALIASED_QUALITY
+
+        font = win32gui.CreateFontIndirect(logfont)
+        win32gui.SelectObject(hdc, font)
+
+        win32gui.SetTextColor(hdc, win32api.RGB(0, 178, 255))
+
+        win32gui.DrawText(
+            hdc,
+            "⮜   ⮞",
+            -1,
+            (0, 0, 110, 50),
+            win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE
+        )
+
+        win32gui.EndPaint(hwnd, paint)
+        return 0
 
     # =============================================================
     #  Mouse Hook
@@ -131,26 +254,60 @@ class ScreenMoverWorker:
                     self.begin_gesture(x, y)
                     return
 
-    # ==============================================================
-    #  OVERLAY ICON (SAFE TKINTER VERSION)
-    # ==============================================================
-    
-    def _is_system_window(self, hwnd):
-        """Return True if window belongs to Explorer or system popups."""
+    def begin_gesture(self, x, y):
+        """Enter gesture mode and request overlay creation on the main Tk thread."""
+        self.gesture_active = True
+
         try:
-            import psutil
-            tid, pid = win32process.GetWindowThreadProcessId(hwnd)
-            exe = psutil.Process(pid).name().lower()
-            return exe in (
-                "explorer.exe",               # Taskbar, tray popups
-                "shellexperiencehost.exe",    # Windows 10/11 UI
-                "startmenuexperiencehost.exe",
-                "searchhost.exe",
-                "widgets.exe"
-            )
+            # window under cursor at the moment gesture starts
+            self.gesture_hwnd = win32gui.WindowFromPoint((x, y))
         except Exception:
+            self.gesture_hwnd = None   # <-- IMPORTANT
+        finally:
+            # Flick baseline MUST always be set
+            self.flick_start_x = x
+            self.flick_start_time = time.time()
+
+        print(f"[GESTURE] Begin, x={x}")
+
+        # Create overlay safely on the Tkinter main thread
+        try:
+            if hasattr(self, "app_root") and self.app_root:
+                self.app_root.after(0, lambda: self._safe_show_overlay(x, y))
+            else:
+                threading.Thread(
+                    target=lambda: self._safe_show_overlay(x, y),
+                    daemon=True
+                ).start()
+        except Exception as e:
+            print("[OVERLAY] Failed to schedule overlay:", e)
+
+            
+    #===================================================================
+    #===================  Gesture ender
+    #===================================================================
+
+    def end_gesture(self):
+        """Exit gesture mode and hide overlay."""
+        print("[GESTURE] End")
+        self.gesture_active = False
+        self.activation_method = None
+        self.flick_start_x = None
+        self.flick_start_time = None
+        self.gesture_hwnd = None
+
+        self.hide_overlay()
+        
+
+    def _check_flick(self, current_x):
+        """Detect flick ANY TIME while gesture is active."""
+        if self.flick_start_x is None:
             return False
 
+        distance = abs(current_x - self.flick_start_x)
+
+        return distance >= self.flick_threshold_px
+    
     def worker_loop(self):
         """Background loop: checks for flicks while a gesture is active."""
         print("[THREAD] Screen mover loop started.")
@@ -209,46 +366,28 @@ class ScreenMoverWorker:
                 except Exception as e:
                     print("[AUTO-ALIGN] Error:", e)
 
-    def begin_gesture(self, x, y):
-        """Enter gesture mode and request overlay creation on the main Tk thread."""
-        self.gesture_active = True
-        self.flick_start_x = x
-        self.flick_start_time = time.time()
-        print(f"[GESTURE] Begin, x={x}")
-
-        # Create overlay safely on the Tkinter main thread
-        try:
-            if hasattr(self, "app_root") and self.app_root:
-                self.app_root.after(0, lambda: self._safe_show_overlay(x, y))
-            else:
-                # fallback (still safer than direct call inside pynput thread)
-                threading.Thread(target=lambda: self._safe_show_overlay(x, y), daemon=True).start()
-        except Exception as e:
-            print("[OVERLAY] Failed to schedule overlay:", e)
-
-    def _check_flick(self, current_x):
-        """Detect flick ANY TIME while gesture is active."""
-        if self.flick_start_x is None:
-            return False
-
-        distance = abs(current_x - self.flick_start_x)
-
-        return distance >= self.flick_threshold_px
-
     def move_active_window(self, direction: str):
         """Move the active window between monitors, preserving size/state."""
         try:
-            win = gw.getActiveWindow()
-            if not win:
-                print("[MOVE] No active window detected.")
-                return
+            # ------------------------------------------------------------------
+            # Resolve target hwnd (gesture-safe)
+            # ------------------------------------------------------------------
+            hwnd = self.gesture_hwnd
 
-            hwnd = win._hWnd
+            if not hwnd:
+                win = gw.getActiveWindow()
+                if not win:
+                    print("[MOVE] No active window detected.")
+                    return
+                hwnd = win._hWnd
+
+            if hwnd == self.overlay_hwnd:
+                hwnd = win32gui.GetForegroundWindow()
 
             # ------------------------------------------------------------------
             # Enumerate monitors
             # ------------------------------------------------------------------
-            
+
             monitors = win32api.EnumDisplayMonitors()
             if len(monitors) < 2:
                 print("[MOVE] Only one monitor detected — skipping move.")
@@ -275,29 +414,23 @@ class ScreenMoverWorker:
             # ------------------------------------------------------------------
             # Current window placement
             # ------------------------------------------------------------------
-            
+
             placement = win32gui.GetWindowPlacement(hwnd)
             show_cmd = placement[1]
-
-            # Window is maximized?
             was_maximized = (show_cmd == win32con.SW_SHOWMAXIMIZED)
 
-            # Window rect BEFORE moving (restored bounds)
             left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-
-            # Restored window size
             restored_width = right - left
             restored_height = bottom - top
 
             # ------------------------------------------------------------------
             # STEP 0: Restore if minimized OR maximized
             # ------------------------------------------------------------------
-            
+
             if show_cmd in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 time.sleep(0.02)
 
-                # Update restored rect AFTER restore
                 left, top, right, bottom = win32gui.GetWindowRect(hwnd)
                 restored_width = right - left
                 restored_height = bottom - top
@@ -305,12 +438,14 @@ class ScreenMoverWorker:
             # ------------------------------------------------------------------
             # STEP 1: MOVE ONLY — keep original size
             # ------------------------------------------------------------------
-            
+
+            cur_left, cur_top, _, _ = win32gui.GetWindowRect(hwnd)
+
             win32gui.SetWindowPos(
                 hwnd,
                 win32con.HWND_TOP,
-                t_left + (left - win32gui.GetWindowRect(hwnd)[0]),   # keep relative offset
-                t_top + (top  - win32gui.GetWindowRect(hwnd)[1]),
+                t_left + (left - cur_left),
+                t_top  + (top  - cur_top),
                 restored_width,
                 restored_height,
                 win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
@@ -319,9 +454,9 @@ class ScreenMoverWorker:
             time.sleep(0.02)
 
             # ------------------------------------------------------------------
-            # STEP 2: If originally maximized → re-maximize on new monitor
+            # STEP 2: Re-maximize if needed
             # ------------------------------------------------------------------
-            
+
             if was_maximized:
                 win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
 
@@ -329,7 +464,8 @@ class ScreenMoverWorker:
 
         except Exception as e:
             print(f"[ERROR] move_active_window: {e}")
-            
+
+
     #===================================================================
     #================ Window Nudger
     #===================================================================
@@ -343,7 +479,6 @@ class ScreenMoverWorker:
         if not self.auto_align_enabled:
             return
 
-        
         try:
             import win32gui, win32con, win32process, psutil
 
@@ -500,21 +635,27 @@ class ScreenMoverWorker:
         except Exception as outer_error:
             # A final safety net so the worker thread never crashes
             print("[AUTO-ALIGN] Outer Exception:", outer_error)
-
-    #===================================================================
-    #===================  Gesture ender
-    #===================================================================
-
-    def end_gesture(self):
-        """Exit gesture mode and hide overlay."""
-        print("[GESTURE] End")
-        self.gesture_active = False
-        self.activation_method = None
-        self.flick_start_x = None
-        self.flick_start_time = None
-
-        self.hide_overlay()
-        
+    
+    # ==============================================================
+    #  OVERLAY ICON (SAFE TKINTER VERSION)
+    # ==============================================================
+    
+    def _is_system_window(self, hwnd):
+        """Return True if window belongs to Explorer or system popups."""
+        try:
+            import psutil
+            tid, pid = win32process.GetWindowThreadProcessId(hwnd)
+            exe = psutil.Process(pid).name().lower()
+            return exe in (
+                "explorer.exe",               # Taskbar, tray popups
+                "shellexperiencehost.exe",    # Windows 10/11 UI
+                "startmenuexperiencehost.exe",
+                "searchhost.exe",
+                "widgets.exe"
+            )
+        except Exception:
+            return False
+    
     #===================================================================
     #===================  Overlay hider
     #===================================================================
@@ -529,122 +670,6 @@ class ScreenMoverWorker:
                     print("[OVERLAY] Destroy failed:", e)
 
         self.overlay_hwnd = None
-
-    # ==============================================================
-    #  OVERLAY (WINAPI STATIC WINDOW)
-    # ==============================================================
-
-    def _safe_show_overlay(self, x, y):
-        """Overlay is ALWAYS topmost, independent of GUI always-on-top state."""
-        try:
-            import win32api, win32con, win32gui
-        except Exception:
-            print("[OVERLAY] WinAPI missing")
-            return
-
-        # Already exists → raise it
-        if self.overlay_hwnd and win32gui.IsWindow(self.overlay_hwnd):
-            win32gui.SetWindowPos(
-                self.overlay_hwnd,
-                win32con.HWND_TOPMOST,
-                0, 0, 0, 0,
-                win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
-            )
-            return
-
-        width, height = 110, 50
-        pos_x = int(x + 20)
-        pos_y = int(y + 20)
-
-        hinstance = win32api.GetModuleHandle(None)
-
-        class_name = "FlickOverlayClass"
-        wndclass = win32gui.WNDCLASS()
-        wndclass.hInstance = hinstance
-        wndclass.lpszClassName = class_name
-        wndclass.lpfnWndProc = {win32con.WM_PAINT: self._overlay_paint}
-
-        try:
-            win32gui.RegisterClass(wndclass)
-        except:
-            pass
-
-        # Independent topmost popup window (NOT tied to GUI)
-        self.overlay_hwnd = win32gui.CreateWindowEx(
-            win32con.WS_EX_TOPMOST
-            | win32con.WS_EX_TOOLWINDOW
-            | win32con.WS_EX_LAYERED,
-            class_name,
-            "",
-            win32con.WS_POPUP,
-            pos_x,
-            pos_y,
-            width,
-            height,
-            0,   # no parent (critical)
-            0,
-            hinstance,
-            None
-        )
-        
-        # Apply rounded corners to overlay window
-        rgn = win32gui.CreateRoundRectRgn(
-            0, 0, width, height,
-            16, 16  # corner radius (X, Y)
-        )
-        win32gui.SetWindowRgn(self.overlay_hwnd, rgn, True)
-
-        if not self.overlay_hwnd:
-            print("[OVERLAY] Failed to create overlay")
-            return
-
-        win32gui.SetLayeredWindowAttributes(
-            self.overlay_hwnd, 0, 255, win32con.LWA_ALPHA
-        )
-
-        # FINAL reinforcement
-        win32gui.SetWindowPos(
-            self.overlay_hwnd,
-            win32con.HWND_TOPMOST,
-            pos_x, pos_y, width, height,
-            win32con.SWP_SHOWWINDOW | win32con.SWP_NOACTIVATE
-        )
-
-    def _overlay_paint(self, hwnd, msg, wparam, lparam):
-        """Custom paint handler for transparent arrow-only overlay."""
-        hdc, paint = win32gui.BeginPaint(hwnd)
-
-        # Transparent background mode for text
-        win32gui.SetBkMode(hdc, win32con.TRANSPARENT)
-
-        # Fill whole window with BLACK so color key makes it invisible
-        rect = win32gui.GetClientRect(hwnd)
-        brush = win32gui.CreateSolidBrush(win32api.RGB(0, 0, 0))
-        win32gui.FillRect(hdc, rect, brush)
-
-        # --- Draw bright cyan arrows ---
-        logfont = win32gui.LOGFONT()
-        logfont.lfHeight = -48
-        logfont.lfWeight = 900
-        logfont.lfFaceName = "Rubik UI Symbol"
-        logfont.lfQuality = win32con.ANTIALIASED_QUALITY
-
-        font = win32gui.CreateFontIndirect(logfont)
-        win32gui.SelectObject(hdc, font)
-
-        win32gui.SetTextColor(hdc, win32api.RGB(0, 178, 255))
-
-        win32gui.DrawText(
-            hdc,
-            "⮜   ⮞",
-            -1,
-            (0, 0, 110, 50),
-            win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE
-        )
-
-        win32gui.EndPaint(hwnd, paint)
-        return 0
-
 
 # global instance (created after class definition)
 SCREEN_MOVER = ScreenMoverWorker()
