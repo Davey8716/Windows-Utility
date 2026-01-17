@@ -13,6 +13,7 @@ from screen_mover import SCREEN_MOVER
 from state_manager import load_state, save_state
 from screenshot_tool import take_desktop_screenshot
 from tray_toggles import TrayIconManager
+from universal_bookmarks_export import BraveBookmarksExporter
 
 # Configure appearance
 ctk.set_appearance_mode("Dark")
@@ -230,7 +231,7 @@ class UtilityControlApp(ctk.CTk):
         # ==============================================================
         # Window geometry
         # ==============================================================
-        self.COLLAPSED_WIDTH = 500
+        self.COLLAPSED_WIDTH = 510
         self.EXPANDED_WIDTH = 975
         self.WINDOW_HEIGHT = 1150
 
@@ -335,10 +336,7 @@ class UtilityControlApp(ctk.CTk):
             initial_open=self.saved_state.get("section_states", {}).get("misc", True)
         )
         self.collapsible_sections.append(self.misc_section)
-        
-        
-        
-        
+
         # ==============================================================
         # Right Column — Advanced Tool Sections
         # ==============================================================
@@ -350,7 +348,7 @@ class UtilityControlApp(ctk.CTk):
         self.advanced_section_1 = CollapsibleSection(
             self.side_frame,
             "Windows Utilities",
-            section_id="advanced_1",
+            section_id="Windows_utilities",
             initial_open=False
         )
         self.collapsible_sections.append(self.advanced_section_1)
@@ -481,7 +479,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.advanced_section_2 = CollapsibleSection(
             self.side_frame,
-            "Power & System",
+            "Drive Space Display",
             section_id="advanced_2",
             initial_open=False
         )
@@ -491,58 +489,36 @@ class UtilityControlApp(ctk.CTk):
         # --------------------------------------------------------------
         # Advanced Section 3 — Debug / Maintenance
         # --------------------------------------------------------------
-
         self.advanced_section_3 = CollapsibleSection(
             self.side_frame,
-            "Debug / Maintenance",
-            section_id="advanced_3",
+            "Universal Bookmarks Exporter",
+            section_id="Bookmarks_exporter",
             initial_open=False
         )
         self.collapsible_sections.append(self.advanced_section_3)
         self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
+
         # --------------------------------------------------------------
-        # Advanced Section 4 — Privacy / Security
+        # Brave Export Button
         # --------------------------------------------------------------
 
-        self.advanced_section_4 = CollapsibleSection(
-            self.side_frame,
-            "Privacy / Security",
-            section_id="advanced_4",
-            initial_open=False
+        brave_frame = ctk.CTkFrame(
+            self.advanced_section_3.content,
+            fg_color="transparent"
         )
-        self.collapsible_sections.append(self.advanced_section_4)
-        self.advanced_section_4.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        brave_frame.pack(anchor="w", padx=10, pady=(5, 2))
 
-        # --------------------------------------------------------------
-        # Advanced Section 5 — Miscellaneous
-        # --------------------------------------------------------------
-
-        self.advanced_section_5 = CollapsibleSection(
-            self.side_frame,
-            "Miscellaneous",
-            section_id="advanced_5",
-            initial_open=False
+        self.btn_brave_export = ctk.CTkButton(
+            brave_frame,
+            text="Export Brave Bookmarks",
+            width=180,
+            font=("Rubik UI", 15, "bold"),
+            command=lambda: BraveBookmarksExporter().run_save_dialog()
         )
-        self.collapsible_sections.append(self.advanced_section_5)
-        self.advanced_section_5.wrapper.pack(fill="x", padx=12, pady=(0, 6))
-
-                
-                
-                
-                
-                
-        
+        self.btn_brave_export.pack(anchor="w")
 
         
-        
-        
-        
-        
-        
-        
-
-
         # ==============================================================
         # Expand / Collapse button
         # ==============================================================
@@ -558,6 +534,11 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 18, "bold")
         )
         self.expand_btn.place(relx=1.0, rely=0.5, anchor="e")
+        
+        CtkTooltip(
+            self.expand_btn,
+            "Toogles Advanced features side panel."
+        )
 
         # -------------------------
         # Dark Mode Toggle
@@ -745,7 +726,6 @@ class UtilityControlApp(ctk.CTk):
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
         # Start with USB settings disabled
 
-
         # --------------------------------------------------------------
         #  Organising Utilities  (NEW GREY SECTION)
         # --------------------------------------------------------------
@@ -758,7 +738,7 @@ class UtilityControlApp(ctk.CTk):
         )
         self.collapsible_sections.append(organising_section)
         self.organise_frame = organising_section.content
-
+        
         # --------------------------------------------------------------
         # Desktop Screenshot Button (top)
         # --------------------------------------------------------------
@@ -777,41 +757,59 @@ class UtilityControlApp(ctk.CTk):
             "Minimizes the app, takes a full desktop screenshot,\n"
             "lets you choose a save location, then restores the window."
         )
-
+        
         # --------------------------------------------------------------
         # Folder Creator Row (button left, entry right)
         # --------------------------------------------------------------
 
         folder_row = ctk.CTkFrame(self.organise_frame, fg_color="transparent")
-        folder_row.pack(anchor="w", padx=10, pady=(5, 2))
-        
+        folder_row.pack(fill="x", padx=10, pady=(5, 2))
 
-        # Left: Create Folder button
+        # left: button (same row)
         self.btn_create_folder = ctk.CTkButton(
             folder_row,
             text="Folder To Desktop",
             width=btn_width,
             font=("Rubik UI", 15, "bold"),
-            command=self._create_desktop_folder
+            command=self._create_desktop_folder,
+            state="disabled"
         )
-        self.btn_create_folder.pack(anchor="w", pady=(0, 5))
+        self.btn_create_folder.pack(side="left")
 
-        CtkTooltip(
-            self.btn_create_folder,
-            "Type a folder name in the box → Click to create\n"
-            "A new folder will appear instantly on your Desktop."
-        )
+        # right: entry + status (same row)
+        entry_group = ctk.CTkFrame(folder_row, fg_color="transparent")
+        entry_group.pack(side="right")
 
-        # Right: Folder name entry
         self.folder_name_var = ctk.StringVar()
+
         self.folder_name_entry = ctk.CTkEntry(
-            folder_row,
+            entry_group,
             placeholder_text="Folder name…",
             textvariable=self.folder_name_var,
             font=("Rubik UI", 15, "bold"),
-            width=220
+            width=150
         )
-        self.folder_name_entry.pack(side="left")
+        self.folder_name_entry.pack(side="left", padx = 5)
+        
+        CtkTooltip(
+            self.btn_create_folder,
+            "Type a folder name in the box → Click to create\n"
+            "A new folder will appear instantly on your Desktop\n"
+            "Greyed out if no name entered.\n"
+        )
+        
+
+        self.folder_status_label = ctk.CTkLabel(
+            entry_group,
+            text="Folder Made ",                  # IMPORTANT: not empty, so it has width
+            width=140,
+            anchor="w",
+            font=("Rubik UI", 16,"bold"),
+            text_color="#1f6aa5"
+        )
+        self.folder_status_label.pack(side="left", padx=(3, 0))
+
+        self.folder_name_var.trace_add("write", self._update_create_folder_button)
 
         # --------------------------------------------------------------
         #  Desktop Backup  (NEW COLLAPSIBLE SECTION)
@@ -871,7 +869,6 @@ class UtilityControlApp(ctk.CTk):
         #  Backup Folder Path Display + Change Button
         # ===================================================================
 
-
         path_inner = ctk.CTkFrame(
             self.desktop_backup_frame,
             fg_color="transparent"
@@ -901,6 +898,7 @@ class UtilityControlApp(ctk.CTk):
             path_inner,
             textvariable=self.backup_path_var,
             font=("Rubik UI", 15),
+            width = 300,
             state="readonly"
         )
         self.entry_backup_path.pack(anchor="w", pady = (0,5))
@@ -909,6 +907,14 @@ class UtilityControlApp(ctk.CTk):
         # Final UI sync (ALL vars now exist)
         # -------------------------------------------------
         self.actions.toggle_power_buttons()
+        
+        Desktop_icon_layout = CollapsibleSection(
+            self.main_frame,
+            "Desktop Icon Organiser:",
+            section_id="Organiser",
+        )
+        self.collapsible_sections.append(Desktop_icon_layout)
+
         
     # ==============================================================
     # Side panel toggle (NO UI CREATION HERE)
@@ -958,7 +964,6 @@ class UtilityControlApp(ctk.CTk):
         # Lock to the configured size (width depends on expanded state)
         width = self.EXPANDED_WIDTH if self.expanded else self.COLLAPSED_WIDTH
         self.geometry(f"{width}x{self.WINDOW_HEIGHT}")
-
 
     # ===================================================================
     #  Save ALL toggle states to JSON
@@ -1045,20 +1050,24 @@ class UtilityControlApp(ctk.CTk):
         # -------------------------
         
         save_state(new)
+
+    def _update_create_folder_button(self, *_):
+        name = self.folder_name_var.get().strip()
         
+        if name:
+            self.btn_create_folder.configure(state="normal")
+            self.folder_status_label.configure(text="")
+        else:
+            self.btn_create_folder.configure(state="disabled")
+            self.folder_status_label.configure(text="")
+
     # ===================================================================
     #  Create Folder On Desktop
     # ===================================================================
     
     def _create_desktop_folder(self):
-        
 
         folder_name = self.folder_name_var.get().strip()
-
-        # Basic validation
-        if not folder_name:
-            messagebox.showerror("Error", "Please type a folder name first.")
-            return
 
         # Resolve desktop path
         desktop = os.path.join(os.path.join(os.environ["USERPROFILE"]), "Desktop")
