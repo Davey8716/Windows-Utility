@@ -4,13 +4,17 @@
 # ===================================================================
 
 import customtkinter as ctk
-from screen_mover import SCREEN_MOVER
-from state_manager import load_state, save_state
 import tkinter as tk
 import os
+import ctypes
+from tkinter import messagebox
 from windows_utility_toggles import switch_theme   # add at top with other imports
 from windows_utility_toggles import UtilityActionsManager
 from pathlib import Path
+from screen_mover import SCREEN_MOVER
+from state_manager import load_state, save_state
+from screenshot_tool import take_desktop_screenshot
+from tray_toggles import TrayIconManager
 
 # Configure appearance
 ctk.set_appearance_mode("Dark")
@@ -126,7 +130,8 @@ class CollapsibleSection:
 
         # Header row
         self.header = ctk.CTkFrame(self.wrapper, fg_color="transparent")
-        self.header.pack(fill="x")
+        self.header.pack(fill="x", pady=(0, 4))
+
 
         self.label = ctk.CTkLabel(
             self.header,
@@ -157,7 +162,7 @@ class CollapsibleSection:
         self.content = ctk.CTkFrame(self.wrapper)
 
         if initial_open:
-            self.content.pack(fill="x", expand=False, pady=(0, 10), padx=10)
+            self.content.pack(fill="x", expand=True, pady=(0, 10), padx=10)
 
     # ---------------------------------------------------------
     # NEW: automatic arrow colour based on Dark/Light mode
@@ -228,7 +233,7 @@ class UtilityControlApp(ctk.CTk):
         # Window geometry
         # ==============================================================
         self.COLLAPSED_WIDTH = 500
-        self.EXPANDED_WIDTH = 900
+        self.EXPANDED_WIDTH = 975
         self.WINDOW_HEIGHT = 1150
 
         self.geometry(f"{self.COLLAPSED_WIDTH}x{self.WINDOW_HEIGHT}")
@@ -239,7 +244,6 @@ class UtilityControlApp(ctk.CTk):
         # ==============================================================
         # Tray
         # ==============================================================
-        from tray_toggles import TrayIconManager
         self.tray = TrayIconManager(self)
         self.tray.create_tray_icon()
         self.protocol("WM_DELETE_WINDOW", self.tray.on_close_to_tray)
@@ -286,8 +290,9 @@ class UtilityControlApp(ctk.CTk):
         self.root_container.rowconfigure(0, weight=1)
 
         # ==============================================================
-        # Main (left) panel — SCROLLABLE
+        #  MAIN FRAMES LEFT HEADER
         # ==============================================================
+        
         self.main_frame = ctk.CTkScrollableFrame(
             self.root_container,
             width=450,
@@ -303,34 +308,19 @@ class UtilityControlApp(ctk.CTk):
         title.pack(pady=10)
 
         # ==============================================================
-        # Side (right) panel — full height
+        #  SIDE PANEL RIGHT HEADER
         # ==============================================================
-        self.side_frame = ctk.CTkFrame(
+
+
+        self.side_frame = ctk.CTkScrollableFrame(
             self.root_container,
             width=450,
-            fg_color=("transparent")
+            fg_color="transparent"
         )
-        self.side_frame.configure(width=450)
-        self.side_frame.grid_propagate(False)
-        # DO NOT grid yet
-        
-        # RIGHT COLUMN (hidden by default)
-        self.side_frame.grid(row=0, column=1, sticky="nsew")
+        self.side_frame.grid(row=0, column=1, sticky="ns")
         self.side_frame.grid_remove()
-        
-        self.root_container.columnconfigure(0, weight=1)
 
-        # ==============================================================
-        # Collapsible sections
-        # ==============================================================
-        self.misc_section = CollapsibleSection(
-            self.main_frame,
-            "User Interface:",
-            section_id="misc",
-            initial_open=self.saved_state.get("section_states", {}).get("misc", True)
-        )
-        self.collapsible_sections.append(self.misc_section)
-        
+
         # ==============================================================
         # Right Column Header
         # ==============================================================
@@ -341,59 +331,66 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 22, "bold")
         )
         self.advanced_title.pack(anchor="w", padx=12, pady=(14, 10))
-    
+        
+        # ==============================================================
+        # Collapsible sections
+        # ==============================================================
+        self.misc_section = CollapsibleSection(
+            self.main_frame,
+            "User Interface:",
+            section_id="misc",
+            initial_open=self.saved_state.get("section_states", {}).get("misc", True)
+        )
+        self.collapsible_sections.append(self.misc_section)
+
         # ==============================================================
         # Right Column — Advanced Tool Sections (placeholders)
         # ==============================================================
 
         self.advanced_section_1 = CollapsibleSection(
             self.side_frame,
-            "🧪 Experimental",
+            "Experimental",
             section_id="advanced_1",
             initial_open=False
         )
         self.collapsible_sections.append(self.advanced_section_1)
-        self.advanced_section_1.wrapper.pack(fill="x", expand=True, padx=8)
-        
+        self.advanced_section_1.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+
         self.advanced_section_2 = CollapsibleSection(
             self.side_frame,
-            "🧠 Power & System",
+            "Power & System",
             section_id="advanced_2",
             initial_open=False
         )
-        
         self.collapsible_sections.append(self.advanced_section_2)
-        self.advanced_section_2.wrapper.pack(fill="x", expand=True, padx=8)
+        self.advanced_section_2.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
         self.advanced_section_3 = CollapsibleSection(
             self.side_frame,
-            "🛠 Debug / Maintenance",
+            "Debug / Maintenance",
             section_id="advanced_3",
             initial_open=False
         )
         self.collapsible_sections.append(self.advanced_section_3)
-        self.advanced_section_3.wrapper.pack(fill="x", expand=True, padx=8)
+        self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
         self.advanced_section_4 = CollapsibleSection(
             self.side_frame,
-            "🔐 Privacy / Security",
+            "Privacy / Security",
             section_id="advanced_4",
             initial_open=False
         )
-        
         self.collapsible_sections.append(self.advanced_section_4)
-        self.advanced_section_4.wrapper.pack(fill="x", expand=True, padx=8)
+        self.advanced_section_4.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
         self.advanced_section_5 = CollapsibleSection(
             self.side_frame,
-            "⚙ Miscellaneous",
+            "Miscellaneous",
             section_id="advanced_5",
             initial_open=False
         )
         self.collapsible_sections.append(self.advanced_section_5)
-        self.advanced_section_5.wrapper.pack(fill="x", expand=True, padx=8)
-        
-
+        self.advanced_section_5.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
         # ==============================================================
         # Expand / Collapse button
@@ -644,7 +641,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.btn_settings = ctk.CTkButton(
             util_grid,
-            text="⚙️ System Settings",
+            text="System Settings",
             width=btn_width,
             command=lambda: os.system("start ms-settings:"),
             font=("Rubik UI", 16,"bold")
@@ -653,7 +650,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.btn_device_mgr = ctk.CTkButton(
             util_grid,
-            text="🧰 Device Manager",
+            text="Device Manager",
             width=btn_width,
             command=lambda: os.system("devmgmt.msc"),
             font=("Rubik UI", 16, "bold")
@@ -662,7 +659,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.btn_task_mgr = ctk.CTkButton(
             util_grid,
-            text="🧠 Task Manager",
+            text="Task Manager",
             width=btn_width,
             command=lambda: os.system("taskmgr"),
             font=("Rubik UI", 16, "bold")
@@ -671,7 +668,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.btn_router = ctk.CTkButton(
             util_grid,
-            text="📡 Router Login",
+            text="Router Login",
             width=btn_width,
             command=self.actions.open_router_page,
             font=("Rubik UI", 16, "bold")
@@ -724,7 +721,7 @@ class UtilityControlApp(ctk.CTk):
         #  Organising Utilities  (NEW GREY SECTION)
         # --------------------------------------------------------------
 
-        from screenshot_tool import take_desktop_screenshot
+        
 
         organising_section = CollapsibleSection(
             self.main_frame,
@@ -742,7 +739,7 @@ class UtilityControlApp(ctk.CTk):
         self.btn_desktop_screenshot = ctk.CTkButton(
             self.organise_frame,
             text="Desktop Screenshot",
-            width=150,
+            width=btn_width,
             command=lambda: take_desktop_screenshot(self),
             font=("Rubik UI", 16, "bold")
         )
@@ -765,7 +762,7 @@ class UtilityControlApp(ctk.CTk):
         self.btn_create_folder = ctk.CTkButton(
             folder_row,
             text="Folder To Desktop",
-            width=140,
+            width=btn_width,
             font=("Rubik UI", 16, "bold"),
             command=self._create_desktop_folder
         )
@@ -816,7 +813,7 @@ class UtilityControlApp(ctk.CTk):
             backup_buttons_frame,
             text="Backup Taskbar",
             font=("Rubik UI", 15, "bold"),
-            width=100,
+            width=btn_width,
             command=self.actions.backup_pinned_shortcuts
         )
         self.btn_backup_pins.pack(anchor="w", pady=(0, 5))
@@ -832,7 +829,7 @@ class UtilityControlApp(ctk.CTk):
             backup_buttons_frame,
             text="Open Backup",
             font=("Rubik UI", 15, "bold"),
-            width=90,
+            width=btn_width,
             command=self.actions.open_backup_folder
         )
         self.btn_open_backup.pack(anchor="w", pady = (0,5))
@@ -861,7 +858,7 @@ class UtilityControlApp(ctk.CTk):
         self.btn_change_path = ctk.CTkButton(
             path_inner,
             text=" Change Folder",
-            width=80,
+            width=btn_width,
             font=("Rubik UI", 16, "bold"),
             command=self.actions.change_backup_folder
         )
@@ -1021,9 +1018,7 @@ class UtilityControlApp(ctk.CTk):
     # ===================================================================
     
     def _create_desktop_folder(self):
-        import os
-        import ctypes
-        from tkinter import messagebox
+        
 
         folder_name = self.folder_name_var.get().strip()
 
