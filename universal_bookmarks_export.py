@@ -117,26 +117,6 @@ class BraveBookmarksExporter:
 
         return True
 
-    def run_save_dialog(self):
-        root = Tk()
-        root.withdraw()
-
-        today = datetime.now().strftime("%Y-%m-%d")
-        default_name = f"Brave_Bookmarks_Export_{today}.html"
-
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".html",
-            filetypes=[("HTML files", "*.html")],
-            title="Save Brave Bookmarks As",
-            initialfile=default_name,
-        )
-
-        if not file_path:
-            return False
-
-        return self.export_to_file(file_path)
-
-
 # ─────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────

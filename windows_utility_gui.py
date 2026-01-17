@@ -252,6 +252,7 @@ class UtilityControlApp(ctk.CTk):
         # ==============================================================
         # Variables (DEFINE ONCE, BEFORE WIDGETS)
         # ==============================================================
+        
         self.theme_var = ctk.BooleanVar(
             value=self.saved_state.get("theme_dark", True)
         )
@@ -269,6 +270,9 @@ class UtilityControlApp(ctk.CTk):
             value=self.saved_state.get("tooltips_enabled", True)
         )
         self.tooltips_enabled = self.tooltips_enabled_var.get()
+        
+        self.brave_export_path_var = ctk.StringVar(value="")
+
 
         # ==============================================================
         # Collapsible registry
@@ -487,8 +491,9 @@ class UtilityControlApp(ctk.CTk):
         self.advanced_section_2.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
         # --------------------------------------------------------------
-        # Advanced Section 3 — Debug / Maintenance
+        # Advanced Section 3 — Universal Bookmarks Exporter
         # --------------------------------------------------------------
+
         self.advanced_section_3 = CollapsibleSection(
             self.side_frame,
             "Universal Bookmarks Exporter",
@@ -498,9 +503,8 @@ class UtilityControlApp(ctk.CTk):
         self.collapsible_sections.append(self.advanced_section_3)
         self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
-
         # --------------------------------------------------------------
-        # Brave Export Button
+        # Brave Export UI (MUST BE AFTER section creation)
         # --------------------------------------------------------------
 
         brave_frame = ctk.CTkFrame(
@@ -514,9 +518,19 @@ class UtilityControlApp(ctk.CTk):
             text="Export Brave Bookmarks",
             width=180,
             font=("Rubik UI", 15, "bold"),
-            command=lambda: BraveBookmarksExporter().run_save_dialog()
+            command=self._run_brave_export,
+            
         )
-        self.btn_brave_export.pack(anchor="w")
+        self.btn_brave_export.pack(anchor="w", pady=(0, 4))
+
+        self.brave_export_entry = ctk.CTkEntry(
+            brave_frame,
+            textvariable=self.brave_export_path_var,
+            font=("Rubik UI", 14),
+            width=360,
+            state="readonly"
+        )
+        self.brave_export_entry.pack(anchor="w")
 
         
         # ==============================================================
@@ -914,6 +928,45 @@ class UtilityControlApp(ctk.CTk):
             section_id="Organiser",
         )
         self.collapsible_sections.append(Desktop_icon_layout)
+        
+    def _choose_brave_export_path(self):
+        from tkinter import filedialog
+        from datetime import datetime
+
+        default_name = f"Brave_Bookmarks_Export_{datetime.now().strftime('%Y-%m-%d')}.html"
+
+        path = filedialog.asksaveasfilename(
+            parent=self,  # <- critical: owned by your CTk root
+            title="Save Brave Bookmarks As",
+            defaultextension=".html",
+            initialfile=default_name,
+            filetypes=[("HTML files", "*.html")],
+        )
+
+        if path:
+            self.brave_export_path_var.set(path)
+
+
+    def _run_brave_export(self):
+        from tkinter import filedialog
+        from datetime import datetime
+
+        default_name = f"Brave_Bookmarks_{datetime.now().strftime('%Y-%m-%d')}.html"
+
+        path = filedialog.asksaveasfilename(
+            parent=self,   # ✅ owned by CTk root
+            title="Save Brave Bookmarks As",
+            defaultextension=".html",
+            initialfile=default_name,
+            filetypes=[("HTML files", "*.html")]
+        )
+
+        if not path:
+            return
+
+        BraveBookmarksExporter().export_to_file(path)
+
+
 
         
     # ==============================================================
