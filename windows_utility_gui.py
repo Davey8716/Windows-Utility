@@ -136,7 +136,7 @@ class CollapsibleSection:
         self.label = ctk.CTkLabel(
             self.header,
             text=title_text,
-            font=("Rubik UI", 16, "bold"),
+            font=("Rubik UI", 15, "bold"),
             text_color="#008DFA"    # ← CTk Blue
             
         )
@@ -320,17 +320,12 @@ class UtilityControlApp(ctk.CTk):
         self.side_frame.grid(row=0, column=1, sticky="ns")
         self.side_frame.grid_remove()
 
-
-        # ==============================================================
-        # Right Column Header
-        # ==============================================================
-
         self.advanced_title = ctk.CTkLabel(
             self.side_frame,
             text="⚠ Advanced Tools",
             font=("Rubik UI", 22, "bold")
         )
-        self.advanced_title.pack(anchor="w", padx=12, pady=(14, 10))
+        self.advanced_title.pack(padx=12, pady=(20, 20))
         
         # ==============================================================
         # Collapsible sections
@@ -417,7 +412,7 @@ class UtilityControlApp(ctk.CTk):
             text="Dark Mode",
             variable=self.theme_var,
             command=self.actions.theme_toggle,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
 
         if self.theme_var.get():
@@ -438,7 +433,7 @@ class UtilityControlApp(ctk.CTk):
             text="Always On Top",
             variable=self.always_on_top_var,
             command=self.actions.always_on_top_toggle,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.always_on_top_switch.pack(anchor="w", padx=12, pady=(4, 4))
 
@@ -457,7 +452,7 @@ class UtilityControlApp(ctk.CTk):
             text="Enable Tooltips",
             variable=self.tooltips_enabled_var,
             command=self.actions.tooltips_toggle,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.tooltip_switch.pack(anchor="w", padx=12, pady=(4, 6))
 
@@ -475,7 +470,7 @@ class UtilityControlApp(ctk.CTk):
             text="Max/Min All Opened Program Windows",
             variable=self.minimize_all_var,
             command=self.actions.minimize_all_toggle,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
 
         self.minimize_all_switch.pack(anchor="w", padx=12, pady=(4, 8))
@@ -505,7 +500,7 @@ class UtilityControlApp(ctk.CTk):
             text="Use Middle Mouse To Flick",
             variable=self.mmb_var,
             command=self.save_all_settings,   # <-- correct handler
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.mmb_switch.pack(anchor="w", padx=10, pady=2)
         
@@ -525,7 +520,7 @@ class UtilityControlApp(ctk.CTk):
             text="Keep Windows In Flick Zone",
             variable=self.auto_align_var,
             command=self.actions.auto_align_toggle,     # <-- THIS WAS MISSING
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.auto_align_switch.pack(anchor="w", padx=10, pady=(8, 2))
 
@@ -558,7 +553,7 @@ class UtilityControlApp(ctk.CTk):
             text="Idle-plugged Reminder",
             variable=self.opt_idle_var,
             command=self.save_all_settings,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.opt_idle.pack(anchor="w", padx=10, pady=2)
 
@@ -571,7 +566,7 @@ class UtilityControlApp(ctk.CTk):
             text="Download-finished Reminder",
             variable=self.opt_download_var,
             command=self.save_all_settings,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.opt_download.pack(anchor="w", padx=10, pady=2)
 
@@ -584,7 +579,7 @@ class UtilityControlApp(ctk.CTk):
             text="Plug / Unplug Notification",
             variable=self.opt_plug_var,
             command=self.save_all_settings,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
             
         )
         
@@ -610,7 +605,7 @@ class UtilityControlApp(ctk.CTk):
             text="Show Power Buttons",
             variable=self.power_toggle_var,
             command=self.actions.toggle_power_buttons,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.power_toggle.pack(anchor="w", padx=10, pady=(2, 5))
 
@@ -644,7 +639,7 @@ class UtilityControlApp(ctk.CTk):
             text="System Settings",
             width=btn_width,
             command=lambda: os.system("start ms-settings:"),
-            font=("Rubik UI", 16,"bold")
+            font=("Rubik UI", 15,"bold")
         )
         self.btn_settings.grid(row=0, column=0, sticky="w", pady=3)
 
@@ -653,7 +648,7 @@ class UtilityControlApp(ctk.CTk):
             text="Device Manager",
             width=btn_width,
             command=lambda: os.system("devmgmt.msc"),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.btn_device_mgr.grid(row=1, column=0, sticky="w", pady=3)
 
@@ -662,7 +657,7 @@ class UtilityControlApp(ctk.CTk):
             text="Task Manager",
             width=btn_width,
             command=lambda: os.system("taskmgr"),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.btn_task_mgr.grid(row=2, column=0, sticky="w", pady=3)
 
@@ -671,7 +666,7 @@ class UtilityControlApp(ctk.CTk):
             text="Router Login",
             width=btn_width,
             command=self.actions.open_router_page,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.btn_router.grid(row=3, column=0, sticky="w", pady=3)
 
@@ -684,7 +679,7 @@ class UtilityControlApp(ctk.CTk):
             text="💤 Sleep",
             width=btn_width,
             command=lambda: os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0"),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.btn_sleep.grid(row=0, column=1, sticky="e", pady=3)
 
@@ -693,7 +688,7 @@ class UtilityControlApp(ctk.CTk):
             text="🔒 Lock PC",
             width=btn_width,
             command=lambda: ctypes.windll.user32.LockWorkStation(),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.btn_lock.grid(row=1, column=1, sticky="e", pady=3)
 
@@ -702,7 +697,7 @@ class UtilityControlApp(ctk.CTk):
             text="🔁 Restart",
             width=btn_width,
             command=lambda: os.system("shutdown /r /t 0"),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.btn_restart.grid(row=2, column=1, sticky="e", pady=3)
 
@@ -711,7 +706,7 @@ class UtilityControlApp(ctk.CTk):
             text="⏻ Shutdown",
             width=btn_width,
             command=lambda: os.system("shutdown /s /t 0"),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
 
@@ -720,8 +715,6 @@ class UtilityControlApp(ctk.CTk):
         # --------------------------------------------------------------
         #  Organising Utilities  (NEW GREY SECTION)
         # --------------------------------------------------------------
-
-        
 
         organising_section = CollapsibleSection(
             self.main_frame,
@@ -741,9 +734,9 @@ class UtilityControlApp(ctk.CTk):
             text="Desktop Screenshot",
             width=btn_width,
             command=lambda: take_desktop_screenshot(self),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
-        self.btn_desktop_screenshot.pack(anchor="w", pady=(5, 6))
+        self.btn_desktop_screenshot.pack(anchor="w", padx=10, pady=(5, 2))
 
         CtkTooltip(
             self.btn_desktop_screenshot,
@@ -756,17 +749,18 @@ class UtilityControlApp(ctk.CTk):
         # --------------------------------------------------------------
 
         folder_row = ctk.CTkFrame(self.organise_frame, fg_color="transparent")
-        folder_row.pack(anchor="w")
+        folder_row.pack(anchor="w", padx=10, pady=(5, 2))
+        
 
         # Left: Create Folder button
         self.btn_create_folder = ctk.CTkButton(
             folder_row,
             text="Folder To Desktop",
             width=btn_width,
-            font=("Rubik UI", 16, "bold"),
+            font=("Rubik UI", 15, "bold"),
             command=self._create_desktop_folder
         )
-        self.btn_create_folder.pack(side="left", padx=(5, 8))
+        self.btn_create_folder.pack(anchor="w", pady=(0, 5))
 
         CtkTooltip(
             self.btn_create_folder,
@@ -780,7 +774,7 @@ class UtilityControlApp(ctk.CTk):
             folder_row,
             placeholder_text="Folder name…",
             textvariable=self.folder_name_var,
-            font=("Rubik UI", 16, "bold"),
+            font=("Rubik UI", 15, "bold"),
             width=220
         )
         self.folder_name_entry.pack(side="left")
@@ -859,7 +853,7 @@ class UtilityControlApp(ctk.CTk):
             path_inner,
             text=" Change Folder",
             width=btn_width,
-            font=("Rubik UI", 16, "bold"),
+            font=("Rubik UI", 15, "bold"),
             command=self.actions.change_backup_folder
         )
         self.btn_change_path.pack(anchor="w", pady = (0,5))
@@ -872,10 +866,10 @@ class UtilityControlApp(ctk.CTk):
         self.entry_backup_path = ctk.CTkEntry(
             path_inner,
             textvariable=self.backup_path_var,
-            font=("Rubik UI", 16),
+            font=("Rubik UI", 15),
             state="readonly"
         )
-        self.entry_backup_path.pack(side="left", fill="x", expand=True, padx=(10, 8))
+        self.entry_backup_path.pack(anchor="w", pady = (0,5))
         
     # ==============================================================
     # Side panel toggle (NO UI CREATION HERE)
