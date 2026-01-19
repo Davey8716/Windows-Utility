@@ -28,7 +28,6 @@ class ScreenMoverWorker:
         self.overlay_hwnd = None
         self.gesture_hwnd = None
 
-
         self.mmb_down = False
         self.lmb_down = False
         self.gesture_active = False
@@ -42,6 +41,7 @@ class ScreenMoverWorker:
 
         # Activation toggles (GUI controls these)
         self.enable_mmb = False
+        self.mmb_ui_enabled = True
 
         self.lock = threading.Lock()
 
@@ -198,6 +198,7 @@ class ScreenMoverWorker:
 
         win32gui.EndPaint(hwnd, paint)
         return 0
+    
 
     # =============================================================
     #  Mouse Hook
@@ -206,7 +207,10 @@ class ScreenMoverWorker:
     def on_mouse_click(self, x, y, button, pressed):
         if not self.enabled:
             return
-
+        
+        if not self.enable_mmb:
+            return
+        # UX gate (this is the important one)
         # ---------------------------------------------------------
         # Track button state
         # ---------------------------------------------------------
@@ -257,6 +261,8 @@ class ScreenMoverWorker:
     def begin_gesture(self, x, y):
         """Enter gesture mode and request overlay creation on the main Tk thread."""
         self.gesture_active = True
+        if not self.enable_mmb:
+            return
 
         try:
             # window under cursor at the moment gesture starts
@@ -464,7 +470,6 @@ class ScreenMoverWorker:
 
         except Exception as e:
             print(f"[ERROR] move_active_window: {e}")
-
 
     #===================================================================
     #================ Window Nudger
