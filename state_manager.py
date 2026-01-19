@@ -14,18 +14,21 @@ def load_state() -> dict:
     # ================================================================
     
     DEFAULTS = {
-        "mmb_activation_enabled": True,
-        "brave_export_path": "",
-        "auto_align_enabled": False,                           
-        "usb_idle_enabled": True,
-        "usb_download_enabled": True,
-        "usb_plug_enabled": True,
         "theme_dark": True,
-        "minimize_all_enabled": False,
         "always_on_top_enabled": True,
         "show_power_buttons": False,
         "tooltips_enabled": True,
+        "minimize_all_enabled": False,
+        
+        "mmb_activation_enabled": True,
+        "auto_align_enabled": False, 
+
+        "usb_idle_enabled": True,
+        "usb_download_enabled": True,
+        "usb_plug_enabled": True,
+        
         "backup_folder_path": str(Path.home()),
+        "brave_export_path": "",
 
         # NEW: Collapsible section states
         "section_states": {
