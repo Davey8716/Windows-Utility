@@ -4,7 +4,6 @@
 # ===================================================================
 
 import customtkinter as ctk
-import tkinter as tk
 import os
 from tkinter import messagebox
 from windows_utility_toggles import switch_theme, UtilityActionsManager  # add at top with other imports
@@ -14,191 +13,13 @@ from state_manager import load_state, save_state
 from screenshot_tool import take_desktop_screenshot
 from tray_toggles import TrayIconManager
 from universal_bookmarks_export import BraveBookmarksExporter
+from tooltips import CtkTooltip
+from collapsible_section import CollapsibleSection
 
 # Configure appearance
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
-# ===================================================================
-# Simple Tooltip for CustomTkinter widgets
-# ===================================================================
-
-class CtkTooltip:
-    def __init__(self, widget, text, delay=500):
-        self.widget = widget
-        self.text = text
-        self.delay = delay
-        self.tip_window = None
-        self.after_id = None
-
-        # Gather all actual hoverable child widgets
-        targets = [widget]
-
-        for attr in ("_canvas", "_label", "_text_label", "_fg_label", "_border_frame"):
-            if hasattr(widget, attr):
-                obj = getattr(widget, attr)
-                if obj:
-                    targets.append(obj)
-
-        if hasattr(widget, "_windows"):
-            for win in widget._windows:
-                targets.append(win)
-
-        # Apply bindings to all relevant sub-widgets
-        for t in targets:
-            try:
-                t.bind("<Enter>", self.schedule, add="+")
-                t.bind("<Leave>", self.hide, add="+")
-                t.bind("<Button-1>", self.hide, add="+")
-            except:
-                pass
-
-    # ------------------------------------------------------
-    # Schedules showing the tooltip
-    # ------------------------------------------------------
-    
-    def schedule(self, event=None):
-        # Cancel previous timer
-        if self.after_id:
-            self.widget.after_cancel(self.after_id)
-            self.after_id = None
-
-        # Start new timer
-        self.after_id = self.widget.after(self.delay, self.show)
-
-    # ------------------------------------------------------
-    # Shows the tooltip IF globally enabled
-    # ------------------------------------------------------
-    
-    def show(self):
-        # Global tooltip toggle (check root window)
-        root = self.widget.winfo_toplevel()
-        if hasattr(root, "tooltips_enabled"):
-            if not root.tooltips_enabled:
-                return
-
-        if self.tip_window:
-            return
-
-        # Position tooltip near cursor
-        x = self.widget.winfo_rootx() + 40
-        y = self.widget.winfo_rooty() + 25
-
-        # Create popup
-        self.tip_window = tw = tk.Toplevel(self.widget)
-        tw.wm_overrideredirect(True)
-        tw.wm_geometry(f"+{x}+{y}")
-        tw.lift()
-        tw.attributes("-topmost", True)
-
-        label = tk.Label(
-            tw,
-            text=self.text,
-            background="#1E1E1E",
-            foreground="white",
-            relief="solid",
-            borderwidth=1,
-            padx=6,
-            pady=4,
-            font=("Rubik UI", 14)
-        )
-        label.pack()
-
-    def hide(self, event=None):
-        if self.after_id:
-            self.widget.after_cancel(self.after_id)
-            self.after_id = None
-
-        if self.tip_window:
-            self.tip_window.destroy()
-            self.tip_window = None
-
-# ===================================================================
-#  Collapsible Section with Auto-Theme Arrow Colour
-# ===================================================================
-
-class CollapsibleSection:
-    def __init__(self, parent, title_text, section_id, initial_open=True):
-        self.parent = parent
-        self.section_id = section_id   # NEW
-        self.open = initial_open
-
-        # A wrapper that keeps header + content together
-        self.wrapper = ctk.CTkFrame(parent, fg_color="transparent")
-        self.wrapper.pack(fill="x", pady=(10, 0))
-
-        # Header row
-        self.header = ctk.CTkFrame(self.wrapper, fg_color="transparent")
-        self.header.pack(fill="x", pady=(0, 4))
-
-
-        self.label = ctk.CTkLabel(
-            self.header,
-            text=title_text,
-            font=("Rubik UI", 15, "bold"),
-            text_color="#008DFA"    # ← CTk Blue
-            
-        )
-        self.label.pack(side="left", padx=10)
-
-        # Toggle button
-        self.button = ctk.CTkButton(
-            self.header,
-            text="▼" if initial_open else "▶",
-            width=30,
-            height=20,
-            command=self.toggle,
-            font=("Rubik UI", 18),
-            fg_color="transparent",
-            hover_color="#202020"
-        )
-        self.button.pack(side="right", padx=10)
-
-        # Apply correct arrow colour depending on theme
-        self.update_arrow_color()
-
-        # Content frame
-        self.content = ctk.CTkFrame(self.wrapper)
-
-        if initial_open:
-            self.content.pack(fill="x", expand=True, pady=(0, 10), padx=10)
-
-    # ---------------------------------------------------------
-    # NEW: automatic arrow colour based on Dark/Light mode
-    # ---------------------------------------------------------
-    
-    def update_arrow_color(self):
-        mode = ctk.get_appearance_mode()
-        if mode == "Dark":
-            self.button.configure(text_color="white")
-        else:
-            self.button.configure(text_color="black")
-
-    def toggle(self):
-        if self.open:
-            self.content.pack_forget()
-            self.button.configure(text="▶")
-        else:
-            self.content.pack(fill="x", pady=(0, 10), padx=10)
-            self.button.configure(text="▼")
-
-        self.open = not self.open
-
-        # Notify app to shrink/expand window
-        try:
-            app = self.parent.winfo_toplevel()
-            if hasattr(app, "resize_to_fit"):
-                app.resize_to_fit()
-        except Exception:
-            pass
-
-        # Save section states
-        try:
-            app = self.parent.winfo_toplevel()
-            if hasattr(app, "save_section_states"):
-                app.save_section_states()
-        except Exception:
-            pass
 
 # ===================================================================
 #  Main App Gui
@@ -234,6 +55,9 @@ class UtilityControlApp(ctk.CTk):
         self.COLLAPSED_WIDTH = 510
         self.EXPANDED_WIDTH = 975
         self.WINDOW_HEIGHT = 1150
+        
+        btn_width = 120 # Large buttons
+        small_btn_width = 90 # Small buttons
 
         self.geometry(f"{self.COLLAPSED_WIDTH}x{self.WINDOW_HEIGHT}")
         self.expanded = False
@@ -274,6 +98,12 @@ class UtilityControlApp(ctk.CTk):
         self.brave_export_path_var = ctk.StringVar(
             value=self.saved_state.get("brave_export_path", "")
         )
+        
+        self.power_toggle_var = ctk.BooleanVar(
+            value=self.saved_state.get("show_power_buttons", False)
+        )
+        
+        self._folder_status_after_id = None
 
 
         # ==============================================================
@@ -350,133 +180,45 @@ class UtilityControlApp(ctk.CTk):
         # --------------------------------------------------------------
         # Advanced Section 1 — Windows Utilities
         # --------------------------------------------------------------
+        
+        def run_windows_utility(choice):
+            actions = {
+                "System Settings": lambda: os.system("start ms-settings:"),
+                "Device Manager": lambda: os.system("devmgmt.msc"),
+                "Task Manager": lambda: os.system("taskmgr"),
+                "Router Login": self.actions.open_router_page,
+            }
 
+            action = actions.get(choice)
+            if action:
+                action()
+                
         self.advanced_section_1 = CollapsibleSection(
             self.side_frame,
             "Windows Utilities",
             section_id="Windows_utilities",
             initial_open=False
         )
+        
         self.collapsible_sections.append(self.advanced_section_1)
         self.advanced_section_1.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
         parent = self.advanced_section_1.content
-
-        # Toggle ABOVE the grid
-        self.power_toggle_var = ctk.BooleanVar(
-            value=self.saved_state.get("show_power_buttons", False)
+                
+        self.windows_util_menu = ctk.CTkOptionMenu(
+            parent,   # ✅ correct parent frame
+            values=[
+                "System Settings",
+                "Device Manager",
+                "Task Manager",
+                "Router Login",
+            ],
+            command=run_windows_utility,
+            width=260,
+            font=("Rubik UI", 15, "bold"),
+            dropdown_font=("Rubik UI", 14),
         )
-
-        self.power_toggle = ctk.CTkSwitch(
-            parent,
-            text="Show Power Buttons",
-            variable=self.power_toggle_var,
-            command=self.actions.toggle_power_buttons,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.power_toggle.pack(anchor="w", padx=10, pady=(2, 5))
-
-        CtkTooltip(
-            self.power_toggle,
-            "⚠️⚠️ Toggles on/off power options ⚠️⚠️\n"
-            "Made for clumsy people who might shutdown by mistake etc.\n"
-            "Remembers if it's on or off on startup.\n"
-        )
-
-        btn_width = 120
-
-        util_grid = ctk.CTkFrame(
-            parent,
-            fg_color="transparent",
-            corner_radius=8
-        )
-        util_grid.pack(fill="x", padx=10, pady=5)
-
-        util_grid.columnconfigure(0, weight=1)
-        util_grid.columnconfigure(1, weight=1)
-
-        # ==========================
-        # LEFT COLUMN
-        # ==========================
-
-        self.btn_settings = ctk.CTkButton(
-            util_grid,
-            text="System Settings",
-            width=btn_width,
-            command=lambda: os.system("start ms-settings:"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_settings.grid(row=0, column=0, sticky="w", pady=3)
-
-        self.btn_device_mgr = ctk.CTkButton(
-            util_grid,
-            text="Device Manager",
-            width=btn_width,
-            command=lambda: os.system("devmgmt.msc"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_device_mgr.grid(row=1, column=0, sticky="w", pady=3)
-
-        self.btn_task_mgr = ctk.CTkButton(
-            util_grid,
-            text="Task Manager",
-            width=btn_width,
-            command=lambda: os.system("taskmgr"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_task_mgr.grid(row=2, column=0, sticky="w", pady=3)
-
-        self.btn_router = ctk.CTkButton(
-            util_grid,
-            text="Router Login",
-            width=btn_width,
-            command=self.actions.open_router_page,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_router.grid(row=3, column=0, sticky="w", pady=3)
-
-        # ==========================
-        # RIGHT COLUMN
-        # ==========================
-
-        self.btn_sleep = ctk.CTkButton(
-            util_grid,
-            text="💤 Sleep",
-            width=btn_width,
-            command=lambda: os.system(
-                "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
-            ),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_sleep.grid(row=0, column=1, sticky="e", pady=3)
-
-        self.btn_lock = ctk.CTkButton(
-            util_grid,
-            text="🔒 Lock PC",
-            width=btn_width,
-            command=lambda: ctypes.windll.user32.LockWorkStation(),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_lock.grid(row=1, column=1, sticky="e", pady=3)
-
-        self.btn_restart = ctk.CTkButton(
-            util_grid,
-            text="🔁 Restart",
-            width=btn_width,
-            command=lambda: os.system("shutdown /r /t 0"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_restart.grid(row=2, column=1, sticky="e", pady=3)
-
-        self.btn_shutdown = ctk.CTkButton(
-            util_grid,
-            text="⏻ Shutdown",
-            width=btn_width,
-            command=lambda: os.system("shutdown /s /t 0"),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_shutdown.grid(row=3, column=1, sticky="e", pady=3)
-
+        self.windows_util_menu.pack(anchor="w", padx=12, pady=8)
 
         # --------------------------------------------------------------
         # Advanced Section 2 — Power & System
@@ -527,7 +269,7 @@ class UtilityControlApp(ctk.CTk):
         self.brave_export_entry = ctk.CTkEntry(
             brave_frame,
             textvariable=self.brave_export_path_var,
-            font=("Rubik UI", 14),
+            font=("Rubik UI", 15),
             width=360,
             state="readonly"
         )
@@ -555,39 +297,75 @@ class UtilityControlApp(ctk.CTk):
             "Toogles Advanced features side panel."
         )
 
+        toggles_row = ctk.CTkFrame(self.misc_section.content, fg_color="transparent")
+        toggles_row.pack(fill="x", padx=12, pady=(4, 6))
+
+        left_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
+        left_col.pack(side="left", anchor="nw")
+
+        right_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
+        right_col.pack(side="right", anchor="ne")
+        
+        
         # -------------------------
-        # Dark Mode Toggle
+        # Dark Mode Toggle (LEFT)
         # -------------------------
 
         self.theme_switch = ctk.CTkSwitch(
-            self.misc_section.content,    # FIXED
+            left_col,
             text="Dark Mode",
             variable=self.theme_var,
             command=self.actions.theme_toggle,
             font=("Rubik UI", 15, "bold")
         )
+        self.theme_switch.pack(anchor="w", pady=(2, 0))
 
         if self.theme_var.get():
-            self.theme_switch.configure(text="Dark Mode")
+            self.theme_switch.configure(text="Dark Mode On")
         else:
-            self.theme_switch.configure(text="Light Mode")
-
-        self.theme_switch.pack(anchor="w", padx=12, pady=(2, 4))
+            self.theme_switch.configure(text="Light Mode On")
 
         CtkTooltip(self.theme_switch, "Light and Dark mode. Try Them!")
 
+        
+        self.power_toggle = ctk.CTkSwitch(
+            left_col,
+            text="Show Power Buttons",
+            variable=self.power_toggle_var,
+            command=self.actions.toggle_power_buttons,
+            font=("Rubik UI", 15, "bold")
+        )
+        self.power_toggle.pack(anchor="w", pady=(0, 0))
+        
+        if self:
+            self.power_toggle.configure(text="Power Options On")
+        else:
+            self.power_toggle.configure(text="Power Options Off")
+
+        CtkTooltip(
+            self.power_toggle,
+            "⚠️⚠️ Toggles on/off power options ⚠️⚠️\n"
+            "Made for clumsy people who might shutdown by mistake etc.\n"
+            "Remembers if it's on or off on startup.\n"
+        )
+
         # -------------------------
-        # Always On Top Toggle
+        # Always On Top Toggle (LEFT)
         # -------------------------
 
         self.always_on_top_switch = ctk.CTkSwitch(
-            self.misc_section.content,
-            text="Always On Top",
+            left_col,
+            text="",
             variable=self.always_on_top_var,
             command=self.actions.always_on_top_toggle,
             font=("Rubik UI", 15, "bold")
         )
-        self.always_on_top_switch.pack(anchor="w", padx=12, pady=(4, 4))
+        self.always_on_top_switch.pack(anchor="w", pady=(0, 0))
+        
+        if self.always_on_top_var.get():
+            self.always_on_top_switch.configure(text="Always On Top On")
+        else:
+            self.always_on_top_switch.configure(text="Always On Top Off")
 
         CtkTooltip(
             self.always_on_top_switch,
@@ -595,18 +373,24 @@ class UtilityControlApp(ctk.CTk):
             "When on DHG will always show on top of other apps.\n"
         )
         
+
         # -------------------------
-        # Turn Off Tooltips Toggle
+        # Enable Tooltips Toggle (RIGHT)
         # -------------------------
 
         self.tooltip_switch = ctk.CTkSwitch(
-            self.misc_section.content,  
-            text="Enable Tooltips",
+            left_col,   # ✅ FIXED PARENT
+            text="",
             variable=self.tooltips_enabled_var,
             command=self.actions.tooltips_toggle,
             font=("Rubik UI", 15, "bold")
         )
-        self.tooltip_switch.pack(anchor="w", padx=12, pady=(4, 6))
+        self.tooltip_switch.pack(anchor="w", pady=(2, 0))
+        
+        if self.tooltips_enabled_var.get():
+            self.tooltip_switch.configure(text="Tooltips On")
+        else:
+            self.tooltip_switch.configure(text="Tooltips Off")
 
         CtkTooltip(
             self.tooltip_switch,
@@ -614,18 +398,22 @@ class UtilityControlApp(ctk.CTk):
         )
 
         # -------------------------
-        # Max/Min All Windows Toggle
+        # Max/Min All Programs Toggle (RIGHT)
         # -------------------------
 
         self.minimize_all_switch = ctk.CTkSwitch(
-            self.misc_section.content, 
-            text="Max/Min All Opened Program Windows",
+            left_col,
+            text="Max/Min All Programs",
             variable=self.minimize_all_var,
             command=self.actions.minimize_all_toggle,
             font=("Rubik UI", 15, "bold")
         )
-
-        self.minimize_all_switch.pack(anchor="w", padx=12, pady=(4, 8))
+        self.minimize_all_switch.pack(anchor="w", pady=(0, 0))
+        
+        if self:
+            self.minimize_all_switch.configure(text="Maximize All Off")
+        else:
+            self.minimize_all_switch.configure(text="Maximize All On")
 
         CtkTooltip(
             self.minimize_all_switch,
@@ -633,7 +421,45 @@ class UtilityControlApp(ctk.CTk):
             "When toggled on all screens are minimized.\n"
             "The App Gui itself stays maximized and in front of all other programs.\n"
         )
+        
+        # ==========================
+        # RIGHT COLUMN
+        # ==========================
 
+        self.btn_sleep = ctk.CTkButton(
+            right_col,
+            text="Sleep",
+            width=small_btn_width,
+            command=lambda: os.system(
+                "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
+            ),
+            font=("Rubik UI", 15, "bold")
+        )
+        
+        self.btn_lock = ctk.CTkButton(
+            right_col,
+            text="Lock PC",
+            width=small_btn_width,
+            command=lambda: ctypes.windll.user32.LockWorkStation(),
+            font=("Rubik UI", 15, "bold")
+        )
+        
+        self.btn_restart = ctk.CTkButton(
+            right_col,
+            text="Restart",
+            width=small_btn_width,
+            command=lambda: os.system("shutdown /r /t 0"),
+            font=("Rubik UI", 15, "bold")
+        )
+        
+        self.btn_shutdown = ctk.CTkButton(
+            right_col,
+            text="Shutdown",
+            width=small_btn_width,
+            command=lambda: os.system("shutdown /s /t 0"),
+            font=("Rubik UI", 15, "bold")
+        )
+        
         # ------------------------------------------------------------------
         #  Screen-Tab Mover Group Box(frame)
         # ------------------------------------------------------------------
@@ -646,25 +472,39 @@ class UtilityControlApp(ctk.CTk):
         )
         self.collapsible_sections.append(mover_section)
 
-        self.mmb_var = ctk.BooleanVar(value=self.saved_state["mmb_activation_enabled"])
+        self.mmb_var = ctk.BooleanVar(
+            value=self.saved_state.get("mmb_activation_enabled", True)
+        )
+
         self.mmb_switch = ctk.CTkSwitch(
-            mover_section.content,   # FIXED
-            text="Use Middle Mouse To Flick",
+            mover_section.content,
             variable=self.mmb_var,
-            command=self.save_all_settings,   # <-- correct handler
+            command=lambda: (
+                self._sync_toggle_label(
+                    self.mmb_switch,
+                    "Middle Mouse To Move",
+                    self.mmb_var
+                ),
+                self.save_all_settings()
+            ),
             font=("Rubik UI", 15, "bold")
         )
-        self.mmb_switch.pack(anchor="w", padx=10, pady=2)
+        self.mmb_switch.pack(anchor="w", padx=10, pady=0)
         
+        self._sync_toggle_label(
+            self.mmb_switch,
+            "Middle Mouse To Move",
+            self.mmb_var
+        )
 
-        
                 
+
         # Add tooltip
         CtkTooltip(
             self.mmb_switch,
             "Click and hold the middle mouse.\n"
             "At the top of any program window.\n"
-            "When the arrow appears, flick left or right\n"
+            "When the arrow appears, Move left or right\n"
             "To move the window to another screen."
         )
 
@@ -672,12 +512,18 @@ class UtilityControlApp(ctk.CTk):
         self.auto_align_var = ctk.BooleanVar(value=self.saved_state.get("auto_align_enabled", False))
         self.auto_align_switch = ctk.CTkSwitch(
             mover_section.content,   # FIXED
-            text="Keep Windows In Flick Zone",
+            text="Windows In Move Zone",
             variable=self.auto_align_var,
             command=self.actions.auto_align_toggle,     # <-- THIS WAS MISSING
             font=("Rubik UI", 15, "bold")
         )
-        self.auto_align_switch.pack(anchor="w", padx=10, pady=(8, 2))
+        self.auto_align_switch.pack(anchor="w", padx=10, pady=2)
+        
+        self._sync_toggle_label(
+            self.auto_align_switch,
+            "Windows In Move Zone",
+            self.auto_align_var
+        )
 
         CtkTooltip(
             self.auto_align_switch,
@@ -703,43 +549,71 @@ class UtilityControlApp(ctk.CTk):
             value=self.saved_state.get("usb_idle_enabled", True)
         )
         
-        self.opt_idle = ctk.CTkSwitch(
-            usb_section.content,
-            text="Idle-plugged Reminder",
-            variable=self.opt_idle_var,
-            command=self.save_all_settings,
-            font=("Rubik UI", 15, "bold")
+        self.opt_idle_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_idle_enabled", True)
         )
-        self.opt_idle.pack(anchor="w", padx=10, pady=2)
 
         self.opt_download_var = ctk.BooleanVar(
             value=self.saved_state.get("usb_download_enabled", True)
         )
-        
-        self.opt_download = ctk.CTkSwitch(
-            usb_section.content,
-            text="Download-finished Reminder",
-            variable=self.opt_download_var,
-            command=self.save_all_settings,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.opt_download.pack(anchor="w", padx=10, pady=2)
 
         self.opt_plug_var = ctk.BooleanVar(
             value=self.saved_state.get("usb_plug_enabled", True)
         )
         
+        self.opt_idle = ctk.CTkSwitch(
+            usb_section.content,
+            text="Idle-plugged Reminder",
+            variable=self.opt_idle_var,
+            command=lambda: (
+                self._sync_toggle_label(
+                    self.opt_idle,
+                    "Idle-plugged Reminder",
+                    self.opt_idle_var
+                ),
+                self.save_all_settings()
+            ),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.opt_idle.pack(anchor="w", padx=10, pady=2)
+
+        self.opt_download = ctk.CTkSwitch(
+            usb_section.content,
+            text="Download-finished Reminder",
+            variable=self.opt_download_var,
+            command=lambda: (
+                self._sync_toggle_label(
+                    self.opt_download,
+                    "Download-finished Reminder",
+                    self.opt_download_var
+                ),
+                self.save_all_settings()
+            ),
+            font=("Rubik UI", 15, "bold")
+        )
+        self.opt_download.pack(anchor="w", padx=10, pady=2)
+
         self.opt_plug = ctk.CTkSwitch(
-            usb_section.content, 
+            usb_section.content,
             text="Plug / Unplug Notification",
             variable=self.opt_plug_var,
-            command=self.save_all_settings,
+            command=lambda: (
+                self._sync_toggle_label(
+                    self.opt_plug,
+                    "Plug / Unplug Notification",
+                    self.opt_plug_var
+                ),
+                self.save_all_settings()
+            ),
             font=("Rubik UI", 15, "bold")
-            
         )
-        
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
-        # Start with USB settings disabled
+
+
+        self._sync_toggle_label(self.opt_idle, "Idle-plugged Reminder", self.opt_idle_var)
+        self._sync_toggle_label(self.opt_download, "Download-finished Reminder", self.opt_download_var)
+        self._sync_toggle_label(self.opt_plug, "Plug / Unplug Notification", self.opt_plug_var)
+
 
         # --------------------------------------------------------------
         #  Organising Utilities  (NEW GREY SECTION)
@@ -816,8 +690,8 @@ class UtilityControlApp(ctk.CTk):
 
         self.folder_status_label = ctk.CTkLabel(
             entry_group,
-            text="Folder Made ",                  # IMPORTANT: not empty, so it has width
-            width=140,
+            text=" ",                  # IMPORTANT: not empty, so it has width
+            width=150,
             anchor="w",
             font=("Rubik UI", 16,"bold"),
             text_color="#1f6aa5"
@@ -917,6 +791,17 @@ class UtilityControlApp(ctk.CTk):
             state="readonly"
         )
         self.entry_backup_path.pack(anchor="w", pady = (0,5))
+        
+        self.actions.toggle_power_buttons()
+        self.update_idletasks() 
+        self.resize_to_fit()
+        
+    def _sync_toggle_label(self, switch, base_text, var):
+        if var.get():
+            switch.configure(text=f"{base_text} On")
+        else:
+            switch.configure(text=f"{base_text} Off")
+
         
         # -------------------------------------------------
         # Final UI sync (ALL vars now exist)
@@ -1054,7 +939,8 @@ class UtilityControlApp(ctk.CTk):
         new["brave_export_path"] = self.brave_export_path_var.get()
 
         # Live update backend
-        SCREEN_MOVER.enable_mmb        = new["mmb_activation_enabled"]
+        # UI intent (used for gating overlay / gestures)
+        SCREEN_MOVER.enable_mmb = new["mmb_activation_enabled"]
         SCREEN_MOVER.auto_align_enabled = new["auto_align_enabled"]  
 
         # -------------------------
@@ -1105,6 +991,57 @@ class UtilityControlApp(ctk.CTk):
         
         save_state(new)
 
+            
+    def _set_folder_status_timed(self, text, duration_ms=2000):
+        # Cancel any existing timer
+        if self._folder_status_after_id:
+            self.after_cancel(self._folder_status_after_id)
+            self._folder_status_after_id = None
+
+        # Set text immediately
+        self.folder_status_label.configure(text=text)
+
+        # Schedule clear
+        self._folder_status_after_id = self.after(
+            duration_ms,
+            lambda: self.folder_status_label.configure(text="")
+        )
+
+    # ===================================================================
+    #  Create Folder On Desktop
+    # ===================================================================
+    
+    def _create_desktop_folder(self):
+        folder_name = self.folder_name_var.get().strip()
+
+        if not folder_name:
+            return
+
+        desktop = os.path.join(os.environ["USERPROFILE"], "Desktop")
+        new_path = os.path.join(desktop, folder_name)
+
+        try:
+            if os.path.exists(new_path):
+                messagebox.showerror(
+                    "Error",
+                    "A folder with that name already exists on Desktop."
+                )
+                return
+
+            os.makedirs(new_path)
+
+            # Clear entry
+            self.folder_name_var.set("")
+
+            # Timed success message
+            self._set_folder_status_timed("Folder Made", 2000)
+
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"Could not create folder:\n{e}"
+            )
+            
     def _update_create_folder_button(self, *_):
         name = self.folder_name_var.get().strip()
         
@@ -1114,30 +1051,6 @@ class UtilityControlApp(ctk.CTk):
         else:
             self.btn_create_folder.configure(state="disabled")
             self.folder_status_label.configure(text="")
-
-    # ===================================================================
-    #  Create Folder On Desktop
-    # ===================================================================
-    
-    def _create_desktop_folder(self):
-
-        folder_name = self.folder_name_var.get().strip()
-
-        # Resolve desktop path
-        desktop = os.path.join(os.path.join(os.environ["USERPROFILE"]), "Desktop")
-        new_path = os.path.join(desktop, folder_name)
-
-        try:
-            if os.path.exists(new_path):
-                messagebox.showerror("Error", "A folder with that name already exists on Desktop.")
-                return
-
-            os.makedirs(new_path)
-            
-            self.folder_name_var.set("")     # <-- clears the entry box
-
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not create folder:\n{e}")
 
     # ---------------- Helpers that run on Tk main thread ----------------
     
@@ -1159,7 +1072,9 @@ class UtilityControlApp(ctk.CTk):
             )
         except Exception as e:
             print("[TOPMOST] WinAPI failed:", e)
-
+    
+        
+    
 # ===================================================================
 # Launch App
 # ===================================================================
