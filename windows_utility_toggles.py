@@ -31,47 +31,27 @@ class UtilityActionsManager:
     # ===================================================================
 
     def toggle_power_buttons(self):
-        """Show or hide the right-side power buttons and save state."""
         enabled = self.app.power_toggle_var.get()
-        self.app.save_all_settings()
-
-        # If GUI not ready yet
-        if not hasattr(self.app, "btn_shutdown"):
-            return
 
         widgets = [
-            self.app.btn_shutdown,
-            self.app.btn_restart,
             self.app.btn_sleep,
             self.app.btn_lock,
+            self.app.btn_restart,
+            self.app.btn_shutdown,
         ]
-        
-        # -------------------------------------------
-        # NEW: Red danger styling when enabled
-        # -------------------------------------------
-        danger_fg     = "#FA0F0F"  # strong red
-        danger_hover  = "#CA0C0C"  # darker hover
-        normal_fg     = None       # CTk default blue
-        normal_hover  = None
 
         for w in widgets:
-            try:
-                if enabled:
-                    w.grid()
-                    w.configure(
-                        fg_color=danger_fg,
-                        hover_color=danger_hover,
-                        text_color="white"
-                    )
-                else:
-                    w.grid_remove()
-                    w.configure(
-                        fg_color=normal_fg,
-                        hover_color=normal_hover,
-                        text_color=None
-                    )
-            except Exception:
-                pass
+            if enabled:
+                w.pack(anchor="e", pady=(0, 4))
+            else:
+                w.pack_forget()
+                # Update switch label text
+        if enabled:
+            self.app.power_toggle.configure(text="Power Options On")
+        else:
+            self.app.power_toggle.configure(text="Power Options Off")
+
+        self.app.save_all_settings()
 
     # ===================================================================
     #  Router Auto-Detect & Open
@@ -117,6 +97,11 @@ class UtilityActionsManager:
             minimize_all_except_gui(real_hwnd)
         else:
             restore_all_except_gui(real_hwnd)
+            
+        if enabled:
+            self.app.minimize_all_switch.configure(text="Maximize All Off")
+        else:
+            self.app.minimize_all_switch.configure(text="Maximize All On")
 
         self.app.save_all_settings()
 
@@ -157,8 +142,16 @@ class UtilityActionsManager:
     # ===================================================================
 
     def tooltips_toggle(self):
-        self.app.tooltips_enabled = self.app.tooltips_enabled_var.get()
+        enabled = self.app.tooltips_enabled_var.get()
         self.app.save_all_settings()
+        
+        if enabled:
+            self.app.tooltip_switch.configure(text="Tooltips On")
+        else:
+            self.app.tooltip_switch.configure(text="Tooltips Off")
+
+        self.app.save_all_settings()
+            
 
     # ===================================================================
     #  Always-On-Top Toggle
@@ -166,8 +159,18 @@ class UtilityActionsManager:
 
     def always_on_top_toggle(self):
         enabled = self.app.always_on_top_var.get()
+
+        # Apply behavior
         self.app.apply_always_on_top(enabled)
+
+        # Update switch label
+        if enabled:
+            self.app.always_on_top_switch.configure(text="Always On Top On")
+        else:
+            self.app.always_on_top_switch.configure(text="Always On Top Off")
+
         self.app.save_all_settings()
+
         
     # ===================================================================
     #  Auto-Align (Screen Mover)
@@ -175,15 +178,19 @@ class UtilityActionsManager:
 
     def auto_align_toggle(self):
         enabled = self.app.auto_align_var.get()
+
+        # Apply backend behaviour
         SCREEN_MOVER.auto_align_enabled = enabled
+
+        # Update switch label text (polish)
+        self.app._sync_toggle_label(
+            self.app.auto_align_switch,
+            "Windows In Move Zone",
+            self.app.auto_align_var
+        )
 
         self.app.save_all_settings()
 
-        if enabled:
-            try:
-                SCREEN_MOVER._force_align_all_windows()
-            except Exception as e:
-                print("[GUI] Force align failed:", e)
 
     # ===================================================================
     #  Organising Utilities - Backup Pinned Shortcuts (REAL LOGIC)
@@ -359,10 +366,10 @@ def restore_all_except_gui(skip_hwnd):
 def switch_theme(dark_mode: bool):
     if dark_mode:
         ctk.set_appearance_mode("Dark")
-        print("[THEME] Switched to Dark Mode")
+        print("[THEME] Switched to Dark Mode On")
     else:
         ctk.set_appearance_mode("Light")
-        print("[THEME] Switched to Light Mode")
+        print("[THEME] Switched to Light Mode Off")
 
 # ===================================================================
 #  USB Reminder – UI Helpers (pure GUI logic, safe to import anywhere)
