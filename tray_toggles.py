@@ -3,7 +3,6 @@ import pystray
 from PIL import Image, ImageDraw
 from screen_mover import SCREEN_MOVER
 
-
 # ===================================================================
 #  Tray Icon Manager (Monolithic Class)
 # ===================================================================
@@ -26,14 +25,14 @@ class TrayIconManager:
         """Create and start the system tray icon in a background thread."""
 
         # Create a simple blue square icon (matches your CTk blue theme)
-        def make_icon_image(size=64):
+        def make_icon_image(size=32):
             img = Image.new("RGBA", (size, size), (26, 115, 232, 255))  # blue-ish
             draw = ImageDraw.Draw(img)
 
             margin = size // 8
             draw.rectangle(
                 [margin, margin, size - margin, size - margin],
-                fill=(41, 140, 255, 255)
+                fill=(0, 120, 255, 255)
             )
 
             return img
