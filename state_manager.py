@@ -19,9 +19,10 @@ def load_state() -> dict:
         "show_power_buttons": False,
         "tooltips_enabled": True,
         "minimize_all_enabled": False,
+        "master_toggle_left": True,
         
         "mmb_activation_enabled": True,
-        "auto_align_enabled": False, 
+        "auto_align_enabled": False,
 
         "usb_idle_enabled": True,
         "usb_download_enabled": True,
@@ -29,14 +30,22 @@ def load_state() -> dict:
         
         "backup_folder_path": str(Path.home()),
         "brave_export_path": "",
+        "side_panel_open" : True,
 
-        # NEW: Collapsible section states
-        "section_states": {
-            "misc": True,
-            "mover": True,
-            "usb": True,
-            "winutils": True
-        }
+
+        "left_section_states": {
+            "user_interface": True,
+            "screen_mover": True,
+            "drive_reminder_options": True,
+            "organising_utilties": True,
+            "desktop_backup": True,
+            "desktop_icon_organiser": True
+        },
+            "right_section_states": {
+            "Windows_utilities": False,
+            "drive_space_display": False,
+            "Bookmarks_exporter": False
+        },
     }
 
     # ================================================================
