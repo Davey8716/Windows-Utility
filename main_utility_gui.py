@@ -73,6 +73,7 @@ def ensure_single_instance():
 # ===================================================================
 #  Main App Gui
 # ===================================================================
+
 class UtilityControlApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -180,43 +181,7 @@ class UtilityControlApp(ctk.CTk):
         self.root_container.rowconfigure(0, weight=1)
         
 
-        # ==============================================================
-        #  MAIN FRAMES LEFT HEADER
-        # ==============================================================
-        
-        self.main_frame = ctk.CTkScrollableFrame(
-            self.root_container,
-            width=450,
-            fg_color="transparent"
-        )
-        self.main_frame.grid(row=0, column=0, sticky="ns")
 
-        # --------------------------------------------------------------
-        # Title row (label + master collapse button)
-        # --------------------------------------------------------------
-
-        title_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        title_row.pack(fill="x", padx=10, pady=10)
-
-        title = ctk.CTkLabel(
-            title_row,
-            text="Problems Gone",
-            font=("Rubik UI", 20, "bold")
-        )
-        title.pack(padx = 50, pady = 10)
-
-        self.master_collapse_btn = ctk.CTkButton(
-            title_row,
-            text="▼",
-            width=32,
-            height=28,
-            font=("Rubik UI", 18, "bold"),
-            fg_color="transparent",
-            hover_color="#202020",
-            command=self.toggle_all_left_sections
-        )
-        self.master_collapse_btn.pack(side="right")
-        
 
         # ==============================================================
         # SIDE PANEL RIGHT HEADER
@@ -236,24 +201,7 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 22, "bold")
         )
         self.advanced_title.pack(padx=12, pady=(20, 20))
-
-
-        # ==============================================================
-        # Collapsible sections
-        # ==============================================================
-
-        self.misc_section = CollapsibleSection(
-            self.main_frame,
-            "User Interface:",
-            section_id="user_interface",
-            initial_open=self.saved_state.get("left_section_states", {}).get("misc", True)
-        )
-        self.collapsible_sections.append(self.misc_section)
-
-
-        # ==============================================================
-        # Right Column — Advanced Tool Sections
-        # ==============================================================
+        
 
         def run_windows_utility(choice):
             actions = {
@@ -450,33 +398,58 @@ class UtilityControlApp(ctk.CTk):
 
 
             
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
+        # ==============================================================
+        #  MAIN FRAMES LEFT HEADER
+        # ==============================================================
+        
+        self.main_frame = ctk.CTkScrollableFrame(
+            self.root_container,
+            width=450,
+            fg_color="transparent"
+        )
+        self.main_frame.grid(row=0, column=0, sticky="ns")
 
+            
+        # --------------------------------------------------------------
+        # Title row (label + master collapse button)
+        # --------------------------------------------------------------
+
+        title_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        title_row.pack(fill="x", padx=10, pady=10)
+
+        title = ctk.CTkLabel(
+            title_row,
+            text="Problems Gone",
+            font=("Rubik UI", 20, "bold")
+        )
+        title.pack(padx = 50, pady = 10)
+
+        self.master_collapse_btn = ctk.CTkButton(
+            title_row,
+            text="▼",
+            width=32,
+            height=28,
+            font=("Rubik UI", 18, "bold"),
+            fg_color="transparent",
+            hover_color="#202020",
+            command=self.toggle_all_left_sections
+        )
+        self.master_collapse_btn.pack(side="right")
+
+        
+        # ==============================================================
+        # Collapsible sections
+        # ==============================================================
+
+        self.misc_section = CollapsibleSection(
+            self.main_frame,
+            "User Interface:",
+            section_id="user_interface",
+            initial_open=self.saved_state.get("left_section_states", {}).get("misc", True)
+        )
+        self.collapsible_sections.append(self.misc_section)
+
+        
         toggles_row = ctk.CTkFrame(self.misc_section.content, fg_color="transparent")
         toggles_row.pack(fill="x", padx=12, pady=(4, 6))
 
@@ -988,6 +961,76 @@ class UtilityControlApp(ctk.CTk):
         self.actions.toggle_power_buttons()
         self.update_idletasks() 
         self.resize_to_fit()
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
     def _sync_toggle_label(self, switch, base_text, var):
         if var.get():
@@ -1011,7 +1054,7 @@ class UtilityControlApp(ctk.CTk):
             elif not collapse and not section.open:
                 section.toggle()
                 
-         # 🔑 THIS WAS MISSING
+        # 🔑 THIS WAS MISSING
         self.master_toggle_left = not collapse
 
         # Update arrow

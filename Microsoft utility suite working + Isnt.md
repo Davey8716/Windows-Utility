@@ -2,19 +2,11 @@
 
 
 
-**Rember to add mutex so it runs one singular instance only once the exe has been built + the listener code(can take from exe builder) to bring program to front if minimized and double clicked on exe icon.**
+**Reset toggles button done for left side!**
 
 
 
-**Restructure Ui to be two 450px boxes side by then 5 deep**
 
-
-
-**Reset toggles button**
-
-
-
-**Dynamic toggle text**
 
 
 
@@ -26,11 +18,11 @@
 
 
 
-**Windows utilities → dropdowns**
-
-
-
 **Minimize Gui when windows utils clicked**
+
+
+
+**Very slow opening of windows utilities (needs fixing + Windows utilities → dropdowns)**
 
 
 
@@ -38,75 +30,75 @@
 
 
 
-**Drag/drop collapsible sections**
+**Drag/drop collapsible sections,**
 
 
 
-**Drive reminder full logic**
+**Drive reminder full logic,**
 
 
 
-**Colour-blind mode**
+**Colour-blind mode,**
 
 
 
-**Drive Space shower**
+**Drive Space shower,**
 
 
 
-**Open Temp Folder**
+**Open Temp Folder,**
 
 
 
-**Toggle File Extensions**
+**Toggle File Extensions,**
 
 
 
-**Toggle Hidden Files**
+**Toggle Hidden Files,**
 
 
 
-**Open Startup Folder**
+**Open Startup Folder,**
 
 
 
-**Open Downloads Folder**
+**Open Downloads Folder,**
 
 
 
-**Clear Clipboard**
+**Clear Clipboard,**
 
 
 
-**Restart Bluetooth Service**
+**Restart Bluetooth Service,**
 
 
 
-**Quick Run Command Box**
+**Quick Run Command Box,**
 
 
 
-**Quick open: Display settings**
+**Quick open: Display settings,**
 
 
 
-**Quick open: Sound devices**
+**Quick open: Sound devices,**
 
 
 
-**Low Disk Space Warning**
+**Low Disk Space Warning,**
 
 
 
-**Clean Desktop Junk button**
+**Clean Desktop Junk button,**
 
 
 
-**Caps Lock notify / NumLock toggle**
+**Caps Lock notify / NumLock toggle,**
 
 
 
-**Tooltip for change folder when input bar is squished**
+**Tooltip for change folder when input bar is squished,**
 
 
 
@@ -140,7 +132,17 @@
 
 
 
+**Rember to add mutex so it runs one singular instance only once the exe has been built + the listener code(can take from exe builder) to bring program to front if minimized and double clicked on exe icon.**
+
+**Dynamic toggle text!**
+
+**Fixed flick icon so it appears symmetrically relative to mouse cursor location + ignores itself so it flicks properly!**
+
+**Did some Gui changes!**
+
 **So the utility starts up properly and the gui shows and is moveable!**
+
+**Restructure Ui to be two 450px boxes side by then 5 deep!**
 
 **the enable/disable screen-tab mover toggle works, when its on it allows for mmb and left click + shift to enable!**
 

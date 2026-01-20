@@ -1,23 +1,29 @@
 {
+    "master_toggle_left": true,
     "mmb_activation_enabled": false,
     "auto_align_enabled": false,
     "minimize_all_enabled": false,
-    "brave_export_path": "C:/Users/davey/Desktop/Admin/BookMarks Passwords/Brave_Bookmarks_2026-01-19.html",
+    "brave_export_path": "",
     "usb_idle_enabled": true,
     "usb_download_enabled": true,
     "usb_plug_enabled": true,
     "theme_dark": true,
-    "always_on_top_enabled": false,
+    "always_on_top_enabled": true,
     "show_power_buttons": true,
-    "tooltips_enabled": true,
+    "tooltips_enabled": false,
+    "side_panel_open": true,
     "backup_folder_path": "C:\\Users\\davey",
-    "section_states": {
-        "misc": true,
+    "left_section_states": {
+        "user_interface": true,
+        "screen_mover": true,
+        "drive_reminder_options": true,
+        "organising_utilties": true,
+        "desktop_backup": true,
+        "desktop_icon_organiser": true
+    },
+    "right_section_states": {
         "Windows_utilities": false,
-        "Bookmarks_exporter": false,
-        "mover": true,
-        "usb": true,
-        "organising": true,
-        "desktop_backup": true
+        "drive_space_display": false,
+        "Bookmarks_exporter": false
     }
 }

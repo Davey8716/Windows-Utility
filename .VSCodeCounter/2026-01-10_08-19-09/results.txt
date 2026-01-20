@@ -1,0 +1,36 @@
+Date : 2026-01-10 08:19:09
+Directory : c:\Users\davey\Desktop\Projects\Windows-Utility
+Total : 9 files,  1688 codes, 490 comments, 664 blanks, all 2842 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |          7 |      1,604 |        490 |        498 |      2,592 |
+| Markdown |          2 |         84 |          0 |        166 |        250 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                      | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                         |          9 |      1,688 |        490 |        664 |      2,842 |
+| . (Files)                                                                                 |          8 |      1,556 |        435 |        619 |      2,610 |
+| Initial code                                                                              |          1 |        132 |         55 |         45 |        232 |
++-------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                  | language | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\davey\Desktop\Projects\Windows-Utility\Initial code\Windows Utility.py           | Python   |        132 |         55 |         45 |        232 |
+| c:\Users\davey\Desktop\Projects\Windows-Utility\Microsoft utility suite working + Isnt.md | Markdown |         60 |          0 |        129 |        189 |
+| c:\Users\davey\Desktop\Projects\Windows-Utility\consolidated_feature_list.md              | Markdown |         24 |          0 |         37 |         61 |
+| c:\Users\davey\Desktop\Projects\Windows-Utility\screen_mover.py                           | Python   |        403 |        118 |        131 |        652 |
+| c:\Users\davey\Desktop\Projects\Windows-Utility\screenshot_tool.py                        | Python   |         30 |         20 |         15 |         65 |
+| c:\Users\davey\Desktop\Projects\Windows-Utility\state_manager.py                          | Python   |         37 |         14 |         14 |         65 |
+| c:\Users\davey\Desktop\Projects\Windows-Utility\tray_toggles.py                           | Python   |         59 |         25 |         25 |        109 |
+| c:\Users\davey\Desktop\Projects\Windows-Utility\windows_utility_gui.py                    | Python   |        715 |        174 |        192 |      1,081 |
+| c:\Users\davey\Desktop\Projects\Windows-Utility\windows_utility_toggles.py                | Python   |        228 |         84 |         76 |        388 |
+| Total                                                                                     |          |      1,688 |        490 |        664 |      2,842 |
++-------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
