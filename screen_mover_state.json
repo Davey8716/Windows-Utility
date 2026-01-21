@@ -1,18 +1,19 @@
 {
-    "master_toggle_left": true,
-    "mmb_activation_enabled": false,
-    "auto_align_enabled": false,
+    "theme_dark": true,
+    "main_always_on_top_enabled": false,
+    "right_always_on_top_enabled": true,
+    "show_power_buttons": false,
+    "tooltips_enabled": true,
     "minimize_all_enabled": false,
-    "brave_export_path": "",
+    "master_toggle_left": true,
+    "mmb_activation_enabled": true,
+    "auto_align_enabled": true,
     "usb_idle_enabled": true,
     "usb_download_enabled": true,
     "usb_plug_enabled": true,
-    "theme_dark": true,
-    "always_on_top_enabled": true,
-    "show_power_buttons": true,
-    "tooltips_enabled": false,
-    "side_panel_open": true,
     "backup_folder_path": "C:\\Users\\davey",
+    "brave_export_path": "",
+    "side_panel_open": 1,
     "left_section_states": {
         "user_interface": true,
         "screen_mover": true,
@@ -22,8 +23,8 @@
         "desktop_icon_organiser": true
     },
     "right_section_states": {
-        "Windows_utilities": false,
-        "drive_space_display": false,
-        "Bookmarks_exporter": false
+        "Windows_utilities": true,
+        "drive_space_display": true,
+        "bookmarks_exporter": true
     }
 }
