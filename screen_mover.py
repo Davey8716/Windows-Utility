@@ -1,5 +1,6 @@
 
 import threading
+import psutil
 import time
 from pynput import mouse
 from state_manager import load_state
@@ -9,8 +10,10 @@ import win32api
 import win32process
 import pygetwindow as gw
 
+
+
 ACTIVATION_Y_MIN = 0
-ACTIVATION_Y_MAX = 40
+ACTIVATION_Y_MAX = 30
 
 # ===================================================================
 #  Background Worker Object
@@ -485,7 +488,7 @@ class ScreenMoverWorker:
             return
 
         try:
-            import win32gui, win32con, win32process, psutil
+            
 
             windows = []
 
@@ -533,7 +536,7 @@ class ScreenMoverWorker:
                         continue
 
                     # Move window just slightly below the top edge
-                    new_top = 10
+                    new_top = 1
                     new_left = left
 
                     try:
@@ -585,7 +588,7 @@ class ScreenMoverWorker:
             # -------------------------------------------------------------
             
             try:
-                import psutil, win32process
+                
                 tid, pid = win32process.GetWindowThreadProcessId(hwnd)
                 exe = psutil.Process(pid).name().lower()
 
@@ -648,7 +651,7 @@ class ScreenMoverWorker:
     def _is_system_window(self, hwnd):
         """Return True if window belongs to Explorer or system popups."""
         try:
-            import psutil
+
             tid, pid = win32process.GetWindowThreadProcessId(hwnd)
             exe = psutil.Process(pid).name().lower()
             return exe in (
