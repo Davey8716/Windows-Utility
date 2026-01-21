@@ -24,6 +24,7 @@ from universal_bookmarks_export import BraveBookmarksExporter
 from utility_toggles import switch_theme, UtilityActionsManager 
 from collapsible_section import CollapsibleSection
 
+
 # Configure appearance
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -52,6 +53,7 @@ def bring_existing_instance_to_front():
             title = win32gui.GetWindowText(hwnd)
             if "Daily Hassles? Gone!" in title:
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+
                 win32gui.SetForegroundWindow(hwnd)
                 return False
         return True
@@ -70,13 +72,16 @@ def ensure_single_instance():
 
     return mutex
 
+
 # ===================================================================
-#  Main App Gui
+#  Main App Gui Left Side
 # ===================================================================
 
 class UtilityControlApp(ctk.CTk):
     def __init__(self):
         super().__init__()
+        
+        from right_utility_gui import AdvancedToolsPanel
         
         mutex = ensure_single_instance()
 
@@ -99,19 +104,26 @@ class UtilityControlApp(ctk.CTk):
         
         self.saved_state = load_state()
         self.actions = UtilityActionsManager(self)
+        
+        # ==============================================================
+        # MAGNET/ OWNERSHIP
+        # ==============================================================
+        
+        self._ui_ready = False
+        self._syncing_windows = False
+        self._drag_owner = None
 
         # ==============================================================
         # Window geometry
         # ==============================================================
         
-        self.COLLAPSED_WIDTH = 510
-        self.EXPANDED_WIDTH = 975
+        self.WINDOW_WIDTH = 510
         self.WINDOW_HEIGHT = 1150
         
         btn_width = 120 # Large buttons
         small_btn_width = 90 # Small buttons
 
-        self.geometry(f"{self.COLLAPSED_WIDTH}x{self.WINDOW_HEIGHT}")
+        self.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}")
         self.expanded = False
 
         self.resizable(False, False)
@@ -127,7 +139,7 @@ class UtilityControlApp(ctk.CTk):
         SCREEN_MOVER.app_root = self
 
         # ==============================================================
-        # Variables (DEFINE ONCE, BEFORE WIDGETS)
+        # Variables (DEFINE ONCE, BEFORE WIDGETS) INITIALIZING STATE
         # ==============================================================
         
         self.theme_var = ctk.BooleanVar(
@@ -135,8 +147,13 @@ class UtilityControlApp(ctk.CTk):
         )
         switch_theme(self.theme_var.get())
 
-        self.always_on_top_var = ctk.BooleanVar(
-            value=self.saved_state.get("always_on_top_enabled", True)
+        self.main_always_on_top_enabled = ctk.BooleanVar(
+            value=self.saved_state.get("main_always_on_top_enabled", True)
+            
+        )
+        
+        self.right_always_on_top_enabled = self.saved_state.get(
+            "right_always_on_top_enabled", True
         )
 
         self.minimize_all_var = ctk.BooleanVar(
@@ -158,10 +175,17 @@ class UtilityControlApp(ctk.CTk):
         
         self._folder_status_after_id = None
         
-        self.master_toggle_left = self.saved_state.get("master_toggle_left", True)
+        self.master_toggle_left_var = ctk.BooleanVar(
+            value=self.saved_state.get("master_toggle_left", True)
+        )
+
 
         self.side_panel_open = self.saved_state.get("side_panel_open", False)
         self.expanded = self.side_panel_open
+        
+        self.bookmarks_exporter_var = ctk.BooleanVar(
+            value=self.saved_state.get("bookmarks_exporter", True)
+        )
 
 
         self.collapsible_sections = []
@@ -175,229 +199,32 @@ class UtilityControlApp(ctk.CTk):
         
         self.root_container.grid_propagate(False)
         self.root_container.pack_propagate(False)
+    
 
         self.root_container.columnconfigure(0, weight=0, minsize=450)
         self.root_container.columnconfigure(1, weight=0, minsize=450)
         self.root_container.rowconfigure(0, weight=1)
         
-
-
-
-        # ==============================================================
-        # SIDE PANEL RIGHT HEADER
-        # ==============================================================
-
-        self.side_frame = ctk.CTkScrollableFrame(
-            self.root_container,
-            width=450,
-            fg_color="transparent"
-        )
-        self.side_frame.grid(row=0, column=1, sticky="ns")
-        self.side_frame.grid_remove()
-
-        self.advanced_title = ctk.CTkLabel(
-            self.side_frame,
-            text="Advanced Tools",
-            font=("Rubik UI", 22, "bold")
-        )
-        self.advanced_title.pack(padx=12, pady=(20, 20))
+        self.bind("<Configure>", lambda e: self._sync_windows("main"))
+        self.bind("<ButtonPress-1>", lambda e: self._set_drag_owner("main"))
+        self.bind("<ButtonRelease-1>", lambda e: self._clear_drag_owner())
         
-
-        def run_windows_utility(choice):
-            actions = {
-                "System Settings": lambda: os.system("start ms-settings:"),
-                "Device Manager": lambda: os.system("devmgmt.msc"),
-                "Task Manager": lambda: os.system("taskmgr"),
-                "Router Login": self.actions.open_router_page,
-            }
-            action = actions.get(choice)
-            if action:
-                action()
-
-
-        self.advanced_section_1 = CollapsibleSection(
-            self.side_frame,
-            "Windows Utilities",
-            section_id="Windows_utilities",
-            initial_open=False
-        )
-        self.collapsible_sections.append(self.advanced_section_1)
-        self.advanced_section_1.wrapper.pack(fill="x", padx=12, pady=(0, 6))
-
-        parent = self.advanced_section_1.content
-
-        self.windows_util_menu = ctk.CTkOptionMenu(
-            parent,
-            values=[
-                "System Settings",
-                "Device Manager",
-                "Task Manager",
-                "Router Login",
-            ],
-            command=run_windows_utility,
-            width=260,
-            font=("Rubik UI", 15, "bold"),
-            dropdown_font=("Rubik UI", 14),
-        )
-        self.windows_util_menu.pack(anchor="w", padx=12, pady=8)
-
-
-        # --------------------------------------------------------------
-        # Advanced Section 2 — Power & System
-        # --------------------------------------------------------------
-
-        self.advanced_section_2 = CollapsibleSection(
-            self.side_frame,
-            "Drive Space Display",
-            section_id="drive_space_display",
-            initial_open=False
-        )
-        self.collapsible_sections.append(self.advanced_section_2)
-        self.advanced_section_2.wrapper.pack(fill="x", padx=12, pady=(0, 6))
-
-        drive_parent = self.advanced_section_2.content
-        self.drive_labels = []
-
-
-        def refresh_drive_display():
-            for lbl in self.drive_labels:
-                lbl.destroy()
-            self.drive_labels.clear()
-
-            for d in get_drive_info():
-                used_gb = (d["total"] - d["free"]) / (1024**3)
-                total_gb = d["total"] / (1024**3)
-                free_gb = d["free"] / (1024**3)
-
-                text = (
-                    f"{d['drive']}  "
-                    f"used: {used_gb:.1f} GB / "
-                    f"Free: {free_gb:.1f} GB / "
-                    f"Total: {total_gb:.1f} GB"
-                )
-
-                lbl = ctk.CTkLabel(
-                    drive_parent,
-                    text=text,
-                    anchor="w",
-                    font=("Rubik UI", 15)
-                )
-                lbl.pack(anchor="w", padx=12, pady=0)
-                self.drive_labels.append(lbl)
-
-
-        refresh_drive_display()
-
-
-        def schedule_drive_refresh():
-            refresh_drive_display()
-            self.after(10_000, schedule_drive_refresh)
-
-
-        schedule_drive_refresh()
-
-
-        # --------------------------------------------------------------
-        # Advanced Section 3 — Universal Bookmarks Exporter
-        # --------------------------------------------------------------
-
-        self.advanced_section_3 = CollapsibleSection(
-            self.side_frame,
-            "Universal Bookmarks Exporter",
-            section_id="Bookmarks_exporter",
-            initial_open=False
-        )
-        self.collapsible_sections.append(self.advanced_section_3)
-        self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(0, 6))
-
-
-        # --------------------------------------------------------------
-        # Brave Export UI (MUST BE AFTER section creation)
-        # --------------------------------------------------------------
-
-        brave_frame = ctk.CTkFrame(
-            self.advanced_section_3.content,
-            fg_color="transparent"
-        )
-        brave_frame.pack(anchor="w", padx=10, pady=(5, 2))
-
-        self.btn_brave_export = ctk.CTkButton(
-            brave_frame,
-            text="Export Brave Bookmarks",
-            width=180,
-            font=("Rubik UI", 15, "bold"),
-            command=self._run_brave_export,
-        )
-        self.btn_brave_export.pack(anchor="w", pady=(0, 4))
-
-        self.brave_export_entry = ctk.CTkEntry(
-            brave_frame,
-            textvariable=self.brave_export_path_var,
-            font=("Rubik UI", 15),
-            width=360,
-            state="readonly"
-        )
-        self.brave_export_entry.pack(anchor="w")
-
-
-        # ==============================================================
-        # Expand / Collapse button
-        # ==============================================================
-
-        self.expand_btn = ctk.CTkButton(
-            self,
-            text="▼",
-            width=28,
-            height=80,
-            corner_radius=8,
-            command=self.toggle_side_panel,
-            fg_color="#2a2a2a",
-            hover_color="#3a3a3a",
-            font=("Rubik UI", 18, "bold")
-        )
-        self.expand_btn.place(relx=1.0, rely=0.5, anchor="e")
-
-        CtkTooltip(
-            self.expand_btn,
-            "Toogles Advanced features side panel."
-        )
-
-        if self.side_panel_open:
-            self.side_frame.grid(row=0, column=1, sticky="ns")
-            self.geometry(f"{self.EXPANDED_WIDTH}x{self.WINDOW_HEIGHT}")
-            self.expand_btn.configure(text="▶")
-            self.expanded = True
-        else:
-            self.side_frame.grid_remove()
-            self.geometry(f"{self.COLLAPSED_WIDTH}x{self.WINDOW_HEIGHT}")
-            self.expand_btn.configure(text="▼")
-            self.expanded = False
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
         # ==============================================================
         #  MAIN FRAMES LEFT HEADER
         # ==============================================================
@@ -409,7 +236,6 @@ class UtilityControlApp(ctk.CTk):
         )
         self.main_frame.grid(row=0, column=0, sticky="ns")
 
-            
         # --------------------------------------------------------------
         # Title row (label + master collapse button)
         # --------------------------------------------------------------
@@ -436,7 +262,6 @@ class UtilityControlApp(ctk.CTk):
         )
         self.master_collapse_btn.pack(side="right")
 
-        
         # ==============================================================
         # Collapsible sections
         # ==============================================================
@@ -445,11 +270,11 @@ class UtilityControlApp(ctk.CTk):
             self.main_frame,
             "User Interface:",
             section_id="user_interface",
+            app=self,
             initial_open=self.saved_state.get("left_section_states", {}).get("misc", True)
         )
         self.collapsible_sections.append(self.misc_section)
 
-        
         toggles_row = ctk.CTkFrame(self.misc_section.content, fg_color="transparent")
         toggles_row.pack(fill="x", padx=12, pady=(4, 6))
 
@@ -504,6 +329,16 @@ class UtilityControlApp(ctk.CTk):
         # -------------------------
         # Always On Top Toggle (LEFT)
         # -------------------------
+        
+        self.main_always_on_top_var = ctk.BooleanVar(
+            value=self.saved_state.get("main_always_on_top_enabled", True)
+        )
+
+        self.right_always_on_top_var = ctk.BooleanVar(
+            value=self.saved_state.get("right_always_on_top_enabled", True)
+        )
+        
+        self.always_on_top_var = self.main_always_on_top_var
 
         self.always_on_top_switch = ctk.CTkSwitch(
             left_col,
@@ -616,20 +451,21 @@ class UtilityControlApp(ctk.CTk):
         #  Screen-Tab Mover Group Box(frame)
         # ------------------------------------------------------------------
         
-        mover_section = CollapsibleSection(
+        self.mover_section = CollapsibleSection(
             self.main_frame,
             "Quick app/browser screen changer:",
             section_id="screen_mover",
+            app = self,
             initial_open=self.saved_state["left_section_states"].get("mover", True)
         )
-        self.collapsible_sections.append(mover_section)
+        self.collapsible_sections.append(self.mover_section)
 
         self.mmb_var = ctk.BooleanVar(
             value=self.saved_state.get("mmb_activation_enabled", True)
         )
 
         self.mmb_switch = ctk.CTkSwitch(
-            mover_section.content,
+            self.mover_section.content,
             variable=self.mmb_var,
             command=lambda: (
                 self._sync_toggle_label(
@@ -662,7 +498,7 @@ class UtilityControlApp(ctk.CTk):
         # NEW: Keep Windows in Flick Zone toggle
         self.auto_align_var = ctk.BooleanVar(value=self.saved_state.get("auto_align_enabled", False))
         self.auto_align_switch = ctk.CTkSwitch(
-            mover_section.content,   # FIXED
+            self.mover_section.content,   # FIXED
             text="Windows In Move Zone",
             variable=self.auto_align_var,
             command=self.actions.auto_align_toggle,     # <-- THIS WAS MISSING
@@ -691,6 +527,7 @@ class UtilityControlApp(ctk.CTk):
             self.main_frame,
             "Drive Reminder Options:",
             section_id="drive_reminder_options",
+            app = self,
             initial_open=self.saved_state["left_section_states"].get("usb", True)
         )
         self.collapsible_sections.append(usb_section)
@@ -769,6 +606,7 @@ class UtilityControlApp(ctk.CTk):
             self.main_frame,
             "Organising Utilities:",
             section_id="organising_utilties",
+            app = self,
             initial_open=self.saved_state.get("left_section_states", {}).get("organising", True)
         )
         self.collapsible_sections.append(organising_section)
@@ -854,6 +692,7 @@ class UtilityControlApp(ctk.CTk):
             self.main_frame,
             "Desktop Backup Utilties:",
             section_id="desktop_backup",
+            app=self,
             initial_open=self.saved_state.get("left_section_states", {}).get("desktop_backup", True)
         )
         self.collapsible_sections.append(desktop_backup_section)
@@ -946,91 +785,234 @@ class UtilityControlApp(ctk.CTk):
             self.main_frame,
             "Desktop Icon Organiser:",
             section_id="desktop_icon_organiser",
+            app=self
         )
         self.collapsible_sections.append(Desktop_icon_layout)
         
-        if not self.master_toggle_left:
+        # --------------------------------------------------
+        # Apply master left collapse override (FINAL)
+        # --------------------------------------------------
+
+        if not self.master_toggle_left_var.get():
             for section in self.collapsible_sections:
-                if section.parent == self.main_frame and section.open:
-                    section.toggle()
+                if isinstance(section, CollapsibleSection) and section.parent == self.main_frame:
+                    if section.open:
+                        section.toggle()
 
             self.master_collapse_btn.configure(text="▶")
         else:
             self.master_collapse_btn.configure(text="▼")
+
         
         self.actions.toggle_power_buttons()
         self.update_idletasks() 
         self.resize_to_fit()
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        # --------------------------------------------------------------
+        # Overlay expand button (CORRECT parent + placement)
+        # --------------------------------------------------------------
+
+        self.overlay_controls = ctk.CTkFrame(
+            self.root_container,
+            fg_color="transparent"
+        )
+
+        # Place relative to root_container, not the window
+        self.overlay_controls.place(
+            relx=1.0,
+            rely=0.5,
+            anchor="e",
+            x=-6
+        )
+
+        self.expand_btn = ctk.CTkButton(
+            self.overlay_controls,
+            text="▼",
+            width=28,
+            height=80,
+            corner_radius=8,
+            command=self.toggle_side_panel,
+            fg_color="#2a2a2a",
+            hover_color="#3a3a3a",
+            text_color="white",
+            font=("Rubik UI", 18, "bold")
+        )
+        self.expand_btn.pack()
+
+        CtkTooltip(self.expand_btn, "Toggles Advanced Tools panel.")
+
+        # Ensure it stays above scrollable content
+        self.overlay_controls.lift()
+        self.expand_btn.lift()
+        self.after(150, self._mark_ui_ready)
+        
+        self.advanced_panel = None
+        self.advanced_panel = AdvancedToolsPanel(self)
+        
+        # --------------------------------------------------
+        # Restore side panel open/closed state
+        # --------------------------------------------------
+
+        if self.saved_state.get("side_panel_open", False):
+            self.advanced_panel.show()
+            self.expand_btn.configure(text="▶")
+        else:
+            self.advanced_panel.hide()
+            self.expand_btn.configure(text="▼")
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+                
+    def _mark_ui_ready(self):
+                self._ui_ready = True
+
+    
+    # ==================================================
+    # Window magnet sync (main <-> advanced)
+    # ==================================================
+
+    def _sync_windows(self, source):
+        if self._syncing_windows:
+            return
+        
+        if not getattr(self, "_ui_ready", False):
+            return
+        
+        # 🔑 advanced panel may not exist yet
+        if not hasattr(self, "advanced_panel"):
+            return
+
+        if self._drag_owner and self._drag_owner != source:
+            return
+
+        side = self.advanced_panel
+        if not side or not side.winfo_exists():
+            return
+
+        self._syncing_windows = True
+        try:
+            if source == "main":
+                x = self.winfo_x()
+                y = self.winfo_y()
+
+                target_x = x + self.winfo_width()
+                target_y = y
+
+                if side.winfo_x() == target_x and side.winfo_y() == target_y:
+                    return
+
+                side.geometry(f"+{target_x}+{target_y}")
+
+            elif source == "side":
+                x = side.winfo_x()
+                y = side.winfo_y()
+
+                target_x = x - self.winfo_width()
+                target_y = y
+
+                if self.winfo_x() == target_x and self.winfo_y() == target_y:
+                    return
+
+                self.geometry(f"+{target_x}+{target_y}")
+
+        finally:
+            self._syncing_windows = False
+
+    def _set_drag_owner(self, who):
+        self._drag_owner = who
+
+    def _clear_drag_owner(self):
+        self._drag_owner = None
 
     def _sync_toggle_label(self, switch, base_text, var):
         if var.get():
@@ -1038,33 +1020,24 @@ class UtilityControlApp(ctk.CTk):
         else:
             switch.configure(text=f"{base_text} Off")
         
+
     def toggle_all_left_sections(self):
-        # Only collapse sections that live in the LEFT panel
-        left_sections = [
-            s for s in self.collapsible_sections
-            if s.parent == self.main_frame
-        ]
+        new_state = not self.master_toggle_left_var.get()
+        self.master_toggle_left_var.set(new_state)
 
-        # Decide action based on first section state
-        collapse = any(s.open for s in left_sections)
+        for section in self.collapsible_sections:
+            if not isinstance(section, CollapsibleSection):
+                continue
 
-        for section in left_sections:
-            if collapse and section.open:
-                section.toggle()
-            elif not collapse and not section.open:
-                section.toggle()
-                
-        # 🔑 THIS WAS MISSING
-        self.master_toggle_left = not collapse
+            if section.parent == self.main_frame:
+                if section.open != new_state:
+                    section.toggle()
 
-        # Update arrow
-        self.master_collapse_btn.configure(
-            text="▶" if collapse else "▼"
-        )
-        
-        # ✅ SAVE ONLY HERE
-        self.save_section_states()
+        self.master_collapse_btn.configure(text="▼" if new_state else "▶")
         self.save_all_settings()
+
+
+
 
     def _choose_brave_export_path(self):
         default_name = f"Brave_Bookmarks_Export_{datetime.now().strftime('%Y-%m-%d')}.html"
@@ -1104,24 +1077,23 @@ class UtilityControlApp(ctk.CTk):
     # ==============================================================
     
     def toggle_side_panel(self):
-        if not self.expanded:
-            self.side_frame.grid(row=0, column=1, sticky="ns")
-            self.geometry(f"{self.EXPANDED_WIDTH}x{self.WINDOW_HEIGHT}")
-            self.expand_btn.configure(text="▶")
-            self.expanded = True
-        else:
-            self.side_frame.grid_remove()
-            self.geometry(f"{self.COLLAPSED_WIDTH}x{self.WINDOW_HEIGHT}")
-            self.expand_btn.configure(text="▼")
-            self.expanded = False
+        panel = self.advanced_panel
 
-                # 🔑 persist user intent
-            
+        if panel.winfo_viewable():
+            panel.hide()
+            self.expand_btn.configure(text="▼")
+        else:
+            panel.show()
+            self.expand_btn.configure(text="▶")
+
         self.save_all_settings()
 
+
     def update_collapsible_arrow_colours(self):
-        """Called after theme change to recolour all section arrows."""
         for section in self.collapsible_sections:
+            if not isinstance(section, CollapsibleSection):
+                continue
+
             section.update_arrow_color()
 
     def apply_always_on_top(self, enabled: bool):
@@ -1147,98 +1119,80 @@ class UtilityControlApp(ctk.CTk):
         """Keep the window height locked; never auto-resize to content."""
         self.update_idletasks()  # Recalculate layout
 
-        # Lock to the configured size (width depends on expanded state)
-        width = self.EXPANDED_WIDTH if self.expanded else self.COLLAPSED_WIDTH
-        self.geometry(f"{width}x{self.WINDOW_HEIGHT}")
-
     # ===================================================================
     #  Save ALL toggle states to JSON
     # ===================================================================
     
-
-
     def save_all_settings(self):
-        
-        old = load_state()   # previous saved values
-
-        new = {}
-        
-        new["master_toggle_left"] = self.master_toggle_left
-
-        # -------------------------
-        # Screen Mover settings
-        # -------------------------
-        
-        new["mmb_activation_enabled"] = self.mmb_var.get()
-        new["auto_align_enabled"]     = self.auto_align_var.get()
-        new["minimize_all_enabled"] = self.minimize_all_var.get()
-        new["brave_export_path"] = self.brave_export_path_var.get()
-
-        # Live update backend
-        # UI intent (used for gating overlay / gestures)
-        SCREEN_MOVER.enable_mmb = new["mmb_activation_enabled"]
-        SCREEN_MOVER.auto_align_enabled = new["auto_align_enabled"]  
-
-        # -------------------------
-        # USB settings
-        # -------------------------
-
-        new["usb_idle_enabled"]     = self.opt_idle_var.get()
-        new["usb_download_enabled"] = self.opt_download_var.get()
-        new["usb_plug_enabled"]     = self.opt_plug_var.get()
-        
-        #-------------
-        # Theme saver
-        #-------------
-        
-        new["theme_dark"] = self.theme_var.get()
-        new["always_on_top_enabled"] = self.always_on_top_var.get()
-        new["show_power_buttons"] = self.power_toggle_var.get()
-        new["tooltips_enabled"] = self.tooltips_enabled_var.get()
-        
-        new["side_panel_open"] = (
-            self.expanded
-            if hasattr(self, "expanded")
-            else old.get("side_panel_open", False)
-        )
-
-                
-        # -------------------------
-        # Backup folder path (SAFE)
-        # -------------------------
-
-        if hasattr(self, "backup_path_var"):
-            # Normal case: Organising Utilities section has been built
-            new["backup_folder_path"] = self.backup_path_var.get()
-        else:
-            # Early-startup case: preserve whatever was in the file
-            new["backup_folder_path"] = old.get("backup_folder_path", "")
-
-        # -------------------------
-        # Debug only changed keys
-        # -------------------------
-        
-        for key, value in new.items():
-            if key not in old or old[key] != value:
-                print(f"[DEBUG] {key} → {value}")
-                
-        
-        # -------------------------
-        # Collapsible section states (split by panel)
-        # -------------------------
 
         left_states = {}
         right_states = {}
 
+        old = load_state()
+        new = dict(old)
+
+        new["master_toggle_left"] = self.master_toggle_left_var.get()
+
+        # -------------------------
+        # Screen Mover settings
+        # -------------------------
+        new["mmb_activation_enabled"] = self.mmb_var.get()
+        new["auto_align_enabled"] = self.auto_align_var.get()
+        new["minimize_all_enabled"] = self.minimize_all_var.get()
+        new["brave_export_path"] = self.brave_export_path_var.get()
+        new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
+
+        # ❌ REMOVE THIS
+        # new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
+
+        # -------------------------
+        # USB settings
+        # -------------------------
+        new["usb_idle_enabled"] = self.opt_idle_var.get()
+        new["usb_download_enabled"] = self.opt_download_var.get()
+        new["usb_plug_enabled"] = self.opt_plug_var.get()
+
+        # -------------------------
+        # Theme / window
+        # -------------------------
+        new["theme_dark"] = self.theme_var.get()
+        new["show_power_buttons"] = self.power_toggle_var.get()
+        new["tooltips_enabled"] = self.tooltips_enabled_var.get()
+        new["main_always_on_top_enabled"] = self.main_always_on_top_var.get()
+        new["right_always_on_top_enabled"] = self.right_always_on_top_var.get()
+
+        new["side_panel_open"] = (
+            self.advanced_panel.winfo_viewable()
+            if hasattr(self, "advanced_panel") and self.advanced_panel.winfo_exists()
+            else False
+        )
+
+        # -------------------------
+        # Collapsible section states
+        # -------------------------
         for section in self.collapsible_sections:
+            if not isinstance(section, CollapsibleSection):
+                continue
+
             if section.parent == self.main_frame:
                 left_states[section.section_id] = section.open
-            elif section.parent == self.side_frame:
+
+            elif (
+                hasattr(self, "advanced_panel")
+                and self.advanced_panel
+                and self.advanced_panel.winfo_exists()
+                and section.parent == self.advanced_panel.side_frame
+            ):
                 right_states[section.section_id] = section.open
 
+        # ✅ NOW write them
         new["left_section_states"] = left_states
         new["right_section_states"] = right_states
-        
+
+        # ✅ Kill legacy keys
+        new.pop("bookmarks_exporter", None)
+        new.pop("Bookmarks_exporter", None)
+
         save_state(new)
 
     def save_section_states(self):
@@ -1262,11 +1216,14 @@ class UtilityControlApp(ctk.CTk):
         
         data["left_section_states"] = left_states
         data["right_section_states"] = right_states
-
+        
+        print("collapsible count:", len(self.collapsible_sections))
+        print("collapsible count:", len(self.collapsible_sections))
+        for s in self.collapsible_sections:
+            print("sec:", s.section_id, "parent:", type(s.parent), "toplevel:", s.parent.winfo_toplevel())
+            
         save_state(data)
         
-
-
     def _set_folder_status_timed(self, text, duration_ms=2000):
         # Cancel any existing timer
         if self._folder_status_after_id:
