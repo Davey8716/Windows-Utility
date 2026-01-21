@@ -127,13 +127,17 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             app=self.app,
             initial_open=False
         )
-        self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        self.advanced_section_3.wrapper.pack(fill= "x", padx=12, pady=(0, 6))
 
-        brave_frame = ctk.CTkFrame(
-            self.advanced_section_3.content,
-            fg_color="transparent"
-        )
-        brave_frame.pack(anchor="w", padx=10, pady=(5, 2))
+
+        
+        
+        
+        
+        
+        
+        
+        
 
         self.btn_brave_export = ctk.CTkButton(
             self.advanced_section_3.content,
