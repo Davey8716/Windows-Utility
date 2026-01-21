@@ -259,7 +259,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         if hasattr(self.app, "expanded"):
             self.app.expanded = False
         if hasattr(self.app, "expand_btn"):
-            self.app.expand_btn.configure(text="▼")
+            self.app.expand_btn.configure(text="▾")
 
     def _position_next_to_main(self):
         self.app.update_idletasks()

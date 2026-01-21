@@ -252,7 +252,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.master_collapse_btn = ctk.CTkButton(
             title_row,
-            text="▼",
+            text="▾",
             width=32,
             height=28,
             font=("Rubik UI", 18, "bold"),
@@ -276,7 +276,7 @@ class UtilityControlApp(ctk.CTk):
         self.collapsible_sections.append(self.misc_section)
 
         toggles_row = ctk.CTkFrame(self.misc_section.content, fg_color="transparent")
-        toggles_row.pack(fill="x", padx=12, pady=(4, 6))
+        toggles_row.pack(fill="x", padx=12, pady=(2))
 
         left_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
         left_col.pack(side="left", anchor="nw")
@@ -408,6 +408,7 @@ class UtilityControlApp(ctk.CTk):
             "When toggled on all screens are minimized.\n"
             "The App Gui itself stays maximized and in front of all other programs.\n"
         )
+    
         
         # ==========================
         # RIGHT COLUMN
@@ -799,15 +800,9 @@ class UtilityControlApp(ctk.CTk):
                     if section.open:
                         section.toggle()
 
-            self.master_collapse_btn.configure(text="▶")
+            self.master_collapse_btn.configure(text="▸")
         else:
-            self.master_collapse_btn.configure(text="▼")
-
-        
-        self.actions.toggle_power_buttons()
-        self.update_idletasks() 
-        self.resize_to_fit()
-        
+            self.master_collapse_btn.configure(text="▾")    
         
         # --------------------------------------------------------------
         # Overlay expand button (CORRECT parent + placement)
@@ -828,7 +823,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.expand_btn = ctk.CTkButton(
             self.overlay_controls,
-            text="▼",
+            text="▾",
             width=28,
             height=80,
             corner_radius=8,
@@ -856,103 +851,18 @@ class UtilityControlApp(ctk.CTk):
 
         if self.saved_state.get("side_panel_open", False):
             self.advanced_panel.show()
-            self.expand_btn.configure(text="▶")
+            self.expand_btn.configure(text="▸")
         else:
             self.advanced_panel.hide()
-            self.expand_btn.configure(text="▼")
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-                
+            self.expand_btn.configure(text="▾")
+            
+        self.actions.toggle_power_buttons()
+        
+        self.update_idletasks() 
+        self.after_idle(self.update_idletasks)
+        self.after_idle(self.resize_to_fit)    
+            
+
     def _mark_ui_ready(self):
                 self._ui_ready = True
 
@@ -1020,7 +930,6 @@ class UtilityControlApp(ctk.CTk):
         else:
             switch.configure(text=f"{base_text} Off")
         
-
     def toggle_all_left_sections(self):
         new_state = not self.master_toggle_left_var.get()
         self.master_toggle_left_var.set(new_state)
@@ -1033,11 +942,8 @@ class UtilityControlApp(ctk.CTk):
                 if section.open != new_state:
                     section.toggle()
 
-        self.master_collapse_btn.configure(text="▼" if new_state else "▶")
+        self.master_collapse_btn.configure(text="▾" if new_state else "▸")
         self.save_all_settings()
-
-
-
 
     def _choose_brave_export_path(self):
         default_name = f"Brave_Bookmarks_Export_{datetime.now().strftime('%Y-%m-%d')}.html"
@@ -1081,12 +987,13 @@ class UtilityControlApp(ctk.CTk):
 
         if panel.winfo_viewable():
             panel.hide()
-            self.expand_btn.configure(text="▼")
+            self.expand_btn.configure(text="▾")   # down
         else:
             panel.show()
-            self.expand_btn.configure(text="▶")
+            self.expand_btn.configure(text="▸")   # right
 
-        self.save_all_settings()
+
+            self.save_all_settings()
 
 
     def update_collapsible_arrow_colours(self):
@@ -1161,11 +1068,12 @@ class UtilityControlApp(ctk.CTk):
         new["main_always_on_top_enabled"] = self.main_always_on_top_var.get()
         new["right_always_on_top_enabled"] = self.right_always_on_top_var.get()
 
-        new["side_panel_open"] = (
-            self.advanced_panel.winfo_viewable()
-            if hasattr(self, "advanced_panel") and self.advanced_panel.winfo_exists()
-            else False
-        )
+        panel = getattr(self, "advanced_panel", None)
+
+        if panel is not None and panel.winfo_exists():
+            new["side_panel_open"] = panel.winfo_viewable()
+        else:
+            new["side_panel_open"] = False
 
         # -------------------------
         # Collapsible section states

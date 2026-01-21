@@ -1,11 +1,13 @@
 import customtkinter as ctk
 
+
 # ===================================================================
 #  Collapsible Section with Auto-Theme Arrow Colour
 # ===================================================================
 
 class CollapsibleSection:
-    def __init__(self, parent, title_text, section_id, initial_open=True):
+    def __init__(self, parent, title_text, section_id,app, initial_open=True):
+        self.app = app
         self.parent = parent
         self.section_id = section_id   # NEW
         self.open = initial_open
@@ -29,9 +31,9 @@ class CollapsibleSection:
         self.label.pack(side="left", padx=10)
 
         # Toggle button
-        self.button = ctk.CTkButton(
+        self.toggle_btn = ctk.CTkButton(
             self.header,
-            text="▼" if initial_open else "▶",
+            text="▾" if initial_open else "▸",
             width=30,
             height=20,
             command=self.toggle,
@@ -39,7 +41,7 @@ class CollapsibleSection:
             fg_color="transparent",
             hover_color="#202020"
         )
-        self.button.pack(side="right", padx=10)
+        self.toggle_btn.pack(side="right", padx=10)
 
         # Apply correct arrow colour depending on theme
         self.update_arrow_color()
@@ -57,19 +59,20 @@ class CollapsibleSection:
     def update_arrow_color(self):
         mode = ctk.get_appearance_mode()
         if mode == "Dark":
-            self.button.configure(text_color="white")
+            self.toggle_btn.configure(text_color="white")
         else:
-            self.button.configure(text_color="black")
+            self.toggle_btn.configure(text_color="black")
 
     def toggle(self):
         if self.open:
             self.content.pack_forget()
-            self.button.configure(text="▶")
+            self.toggle_btn.configure(text="▸")
+            self.open = False
         else:
             self.content.pack(fill="x", pady=(0, 10), padx=10)
-            self.button.configure(text="▼")
+            self.toggle_btn.configure(text="▾")
+            self.open = True
 
-        self.open = not self.open
 
         # Notify app to shrink/expand window
         try:
@@ -86,3 +89,5 @@ class CollapsibleSection:
                 app.save_section_states()
         except Exception:
             pass
+        
+        self.app.after_idle(self.app.save_all_settings)
