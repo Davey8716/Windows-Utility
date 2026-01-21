@@ -49,53 +49,84 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
         def run_windows_utility(choice):
             actions = {
-                "System Settings": lambda: os.system("start ms-settings:"),
+                "Control Panel": lambda: os.system("control"),
                 "Device Manager": lambda: os.system("devmgmt.msc"),
-                "Task Manager": lambda: os.system("taskmgr"),
+                "Disk Management": lambda: os.system("diskmgmt.msc"),
+                "Event Viewer": lambda: os.system("eventvwr.msc"),
+                "Firewall": lambda: os.system("wf.msc"),
+                "IP Configuration": lambda: os.system("cmd /k ipconfig"),
+                "Network Connections": lambda: os.system("ncpa.cpl"),
+                "Power Options": lambda: os.system("powercfg.cpl"),
                 "Router Login": app.actions.open_router_page,
+                "Services": lambda: os.system("services.msc"),
+                "Startup Apps": lambda: os.system("start ms-settings:startupapps"),
+                "System Information": lambda: os.system("msinfo32"),
+                "System Settings": lambda: os.system("start ms-settings:"),
+                "Task Manager": lambda: os.system("taskmgr"),
+                "User Accounts": lambda: os.system("netplwiz"),
+                "Windows Update": lambda: os.system("start ms-settings:windowsupdate"),
             }
             action = actions.get(choice)
             if action:
                 action()
 
-        self.advanced_section_1 = CollapsibleSection(
+        self.windows_utility_section = CollapsibleSection(
             self.side_frame,
             "Windows Utilities",
             section_id="Windows_utilities",
+            app = self.app,
             initial_open=False
         )
-        self.advanced_section_1.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        app.collapsible_sections.append(self.windows_utility_section)
 
-        parent = self.advanced_section_1.content
+        parent = self.windows_utility_section.content
 
-        self.windows_util_menu = ctk.CTkOptionMenu(
+        self.windows_utility_section = ctk.CTkOptionMenu(
             parent,
             values=[
-                "System Settings",
+                "Control Panel",
                 "Device Manager",
-                "Task Manager",
+                "Disk Management",
+                "Event Viewer",
+                "Firewall",
+                "IP Configuration",
+                "Network Connections",
+                "Power Options",
                 "Router Login",
+                "Services",
+                "Startup Apps",
+                "System Information",
+                "System Settings",
+                "Task Manager",
+                "User Accounts",
+                "Windows Update",
             ],
             command=run_windows_utility,
             width=260,
             font=("Rubik UI", 15, "bold"),
             dropdown_font=("Rubik UI", 14),
         )
-        self.windows_util_menu.pack(anchor="w", padx=12, pady=8)
+        self.windows_utility_section.pack(anchor="w", padx=12, pady=8)
+        app.collapsible_sections.append(self.windows_utility_section)
+
+
 
         # ==================================================
         # Drive Space Display
         # ==================================================
 
-        self.advanced_section_2 = CollapsibleSection(
+        self.display_space_section = CollapsibleSection(
             self.side_frame,
             "Drive Space Display",
             section_id="drive_space_display",
+            app=self.app,
             initial_open=False
         )
-        self.advanced_section_2.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        self.display_space_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        app.collapsible_sections.append(self.display_space_section)
 
-        drive_parent = self.advanced_section_2.content
+        drive_parent = self.display_space_section.content
         self.drive_labels = []
 
         def refresh_drive_display():
@@ -139,7 +170,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.advanced_section_3 = CollapsibleSection(
             self.side_frame,
             "Universal Bookmarks Exporter",
-            section_id="Bookmarks_exporter",
+            section_id="bookmarks_exporter",
+            app = self.app,
             initial_open=False
         )
         self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(0, 6))
@@ -151,7 +183,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         brave_frame.pack(anchor="w", padx=10, pady=(5, 2))
 
         self.btn_brave_export = ctk.CTkButton(
-            brave_frame,
+            self.advanced_section_3.content,
             text="Export Brave Bookmarks",
             width=180,
             font=("Rubik UI", 15, "bold"),
@@ -160,13 +192,15 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.btn_brave_export.pack(anchor="w", pady=(0, 4))
 
         self.brave_export_entry = ctk.CTkEntry(
-            brave_frame,
+            self.advanced_section_3.content,
             textvariable=app.brave_export_path_var,
             font=("Rubik UI", 15),
             width=360,
             state="readonly"
         )
         self.brave_export_entry.pack(anchor="w")
+        
+        app.collapsible_sections.append(self.advanced_section_3)
 
     # ==================================================
     # Visibility helpers
@@ -184,7 +218,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         
         self.lift()
 
-
     def hide(self):
         self.withdraw()
 
@@ -193,7 +226,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             self.app.expanded = False
         if hasattr(self.app, "expand_btn"):
             self.app.expand_btn.configure(text="▼")
-
 
     def _position_next_to_main(self):
         self.app.update_idletasks()
