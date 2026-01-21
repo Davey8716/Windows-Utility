@@ -52,6 +52,7 @@ class UtilityActionsManager:
             self.app.power_toggle.configure(text="Power Options Off")
 
         self.app.save_all_settings()
+        self.app.update_idletasks()
 
     # ===================================================================
     #  Router Auto-Detect & Open
