@@ -27,7 +27,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.side_frame = ctk.CTkScrollableFrame(
             self,
             width=450,
-            height= 1150,
+            height=1150,
             fg_color="transparent"
         )
         self.side_frame.pack(fill="both", expand=True)
@@ -47,34 +47,11 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         # Windows Utilities
         # ==================================================
 
-        def run_windows_utility(choice):
-            actions = {
-                "Control Panel": lambda: os.system("control"),
-                "Device Manager": lambda: os.system("devmgmt.msc"),
-                "Disk Management": lambda: os.system("diskmgmt.msc"),
-                "Event Viewer": lambda: os.system("eventvwr.msc"),
-                "Firewall": lambda: os.system("wf.msc"),
-                "IP Configuration": lambda: os.system("cmd /k ipconfig"),
-                "Network Connections": lambda: os.system("ncpa.cpl"),
-                "Power Options": lambda: os.system("powercfg.cpl"),
-                "Router Login": app.actions.open_router_page,
-                "Services": lambda: os.system("services.msc"),
-                "Startup Apps": lambda: os.system("start ms-settings:startupapps"),
-                "System Information": lambda: os.system("msinfo32"),
-                "System Settings": lambda: os.system("start ms-settings:"),
-                "Task Manager": lambda: os.system("taskmgr"),
-                "User Accounts": lambda: os.system("netplwiz"),
-                "Windows Update": lambda: os.system("start ms-settings:windowsupdate"),
-            }
-            action = actions.get(choice)
-            if action:
-                action()
-
         self.windows_utility_section = CollapsibleSection(
             self.side_frame,
             "Windows Utilities",
             section_id="Windows_utilities",
-            app = self.app,
+            app=self.app,
             initial_open=False
         )
         self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
@@ -82,35 +59,11 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
         parent = self.windows_utility_section.content
 
-        self.windows_utility_section = ctk.CTkOptionMenu(
-            parent,
-            values=[
-                "Control Panel",
-                "Device Manager",
-                "Disk Management",
-                "Event Viewer",
-                "Firewall",
-                "IP Configuration",
-                "Network Connections",
-                "Power Options",
-                "Router Login",
-                "Services",
-                "Startup Apps",
-                "System Information",
-                "System Settings",
-                "Task Manager",
-                "User Accounts",
-                "Windows Update",
-            ],
-            command=run_windows_utility,
-            width=260,
-            font=("Rubik UI", 15, "bold"),
-            dropdown_font=("Rubik UI", 14),
-        )
-        self.windows_utility_section.pack(anchor="w", padx=12, pady=8)
-        app.collapsible_sections.append(self.windows_utility_section)
-
-
+        self._add_windows_dropdown(parent, "System", self._system_utilities())
+        self._add_windows_dropdown(parent, "Hardware", self._hardware_utilities())
+        self._add_windows_dropdown(parent, "Network", self._network_utilities())
+        self._add_windows_dropdown(parent, "Startup & Power", self._startup_power_utilities())
+        self._add_windows_dropdown(parent, "Users", self._user_utilities())
 
         # ==================================================
         # Drive Space Display
@@ -171,7 +124,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             self.side_frame,
             "Universal Bookmarks Exporter",
             section_id="bookmarks_exporter",
-            app = self.app,
+            app=self.app,
             initial_open=False
         )
         self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(0, 6))
@@ -203,6 +156,73 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         app.collapsible_sections.append(self.advanced_section_3)
 
     # ==================================================
+    # Windows Utilities
+    # ==================================================
+    
+    def _system_utilities(self):
+        return {
+            "Control Panel": lambda: os.system("control"),
+            "System Settings": lambda: os.system("start ms-settings:"),
+            "System Information": lambda: os.system("msinfo32"),
+            "Task Manager": lambda: os.system("taskmgr"),
+        }
+        
+    def _hardware_utilities(self):
+        return {
+            "Device Manager": lambda: os.system("devmgmt.msc"),
+            "Disk Management": lambda: os.system("diskmgmt.msc"),
+            "Services": lambda: os.system("services.msc"),
+            "Event Viewer": lambda: os.system("eventvwr.msc"),
+        }
+        
+    def _network_utilities(self):
+        return {
+            "Network Connections": lambda: os.system("ncpa.cpl"),
+            "Firewall": lambda: os.system("wf.msc"),
+            "IP Configuration": lambda: os.system("cmd /k ipconfig"),
+            "Router Login": self.app.actions.open_router_page,
+        }
+        
+    def _startup_power_utilities(self):
+        return {
+            "Startup Apps": lambda: os.system("start ms-settings:startupapps"),
+            "Power Options": lambda: os.system("powercfg.cpl"),
+        }
+        
+    def _user_utilities(self):
+        return {}
+
+
+    # ==================================================
+    # Drop down helper
+    # ==================================================
+        
+    def _add_windows_dropdown(self, parent, label, actions_map):
+        placeholder = f"— {label} —"
+
+        def runner(choice):
+            if choice == placeholder:
+                return
+            action = actions_map.get(choice)
+            if action:
+                action()
+
+        values = [placeholder] + sorted(actions_map.keys())
+
+        dropdown = ctk.CTkOptionMenu(
+            parent,
+            values=values,
+            command=runner,
+            width=260,
+            font=("Rubik UI", 15, "bold"),
+            dropdown_font=("Rubik UI", 14),
+        )
+
+        dropdown.set(placeholder)  # ✅ force title display
+        dropdown.pack(anchor="w", padx=12, pady=(4, 8))
+
+
+    # ==================================================
     # Visibility helpers
     # ==================================================
 
@@ -210,7 +230,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.app._sync_windows("main")
         self.deiconify()
         
-        # 🔑 Apply topmost AFTER deiconify
         try:
             self.attributes("-topmost", self._desired_topmost)
         except Exception:
@@ -221,7 +240,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
     def hide(self):
         self.withdraw()
 
-        # tell the app to update its own UI/state
         if hasattr(self.app, "expanded"):
             self.app.expanded = False
         if hasattr(self.app, "expand_btn"):
