@@ -1,5 +1,6 @@
 import os
 import customtkinter as ctk
+from tooltips import CtkTooltip
 from collapsible_section import CollapsibleSection
 from main_utility_gui import get_drive_info
 
@@ -54,7 +55,13 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             app=self.app,
             initial_open=False
         )
-        self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(5, 6))
+        
+        CtkTooltip(
+            self.windows_utility_section.toggle_btn,
+            "Shows windows utilities here instead grouped by type \n"
+            "not having to have them all cluttering up your taskbar."
+        )
         app.collapsible_sections.append(self.windows_utility_section)
 
         parent = self.windows_utility_section.content
@@ -64,6 +71,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self._add_windows_dropdown(parent, "Network", self._network_utilities())
         self._add_windows_dropdown(parent, "Startup & Power", self._startup_power_utilities())
         self._add_windows_dropdown(parent, "Users", self._user_utilities())
+        
 
         # ==================================================
         # Drive Space Display
@@ -77,7 +85,15 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             initial_open=False
         )
         self.display_space_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        
+        CtkTooltip(
+            self.display_space_section.toggle_btn,
+            "Shows disk usage for all detected drives."
+        )
+        
         app.collapsible_sections.append(self.display_space_section)
+        
+
 
         drive_parent = self.display_space_section.content
         self.drive_labels = []
@@ -127,17 +143,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             app=self.app,
             initial_open=False
         )
-        self.advanced_section_3.wrapper.pack(fill= "x", padx=12, pady=(0, 6))
-
-
-        
-        
-        
-        
-        
-        
-        
-        
+        self.advanced_section_3.wrapper.pack(fill= "x", padx=12, pady=(5, 6))
 
         self.btn_brave_export = ctk.CTkButton(
             self.advanced_section_3.content,
@@ -146,7 +152,13 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             font=("Rubik UI", 15, "bold"),
             command=app._run_brave_export,
         )
-        self.btn_brave_export.pack(anchor="w", pady=(0, 4))
+        self.btn_brave_export.pack(anchor="w",padx = 5, pady=(5, 4))
+        
+        CtkTooltip(
+            self.btn_brave_export,
+            "Exports brave bookmarks to a file path of your choice,\n"
+            "remembers last saved location.\n"
+        )
 
         self.brave_export_entry = ctk.CTkEntry(
             self.advanced_section_3.content,
@@ -155,7 +167,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             width=360,
             state="readonly"
         )
-        self.brave_export_entry.pack(anchor="w")
+        self.brave_export_entry.pack(anchor="w", padx = 5, pady=(5, 4))
         
         app.collapsible_sections.append(self.advanced_section_3)
 
