@@ -15,7 +15,8 @@ def load_state() -> dict:
     
     DEFAULTS = {
         "theme_dark": True,
-        "always_on_top_enabled": True,
+        "main_always_on_top_enabled": True,
+        "right_always_on_top_enabled": True,
         "show_power_buttons": False,
         "tooltips_enabled": True,
         "minimize_all_enabled": False,
@@ -38,13 +39,13 @@ def load_state() -> dict:
             "screen_mover": True,
             "drive_reminder_options": True,
             "organising_utilties": True,
-            "desktop_backup": True,
+            "desktop_backup_utilities": True,
             "desktop_icon_organiser": True
         },
-            "right_section_states": {
+        "right_section_states": {
             "Windows_utilities": False,
             "drive_space_display": False,
-            "Bookmarks_exporter": False
+            "bookmarks_exporter": False
         },
     }
 
