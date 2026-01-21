@@ -162,12 +162,23 @@ class UtilityActionsManager:
 
         # Apply behavior
         self.app.apply_always_on_top(enabled)
+        
+        # Apply to advanced panel if it exists
+        if hasattr(self.app, "advanced_panel"):
+            panel = self.app.advanced_panel
+            if panel and panel.winfo_exists():
+                panel._desired_topmost = enabled
+                panel.attributes("-topmost", enabled)
 
         # Update switch label
         if enabled:
             self.app.always_on_top_switch.configure(text="Always On Top On")
         else:
             self.app.always_on_top_switch.configure(text="Always On Top Off")
+            
+        # Persist
+        self.app.main_always_on_top_enabled = enabled
+        self.app.right_always_on_top_enabled = enabled
 
         self.app.save_all_settings()
 

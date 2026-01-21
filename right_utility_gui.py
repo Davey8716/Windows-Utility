@@ -3,6 +3,7 @@ import customtkinter as ctk
 from collapsible_section import CollapsibleSection
 from main_utility_gui import get_drive_info
 
+
 class AdvancedToolsPanel(ctk.CTkToplevel):
     def __init__(self, app):
         super().__init__(app)
@@ -15,6 +16,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.resizable(False, False)
         self.withdraw()  # start hidden
         
+        self._desired_topmost = app.right_always_on_top_var.get()
 
         # Close button behaviour
         self.protocol("WM_DELETE_WINDOW", self.hide)
@@ -40,7 +42,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.bind("<Configure>", lambda e: self.app._sync_windows("side"))
         self.bind("<ButtonPress-1>", lambda e: self.app._set_drag_owner("side"))
         self.bind("<ButtonRelease-1>", lambda e: self.app._clear_drag_owner())
-
 
         # ==================================================
         # Windows Utilities
@@ -174,6 +175,13 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
     def show(self):
         self.app._sync_windows("main")
         self.deiconify()
+        
+        # 🔑 Apply topmost AFTER deiconify
+        try:
+            self.attributes("-topmost", self._desired_topmost)
+        except Exception:
+            pass
+        
         self.lift()
 
 
