@@ -1112,12 +1112,13 @@ class UtilityControlApp(ctk.CTk):
                 left_states[section.section_id] = section.open
 
             elif (
-                hasattr(self, "advanced_panel_var")
-                and self.advanced_panel_open_var
-                and self.advanced_panel_open_var.winfo_exists()
-                and section.parent == self.advanced_panel_open_var.side_frame
+                hasattr(self, "advanced_panel")
+                and self.advanced_panel
+                and self.advanced_panel.winfo_exists()
+                and section.parent.winfo_toplevel() == self.advanced_panel
             ):
                 right_states[section.section_id] = section.open
+
 
         # ✅ NOW write them
         new["left_section_states"] = left_states
@@ -1125,7 +1126,6 @@ class UtilityControlApp(ctk.CTk):
 
         # ✅ Kill legacy keys
         new.pop("bookmarks_exporter", None)
-        new.pop("Bookmarks_exporter", None)
 
         save_state(new)
 

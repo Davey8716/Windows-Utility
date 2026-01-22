@@ -53,7 +53,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Windows Utilities",
             section_id="Windows_utilities",
             app=self.app,
-            initial_open=app.saved_state.get("right_section_states", {}).get("Windows_utilities", False)
+            initial_open=self.app.saved_state.get("right_section_states", {}).get("Windows_utilities", False)
         )
         self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(5, 6))
 
@@ -83,7 +83,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Drive Space Display",
             section_id="drive_space_display",
             app=self.app,
-            initial_open=app.saved_state.get("right_section_states", {}).get("drive_space_display", False)
+            initial_open=self.app.saved_state.get("right_section_states", {}).get("drive_space_display", False)
         )
         self.display_space_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
 
@@ -141,7 +141,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Universal Bookmarks Exporter",
             section_id="bookmarks_exporter",
             app=self.app,
-            initial_open=app.saved_state.get("right_section_states", {}).get("bookmarks_exporter", False)
+            initial_open=self.app.saved_state.get("right_section_states", {}).get("bookmarks_exporter", False)
         )
         self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(5, 6))
 
