@@ -210,7 +210,25 @@ class UtilityControlApp(ctk.CTk):
         self.bind("<FocusIn>", lambda e: self._set_drag_owner("main"))
         self.bind("<ButtonRelease-1>", lambda e: self._clear_drag_owner())
         
+<<<<<<< HEAD
 
+=======
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+>>>>>>> parent of 284fc5e (Added minimizing logic that makes both minmize)
     
         # ==============================================================
         #  MAIN FRAMES LEFT HEADER
@@ -850,13 +868,10 @@ class UtilityControlApp(ctk.CTk):
         
         self.update_idletasks() 
         self.after_idle(self.update_idletasks)
-        self.after_idle(self.resize_to_fit)
-        
-    def _on_main_unmap(self, event=None):
-        # Ignore minimize
-        if self.state() == "iconic":
-            return
+        self.after_idle(self.resize_to_fit)    
+            
 
+<<<<<<< HEAD
         # Only act when actually withdrawn (to tray)
         if self.state() != "withdrawn":
             return
@@ -926,6 +941,8 @@ class UtilityControlApp(ctk.CTk):
         except Exception:
             pass
 
+=======
+>>>>>>> parent of 284fc5e (Added minimizing logic that makes both minmize)
     def _mark_ui_ready(self):
                 self._ui_ready = True
 

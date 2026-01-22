@@ -2,12 +2,12 @@
     "theme_dark": true,
     "main_always_on_top_enabled": true,
     "right_always_on_top_enabled": true,
-    "show_power_buttons": false,
+    "show_power_buttons": true,
     "tooltips_enabled": true,
     "minimize_all_enabled": true,
     "master_toggle_left": true,
-    "mmb_activation_enabled": false,
-    "auto_align_enabled": false,
+    "mmb_activation_enabled": true,
+    "auto_align_enabled": true,
     "usb_idle_enabled": true,
     "usb_download_enabled": true,
     "usb_plug_enabled": false,
@@ -23,8 +23,8 @@
         "desktop_icon_organiser": true
     },
     "right_section_states": {
-        "Windows_utilities": false,
-        "drive_space_display": false,
-        "bookmarks_exporter": false
+        "Windows_utilities": true,
+        "drive_space_display": true,
+        "bookmarks_exporter": true
     }
 }
