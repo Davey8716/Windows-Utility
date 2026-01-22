@@ -73,22 +73,12 @@ class TrayIconManager:
     # ===================================================================
     #  Helpers (Executed on Tk thread)
     # ===================================================================
-    
-    def _show_window(self):
-        self.deiconify()
-        self.lift()
-        self.focus_force()
 
     def _toggle_window(self):
         if self.app.state() == "withdrawn":
             self.app._show_window()
-
-            # 🔴 reset leadership + resync after restore
-            self.app._clear_drag_owner()
-            self.app.after(20, lambda: self.app._sync_windows("main"))
         else:
             self.app.withdraw()
-
 
     def _quit_from_tray(self):
         print("[INFO] Quitting from tray…")

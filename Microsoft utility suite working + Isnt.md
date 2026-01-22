@@ -6,6 +6,14 @@
 
 
 
+
+
+
+
+**Browser exporters (Brave/Chrome/Firefox)**
+
+
+
 **Desktop icon saver/organiser**
 
 
@@ -124,11 +132,7 @@
 
 
 
-
-
-**Browser exporters (Brave/Chrome/Firefox) BRAVE ADDED SO FAR!**
-
-**Rembert to add mutex so it runs one singular instance only once the exe has been built + the listener code(can take from exe builder) to bring program to front if minimized and double clicked on exe icon.**
+**Rember to add mutex so it runs one singular instance only once the exe has been built + the listener code(can take from exe builder) to bring program to front if minimized and double clicked on exe icon.**
 
 **Dynamic toggle text!**
 

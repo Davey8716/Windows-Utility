@@ -40,26 +40,20 @@ class UtilityActionsManager:
             self.app.btn_shutdown,
         ]
 
-        # ✅ show/hide the entire right column (this removes the “blank padding”)
-        if enabled:
-            if not self.app.power_right_col.winfo_ismapped():
-                self.app.power_right_col.pack(side="right", anchor="ne")
-        else:
-            if self.app.power_right_col.winfo_ismapped():
-                self.app.power_right_col.pack_forget()
-
-        # show/hide buttons
         for w in widgets:
             if enabled:
                 w.pack(anchor="e", pady=(0, 4))
             else:
                 w.pack_forget()
-
-        self.app.power_toggle.configure(text="Power Options On" if enabled else "Power Options Off")
+                # Update switch label text
+        if enabled:
+            self.app.power_toggle.configure(text="Power Options On")
+        else:
+            self.app.power_toggle.configure(text="Power Options Off")
 
         self.app.save_all_settings()
         self.app.update_idletasks()
-            
+        
     # ===================================================================
     #  Router Auto-Detect & Open
     # ===================================================================

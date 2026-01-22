@@ -205,12 +205,10 @@ class UtilityControlApp(ctk.CTk):
         self.root_container.columnconfigure(1, weight=0, minsize=450)
         self.root_container.rowconfigure(0, weight=1)
         
-    
-        self.bind("<Configure>",lambda e: self._sync_windows("side"))
-        self.bind("<FocusIn>", lambda e: self._set_drag_owner("main"))
+        self.bind("<Configure>", lambda e: self._sync_windows("main"))
+        self.bind("<ButtonPress-1>", lambda e: self._set_drag_owner("main"))
         self.bind("<ButtonRelease-1>", lambda e: self._clear_drag_owner())
-        
-
+        self.bind("<Configure>", self._on_main_configure)
     
         # ==============================================================
         #  MAIN FRAMES LEFT HEADER
@@ -267,10 +265,9 @@ class UtilityControlApp(ctk.CTk):
 
         left_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
         left_col.pack(side="left", anchor="nw")
- 
-        self.power_right_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
-        # DO NOT pack here (we only pack it when power buttons are ON)
 
+        right_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
+        right_col.pack(side="right", anchor="ne")
         
         # -------------------------
         # Dark Mode Toggle (LEFT)
@@ -306,8 +303,6 @@ class UtilityControlApp(ctk.CTk):
             self.power_toggle.configure(text="Power Options On")
         else:
             self.power_toggle.configure(text="Power Options Off")
-            
-            self.update_idle_tasks()
 
         CtkTooltip(
             self.power_toggle,
@@ -401,11 +396,11 @@ class UtilityControlApp(ctk.CTk):
     
         
         # ==========================
-        # RIGHT COLUMNright_col
+        # RIGHT COLUMN
         # ==========================
 
         self.btn_sleep = ctk.CTkButton(
-            self.power_right_col,
+            right_col,
             text="Sleep",
             width=small_btn_width,
             command=lambda: os.system(
@@ -415,7 +410,7 @@ class UtilityControlApp(ctk.CTk):
         )
         
         self.btn_lock = ctk.CTkButton(
-            self.power_right_col,
+            right_col,
             text="Lock PC",
             width=small_btn_width,
             command=lambda: ctypes.windll.user32.LockWorkStation(),
@@ -423,7 +418,7 @@ class UtilityControlApp(ctk.CTk):
         )
         
         self.btn_restart = ctk.CTkButton(
-            self.power_right_col,
+            right_col,
             text="Restart",
             width=small_btn_width,
             command=lambda: os.system("shutdown /r /t 0"),
@@ -431,7 +426,7 @@ class UtilityControlApp(ctk.CTk):
         )
         
         self.btn_shutdown = ctk.CTkButton(
-            self.power_right_col,
+            right_col,
             text="Shutdown",
             width=small_btn_width,
             command=lambda: os.system("shutdown /s /t 0"),
@@ -869,66 +864,29 @@ class UtilityControlApp(ctk.CTk):
             and self.advanced_panel.winfo_viewable()
         ):
             self.toggle_side_panel()
-            
-            
-    def _snap_side_panel(self):
-        panel = self.advanced_panel
-        if not panel or not panel.winfo_exists():
-            return
-
-        self.update_idletasks()
-
-        x = self.winfo_x() + self.winfo_width()
-        y = self.winfo_y()
-
-        panel.geometry(f"+{x}+{y}")
 
         
     def _on_main_configure(self, event=None):
+        """
+        If main window is minimized, iconify the right panel too.
+        Do NOT send anything to tray.
+        """
         try:
-            # MAIN restored from taskbar
-            if self.state() == "normal":
-                if (
-                    hasattr(self, "advanced_panel")
-                    and self.advanced_panel
-                    and self.advanced_panel.winfo_exists()
-                    and self.advanced_panel.state() == "iconic"
-                ):
-                    self.advanced_panel.deiconify()
-                    
-                    # 🔴 RE-APPLY MAGNETISING
-                    self._snap_side_panel()
-
-            # MAIN minimized → minimize side panel
-            elif self.state() == "iconic":
+            if self.state() == "iconic":
                 if (
                     hasattr(self, "advanced_panel")
                     and self.advanced_panel
                     and self.advanced_panel.winfo_exists()
                 ):
                     self.advanced_panel.iconify()
-
         except Exception:
             pass
+
         
-    def _on_side_configure(self, event=None):
-        try:
-            # SIDE restored from taskbar
-            if self.advanced_panel.state() == "normal":
-                if self.state() == "iconic":
-                    self.deiconify()
-
-            # SIDE minimized → minimize main
-            elif self.advanced_panel.state() == "iconic":
-                if self.state() == "normal":
-                    self.iconify()
-
-        except Exception:
-            pass
-
     def _mark_ui_ready(self):
                 self._ui_ready = True
 
+    
     # ==================================================
     # Window magnet sync (main <-> advanced)
     # ==================================================
@@ -981,11 +939,7 @@ class UtilityControlApp(ctk.CTk):
             self._syncing_windows = False
 
     def _set_drag_owner(self, who):
-    # If a drag is already active, don't steal ownership
-        if self._drag_owner and self._drag_owner != who:
-            return
         self._drag_owner = who
-
 
     def _clear_drag_owner(self):
         self._drag_owner = None
@@ -1053,16 +1007,13 @@ class UtilityControlApp(ctk.CTk):
 
         if panel.winfo_viewable():
             panel.hide()
-            self.expand_btn.configure(text="▾")
+            self.expand_btn.configure(text="▾")   # down
         else:
             panel.show()
-            self.expand_btn.configure(text="▸")
+            self.expand_btn.configure(text="▸")   # right
 
-            # 🔴 REQUIRED: reset drag ownership + resync
-            self._clear_drag_owner()
-            self.after(10, lambda: self._sync_windows("side"))
 
-        self.save_all_settings()
+            self.save_all_settings()
 
 
     def update_collapsible_arrow_colours(self):
