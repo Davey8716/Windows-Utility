@@ -119,7 +119,7 @@ class UtilityControlApp(ctk.CTk):
         # ==============================================================
         
         self.WINDOW_WIDTH = 510
-        self.WINDOW_HEIGHT = 1160
+        self.WINDOW_HEIGHT = 1150
         
         btn_width = 120 # Large buttons
         small_btn_width = 90 # Small buttons
@@ -281,7 +281,7 @@ class UtilityControlApp(ctk.CTk):
             text="Dark Mode",
             variable=self.theme_var,
             command=self.actions.theme_toggle,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.theme_switch.pack(anchor="w", pady=(2, 0))
 
@@ -298,7 +298,7 @@ class UtilityControlApp(ctk.CTk):
             text="Show Power Buttons",
             variable=self.power_toggle_var,
             command=self.actions.toggle_power_buttons,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.power_toggle.pack(anchor="w", pady=(0, 0))
         
@@ -333,7 +333,7 @@ class UtilityControlApp(ctk.CTk):
             text="",
             variable=self.always_on_top_var,
             command=self.actions.always_on_top_toggle,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.always_on_top_switch.pack(anchor="w", pady=(0, 0))
         
@@ -358,7 +358,7 @@ class UtilityControlApp(ctk.CTk):
             text="",
             variable=self.tooltips_enabled_var,
             command=self.actions.tooltips_toggle,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.tooltip_switch.pack(anchor="w", pady=(2, 0))
         
@@ -381,7 +381,7 @@ class UtilityControlApp(ctk.CTk):
             text="Max/Min All Programs",
             variable=self.minimize_all_var,
             command=self.actions.minimize_all_toggle,
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.minimize_all_switch.pack(anchor="w", pady=(0, 0))
         
@@ -409,7 +409,7 @@ class UtilityControlApp(ctk.CTk):
             command=lambda: os.system(
                 "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
             ),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         
         self.btn_lock = ctk.CTkButton(
@@ -417,7 +417,7 @@ class UtilityControlApp(ctk.CTk):
             text="Lock PC",
             width=small_btn_width,
             command=lambda: ctypes.windll.user32.LockWorkStation(),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         
         self.btn_restart = ctk.CTkButton(
@@ -425,7 +425,7 @@ class UtilityControlApp(ctk.CTk):
             text="Restart",
             width=small_btn_width,
             command=lambda: os.system("shutdown /r /t 0"),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         
         self.btn_shutdown = ctk.CTkButton(
@@ -433,7 +433,7 @@ class UtilityControlApp(ctk.CTk):
             text="Shutdown",
             width=small_btn_width,
             command=lambda: os.system("shutdown /s /t 0"),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         
         # ------------------------------------------------------------------
@@ -464,7 +464,7 @@ class UtilityControlApp(ctk.CTk):
                 ),
                 self.save_all_settings()
             ),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.mmb_switch.pack(anchor="w", padx=10, pady=0)
         
@@ -491,7 +491,7 @@ class UtilityControlApp(ctk.CTk):
             text="Windows In Move Zone",
             variable=self.auto_align_var,
             command=self.actions.auto_align_toggle,     # <-- THIS WAS MISSING
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.auto_align_switch.pack(anchor="w", padx=10, pady=2)
         
@@ -547,7 +547,7 @@ class UtilityControlApp(ctk.CTk):
                 ),
                 self.save_all_settings()
             ),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.opt_idle.pack(anchor="w", padx=10, pady=2)
 
@@ -563,7 +563,7 @@ class UtilityControlApp(ctk.CTk):
                 ),
                 self.save_all_settings()
             ),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.opt_download.pack(anchor="w", padx=10, pady=2)
 
@@ -579,7 +579,7 @@ class UtilityControlApp(ctk.CTk):
                 ),
                 self.save_all_settings()
             ),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.opt_plug.pack(anchor="w", padx=10, pady=2)
 
@@ -610,7 +610,7 @@ class UtilityControlApp(ctk.CTk):
             text="Desktop Screenshot",
             width=btn_width,
             command=lambda: take_desktop_screenshot(self),
-            font=("Rubik UI", 16, "bold")
+            font=("Rubik UI", 15, "bold")
         )
         self.btn_desktop_screenshot.pack(anchor="w", padx=10, pady=(5, 2))
 
@@ -632,7 +632,7 @@ class UtilityControlApp(ctk.CTk):
             folder_row,
             text="Folder To Desktop",
             width=btn_width,
-            font=("Rubik UI", 16, "bold"),
+            font=("Rubik UI", 15, "bold"),
             command=self._create_desktop_folder,
             state="disabled"
         )
@@ -648,8 +648,8 @@ class UtilityControlApp(ctk.CTk):
             entry_group,
             placeholder_text="Folder name…",
             textvariable=self.folder_name_var,
-            font=("Rubik UI", 16, "bold"),
-            width=160
+            font=("Rubik UI", 15, "bold"),
+            width=150
         )
         self.folder_name_entry.pack(side="left", padx = 5)
         
@@ -665,9 +665,9 @@ class UtilityControlApp(ctk.CTk):
         self.folder_status_label = ctk.CTkLabel(
             entry_group,
             text=" ",                  # IMPORTANT: not empty, so it has width
-            width=160,
+            width=150,
             anchor="w",
-            font=("Rubik UI", 16,"bold"),
+            font=("Rubik UI", 15,"bold"),
             text_color="#1f6aa5"
         )
         self.folder_status_label.pack(side="left", padx=(3, 0))
@@ -702,7 +702,7 @@ class UtilityControlApp(ctk.CTk):
         self.btn_backup_pins = ctk.CTkButton(
             backup_buttons_frame,
             text="Backup Taskbar",
-            font=("Rubik UI", 16, "bold"),
+            font=("Rubik UI", 15, "bold"),
             width=btn_width,
             command=self.actions.backup_pinned_shortcuts
         )
@@ -718,7 +718,7 @@ class UtilityControlApp(ctk.CTk):
         self.btn_open_backup = ctk.CTkButton(
             backup_buttons_frame,
             text="Open Backup",
-            font=("Rubik UI", 16, "bold"),
+            font=("Rubik UI", 15, "bold"),
             width=btn_width,
             command=self.actions.open_backup_folder
         )
@@ -748,7 +748,7 @@ class UtilityControlApp(ctk.CTk):
             path_inner,
             text=" Change Folder",
             width=btn_width,
-            font=("Rubik UI", 16, "bold"),
+            font=("Rubik UI", 15, "bold"),
             command=self.actions.change_backup_folder
         )
         self.btn_change_path.pack(anchor="w", pady = (0,5))
@@ -761,7 +761,7 @@ class UtilityControlApp(ctk.CTk):
         self.entry_backup_path = ctk.CTkEntry(
             path_inner,
             textvariable=self.backup_path_var,
-            font=("Rubik UI", 16),
+            font=("Rubik UI", 15),
             width = 360,
             state="readonly"
         )
@@ -830,7 +830,7 @@ class UtilityControlApp(ctk.CTk):
         # Ensure it stays above scrollable content
         self.overlay_controls.lift()
         self.expand_btn.lift()
-        self.after(160, self._mark_ui_ready)
+        self.after(150, self._mark_ui_ready)
         
         
         self.advanced_panel = AdvancedToolsPanel(self)
@@ -1203,8 +1203,18 @@ class UtilityControlApp(ctk.CTk):
             # Timed success message
             self._set_folder_status_timed("Folder Made", 2000)
             
-            # Minimize app after creation (EZ win UX)
-            self.after(3000, self.withdraw)
+            def minimize_both():
+                if (
+                    hasattr(self, "advanced_panel")
+                    and self.advanced_panel
+                    and self.advanced_panel.winfo_viewable()
+                ):
+                    self.advanced_panel.iconify()
+
+                self.iconify()
+
+            self.after(3000, minimize_both)
+
 
         except Exception as e:
             messagebox.showerror(
