@@ -208,22 +208,7 @@ class UtilityControlApp(ctk.CTk):
         self.bind("<Configure>", lambda e: self._sync_windows("main"))
         self.bind("<ButtonPress-1>", lambda e: self._set_drag_owner("main"))
         self.bind("<ButtonRelease-1>", lambda e: self._clear_drag_owner())
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        self.bind("<Configure>", self._on_main_configure)
     
         # ==============================================================
         #  MAIN FRAMES LEFT HEADER
@@ -860,9 +845,44 @@ class UtilityControlApp(ctk.CTk):
         
         self.update_idletasks() 
         self.after_idle(self.update_idletasks)
-        self.after_idle(self.resize_to_fit)    
-            
+        self.after_idle(self.resize_to_fit)
+        
+    def _on_main_unmap(self, event=None):
+        # Ignore minimize
+        if self.state() == "iconic":
+            return
 
+        # Only act when actually withdrawn (to tray)
+        if self.state() != "withdrawn":
+            return
+
+        # Ensure right panel is not left floating
+        if (
+            hasattr(self, "advanced_panel")
+            and self.advanced_panel
+            and self.advanced_panel.winfo_exists()
+            and self.advanced_panel.winfo_viewable()
+        ):
+            self.toggle_side_panel()
+
+        
+    def _on_main_configure(self, event=None):
+        """
+        If main window is minimized, iconify the right panel too.
+        Do NOT send anything to tray.
+        """
+        try:
+            if self.state() == "iconic":
+                if (
+                    hasattr(self, "advanced_panel")
+                    and self.advanced_panel
+                    and self.advanced_panel.winfo_exists()
+                ):
+                    self.advanced_panel.iconify()
+        except Exception:
+            pass
+
+        
     def _mark_ui_ready(self):
                 self._ui_ready = True
 

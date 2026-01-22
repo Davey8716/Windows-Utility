@@ -102,6 +102,12 @@ class TrayIconManager:
     # ===================================================================
 
     def on_close_to_tray(self):
-        """User clicked the X → hide window instead of exiting."""
-        print("[INFO] Window hidden to tray")
+        # close right panel first
+        if (
+            hasattr(self.app, "advanced_panel")
+            and self.app.advanced_panel
+            and self.app.advanced_panel.winfo_viewable()
+        ):
+            self.app.toggle_side_panel()
+
         self.app.withdraw()
