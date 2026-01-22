@@ -10,25 +10,24 @@ import win32gui
 import win32con
 import string
 import shutil
-import customtkinter as ctk
+import time
+from PIL import ImageGrab
 from tkinter import filedialog
 from datetime import datetime
+import customtkinter as ctk
 from tkinter import messagebox
 from tooltips import CtkTooltip
 from pathlib import Path
 from screen_mover import SCREEN_MOVER
 from state_manager import load_state, save_state
-from screenshot_tool import take_desktop_screenshot
 from tray_toggles import TrayIconManager
 from universal_bookmarks_export import BraveBookmarksExporter
 from utility_toggles import switch_theme, UtilityActionsManager 
 from collapsible_section import CollapsibleSection
 
-
-
 # Configure appearance
 ctk.set_appearance_mode("Dark")
-ctk.set_default_color_theme("blue")
+ctk.set_default_color_theme("Blue")
 
 MUTEX_NAME = "Global\\DailyHasslesGone_SingleInstance"
 
@@ -609,7 +608,7 @@ class UtilityControlApp(ctk.CTk):
             self.organise_frame,
             text="Desktop Screenshot",
             width=btn_width,
-            command=lambda: take_desktop_screenshot(self),
+            command= self.take_desktop_screenshot,
             font=("Rubik UI", 15, "bold")
         )
         self.btn_desktop_screenshot.pack(anchor="w", padx=10, pady=(5, 2))
@@ -883,6 +882,85 @@ class UtilityControlApp(ctk.CTk):
             and self.advanced_panel_var.winfo_viewable()
         ):
             self.toggle_side_panel()
+            
+    def take_desktop_screenshot(self):
+        """
+        Universal desktop screenshotter:
+        - Minimizes main GUI
+        - Minimizes right panel if open
+        - Takes screenshot
+        - Prompts for save location
+        - Restores previous GUI state
+        """
+
+
+        right_was_open = False
+
+        try:
+            # -------------------------------------------------------
+            # 1) Capture current state
+            # -------------------------------------------------------
+
+            if (
+                hasattr(app, "advanced_panel")
+                and self.advanced_panel
+                and self.advanced_panel.winfo_viewable()
+            ):
+                right_was_open = True
+                app.advanced_panel.withdraw()
+
+            # -------------------------------------------------------
+            # 2) Minimize main GUI
+            # -------------------------------------------------------
+
+            self.withdraw()
+            self.update_idletasks()
+            time.sleep(0.3)  # ensure desktop is clean
+
+            # -------------------------------------------------------
+            # 3) Capture full desktop
+            # -------------------------------------------------------
+
+            img = ImageGrab.grab()
+
+            # -------------------------------------------------------
+            # 4) Save dialog
+            # -------------------------------------------------------
+
+            default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+
+            save_path = filedialog.asksaveasfilename(
+                title="Save Desktop Screenshot",
+                defaultextension=".png",
+                initialfile=default_name,
+                filetypes=[("PNG Image", "*.png")],
+            )
+
+            if save_path:
+                img.save(save_path)
+                print(f"[SCREENSHOT] Saved: {save_path}")
+            else:
+                print("[SCREENSHOT] Cancelled by user")
+
+        except Exception as e:
+            print("[SCREENSHOT] Error:", e)
+
+        finally:
+            # -------------------------------------------------------
+            # 5) Restore GUI exactly as before
+            # -------------------------------------------------------
+
+            try:
+                self.deiconify()
+                self.after(50, app.lift)
+
+                if right_was_open:
+                    self.advanced_panel.deiconify()
+                    self.after(60, lambda: self._sync_windows("main"))
+
+            except Exception:
+                pass
+
 
         
     def _on_main_configure(self, event=None):
@@ -1120,11 +1198,6 @@ class UtilityControlApp(ctk.CTk):
         new["brave_export_path"] = self.brave_export_path_var.get()
         new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
 
-        
-        
-
-
-        
         # -------------------------
         # Collapsible section states
         # -------------------------
