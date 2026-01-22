@@ -1063,17 +1063,27 @@ class UtilityControlApp(ctk.CTk):
         old = load_state()
         new = dict(old)
 
-        new["master_toggle_left"] = self.master_toggle_left_var.get()
-
         # -------------------------
-        # Screen Mover settings
+        # Master switches
+        # -------------------------
+        new["master_toggle_left"] = self.master_toggle_left_var.get()
+        new["advanced_panel_open"] = self.advanced_panel_open_var.get()
+        
+        # -------------------------
+        # User interface
+        # -------------------------
+        new["theme_dark"] = self.theme_var.get()
+        new["show_power_buttons"] = self.power_toggle_var.get()
+        new["tooltips_enabled"] = self.tooltips_enabled_var.get()
+        new["main_always_on_top_enabled"] = self.main_always_on_top_var.get()
+        new["right_always_on_top_enabled"] = self.right_always_on_top_var.get()
+        new["minimize_all_enabled"] = self.minimize_all_var.get()
+        
+        # -------------------------
+        # Screen mover
         # -------------------------
         new["mmb_activation_enabled"] = self.mmb_var.get()
         new["auto_align_enabled"] = self.auto_align_var.get()
-        new["minimize_all_enabled"] = self.minimize_all_var.get()
-        new["brave_export_path"] = self.brave_export_path_var.get()
-        new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
-
 
         # -------------------------
         # USB settings
@@ -1081,16 +1091,12 @@ class UtilityControlApp(ctk.CTk):
         new["usb_idle_enabled"] = self.opt_idle_var.get()
         new["usb_download_enabled"] = self.opt_download_var.get()
         new["usb_plug_enabled"] = self.opt_plug_var.get()
+        
+        new["brave_export_path"] = self.brave_export_path_var.get()
+        new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
 
-        # -------------------------
-        # Theme / window
-        # -------------------------
-        new["theme_dark"] = self.theme_var.get()
-        new["show_power_buttons"] = self.power_toggle_var.get()
-        new["tooltips_enabled"] = self.tooltips_enabled_var.get()
-        new["main_always_on_top_enabled"] = self.main_always_on_top_var.get()
-        new["right_always_on_top_enabled"] = self.right_always_on_top_var.get()
-        new["advanced_panel_open"] = self.advanced_panel_open_var.get()
+        
+        
 
 
         
