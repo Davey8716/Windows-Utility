@@ -266,8 +266,8 @@ class UtilityControlApp(ctk.CTk):
         left_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
         left_col.pack(side="left", anchor="nw")
 
-        right_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
-        right_col.pack(side="right", anchor="ne")
+        self.power_right_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
+        
         
         # -------------------------
         # Dark Mode Toggle (LEFT)
@@ -400,7 +400,7 @@ class UtilityControlApp(ctk.CTk):
         # ==========================
 
         self.btn_sleep = ctk.CTkButton(
-            right_col,
+            self.power_right_col,
             text="Sleep",
             width=small_btn_width,
             command=lambda: os.system(
@@ -410,7 +410,7 @@ class UtilityControlApp(ctk.CTk):
         )
         
         self.btn_lock = ctk.CTkButton(
-            right_col,
+            self.power_right_col,
             text="Lock PC",
             width=small_btn_width,
             command=lambda: ctypes.windll.user32.LockWorkStation(),
@@ -418,7 +418,7 @@ class UtilityControlApp(ctk.CTk):
         )
         
         self.btn_restart = ctk.CTkButton(
-            right_col,
+            self.power_right_col,
             text="Restart",
             width=small_btn_width,
             command=lambda: os.system("shutdown /r /t 0"),
@@ -426,7 +426,7 @@ class UtilityControlApp(ctk.CTk):
         )
         
         self.btn_shutdown = ctk.CTkButton(
-            right_col,
+            self.power_right_col ,
             text="Shutdown",
             width=small_btn_width,
             command=lambda: os.system("shutdown /s /t 0"),
