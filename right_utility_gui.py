@@ -28,7 +28,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.side_frame = ctk.CTkScrollableFrame(
             self,
             width=450,
-            height=1150,
+            height=1160,
             fg_color="transparent"
         )
         self.side_frame.pack(fill="both", expand=True)
@@ -119,7 +119,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
                     drive_parent,
                     text=text,
                     anchor="w",
-                    font=("Rubik UI", 15)
+                    font=("Rubik UI", 15, "bold")
                 )
                 lbl.pack(anchor="w", padx=12, pady=0)
                 self.drive_labels.append(lbl)
@@ -149,7 +149,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             self.advanced_section_3.content,
             text="Export Brave Bookmarks",
             width=180,
-            font=("Rubik UI", 15, "bold"),
+            font=("Rubik UI", 16, "bold"),
             command=app._run_brave_export,
         )
         self.btn_brave_export.pack(anchor="w", padx=5, pady=(5, 4))
@@ -163,7 +163,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.brave_export_entry = ctk.CTkEntry(
             self.advanced_section_3.content,
             textvariable=app.brave_export_path_var,
-            font=("Rubik UI", 15),
+            font=("Rubik UI", 16),
             width=360,
             state="readonly"
         )
@@ -231,7 +231,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             values=values,
             command=runner,
             width=260,
-            font=("Rubik UI", 15, "bold"),
+            font=("Rubik UI", 16, "bold"),
             dropdown_font=("Rubik UI", 14),
         )
 
