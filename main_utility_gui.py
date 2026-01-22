@@ -697,16 +697,30 @@ class UtilityControlApp(ctk.CTk):
             fg_color="transparent"
         )
         backup_buttons_frame.pack(anchor="w", padx=10, pady=(5, 2))
+        
+        # BACKUP BUTTON ROW (button + inline status)
+        backup_row = ctk.CTkFrame(backup_buttons_frame, fg_color="transparent")
+        backup_row.pack(anchor="w", pady=(0, 5))
 
         # BACKUP BUTTON (top)
         self.btn_backup_pins = ctk.CTkButton(
-            backup_buttons_frame,
+            backup_row,
             text="Backup Taskbar",
             font=("Rubik UI", 15, "bold"),
             width=btn_width,
             command=self.actions.backup_pinned_shortcuts
         )
-        self.btn_backup_pins.pack(anchor="w", pady=(0, 5))
+        self.btn_backup_pins.pack(side="left")
+        
+        self.backup_status_label = ctk.CTkLabel(
+            backup_row,
+            text=" ",
+            width=140,
+            anchor="e",
+            font=("Rubik UI", 14, "bold"),
+            text_color="#1f6aa5"
+        )
+        self.backup_status_label.pack(anchor = "w", padx=(5, 0))
 
         CtkTooltip(
             self.btn_backup_pins,
@@ -886,8 +900,17 @@ class UtilityControlApp(ctk.CTk):
                     self.advanced_panel_var.iconify()
         except Exception:
             pass
-
         
+    def _set_backup_status_timed(self, text, duration_ms=2000):
+        if hasattr(self, "_backup_status_after_id") and self._backup_status_after_id:
+            self.after_cancel(self._backup_status_after_id)
+
+        self.backup_status_label.configure(text=text)
+        self._backup_status_after_id = self.after(
+            duration_ms,
+            lambda: self.backup_status_label.configure(text="")
+    )
+
     def _mark_ui_ready(self):
                 self._ui_ready = True
 

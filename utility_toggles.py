@@ -262,21 +262,16 @@ class UtilityActionsManager:
                     count += 1
                 except Exception as e:
                     print(f"[BACKUP] Failed to copy {file}: {e}")
+                    
+                    
+            if count > 0:
+                self.app._set_backup_status_timed(f"Backup saved ({count})")
+            else:
+                self.app._set_backup_status_timed("No shortcuts found")
 
-        # 4. Finish message
-        if count > 0:
-            messagebox.showinfo(
-                "Backup Complete",
-                f"Successfully backed up {count} pinned shortcuts.\n\n"
-                f"Saved to:\n{backup_folder}"
-            )
-        else:
-            messagebox.showwarning(
-                "No Shortcuts Found",
-                "No pinned shortcuts were found to back up."
-            )
 
         print(f"[BACKUP] Completed. {count} shortcuts copied.")
+        
 
     # ===================================================================
     #  Organising Utilities - Open Backup Folder
