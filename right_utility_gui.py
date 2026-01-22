@@ -41,8 +41,10 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.advanced_title.pack(padx=12, pady=(20, 20))
         
         self.bind("<Configure>", lambda e: self.app._sync_windows("side"))
-        self.bind("<ButtonPress-1>", lambda e: self.app._set_drag_owner("side"))
+        self.bind("<FocusIn>", lambda e: self.app._set_drag_owner("side"))
         self.bind("<ButtonRelease-1>", lambda e: self.app._clear_drag_owner())
+
+
 
         # ==================================================
         # Windows Utilities
