@@ -259,7 +259,7 @@ class UtilityControlApp(ctk.CTk):
             "User Interface:",
             section_id="user_interface",
             app=self,
-            initial_open=self.saved_state.get("left_section_states", {}).get("misc", True)
+            initial_open=self.saved_state.get("left_section_states", {}).get("user_interface", True)
         )
         self.collapsible_sections.append(self.misc_section)
 
@@ -445,7 +445,7 @@ class UtilityControlApp(ctk.CTk):
             "Quick app/browser screen changer:",
             section_id="screen_mover",
             app = self,
-            initial_open=self.saved_state["left_section_states"].get("mover", True)
+            initial_open=self.saved_state["left_section_states"].get("screen_mover", True)
         )
         self.collapsible_sections.append(self.mover_section)
 
@@ -517,7 +517,7 @@ class UtilityControlApp(ctk.CTk):
             "Drive Reminder Options:",
             section_id="drive_reminder_options",
             app = self,
-            initial_open=self.saved_state["left_section_states"].get("usb", True)
+            initial_open=self.saved_state["left_section_states"].get("drive_reminder_options", True)
         )
         self.collapsible_sections.append(usb_section)
 
@@ -594,9 +594,9 @@ class UtilityControlApp(ctk.CTk):
         organising_section = CollapsibleSection(
             self.main_frame,
             "Organising Utilities:",
-            section_id="organising_utilties",
+            section_id="organising_utilities",
             app = self,
-            initial_open=self.saved_state.get("left_section_states", {}).get("organising", True)
+            initial_open=self.saved_state.get("left_section_states", {}).get("organising_utilities", True)
         )
         self.collapsible_sections.append(organising_section)
         self.organise_frame = organising_section.content
@@ -679,10 +679,10 @@ class UtilityControlApp(ctk.CTk):
 
         desktop_backup_section = CollapsibleSection(
             self.main_frame,
-            "Desktop Backup Utilties:",
-            section_id="desktop_backup",
+            "Desktop Backup Utilities:",
+            section_id="desktop_backup_utilities",
             app=self,
-            initial_open=self.saved_state.get("left_section_states", {}).get("desktop_backup", True)
+            initial_open=self.saved_state.get("left_section_states", {}).get("desktop_backup_utilities", True)
         )
         self.collapsible_sections.append(desktop_backup_section)
         self.desktop_backup_frame = desktop_backup_section.content
@@ -774,7 +774,8 @@ class UtilityControlApp(ctk.CTk):
             self.main_frame,
             "Desktop Icon Organiser:",
             section_id="desktop_icon_organiser",
-            app=self
+            app=self,
+            initial_open=self.saved_state.get("left_section_states", {}).get("desktop_icon_organiser", True)
         )
         self.collapsible_sections.append(Desktop_icon_layout)
         
