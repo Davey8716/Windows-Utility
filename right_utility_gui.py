@@ -20,7 +20,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self._desired_topmost = app.right_always_on_top_var.get()
 
         # Close button behaviour
-        self.protocol("WM_DELETE_WINDOW", self.hide)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # --------------------------------------------------
         # Scrollable content
@@ -53,16 +53,17 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Windows Utilities",
             section_id="Windows_utilities",
             app=self.app,
-            initial_open=False
+            initial_open=app.saved_state.get("right_section_states", {}).get("Windows_utilities", False)
         )
         self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(5, 6))
-        
+
         CtkTooltip(
             self.windows_utility_section.toggle_btn,
             "Shows windows utilities here instead grouped by type \n"
             "not having to have them all cluttering up your taskbar."
         )
         app.collapsible_sections.append(self.windows_utility_section)
+
 
         parent = self.windows_utility_section.content
 
@@ -82,19 +83,18 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Drive Space Display",
             section_id="drive_space_display",
             app=self.app,
-            initial_open=False
+            initial_open=app.saved_state.get("right_section_states", {}).get("drive_space_display", False)
         )
         self.display_space_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
-        
+
         CtkTooltip(
             self.display_space_section.toggle_btn,
             "Shows disk usage for all detected drives."
         )
-        
+
         app.collapsible_sections.append(self.display_space_section)
+
         
-
-
         drive_parent = self.display_space_section.content
         self.drive_labels = []
 
@@ -135,15 +135,15 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         # ==================================================
         # Universal Bookmarks Exporter
         # ==================================================
-
+        
         self.advanced_section_3 = CollapsibleSection(
             self.side_frame,
             "Universal Bookmarks Exporter",
             section_id="bookmarks_exporter",
             app=self.app,
-            initial_open=False
+            initial_open=app.saved_state.get("right_section_states", {}).get("bookmarks_exporter", False)
         )
-        self.advanced_section_3.wrapper.pack(fill= "x", padx=12, pady=(5, 6))
+        self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(5, 6))
 
         self.btn_brave_export = ctk.CTkButton(
             self.advanced_section_3.content,
@@ -152,8 +152,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             font=("Rubik UI", 15, "bold"),
             command=app._run_brave_export,
         )
-        self.btn_brave_export.pack(anchor="w",padx = 5, pady=(5, 4))
-        
+        self.btn_brave_export.pack(anchor="w", padx=5, pady=(5, 4))
+
         CtkTooltip(
             self.btn_brave_export,
             "Exports brave bookmarks to a file path of your choice,\n"
@@ -167,10 +167,11 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             width=360,
             state="readonly"
         )
-        self.brave_export_entry.pack(anchor="w", padx = 5, pady=(5, 4))
-        
+        self.brave_export_entry.pack(anchor="w", padx=5, pady=(5, 4))
+
         app.collapsible_sections.append(self.advanced_section_3)
 
+        
     # ==================================================
     # Windows Utilities
     # ==================================================
@@ -268,3 +269,9 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         y = self.app.winfo_rooty()
 
         self.geometry(f"+{x}+{y}")
+        
+    def _on_close(self):
+        # close via the same logic as the toggle
+        self.app.advanced_panel_open_var.set(False)
+        self.hide()
+        self.app.save_all_settings()

@@ -25,6 +25,7 @@ from utility_toggles import switch_theme, UtilityActionsManager
 from collapsible_section import CollapsibleSection
 
 
+
 # Configure appearance
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -80,8 +81,8 @@ def ensure_single_instance():
 class UtilityControlApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        
         from right_utility_gui import AdvancedToolsPanel
+    
         
         mutex = ensure_single_instance()
 
@@ -179,9 +180,11 @@ class UtilityControlApp(ctk.CTk):
             value=self.saved_state.get("master_toggle_left", True)
         )
 
-
-        self.side_panel_open = self.saved_state.get("side_panel_open", False)
-        self.expanded = self.side_panel_open
+        self.advanced_panel_open_var = ctk.BooleanVar(
+            value=bool(self.saved_state.get("advanced_panel_open", False))
+        )
+        self.expanded = self.advanced_panel_open_var.get
+        
         
         self.bookmarks_exporter_var = ctk.BooleanVar(
             value=self.saved_state.get("bookmarks_exporter", True)
@@ -827,19 +830,19 @@ class UtilityControlApp(ctk.CTk):
         self.expand_btn.lift()
         self.after(150, self._mark_ui_ready)
         
-        self.advanced_panel = None
+        
         self.advanced_panel = AdvancedToolsPanel(self)
         
         # --------------------------------------------------
-        # Restore side panel open/closed state
+        # Restore side panel open/closed state  ✅ CORRECT PLACE
         # --------------------------------------------------
-
-        if self.saved_state.get("side_panel_open", False):
+        if self.advanced_panel_open_var.get():
             self.advanced_panel.show()
             self.expand_btn.configure(text="▸")
         else:
             self.advanced_panel.hide()
             self.expand_btn.configure(text="▾")
+    
             
         self.actions.toggle_power_buttons()
         
@@ -858,10 +861,10 @@ class UtilityControlApp(ctk.CTk):
 
         # Ensure right panel is not left floating
         if (
-            hasattr(self, "advanced_panel")
-            and self.advanced_panel
-            and self.advanced_panel.winfo_exists()
-            and self.advanced_panel.winfo_viewable()
+            hasattr(self, "advanced_panel_var")
+            and self.advanced_panel_var
+            and self.advanced_panel_var.winfo_exists()
+            and self.advanced_panel_var.winfo_viewable()
         ):
             self.toggle_side_panel()
 
@@ -874,11 +877,11 @@ class UtilityControlApp(ctk.CTk):
         try:
             if self.state() == "iconic":
                 if (
-                    hasattr(self, "advanced_panel")
-                    and self.advanced_panel
-                    and self.advanced_panel.winfo_exists()
+                    hasattr(self, "advanced_panel_var")
+                    and self.advanced_panel_var
+                    and self.advanced_panel_var.winfo_exists()
                 ):
-                    self.advanced_panel.iconify()
+                    self.advanced_panel_var.iconify()
         except Exception:
             pass
 
@@ -899,13 +902,13 @@ class UtilityControlApp(ctk.CTk):
             return
         
         # 🔑 advanced panel may not exist yet
-        if not hasattr(self, "advanced_panel"):
+        if not hasattr(self, "advanced_panel_var"):
             return
 
         if self._drag_owner and self._drag_owner != source:
             return
 
-        side = self.advanced_panel
+        side = self.advanced_panel_var
         if not side or not side.winfo_exists():
             return
 
@@ -1007,13 +1010,15 @@ class UtilityControlApp(ctk.CTk):
 
         if panel.winfo_viewable():
             panel.hide()
-            self.expand_btn.configure(text="▾")   # down
+            self.expand_btn.configure(text="▾")
+            self.advanced_panel_open_var.set(False)   # ← REQUIRED
         else:
             panel.show()
-            self.expand_btn.configure(text="▸")   # right
+            self.expand_btn.configure(text="▸")
+            self.advanced_panel_open_var.set(True)    # ← REQUIRED
 
 
-            self.save_all_settings()
+        self.save_all_settings()
 
 
     def update_collapsible_arrow_colours(self):
@@ -1069,8 +1074,6 @@ class UtilityControlApp(ctk.CTk):
         new["brave_export_path"] = self.brave_export_path_var.get()
         new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
 
-        # ❌ REMOVE THIS
-        # new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
 
         # -------------------------
         # USB settings
@@ -1087,14 +1090,10 @@ class UtilityControlApp(ctk.CTk):
         new["tooltips_enabled"] = self.tooltips_enabled_var.get()
         new["main_always_on_top_enabled"] = self.main_always_on_top_var.get()
         new["right_always_on_top_enabled"] = self.right_always_on_top_var.get()
+        new["advanced_panel_open"] = self.advanced_panel_open_var.get()
 
-        panel = getattr(self, "advanced_panel", None)
 
-        if panel is not None and panel.winfo_exists():
-            new["side_panel_open"] = panel.winfo_viewable()
-        else:
-            new["side_panel_open"] = False
-
+        
         # -------------------------
         # Collapsible section states
         # -------------------------
@@ -1106,10 +1105,10 @@ class UtilityControlApp(ctk.CTk):
                 left_states[section.section_id] = section.open
 
             elif (
-                hasattr(self, "advanced_panel")
-                and self.advanced_panel
-                and self.advanced_panel.winfo_exists()
-                and section.parent == self.advanced_panel.side_frame
+                hasattr(self, "advanced_panel_var")
+                and self.advanced_panel_open_var
+                and self.advanced_panel_open_var.winfo_exists()
+                and section.parent == self.advanced_panel_open_var.side_frame
             ):
                 right_states[section.section_id] = section.open
 
