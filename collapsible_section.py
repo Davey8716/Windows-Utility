@@ -61,7 +61,7 @@ class CollapsibleSection:
         if mode == "Dark":
             self.toggle_btn.configure(text_color="white")
         else:
-            self.toggle_btn.configure(text_color="black")
+            self.toggle_btn.configure(text_color="Black")
 
     def toggle(self):
         if self.open:

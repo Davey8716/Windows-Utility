@@ -27,7 +27,7 @@ from collapsible_section import CollapsibleSection
 
 # Configure appearance
 ctk.set_appearance_mode("Dark")
-ctk.set_default_color_theme("Blue")
+ctk.set_default_color_theme("blue")
 
 MUTEX_NAME = "Global\\DailyHasslesGone_SingleInstance"
 
@@ -82,7 +82,7 @@ class UtilityControlApp(ctk.CTk):
         super().__init__()
         from right_utility_gui import AdvancedToolsPanel
     
-        
+        self.title("")
         mutex = ensure_single_instance()
 
         # ==============================================================
@@ -117,8 +117,8 @@ class UtilityControlApp(ctk.CTk):
         # Window geometry
         # ==============================================================
         
-        self.WINDOW_WIDTH = 510
-        self.WINDOW_HEIGHT = 1150
+        self.WINDOW_WIDTH = 505
+        self.WINDOW_HEIGHT = 1000
         
         btn_width = 120 # Large buttons
         small_btn_width = 90 # Small buttons
@@ -203,8 +203,8 @@ class UtilityControlApp(ctk.CTk):
         self.root_container.pack_propagate(False)
     
 
-        self.root_container.columnconfigure(0, weight=0, minsize=450)
-        self.root_container.columnconfigure(1, weight=0, minsize=450)
+        self.root_container.columnconfigure(0, weight=0, minsize=425)
+        self.root_container.columnconfigure(1, weight=0, minsize=425)
         self.root_container.rowconfigure(0, weight=1)
         
         self.bind("<Configure>", lambda e: self._sync_windows("main"))
@@ -235,7 +235,7 @@ class UtilityControlApp(ctk.CTk):
             text="Problems Gone",
             font=("Rubik UI", 20, "bold")
         )
-        title.pack(padx = 50, pady = 10)
+        title.pack(padx = 25, pady = 5)
 
         self.master_collapse_btn = ctk.CTkButton(
             title_row,
@@ -255,7 +255,7 @@ class UtilityControlApp(ctk.CTk):
 
         self.misc_section = CollapsibleSection(
             self.main_frame,
-            "User Interface:",
+            "User Interface",
             section_id="user_interface",
             app=self,
             initial_open=self.saved_state.get("left_section_states", {}).get("user_interface", True)
@@ -441,7 +441,7 @@ class UtilityControlApp(ctk.CTk):
         
         self.mover_section = CollapsibleSection(
             self.main_frame,
-            "Quick app/browser screen changer:",
+            "Screen Mover",
             section_id="screen_mover",
             app = self,
             initial_open=self.saved_state["left_section_states"].get("screen_mover", True)
@@ -513,7 +513,7 @@ class UtilityControlApp(ctk.CTk):
         
         usb_section = CollapsibleSection(
             self.main_frame,
-            "Drive Reminder Options:",
+            "Drive Reminder Options",
             section_id="drive_reminder_options",
             app = self,
             initial_open=self.saved_state["left_section_states"].get("drive_reminder_options", True)
@@ -592,7 +592,7 @@ class UtilityControlApp(ctk.CTk):
 
         organising_section = CollapsibleSection(
             self.main_frame,
-            "Organising Utilities:",
+            "Organising Utilities",
             section_id="organising_utilities",
             app = self,
             initial_open=self.saved_state.get("left_section_states", {}).get("organising_utilities", True)
@@ -664,7 +664,7 @@ class UtilityControlApp(ctk.CTk):
         self.folder_status_label = ctk.CTkLabel(
             entry_group,
             text=" ",                  # IMPORTANT: not empty, so it has width
-            width=150,
+            width=300,
             anchor="w",
             font=("Rubik UI", 15,"bold"),
             text_color="#1f6aa5"
@@ -679,7 +679,7 @@ class UtilityControlApp(ctk.CTk):
 
         desktop_backup_section = CollapsibleSection(
             self.main_frame,
-            "Desktop Backup Utilities:",
+            "Desktop Backup Utilities",
             section_id="desktop_backup_utilities",
             app=self,
             initial_open=self.saved_state.get("left_section_states", {}).get("desktop_backup_utilities", True)
@@ -775,7 +775,7 @@ class UtilityControlApp(ctk.CTk):
             path_inner,
             textvariable=self.backup_path_var,
             font=("Rubik UI", 15),
-            width = 360,
+            width = 400,
             state="readonly"
         )
         self.entry_backup_path.pack(anchor="w", pady = (0,5))
@@ -786,7 +786,7 @@ class UtilityControlApp(ctk.CTk):
         
         Desktop_icon_layout = CollapsibleSection(
             self.main_frame,
-            "Desktop Icon Organiser:",
+            "Desktop Icon Organiser",
             section_id="desktop_icon_organiser",
             app=self,
             initial_open=self.saved_state.get("left_section_states", {}).get("desktop_icon_organiser", True)
@@ -865,6 +865,12 @@ class UtilityControlApp(ctk.CTk):
         self.after_idle(self.update_idletasks)
         self.after_idle(self.resize_to_fit)
         
+        
+        
+    # ==================================================
+    # End of muddafucking initilisation bro
+    # ==================================================
+
     def _on_main_unmap(self, event=None):
         # Ignore minimize
         if self.state() == "iconic":
@@ -883,86 +889,7 @@ class UtilityControlApp(ctk.CTk):
         ):
             self.toggle_side_panel()
             
-    def take_desktop_screenshot(self):
-        """
-        Universal desktop screenshotter:
-        - Minimizes main GUI
-        - Minimizes right panel if open
-        - Takes screenshot
-        - Prompts for save location
-        - Restores previous GUI state
-        """
 
-
-        right_was_open = False
-
-        try:
-            # -------------------------------------------------------
-            # 1) Capture current state
-            # -------------------------------------------------------
-
-            if (
-                hasattr(app, "advanced_panel")
-                and self.advanced_panel
-                and self.advanced_panel.winfo_viewable()
-            ):
-                right_was_open = True
-                app.advanced_panel.withdraw()
-
-            # -------------------------------------------------------
-            # 2) Minimize main GUI
-            # -------------------------------------------------------
-
-            self.withdraw()
-            self.update_idletasks()
-            time.sleep(0.3)  # ensure desktop is clean
-
-            # -------------------------------------------------------
-            # 3) Capture full desktop
-            # -------------------------------------------------------
-
-            img = ImageGrab.grab()
-
-            # -------------------------------------------------------
-            # 4) Save dialog
-            # -------------------------------------------------------
-
-            default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-
-            save_path = filedialog.asksaveasfilename(
-                title="Save Desktop Screenshot",
-                defaultextension=".png",
-                initialfile=default_name,
-                filetypes=[("PNG Image", "*.png")],
-            )
-
-            if save_path:
-                img.save(save_path)
-                print(f"[SCREENSHOT] Saved: {save_path}")
-            else:
-                print("[SCREENSHOT] Cancelled by user")
-
-        except Exception as e:
-            print("[SCREENSHOT] Error:", e)
-
-        finally:
-            # -------------------------------------------------------
-            # 5) Restore GUI exactly as before
-            # -------------------------------------------------------
-
-            try:
-                self.deiconify()
-                self.after(50, app.lift)
-
-                if right_was_open:
-                    self.advanced_panel.deiconify()
-                    self.after(60, lambda: self._sync_windows("main"))
-
-            except Exception:
-                pass
-
-
-        
     def _on_main_configure(self, event=None):
         """
         If main window is minimized, iconify the right panel too.
@@ -1070,6 +997,85 @@ class UtilityControlApp(ctk.CTk):
 
         self.master_collapse_btn.configure(text="▾" if new_state else "▸")
         self.save_all_settings()
+        
+    def take_desktop_screenshot(self):
+        """
+        Universal desktop screenshotter:
+        - Minimizes main GUI
+        - Minimizes right panel if open
+        - Takes screenshot
+        - Prompts for save location
+        - Restores previous GUI state
+        """
+
+
+        right_was_open = False
+
+        try:
+            # -------------------------------------------------------
+            # 1) Capture current state
+            # -------------------------------------------------------
+
+            if (
+                hasattr(app, "advanced_panel")
+                and self.advanced_panel
+                and self.advanced_panel.winfo_viewable()
+            ):
+                right_was_open = True
+                app.advanced_panel.withdraw()
+
+            # -------------------------------------------------------
+            # 2) Minimize main GUI
+            # -------------------------------------------------------
+
+            self.withdraw()
+            self.update_idletasks()
+            time.sleep(0.3)  # ensure desktop is clean
+
+            # -------------------------------------------------------
+            # 3) Capture full desktop
+            # -------------------------------------------------------
+
+            img = ImageGrab.grab()
+
+            # -------------------------------------------------------
+            # 4) Save dialog
+            # -------------------------------------------------------
+
+            default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+
+            save_path = filedialog.asksaveasfilename(
+                title="Save Desktop Screenshot",
+                defaultextension=".png",
+                initialfile=default_name,
+                filetypes=[("PNG Image", "*.png")],
+            )
+
+            if save_path:
+                img.save(save_path)
+                print(f"[SCREENSHOT] Saved: {save_path}")
+            else:
+                print("[SCREENSHOT] Cancelled by user")
+
+        except Exception as e:
+            print("[SCREENSHOT] Error:", e)
+
+        finally:
+            # -------------------------------------------------------
+            # 5) Restore GUI exactly as before
+            # -------------------------------------------------------
+
+            try:
+                self.deiconify()
+                self.after(50, app.lift)
+
+                if right_was_open:
+                    self.advanced_panel.deiconify()
+                    self.after(60, lambda: self._sync_windows("main"))
+
+            except Exception:
+                pass
+
 
     def _choose_brave_export_path(self):
         default_name = f"Brave_Bookmarks_Export_{datetime.now().strftime('%Y-%m-%d')}.html"

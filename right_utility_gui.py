@@ -13,7 +13,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         # --------------------------------------------------
         # Window config
         # --------------------------------------------------
-        self.title("Advanced Tools")
+        self.title("")
         self.resizable(False, False)
         self.withdraw()  # start hidden
         
@@ -27,7 +27,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         # --------------------------------------------------
         self.side_frame = ctk.CTkScrollableFrame(
             self,
-            width=450,
+            width=480,
             height=1150,
             fg_color="transparent"
         )
@@ -36,7 +36,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.advanced_title = ctk.CTkLabel(
             self.side_frame,
             text="Advanced Tools",
-            font=("Rubik UI", 22, "bold")
+            font=("Rubik UI", 20, "bold")
         )
         self.advanced_title.pack(padx=12, pady=(20, 20))
         
@@ -94,7 +94,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
         app.collapsible_sections.append(self.display_space_section)
 
-        
         drive_parent = self.display_space_section.content
         self.drive_labels = []
 
@@ -144,6 +143,12 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             initial_open=self.app.saved_state.get("right_section_states", {}).get("bookmarks_exporter", False)
         )
         self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(5, 6))
+        
+        CtkTooltip(
+            self.advanced_section_3.toggle_btn,
+            "Exports boomkars to a file path of your choosing\n"
+        )
+        app.collapsible_sections.append(self.advanced_section_3)
 
         self.btn_brave_export = ctk.CTkButton(
             self.advanced_section_3.content,
@@ -164,14 +169,13 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             self.advanced_section_3.content,
             textvariable=app.brave_export_path_var,
             font=("Rubik UI", 15),
-            width=360,
+            width=400,
             state="readonly"
         )
         self.brave_export_entry.pack(anchor="w", padx=5, pady=(5, 4))
 
         app.collapsible_sections.append(self.advanced_section_3)
 
-        
     # ==================================================
     # Windows Utilities
     # ==================================================
@@ -215,7 +219,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
     # ==================================================
         
     def _add_windows_dropdown(self, parent, label, actions_map):
-        placeholder = f"— {label} —"
+        placeholder = f" {label} "
 
         def runner(choice):
             if choice == placeholder:
@@ -230,14 +234,13 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             parent,
             values=values,
             command=runner,
-            width=260,
+            width=160,
             font=("Rubik UI", 15, "bold"),
             dropdown_font=("Rubik UI", 14),
         )
 
         dropdown.set(placeholder)  # ✅ force title display
         dropdown.pack(anchor="w", padx=12, pady=(4, 8))
-
 
     # ==================================================
     # Visibility helpers
