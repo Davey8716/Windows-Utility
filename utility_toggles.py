@@ -126,8 +126,9 @@ class UtilityActionsManager:
         self.app.save_all_settings()
 
     # ===================================================================
-    #  Theme Toggle (Dark/Light)
+    #  Theme Toggle (Dark/Light) +  Arrow Colour relative to state
     # ===================================================================
+    
 
     def theme_toggle(self):
         enabled = self.app.theme_var.get()

@@ -25,6 +25,7 @@ from universal_bookmarks_export import BraveBookmarksExporter
 from utility_toggles import switch_theme, UtilityActionsManager 
 from collapsible_section import CollapsibleSection
 
+
 # Configure appearance
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -245,6 +246,10 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 20, "bold")
         )
         title.pack(padx = 25, pady = 5)
+        
+        
+        
+        arrow_colors = self._get_arrow_colors()
 
         self.master_collapse_btn_left = ctk.CTkButton(
             title_row,
@@ -253,11 +258,12 @@ class UtilityControlApp(ctk.CTk):
             height=28,
             font=("Rubik UI", 18, "bold"),
             fg_color="transparent",
+            text_color=arrow_colors["text"],
             hover_color="#202020",
             command=self.toggle_all_left_sections
         )
         self.master_collapse_btn_left.pack(side="right")
-        
+
         CtkTooltip(
             self.master_collapse_btn_left,
             "Master collapse toggle for all of these regions.\n"
@@ -1146,14 +1152,46 @@ class UtilityControlApp(ctk.CTk):
 
 
         self.save_all_settings()
-
+    
+    def _get_arrow_colors(self):
+        if ctk.get_appearance_mode() == "Dark":
+            return {
+                "text": "#E6E6E6",
+                "hover": "#303030",
+            }
+        else:
+            return {
+                "text": "#1A1A1A",
+                "hover": "#D0D0D0",
+            }
 
     def update_collapsible_arrow_colours(self):
-        for section in self.collapsible_sections:
-            if not isinstance(section, CollapsibleSection):
-                continue
+        arrow_colors = self._get_arrow_colors()
 
-            section.update_arrow_color()
+        # LEFT (main window)
+        if hasattr(self, "master_collapse_btn_left"):
+            self.master_collapse_btn_left.configure(
+                text_color=arrow_colors["text"],
+                hover_color=arrow_colors["hover"],
+            )
+
+        # RIGHT (advanced panel)
+        if (
+            hasattr(self, "advanced_panel")
+            and self.advanced_panel
+            and hasattr(self.advanced_panel, "master_collapse_btn_right")
+        ):
+            self.advanced_panel.master_collapse_btn_right.configure(
+                text_color=arrow_colors["text"],
+                hover_color=arrow_colors["hover"],
+            )
+
+        # All section arrows (both panels)
+        for section in self.collapsible_sections:
+            if isinstance(section, CollapsibleSection):
+                section.update_arrow_color()
+
+    
 
     def apply_always_on_top(self, enabled: bool):
         """Apply Always-on-Top state using both Tk and WinAPI."""
@@ -1222,6 +1260,7 @@ class UtilityControlApp(ctk.CTk):
         new["brave_export_path"] = self.brave_export_path_var.get()
         new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
         
+
         new["master_toggle_right"] = self.master_toggle_right_var.get()
 
         # -------------------------
@@ -1281,20 +1320,6 @@ class UtilityControlApp(ctk.CTk):
             
         save_state(data)
         
-    def _set_folder_status_timed(self, text, duration_ms=2000):
-        # Cancel any existing timer
-        if self._folder_status_after_id:
-            self.after_cancel(self._folder_status_after_id)
-            self._folder_status_after_id = None
-
-        # Set text immediately
-        self.folder_status_label.configure(text=text)
-
-        # Schedule clear
-        self._folder_status_after_id = self.after(
-            duration_ms,
-            lambda: self.folder_status_label.configure(text="")
-        )
 
     # ===================================================================
     #  Create Folder On Desktop
@@ -1353,6 +1378,21 @@ class UtilityControlApp(ctk.CTk):
         else:
             self.btn_create_folder.configure(state="disabled")
             self.folder_status_label.configure(text="")
+            
+    def _set_folder_status_timed(self, text, duration_ms=2000):
+        # Cancel any existing timer
+        if self._folder_status_after_id:
+            self.after_cancel(self._folder_status_after_id)
+            self._folder_status_after_id = None
+
+        # Set text immediately
+        self.folder_status_label.configure(text=text)
+
+        # Schedule clear
+        self._folder_status_after_id = self.after(
+            duration_ms,
+            lambda: self.folder_status_label.configure(text="")
+        )
 
     # ---------------- Helpers that run on Tk main thread ----------------
     

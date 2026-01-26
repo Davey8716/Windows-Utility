@@ -48,6 +48,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         title_row = ctk.CTkFrame(self.side_frame, fg_color="transparent")
         title_row.pack(fill="x", padx=10, pady=10)
         
+        arrow_colors = self.app._get_arrow_colors()
+        
         self.master_collapse_btn_right = ctk.CTkButton(
             title_row,
             text="▾",
@@ -55,6 +57,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             height=28,
             font=("Rubik UI", 18, "bold"),
             fg_color="transparent",
+            text_color=arrow_colors["text"],
             hover_color="#202020",
             command=self.toggle_all_right_sections
         )
