@@ -19,3 +19,5 @@ consolidated_feature_list.md
 Microsoft utility suite working + Isnt.md
 *.md
 *.json
+state_manager.py
+screen_mover_state.json

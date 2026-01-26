@@ -112,7 +112,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.sidebar_output = ctk.CTkTextbox(
             self.sidebar_utils_section.content,
             height=120,
-            font=("Consolas", 12),
+            font=("Consolas", 15, "bold"),
         )
         self.sidebar_output.pack(fill="x", padx=8, pady=(8, 6))
 
@@ -157,41 +157,66 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         app.collapsible_sections.append(self.display_space_section)
 
         drive_parent = self.display_space_section.content
-        self.drive_labels = []
+        
+        def open_this_pc():
+            os.system("explorer shell:MyComputerFolder")
+            
+            # minimize after 5 seconds
+            self.after(1000, self.iconify)
+
+        btn_this_pc = ctk.CTkButton(
+            drive_parent,
+            text="Open This PC",
+            font=("Rubik UI", 14, "bold"),
+            height=28,
+            command=open_this_pc,
+        )
+
+        btn_this_pc.pack(anchor= "w",padx= 5, pady=(4, 4))
+
+        # OUTPUT CONSOLE (read-only)
+        self.drive_space_output = ctk.CTkTextbox(
+            drive_parent,
+            height=120,
+            font=("Consolas", 12),
+            wrap="none",
+        )
+        self.drive_space_output.pack(fill="x", padx=5, pady=6)
+        self.drive_space_output.configure(state="disabled")
+
 
         def refresh_drive_display():
-            for lbl in self.drive_labels:
-                lbl.destroy()
-            self.drive_labels.clear()
+            self.drive_space_output.configure(state="normal")
+            self.drive_space_output.delete("1.0", "end")
 
             for d in get_drive_info():
                 used_gb = (d["total"] - d["free"]) / (1024**3)
                 total_gb = d["total"] / (1024**3)
                 free_gb = d["free"] / (1024**3)
 
-                text = (
-                    f"{d['drive']}  "
-                    f"used: {used_gb:.1f} GB / "
-                    f"Free: {free_gb:.1f} GB / "
-                    f"Total: {total_gb:.1f} GB"
+                line = (
+                    f"{d['drive']:<5} "
+                    f"Used: {used_gb:6.1f} GB   "
+                    f"Free: {free_gb:6.1f} GB   "
+                    f"Total: {total_gb:6.1f} GB\n"
                 )
 
-                lbl = ctk.CTkLabel(
-                    drive_parent,
-                    text=text,
-                    anchor="w",
-                    font=("Rubik UI", 15, "bold")
-                )
-                lbl.pack(anchor="w", padx=12, pady=0)
-                self.drive_labels.append(lbl)
+                self.drive_space_output.insert("end", line)
 
+            self.drive_space_output.configure(state="disabled")
+
+
+        # initial render
         refresh_drive_display()
+
 
         def schedule_drive_refresh():
             refresh_drive_display()
-            app.after(10_000, schedule_drive_refresh)
+            self.app.after(10_000, schedule_drive_refresh)
+
 
         schedule_drive_refresh()
+
 
         # ==================================================
         # Universal Bookmarks Exporter
@@ -507,11 +532,11 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             command=runner,
             width=160,
             font=("Rubik UI", 14, "bold"),
-            dropdown_font=("Rubik UI", 13),
+            dropdown_font=("Rubik UI", 14),
         )
 
         dropdown.set(placeholder)
-        dropdown.pack(fill="x", padx=8, pady=4)
+        dropdown.pack(anchor ="w", padx=8, pady=4)
         
         
         
