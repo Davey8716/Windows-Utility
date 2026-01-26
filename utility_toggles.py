@@ -50,6 +50,7 @@ class UtilityActionsManager:
         # show/hide buttons
         for w in widgets:
             if enabled:
+                w.configure(fg_color="red", hover_color="#b00000")
                 w.pack(anchor="e", pady=(0, 4))
             else:
                 w.pack_forget()
@@ -269,9 +270,7 @@ class UtilityActionsManager:
             else:
                 self.app._set_backup_status_timed("No shortcuts found")
 
-
         print(f"[BACKUP] Completed. {count} shortcuts copied.")
-        
 
     # ===================================================================
     #  Organising Utilities - Open Backup Folder
@@ -305,14 +304,9 @@ class UtilityActionsManager:
         except Exception as e:
             print(f"[ERROR] change_backup_folder: {e}")
 
-
 # ===================================================================
 #  Minimize / Restore All Windows Except GUI
 # ===================================================================
-
-# ------------------------------------------------------------
-#  Helper: Should we skip this hwnd?
-# ------------------------------------------------------------
 
 def _should_skip(hwnd, skip_hwnd):
     if hwnd == skip_hwnd:
