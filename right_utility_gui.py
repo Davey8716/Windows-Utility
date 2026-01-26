@@ -3,7 +3,8 @@ import customtkinter as ctk
 from tooltips import CtkTooltip
 from collapsible_section import CollapsibleSection
 from main_utility_gui import get_drive_info
-
+from main_utility_gui import load_state, save_state
+from tkinter import messagebox
 
 class AdvancedToolsPanel(ctk.CTkToplevel):
     def __init__(self, app):
@@ -43,7 +44,28 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.bind("<Configure>", lambda e: self.app._sync_windows("side"))
         self.bind("<ButtonPress-1>", lambda e: self.app._set_drag_owner("side"))
         self.bind("<ButtonRelease-1>", lambda e: self.app._clear_drag_owner())
-
+        
+        title_row = ctk.CTkFrame(self.side_frame, fg_color="transparent")
+        title_row.pack(fill="x", padx=10, pady=10)
+        
+        self.master_collapse_btn_right = ctk.CTkButton(
+            title_row,
+            text="▾",
+            width=32,
+            height=28,
+            font=("Rubik UI", 18, "bold"),
+            fg_color="transparent",
+            hover_color="#202020",
+            command=self.toggle_all_right_sections
+        )
+        self.master_collapse_btn_right.pack(side="right")
+        
+        CtkTooltip(
+            self.master_collapse_btn_right,
+            "Master collapse toggle for all of these regions.\n"
+            
+        )
+        
         # ==================================================
         # Windows Utilities
         # ==================================================
@@ -51,11 +73,12 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.windows_utility_section = CollapsibleSection(
             self.side_frame,
             "Windows Utilities",
-            section_id="Windows_utilities",
+            section_id="windows_utilities",
             app=self.app,
-            initial_open=self.app.saved_state.get("right_section_states", {}).get("Windows_utilities", False)
+            initial_open=self.app.saved_state.get("right_section_states", {}).get("windows_utilities", False)
         )
         self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(5, 6))
+        
 
         CtkTooltip(
             self.windows_utility_section.toggle_btn,
@@ -64,16 +87,46 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         )
         app.collapsible_sections.append(self.windows_utility_section)
 
-
         parent = self.windows_utility_section.content
-
-        self._add_windows_dropdown(parent, "System", self._system_utilities())
-        self._add_windows_dropdown(parent, "Hardware", self._hardware_utilities())
-        self._add_windows_dropdown(parent, "Network", self._network_utilities())
-        self._add_windows_dropdown(parent, "Startup & Power", self._startup_power_utilities())
-        self._add_windows_dropdown(parent, "Users", self._user_utilities())
         
+        self.sidebar_utils_section = CollapsibleSection(
+            self.side_frame,
+            "Side Bar Utilities",
+            section_id="sidebar_utils_section",
+            app=self.app,
+            initial_open=self.app.saved_state.get("right_section_states", {}).get("sidebar_utils_section", False)
+        )
+        self.sidebar_utils_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        
+        # ✅ REGISTER IT as a right-section state
+        self.app.collapsible_sections.append(self.sidebar_utils_section)
 
+        CtkTooltip(
+            self.sidebar_utils_section.toggle_btn,
+            "Side bar actions menus."
+        )
+
+
+        # container row
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(anchor="w", padx=12, pady=(4, 8))
+
+        # left column (System / Hardware)
+        left_col = ctk.CTkFrame(row, fg_color="transparent")
+        left_col.pack(side="left", padx=(0, 12))
+
+        # right column (Network / Startup & Power)
+        right_col = ctk.CTkFrame(row, fg_color="transparent")
+        right_col.pack(side="left")
+
+        # add dropdowns
+        self._add_windows_dropdown(left_col, "System", self._system_utilities())
+        self._add_windows_dropdown(left_col, "Hardware", self._hardware_utilities())
+
+        self._add_windows_dropdown(right_col, "Network", self._network_utilities())
+        self._add_windows_dropdown(right_col, "Startup & Power", self._startup_power_utilities())
+                
+        
         # ==================================================
         # Drive Space Display
         # ==================================================
@@ -86,6 +139,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             initial_open=self.app.saved_state.get("right_section_states", {}).get("drive_space_display", False)
         )
         self.display_space_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        
+        
 
         CtkTooltip(
             self.display_space_section.toggle_btn,
@@ -146,7 +201,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         
         CtkTooltip(
             self.advanced_section_3.toggle_btn,
-            "Exports boomkars to a file path of your choosing\n"
+            "Exports bookmarks to a file path of your choosing.\n"
         )
         app.collapsible_sections.append(self.advanced_section_3)
 
@@ -174,7 +229,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         )
         self.brave_export_entry.pack(anchor="w", padx=5, pady=(5, 4))
 
-        app.collapsible_sections.append(self.advanced_section_3)
+
+
 
     # ==================================================
     # Windows Utilities
@@ -210,9 +266,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Power Options": lambda: os.system("powercfg.cpl"),
         }
         
-    def _user_utilities(self):
-        return {}
-
 
     # ==================================================
     # Drop down helper
@@ -224,8 +277,13 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         def runner(choice):
             if choice == placeholder:
                 return
+
             action = actions_map.get(choice)
             if action:
+                # minimize BOTH windows to taskbar
+                self.app.iconify()
+                self.iconify()
+
                 action()
 
         values = [placeholder] + sorted(actions_map.keys())
@@ -239,8 +297,39 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             dropdown_font=("Rubik UI", 14),
         )
 
-        dropdown.set(placeholder)  # ✅ force title display
+        dropdown.set(placeholder)
         dropdown.pack(anchor="w", padx=12, pady=(4, 8))
+        
+    def toggle_all_right_sections(self):
+        new_state = not self.app.master_toggle_right_var.get()
+        self.app.master_toggle_right_var.set(new_state)
+
+        for section in self.app.collapsible_sections:
+            if not isinstance(section, CollapsibleSection):
+                continue
+
+            if section.parent == self.side_frame:
+                if section.open != new_state:
+                    section.toggle()
+
+    def toggle_side_bar_utilities(self):
+        messagebox.showinfo("Debug", "sidebar_utils_section called")
+
+        section = self.app.sidebar_utils_section
+
+        new_state = not section.var.get()
+        section.var.set(new_state)   # ✅ THIS is the missing line
+
+        if new_state:
+            if not section.wrapper.winfo_ismapped():
+                section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        else:
+            if section.wrapper.winfo_ismapped():
+                section.wrapper.pack_forget()
+
+        self.app.save_all_settings()
+
+
 
     # ==================================================
     # Visibility helpers

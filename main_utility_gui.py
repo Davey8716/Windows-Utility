@@ -72,7 +72,6 @@ def ensure_single_instance():
 
     return mutex
 
-
 # ===================================================================
 #  Main App Gui Left Side
 # ===================================================================
@@ -178,6 +177,16 @@ class UtilityControlApp(ctk.CTk):
         self.master_toggle_left_var = ctk.BooleanVar(
             value=self.saved_state.get("master_toggle_left", True)
         )
+        
+        self.sidebar_utils_section_var = ctk.BooleanVar(
+            value=self.saved_state.get("sidebar_utils_section", True)
+        )
+        
+        self.master_toggle_right_var = ctk.BooleanVar(
+            value=self.saved_state.get("master_toggle_right", True)
+        )
+        
+        
 
         self.advanced_panel_open_var = ctk.BooleanVar(
             value=bool(self.saved_state.get("advanced_panel_open", False))
@@ -237,7 +246,7 @@ class UtilityControlApp(ctk.CTk):
         )
         title.pack(padx = 25, pady = 5)
 
-        self.master_collapse_btn = ctk.CTkButton(
+        self.master_collapse_btn_left = ctk.CTkButton(
             title_row,
             text="▾",
             width=32,
@@ -247,7 +256,13 @@ class UtilityControlApp(ctk.CTk):
             hover_color="#202020",
             command=self.toggle_all_left_sections
         )
-        self.master_collapse_btn.pack(side="right")
+        self.master_collapse_btn_left.pack(side="right")
+        
+        CtkTooltip(
+            self.master_collapse_btn_left,
+            "Master collapse toggle for all of these regions.\n"
+            
+        )
 
         # ==============================================================
         # Collapsible sections
@@ -780,9 +795,9 @@ class UtilityControlApp(ctk.CTk):
         )
         self.entry_backup_path.pack(anchor="w", pady = (0,5))
         
-        # -------------------------------------------------
-        # Final UI sync (ALL vars now exist)
-        # -------------------------------------------------
+        # # -------------------------------------------------
+        # # Final UI sync (ALL vars now exist)
+        # # -------------------------------------------------
         
         Desktop_icon_layout = CollapsibleSection(
             self.main_frame,
@@ -803,9 +818,9 @@ class UtilityControlApp(ctk.CTk):
                     if section.open:
                         section.toggle()
 
-            self.master_collapse_btn.configure(text="▸")
+            self.master_collapse_btn_left.configure(text="▸")
         else:
-            self.master_collapse_btn.configure(text="▾")    
+            self.master_collapse_btn_left.configure(text="▾")    
         
         # --------------------------------------------------------------
         # Overlay expand button (CORRECT parent + placement)
@@ -995,7 +1010,10 @@ class UtilityControlApp(ctk.CTk):
                 if section.open != new_state:
                     section.toggle()
 
-        self.master_collapse_btn.configure(text="▾" if new_state else "▸")
+        self.master_collapse_btn_left.configure(text="▾" if new_state else "▸")
+        self.save_all_settings()
+        
+        self.master_collapse_btn_left.configure(text="▾" if new_state else "▸")
         self.save_all_settings()
         
     def take_desktop_screenshot(self):
@@ -1203,6 +1221,8 @@ class UtilityControlApp(ctk.CTk):
         
         new["brave_export_path"] = self.brave_export_path_var.get()
         new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
+        
+        new["master_toggle_right"] = self.master_toggle_right_var.get()
 
         # -------------------------
         # Collapsible section states
