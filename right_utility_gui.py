@@ -1,10 +1,10 @@
 import os
 import customtkinter as ctk
+import subprocess
 from tooltips import CtkTooltip
 from collapsible_section import CollapsibleSection
 from main_utility_gui import get_drive_info
-from main_utility_gui import load_state, save_state
-from tkinter import messagebox
+
 
 class AdvancedToolsPanel(ctk.CTkToplevel):
     def __init__(self, app):
@@ -96,15 +96,25 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             app=self.app,
             initial_open=self.app.saved_state.get("right_section_states", {}).get("sidebar_utils_section", False)
         )
-        self.sidebar_utils_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
-        
+    
         # ✅ REGISTER IT as a right-section state
         self.app.collapsible_sections.append(self.sidebar_utils_section)
-
+        self.sidebar_utils_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        
+        # 🔴 THIS LINE WAS MISSING
+        self.build_sidebar_utilities()
+        
         CtkTooltip(
             self.sidebar_utils_section.toggle_btn,
             "Side bar actions menus."
         )
+                
+        self.sidebar_output = ctk.CTkTextbox(
+            self.sidebar_utils_section.content,
+            height=120,
+            font=("Consolas", 12),
+        )
+        self.sidebar_output.pack(fill="x", padx=8, pady=(8, 6))
 
 
         # container row
@@ -125,8 +135,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
         self._add_windows_dropdown(right_col, "Network", self._network_utilities())
         self._add_windows_dropdown(right_col, "Startup & Power", self._startup_power_utilities())
-                
-        
+
         # ==================================================
         # Drive Space Display
         # ==================================================
@@ -139,8 +148,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             initial_open=self.app.saved_state.get("right_section_states", {}).get("drive_space_display", False)
         )
         self.display_space_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
-        
-        
 
         CtkTooltip(
             self.display_space_section.toggle_btn,
@@ -228,9 +235,38 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             state="readonly"
         )
         self.brave_export_entry.pack(anchor="w", padx=5, pady=(5, 4))
-
-
-
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
     # ==================================================
     # Windows Utilities
@@ -265,10 +301,9 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Startup Apps": lambda: os.system("start ms-settings:startupapps"),
             "Power Options": lambda: os.system("powercfg.cpl"),
         }
-        
 
     # ==================================================
-    # Drop down helper
+    # Drop down helper for windows utils
     # ==================================================
         
     def _add_windows_dropdown(self, parent, label, actions_map):
@@ -300,20 +335,89 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         dropdown.set(placeholder)
         dropdown.pack(anchor="w", padx=12, pady=(4, 8))
         
-    def toggle_all_right_sections(self):
-        new_state = not self.app.master_toggle_right_var.get()
-        self.app.master_toggle_right_var.set(new_state)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    # ==================================================
+    # Side Bar Utilities
+    # ==================================================
 
-        for section in self.app.collapsible_sections:
-            if not isinstance(section, CollapsibleSection):
-                continue
+    def _sidebar_network_actions(self):
+        return {
+            "Flush DNS": self.flush_dns,
+            "Renew IP": self.renew_ip,
+            "IP Config": self.show_ip_config,
+            "Restart Explorer": self.restart_explorer,
+            "Restart Bluetooth Service": self.restart_bluetooth,
+        }
 
-            if section.parent == self.side_frame:
-                if section.open != new_state:
-                    section.toggle()
+    def _sidebar_cleanup_actions(self):
+        return {
+            "Clear Temp Files": self.clear_temp,
+            "Clear Clipboard": self.clear_clipboard,
+        }
+
+    def _sidebar_quick_open_actions(self):
+        return {
+            "Open Downloads Folder": self.open_downloads,
+            "Open Startup Folder": self.open_startup_folder,
+            "Clipboard History": self.open_clipboard_history,
+        }
+        
+        
+    def build_sidebar_utilities(self):
+        parent = self.sidebar_utils_section.content
+
+        self._add_sidebar_dropdown(
+            parent,
+            "Network / System Quick Fix",
+            self._sidebar_network_actions()
+        )
+
+        self._add_sidebar_dropdown(
+            parent,
+            "Cleanup / Quick Actions",
+            self._sidebar_cleanup_actions()
+        )
+
+        self._add_sidebar_dropdown(
+            parent,
+            "Quick Open",
+            self._sidebar_quick_open_actions()
+        )
 
     def toggle_side_bar_utilities(self):
-        messagebox.showinfo("Debug", "sidebar_utils_section called")
 
         section = self.app.sidebar_utils_section
 
@@ -328,8 +432,117 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
                 section.wrapper.pack_forget()
 
         self.app.save_all_settings()
+        
+    def _run_and_output(self, cmd, shell=True):
+        self.sidebar_output.delete("1.0", "end")
+        try:
+            result = subprocess.run(
+                cmd,
+                shell=shell,
+                capture_output=True,
+                text=True,
+            )
+            output = result.stdout or result.stderr or "[no output]"
+        except Exception as e:
+            output = str(e)
 
+        self.sidebar_output.insert("end", output)
 
+    # ==================================== 
+    # Dropdown calls
+    # ==================================== 
+        
+    def flush_dns(self):
+        self._run_and_output("ipconfig /flushdns")
+
+    def renew_ip(self):
+        self._run_and_output("ipconfig /renew")
+
+    def show_ip_config(self):
+        self._run_and_output("ipconfig")
+
+    def restart_explorer(self):
+        self._run_and_output("taskkill /f /im explorer.exe && start explorer")
+
+    def restart_bluetooth(self):
+        self._run_and_output("powershell Restart-Service bthserv -Force")
+        
+    def clear_temp(self):
+        self._run_and_output("del /q /s %temp%\\*", shell=True)
+
+    def clear_clipboard(self):
+        self._run_and_output("cmd /c echo off | clip")
+        
+    def open_downloads(self):
+        self.sidebar_output.delete("1.0", "end")
+        os.system("explorer shell:downloads")
+        self.sidebar_output.insert("end", "Opened Downloads folder.\n")
+
+    def open_startup_folder(self):
+        self.sidebar_output.delete("1.0", "end")
+        os.system("explorer shell:startup")
+        self.sidebar_output.insert("end", "Opened Startup folder.\n")
+
+    def open_clipboard_history(self):
+        self.sidebar_output.delete("1.0", "end")
+        os.system("start ms-settings:clipboard")
+        self.sidebar_output.insert("end", "Opened Clipboard History.\n")
+
+    def _add_sidebar_dropdown(self, parent, title, actions_map):
+        placeholder = f" {title} "
+
+        def runner(choice):
+            if choice == placeholder:
+                return
+            action = actions_map.get(choice)
+            if action:
+                action()
+            dropdown.set(placeholder)  # reset after run
+
+        values = [placeholder] + list(actions_map.keys())
+
+        dropdown = ctk.CTkOptionMenu(
+            parent,
+            values=values,
+            command=runner,
+            width=160,
+            font=("Rubik UI", 14, "bold"),
+            dropdown_font=("Rubik UI", 13),
+        )
+
+        dropdown.set(placeholder)
+        dropdown.pack(fill="x", padx=8, pady=4)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    # ==================================================
+    # Master Toggle Right
+    # ==================================================
+
+    def toggle_all_right_sections(self):
+        new_state = not self.app.master_toggle_right_var.get()
+        self.app.master_toggle_right_var.set(new_state)
+
+        for section in self.app.collapsible_sections:
+            if not isinstance(section, CollapsibleSection):
+                continue
+
+            if section.parent == self.side_frame:
+                if section.open != new_state:
+                    section.toggle()
 
     # ==================================================
     # Visibility helpers
