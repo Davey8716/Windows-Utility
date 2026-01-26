@@ -28,8 +28,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         # --------------------------------------------------
         self.side_frame = ctk.CTkScrollableFrame(
             self,
-            width=480,
-            height=1150,
+            width=505,
+            height=1000,
             fg_color="transparent"
         )
         self.side_frame.pack(fill="both", expand=True)
@@ -39,7 +39,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             text="Advanced Tools",
             font=("Rubik UI", 20, "bold")
         )
-        self.advanced_title.pack(padx=12, pady=(20, 20))
+        self.advanced_title.pack(padx = 25, pady = 5)
         
         self.bind("<Configure>", lambda e: self.app._sync_windows("side"))
         self.bind("<ButtonPress-1>", lambda e: self.app._set_drag_owner("side"))
@@ -161,21 +161,19 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
         drive_parent = self.display_space_section.content
         
-        def open_this_pc():
-            os.system("explorer shell:MyComputerFolder")
-            
-            # minimize after 5 seconds
-            self.after(1000, self.iconify)
+        
 
         btn_this_pc = ctk.CTkButton(
             drive_parent,
             text="Open This PC",
             font=("Rubik UI", 14, "bold"),
             height=28,
-            command=open_this_pc,
+            command=self.app.open_this_pc,
         )
 
         btn_this_pc.pack(anchor= "w",padx= 5, pady=(4, 4))
+        
+        CtkTooltip(btn_this_pc, "Takes you to Drives location.")
 
         # OUTPUT CONSOLE (read-only)
         self.drive_space_output = ctk.CTkTextbox(

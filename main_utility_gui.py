@@ -25,7 +25,6 @@ from universal_bookmarks_export import BraveBookmarksExporter
 from utility_toggles import switch_theme, UtilityActionsManager 
 from collapsible_section import CollapsibleSection
 
-
 # Configure appearance
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -186,14 +185,11 @@ class UtilityControlApp(ctk.CTk):
         self.master_toggle_right_var = ctk.BooleanVar(
             value=self.saved_state.get("master_toggle_right", True)
         )
-        
-        
 
         self.advanced_panel_open_var = ctk.BooleanVar(
             value=bool(self.saved_state.get("advanced_panel_open", False))
         )
         self.expanded = self.advanced_panel_open_var.get
-        
         
         self.bookmarks_exporter_var = ctk.BooleanVar(
             value=self.saved_state.get("bookmarks_exporter", True)
@@ -238,7 +234,7 @@ class UtilityControlApp(ctk.CTk):
         # --------------------------------------------------------------
 
         title_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        title_row.pack(fill="x", padx=10, pady=10)
+        title_row.pack(fill="x", padx=10, pady=0)
 
         title = ctk.CTkLabel(
             title_row,
@@ -246,9 +242,7 @@ class UtilityControlApp(ctk.CTk):
             font=("Rubik UI", 20, "bold")
         )
         title.pack(padx = 25, pady = 5)
-        
-        
-        
+
         arrow_colors = self._get_arrow_colors()
 
         self.master_collapse_btn_left = ctk.CTkButton(
@@ -284,7 +278,7 @@ class UtilityControlApp(ctk.CTk):
         self.collapsible_sections.append(self.misc_section)
 
         toggles_row = ctk.CTkFrame(self.misc_section.content, fg_color="transparent")
-        toggles_row.pack(fill="x", padx=12, pady=(2))
+        toggles_row.pack(fill="x", padx=12, pady=(1))
 
         left_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
         left_col.pack(side="left", anchor="nw")
@@ -303,7 +297,7 @@ class UtilityControlApp(ctk.CTk):
             command=self.actions.theme_toggle,
             font=("Rubik UI", 15, "bold")
         )
-        self.theme_switch.pack(anchor="w", pady=(2, 0))
+        self.theme_switch.pack(anchor="w", pady=(0, 0))
 
         if self.theme_var.get():
             self.theme_switch.configure(text="Dark Mode On")
@@ -380,7 +374,7 @@ class UtilityControlApp(ctk.CTk):
             command=self.actions.tooltips_toggle,
             font=("Rubik UI", 15, "bold")
         )
-        self.tooltip_switch.pack(anchor="w", pady=(2, 0))
+        self.tooltip_switch.pack(anchor="w", pady=(0, 0))
         
         if self.tooltips_enabled_var.get():
             self.tooltip_switch.configure(text="Tooltips On")
@@ -569,7 +563,7 @@ class UtilityControlApp(ctk.CTk):
             ),
             font=("Rubik UI", 15, "bold")
         )
-        self.opt_idle.pack(anchor="w", padx=10, pady=2)
+        self.opt_idle.pack(anchor="w", padx=5, pady=0)
 
         self.opt_download = ctk.CTkSwitch(
             usb_section.content,
@@ -585,7 +579,7 @@ class UtilityControlApp(ctk.CTk):
             ),
             font=("Rubik UI", 15, "bold")
         )
-        self.opt_download.pack(anchor="w", padx=10, pady=2)
+        self.opt_download.pack(anchor="w", padx=5, pady=0)
 
         self.opt_plug = ctk.CTkSwitch(
             usb_section.content,
@@ -601,7 +595,7 @@ class UtilityControlApp(ctk.CTk):
             ),
             font=("Rubik UI", 15, "bold")
         )
-        self.opt_plug.pack(anchor="w", padx=10, pady=2)
+        self.opt_plug.pack(anchor="w", padx=5, pady=0)
 
         self._sync_toggle_label(self.opt_idle, "Idle-plugged Reminder", self.opt_idle_var)
         self._sync_toggle_label(self.opt_download, "Download-finished Reminder", self.opt_download_var)
@@ -637,7 +631,7 @@ class UtilityControlApp(ctk.CTk):
         CtkTooltip(
             self.btn_desktop_screenshot,
             "Minimizes the app, takes a full desktop screenshot,\n"
-            "lets you choose a save location, then restores the window."
+            "lets you choose a save location, then minmizes the window."
         )
         
         # --------------------------------------------------------------
@@ -728,7 +722,7 @@ class UtilityControlApp(ctk.CTk):
             text="Backup Taskbar",
             font=("Rubik UI", 15, "bold"),
             width=btn_width,
-            command=self.actions.backup_pinned_shortcuts
+            command=self._backup_taskbar_and_minimize
         )
         self.btn_backup_pins.pack(side="left")
         
@@ -891,6 +885,23 @@ class UtilityControlApp(ctk.CTk):
     # ==================================================
     # End of muddafucking initilisation bro
     # ==================================================
+    
+    def _backup_taskbar_and_minimize(self):
+        # run the actual backup
+        self.actions.backup_pinned_shortcuts()
+
+        # give time for status text to show
+        def minimize_both():
+            self.iconify()
+            if (
+                hasattr(self, "advanced_panel")
+                and self.advanced_panel
+                and self.advanced_panel.winfo_viewable()
+            ):
+                self.advanced_panel.iconify()
+
+        self.after(1200, minimize_both)
+
 
     def _on_main_unmap(self, event=None):
         # Ignore minimize
@@ -935,7 +946,8 @@ class UtilityControlApp(ctk.CTk):
         self._backup_status_after_id = self.after(
             duration_ms,
             lambda: self.backup_status_label.configure(text="")
-    )
+    )   
+        
 
     def _mark_ui_ready(self):
                 self._ui_ready = True
@@ -1025,47 +1037,36 @@ class UtilityControlApp(ctk.CTk):
     def take_desktop_screenshot(self):
         """
         Universal desktop screenshotter:
-        - Minimizes main GUI
-        - Minimizes right panel if open
+        - Iconifies main GUI
+        - Iconifies right panel if open
         - Takes screenshot
         - Prompts for save location
-        - Restores previous GUI state
+        - Ends iconified (both panels)
         """
-
-
-        right_was_open = False
 
         try:
             # -------------------------------------------------------
-            # 1) Capture current state
+            # 1) Iconify BOTH panels immediately
             # -------------------------------------------------------
-
             if (
-                hasattr(app, "advanced_panel")
+                hasattr(self, "advanced_panel")
                 and self.advanced_panel
                 and self.advanced_panel.winfo_viewable()
             ):
-                right_was_open = True
-                app.advanced_panel.withdraw()
+                self.advanced_panel.iconify()
 
-            # -------------------------------------------------------
-            # 2) Minimize main GUI
-            # -------------------------------------------------------
-
-            self.withdraw()
+            self.iconify()
             self.update_idletasks()
             time.sleep(0.3)  # ensure desktop is clean
 
             # -------------------------------------------------------
-            # 3) Capture full desktop
+            # 2) Capture full desktop
             # -------------------------------------------------------
-
             img = ImageGrab.grab()
 
             # -------------------------------------------------------
-            # 4) Save dialog
+            # 3) Save dialog
             # -------------------------------------------------------
-
             default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
 
             save_path = filedialog.asksaveasfilename(
@@ -1086,20 +1087,16 @@ class UtilityControlApp(ctk.CTk):
 
         finally:
             # -------------------------------------------------------
-            # 5) Restore GUI exactly as before
+            # 4) End state: keep both panels iconified
             # -------------------------------------------------------
+            if (
+                hasattr(self, "advanced_panel")
+                and self.advanced_panel
+                and self.advanced_panel.winfo_exists()
+            ):
+                self.advanced_panel.iconify()
 
-            try:
-                self.deiconify()
-                self.after(50, app.lift)
-
-                if right_was_open:
-                    self.advanced_panel.deiconify()
-                    self.after(60, lambda: self._sync_windows("main"))
-
-            except Exception:
-                pass
-
+            self.iconify()
 
     def _choose_brave_export_path(self):
         default_name = f"Brave_Bookmarks_Export_{datetime.now().strftime('%Y-%m-%d')}.html"
@@ -1133,6 +1130,22 @@ class UtilityControlApp(ctk.CTk):
             self.brave_export_path_var.set(path)
             self.save_all_settings()
             BraveBookmarksExporter().export_to_file(path)
+            
+            # 👇 get out of the way
+            self.iconify()
+            if hasattr(self, "advanced_panel") and self.advanced_panel.winfo_viewable():
+                self.advanced_panel.iconify()
+                
+                
+    def open_this_pc(self):
+        os.system("explorer shell:MyComputerFolder")
+
+        def minimize_both():
+            self.iconify()
+            if hasattr(self, "advanced_panel") and self.advanced_panel.winfo_viewable():
+                self.advanced_panel.iconify()
+
+        self.after(1000, minimize_both)
 
     # ==============================================================
     # Side panel toggle (NO UI CREATION HERE)
