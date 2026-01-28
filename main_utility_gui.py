@@ -19,10 +19,10 @@ from tkinter import messagebox
 from tooltips import CtkTooltip
 from pathlib import Path
 from screen_mover import SCREEN_MOVER
-from state_manager import load_state, save_state
 from tray_toggles import TrayIconManager
 from universal_bookmarks_export import BraveBookmarksExporter
 from utility_toggles import switch_theme, UtilityActionsManager 
+from state_manager import load_state, save_state
 from collapsible_section import CollapsibleSection
 
 # Configure appearance
@@ -489,6 +489,8 @@ class UtilityControlApp(ctk.CTk):
             self.mover_section.content,
             variable=self.mmb_var,
             command=lambda: (
+                setattr(SCREEN_MOVER, "enable_mmb", self.mmb_var.get()),
+
                 self._sync_toggle_label(
                     self.mmb_switch,
                     "Middle Mouse To Move",
@@ -498,6 +500,7 @@ class UtilityControlApp(ctk.CTk):
             ),
             font=("Rubik UI", 15, "bold")
         )
+
         self.mmb_switch.pack(anchor="w", padx=6, pady=(1,1))
         
         self._sync_toggle_label(
@@ -505,6 +508,7 @@ class UtilityControlApp(ctk.CTk):
             "Middle Mouse To Move",
             self.mmb_var
         )
+        
 
         # Add tooltip
         CtkTooltip(
