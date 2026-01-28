@@ -159,6 +159,9 @@ class UtilityActionsManager:
         enabled = self.app.tooltips_enabled_var.get()
         self.app.save_all_settings()
         
+        # ✅ THIS is the missing part (keeps CtkTooltip.show() correct)
+        self.app.tooltips_enabled = enabled
+        
         if enabled:
             self.app.tooltip_switch.configure(text="Tooltips On")
         else:
