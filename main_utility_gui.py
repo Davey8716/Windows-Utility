@@ -29,7 +29,7 @@ from collapsible_section import CollapsibleSection
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
-MUTEX_NAME = "Global\\DailyHasslesGone_SingleInstance"
+MUTEX_NAME = "Problems Gone"
 
 def get_drive_info():
             drives = []
@@ -49,16 +49,21 @@ def get_drive_info():
 
 def bring_existing_instance_to_front():
     def enum_handler(hwnd, _):
-        if win32gui.IsWindowVisible(hwnd):
-            title = win32gui.GetWindowText(hwnd)
-            if "Daily Hassles? Gone!" in title:
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        title = win32gui.GetWindowText(hwnd)
 
+        if "Problems Gone" in title:
+            try:
+                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)     # handles withdrawn
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)  # handles minimized
                 win32gui.SetForegroundWindow(hwnd)
-                return False
+            except Exception as e:
+                print("[RESTORE] failed:", e)
+            return False  # stop enumerating
+
         return True
 
     win32gui.EnumWindows(enum_handler, None)
+
 
 def ensure_single_instance():
     kernel32 = ctypes.windll.kernel32
@@ -81,7 +86,7 @@ class UtilityControlApp(ctk.CTk):
         super().__init__()
         from right_utility_gui import AdvancedToolsPanel
     
-        self.title("")
+        self.title("Problems Gone")
         mutex = ensure_single_instance()
 
         # ==============================================================
@@ -193,6 +198,21 @@ class UtilityControlApp(ctk.CTk):
         
         self.bookmarks_exporter_var = ctk.BooleanVar(
             value=self.saved_state.get("bookmarks_exporter", True)
+            
+        )
+        
+        # USB sub-toggle initializers (load from JSON)
+        self.opt_idle_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_idle_enabled", True)
+        )
+
+
+        self.opt_download_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_download_enabled", True)
+        )
+
+        self.opt_plug_var = ctk.BooleanVar(
+            value=self.saved_state.get("usb_plug_enabled", True)
         )
 
 
@@ -278,14 +298,13 @@ class UtilityControlApp(ctk.CTk):
         self.collapsible_sections.append(self.misc_section)
 
         toggles_row = ctk.CTkFrame(self.misc_section.content, fg_color="transparent")
-        toggles_row.pack(fill="x", padx=12, pady=(1))
+        toggles_row.pack(fill="x", padx=12, pady=0)
 
         left_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
         left_col.pack(side="left", anchor="nw")
 
         self.power_right_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
-        
-        
+
         # -------------------------
         # Dark Mode Toggle (LEFT)
         # -------------------------
@@ -297,7 +316,7 @@ class UtilityControlApp(ctk.CTk):
             command=self.actions.theme_toggle,
             font=("Rubik UI", 15, "bold")
         )
-        self.theme_switch.pack(anchor="w", pady=(0, 0))
+        self.theme_switch.pack(anchor="w", )
 
         if self.theme_var.get():
             self.theme_switch.configure(text="Dark Mode On")
@@ -411,7 +430,6 @@ class UtilityControlApp(ctk.CTk):
             "The App Gui itself stays maximized and in front of all other programs.\n"
         )
     
-        
         # ==========================
         # RIGHT COLUMN
         # ==========================
@@ -423,7 +441,7 @@ class UtilityControlApp(ctk.CTk):
             command=lambda: os.system(
                 "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
             ),
-            font=("Rubik UI", 15, "bold")
+            font=("Rubik UI", 14, "bold")
         )
         
         self.btn_lock = ctk.CTkButton(
@@ -431,7 +449,7 @@ class UtilityControlApp(ctk.CTk):
             text="Lock PC",
             width=small_btn_width,
             command=lambda: ctypes.windll.user32.LockWorkStation(),
-            font=("Rubik UI", 15, "bold")
+            font=("Rubik UI", 14, "bold")
         )
         
         self.btn_restart = ctk.CTkButton(
@@ -439,7 +457,7 @@ class UtilityControlApp(ctk.CTk):
             text="Restart",
             width=small_btn_width,
             command=lambda: os.system("shutdown /r /t 0"),
-            font=("Rubik UI", 15, "bold")
+            font=("Rubik UI", 14, "bold")
         )
         
         self.btn_shutdown = ctk.CTkButton(
@@ -447,9 +465,9 @@ class UtilityControlApp(ctk.CTk):
             text="Shutdown",
             width=small_btn_width,
             command=lambda: os.system("shutdown /s /t 0"),
-            font=("Rubik UI", 15, "bold")
+            font=("Rubik UI", 14, "bold")
         )
-        
+
         # ------------------------------------------------------------------
         #  Screen-Tab Mover Group Box(frame)
         # ------------------------------------------------------------------
@@ -480,14 +498,13 @@ class UtilityControlApp(ctk.CTk):
             ),
             font=("Rubik UI", 15, "bold")
         )
-        self.mmb_switch.pack(anchor="w", padx=10, pady=0)
+        self.mmb_switch.pack(anchor="w", padx=6, pady=(1,1))
         
         self._sync_toggle_label(
             self.mmb_switch,
             "Middle Mouse To Move",
             self.mmb_var
         )
-
 
         # Add tooltip
         CtkTooltip(
@@ -507,7 +524,7 @@ class UtilityControlApp(ctk.CTk):
             command=self.actions.auto_align_toggle,     # <-- THIS WAS MISSING
             font=("Rubik UI", 15, "bold")
         )
-        self.auto_align_switch.pack(anchor="w", padx=10, pady=2)
+        self.auto_align_switch.pack(anchor="w", padx=6, pady=(0,1))
         
         self._sync_toggle_label(
             self.auto_align_switch,
@@ -535,20 +552,6 @@ class UtilityControlApp(ctk.CTk):
         )
         self.collapsible_sections.append(usb_section)
 
-        # USB sub-toggle initializers (load from JSON)
-        self.opt_idle_var = ctk.BooleanVar(
-            value=self.saved_state.get("usb_idle_enabled", True)
-        )
-
-
-        self.opt_download_var = ctk.BooleanVar(
-            value=self.saved_state.get("usb_download_enabled", True)
-        )
-
-        self.opt_plug_var = ctk.BooleanVar(
-            value=self.saved_state.get("usb_plug_enabled", True)
-        )
-        
         self.opt_idle = ctk.CTkSwitch(
             usb_section.content,
             text="Idle-plugged Reminder",
@@ -687,6 +690,16 @@ class UtilityControlApp(ctk.CTk):
         self.folder_status_label.pack(side="left", padx=(3, 0))
 
         self.folder_name_var.trace_add("write", self._update_create_folder_button)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
         # --------------------------------------------------------------
         #  Desktop Backup  (NEW COLLAPSIBLE SECTION)
@@ -750,7 +763,7 @@ class UtilityControlApp(ctk.CTk):
             width=btn_width,
             command=self.actions.open_backup_folder
         )
-        self.btn_open_backup.pack(anchor="w", pady = (0,5))
+        self.btn_open_backup.pack(anchor="w", pady = (5,2))
 
         CtkTooltip(
             self.btn_open_backup,
@@ -765,7 +778,7 @@ class UtilityControlApp(ctk.CTk):
             self.desktop_backup_frame,
             fg_color="transparent"
         )
-        path_inner.pack(fill="x", padx=10, pady=(0, 8))
+        path_inner.pack(fill="x", padx=10, pady=(5, 2))
 
         # Variable must exist BEFORE entry
         self.backup_path_var = ctk.StringVar(
@@ -793,35 +806,74 @@ class UtilityControlApp(ctk.CTk):
             width = 400,
             state="readonly"
         )
-        self.entry_backup_path.pack(anchor="w", pady = (0,5))
+        self.entry_backup_path.pack(anchor="w", pady = (0,))
+
+        # -------------------------------------------------
+        # Final UI sync (ALL vars now exist)
+        # -------------------------------------------------
         
-        # # -------------------------------------------------
-        # # Final UI sync (ALL vars now exist)
-        # # -------------------------------------------------
-        
-        Desktop_icon_layout = CollapsibleSection(
+        # --------------------------------------------------------------
+        #  Desktop Icon Organiser
+        # --------------------------------------------------------------
+
+        desktop_icon_layout = CollapsibleSection(
             self.main_frame,
             "Desktop Icon Organiser",
             section_id="desktop_icon_organiser",
             app=self,
-            initial_open=self.saved_state.get("left_section_states", {}).get("desktop_icon_organiser", True)
+            initial_open=self.saved_state.get("left_section_states", {}).get(
+                "desktop_icon_organiser", True
+            )
         )
-        self.collapsible_sections.append(Desktop_icon_layout)
-        
-        # --------------------------------------------------
-        # Apply master left collapse override (FINAL)
-        # --------------------------------------------------
+        self.collapsible_sections.append(desktop_icon_layout)
+        self.desktop_icon_frame = desktop_icon_layout.content
 
-        if not self.master_toggle_left_var.get():
-            for section in self.collapsible_sections:
-                if isinstance(section, CollapsibleSection) and section.parent == self.main_frame:
-                    if section.open:
-                        section.toggle()
-
-            self.master_collapse_btn_left.configure(text="▸")
-        else:
-            self.master_collapse_btn_left.configure(text="▾")    
+        # ===================================================================
+        #  Capture Desktop Layout  (MATCHES Backup Taskbar structure)
+        # ===================================================================
         
+        icon_buttons_frame = ctk.CTkFrame(
+            self.desktop_icon_frame,
+            fg_color="transparent"
+        )
+        icon_buttons_frame.pack(anchor="w", padx=10, pady=(5,5))
+
+        # --- ROW for Capture + status ---
+        capture_row = ctk.CTkFrame(icon_buttons_frame, fg_color="transparent")
+        capture_row.pack(anchor="w", pady=(0, 5))
+
+        self.btn_capture_layout = ctk.CTkButton(
+            capture_row,
+            text="Capture Desktop Layout",
+            font=("Rubik UI", 15, "bold"),
+            height=28,
+            width=btn_width,
+            command=self.actions.capture_desktop_layout
+        )
+        self.btn_capture_layout.pack(side="left")
+
+        self.desktop_layout_status = ctk.CTkLabel(
+            capture_row,
+            text=" ",
+            width=140,
+            anchor="w",
+            font=("Rubik UI", 15, "bold"),
+            text_color="#1f6aa5"
+        )
+        self.desktop_layout_status.pack(side="left", padx=(6, 0))
+
+        # --- Restore button directly under (tight) ---
+        self.btn_restore_layout = ctk.CTkButton(
+            icon_buttons_frame,
+            text="Restore Layout",
+            font=("Rubik UI", 15, "bold"),
+            height=28,
+            width=btn_width,
+            command=self.actions.restore_desktop_layout
+        )
+        self.btn_restore_layout.pack(anchor="w", pady=(0, 0))
+
+
         # --------------------------------------------------------------
         # Overlay expand button (CORRECT parent + placement)
         # --------------------------------------------------------------
@@ -859,8 +911,7 @@ class UtilityControlApp(ctk.CTk):
         self.overlay_controls.lift()
         self.expand_btn.lift()
         self.after(150, self._mark_ui_ready)
-        
-        
+
         self.advanced_panel = AdvancedToolsPanel(self)
         
         # --------------------------------------------------
@@ -873,15 +924,30 @@ class UtilityControlApp(ctk.CTk):
             self.advanced_panel.hide()
             self.expand_btn.configure(text="▾")
     
-            
         self.actions.toggle_power_buttons()
         
         self.update_idletasks() 
         self.after_idle(self.update_idletasks)
         self.after_idle(self.resize_to_fit)
         
-        
-        
+        #  --------------------------------------------------
+        # Apply master left collapse override (FINAL)
+        # --------------------------------------------------
+
+        if not self.master_toggle_left_var.get():
+            for section in self.collapsible_sections:
+                if isinstance(section, CollapsibleSection) and section.parent == self.main_frame:
+                    if section.open:
+                        section.toggle()
+
+            self.master_collapse_btn_left.configure(text="▸")
+        else:
+            self.master_collapse_btn_left.configure(text="▾") 
+            
+    def set_desktop_layout_status(self, text, timeout=2500):
+        self.desktop_layout_status.configure(text=text)
+        self.after(timeout, lambda: self.desktop_layout_status.configure(text=" "))
+
     # ==================================================
     # End of muddafucking initilisation bro
     # ==================================================
@@ -901,7 +967,6 @@ class UtilityControlApp(ctk.CTk):
                 self.advanced_panel.iconify()
 
         self.after(1200, minimize_both)
-
 
     def _on_main_unmap(self, event=None):
         # Ignore minimize
@@ -948,11 +1013,9 @@ class UtilityControlApp(ctk.CTk):
             lambda: self.backup_status_label.configure(text="")
     )   
         
-
     def _mark_ui_ready(self):
                 self._ui_ready = True
 
-    
     # ==================================================
     # Window magnet sync (main <-> advanced)
     # ==================================================
@@ -1204,8 +1267,6 @@ class UtilityControlApp(ctk.CTk):
             if isinstance(section, CollapsibleSection):
                 section.update_arrow_color()
 
-    
-
     def apply_always_on_top(self, enabled: bool):
         """Apply Always-on-Top state using both Tk and WinAPI."""
         try:
@@ -1332,7 +1393,6 @@ class UtilityControlApp(ctk.CTk):
             print("sec:", s.section_id, "parent:", type(s.parent), "toplevel:", s.parent.winfo_toplevel())
             
         save_state(data)
-        
 
     # ===================================================================
     #  Create Folder On Desktop
@@ -1374,7 +1434,6 @@ class UtilityControlApp(ctk.CTk):
                 self.iconify()
 
             self.after(3000, minimize_both)
-
 
         except Exception as e:
             messagebox.showerror(
