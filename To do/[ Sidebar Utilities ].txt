@@ -1,0 +1,17 @@
+[ Sidebar Utilities ]
+--------------------
+Flush DNS
+Renew IP
+Restart Explorer
+Restart Bluetooth
+--------------------
+Clear Temp
+Clear Clipboard
+--------------------
+Open Downloads
+Open Startup Folder
+Display Settings
+Sound Devices
+--------------------
+System Scan
+DISM Repair
