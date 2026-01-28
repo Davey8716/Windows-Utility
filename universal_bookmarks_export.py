@@ -10,8 +10,6 @@ import os
 import json
 from html import escape
 
-
-
 class BraveBookmarksExporter:
     def __init__(self, title="Brave Bookmarks Export"):
         self.title = title
@@ -19,6 +17,7 @@ class BraveBookmarksExporter:
     # ─────────────────────────────────────────────
     # HTML helpers
     # ─────────────────────────────────────────────
+    
     def _netscape_header(self):
         return (
             "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n"
@@ -75,6 +74,7 @@ class BraveBookmarksExporter:
     # ─────────────────────────────────────────────
     # Brave profile discovery
     # ─────────────────────────────────────────────
+    
     def _find_brave_profiles(self):
         local_app = os.environ.get("LOCALAPPDATA", "")
         base = os.path.join(
@@ -94,6 +94,7 @@ class BraveBookmarksExporter:
     # ─────────────────────────────────────────────
     # Public API
     # ─────────────────────────────────────────────
+    
     def export_to_file(self, out_path):
         profiles = self._find_brave_profiles()
         if not profiles:

@@ -225,11 +225,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             initial_open=self.app.saved_state.get("right_section_states", {}).get("bookmarks_exporter", False)
         )
         self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(5, 6))
-        
-        CtkTooltip(
-            self.advanced_section_3.toggle_btn,
-            "Exports bookmarks to a file path of your choosing.\n"
-        )
+
         app.collapsible_sections.append(self.advanced_section_3)
 
         self.btn_brave_export = ctk.CTkButton(

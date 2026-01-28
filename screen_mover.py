@@ -10,8 +10,6 @@ import win32api
 import win32process
 import pygetwindow as gw
 
-
-
 ACTIVATION_Y_MIN = 0
 ACTIVATION_Y_MAX = 30
 
@@ -28,6 +26,7 @@ class ScreenMoverWorker:
         self.last_rect = None
         self.last_move_time = 0
 
+        
         self.overlay_hwnd = None
         self.gesture_hwnd = None
 
@@ -87,6 +86,9 @@ class ScreenMoverWorker:
 
     def _safe_show_overlay(self, x, y):
         """Overlay is ALWAYS topmost, independent of GUI always-on-top state."""
+
+
+        
         try:
             import win32api, win32con, win32gui
         except Exception:
@@ -211,8 +213,14 @@ class ScreenMoverWorker:
         if not self.enabled:
             return
         
+        # ✅ pull the LIVE value that already exists on the worker
+        
+
+        
         if not self.enable_mmb:
             return
+        
+        # ✅ keep logic in sync
         # UX gate (this is the important one)
         # ---------------------------------------------------------
         # Track button state

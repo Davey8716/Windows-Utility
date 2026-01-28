@@ -323,7 +323,7 @@ class UtilityControlApp(ctk.CTk):
         else:
             self.theme_switch.configure(text="Light Mode On")
 
-        CtkTooltip(self.theme_switch, "Light and Dark mode. Try Them!")
+        CtkTooltip(self.theme_switch, "Light and Dark mode toggle.")
 
 
         self.power_toggle = ctk.CTkSwitch(
@@ -342,7 +342,7 @@ class UtilityControlApp(ctk.CTk):
 
         CtkTooltip(
             self.power_toggle,
-            "⚠️⚠️ Toggles on/off power options ⚠️⚠️\n"
+            "Toggles on/off power options \n"
             "Made for clumsy people who might shutdown by mistake etc.\n"
             "Remembers if it's on or off on startup.\n"
         )
@@ -377,8 +377,8 @@ class UtilityControlApp(ctk.CTk):
 
         CtkTooltip(
             self.always_on_top_switch,
-            "When off DHG will show below other apps if they are maximized.\n"
-            "When on DHG will always show on top of other apps.\n"
+            "When off the app will show below other apps if they are maximized.\n"
+            "When on the app will always show on top of other apps.\n"
         )
         
 
@@ -515,7 +515,7 @@ class UtilityControlApp(ctk.CTk):
             self.mmb_switch,
             "Click and hold the middle mouse.\n"
             "At the top of any program window.\n"
-            "When the arrow appears, Move left or right\n"
+            "When the arrow appears, Move left or right.\n"
             "To move the window to another screen."
         )
 
@@ -637,8 +637,8 @@ class UtilityControlApp(ctk.CTk):
 
         CtkTooltip(
             self.btn_desktop_screenshot,
-            "Minimizes the app, takes a full desktop screenshot,\n"
-            "lets you choose a save location, then minmizes the window."
+            "Minimizes the app, takes a full desktop screenshot.\n"
+            "Choose a save location, then minmizes the window."
         )
         
         # --------------------------------------------------------------
@@ -670,14 +670,14 @@ class UtilityControlApp(ctk.CTk):
             placeholder_text="Folder name…",
             textvariable=self.folder_name_var,
             font=("Rubik UI", 15, "bold"),
-            width=150
+            width=250
         )
         self.folder_name_entry.pack(side="left", padx = 5)
         
         CtkTooltip(
             self.btn_create_folder,
-            "Type a folder name in the box → Click to create\n"
-            "A new folder will appear instantly on your Desktop\n"
+            "Type a folder name in the box → Click to create.\n"
+            "A new folder will appear instantly on your Desktop.\n"
             "Greyed out if no name entered.\n"
             "App self minimizes after a few seconds.\n"
         )
@@ -755,24 +755,11 @@ class UtilityControlApp(ctk.CTk):
 
         CtkTooltip(
             self.btn_backup_pins,
-            "Backs up Taskbar icons to a folder chosen\n"
+            "Backs up Taskbar icons to a folder chosen.\n"
             "by Change Folder button.\n"
         )
 
-        # OPEN BACKUP BUTTON (underneath)
-        self.btn_open_backup = ctk.CTkButton(
-            backup_buttons_frame,
-            text="Open Backup",
-            font=("Rubik UI", 15, "bold"),
-            width=btn_width,
-            command=self.actions.open_backup_folder
-        )
-        self.btn_open_backup.pack(anchor="w", pady = (5,2))
-
-        CtkTooltip(
-            self.btn_open_backup,
-            "Opens backed up Taskbar icons folder location.\n"
-        )
+        
 
         # ===================================================================
         #  Backup Folder Path Display + Change Button
@@ -802,6 +789,21 @@ class UtilityControlApp(ctk.CTk):
             self.btn_change_path,
             "Chooses folder path for backing up Taskbar icons.\n"
         )
+        
+        # OPEN BACKUP BUTTON (underneath)
+        self.btn_open_backup = ctk.CTkButton(
+            backup_buttons_frame,
+            text="Open Backup",
+            font=("Rubik UI", 15, "bold"),
+            width=btn_width,
+            command=self.actions.open_backup_folder
+        )
+        self.btn_open_backup.pack(anchor="w", pady = (5,2))
+
+        CtkTooltip(
+            self.btn_open_backup,
+            "Opens backed up Taskbar icons folder location.\n"
+        )
 
         self.entry_backup_path = ctk.CTkEntry(
             path_inner,
@@ -820,7 +822,7 @@ class UtilityControlApp(ctk.CTk):
         #  Desktop Icon Organiser
         # --------------------------------------------------------------
 
-        desktop_icon_layout = CollapsibleSection(
+        self.desktop_icon_layout = CollapsibleSection(
             self.main_frame,
             "Desktop Icon Organiser",
             section_id="desktop_icon_organiser",
@@ -829,25 +831,38 @@ class UtilityControlApp(ctk.CTk):
                 "desktop_icon_organiser", True
             )
         )
-        self.collapsible_sections.append(desktop_icon_layout)
-        self.desktop_icon_frame = desktop_icon_layout.content
+        self.collapsible_sections.append(self.desktop_icon_layout)
+        self.desktop_icon_frame = self.desktop_icon_layout.content
+        
+
+
+
+
+
+
+
+
+
 
         # ===================================================================
         #  Capture Desktop Layout  (MATCHES Backup Taskbar structure)
         # ===================================================================
-        
-        icon_buttons_frame = ctk.CTkFrame(
+
+        self.icon_buttons_frame = ctk.CTkFrame(
             self.desktop_icon_frame,
             fg_color="transparent"
         )
-        icon_buttons_frame.pack(anchor="w", padx=10, pady=(5,5))
+        self.icon_buttons_frame.pack(anchor="w", padx=10, pady=(5, 5))
 
         # --- ROW for Capture + status ---
-        capture_row = ctk.CTkFrame(icon_buttons_frame, fg_color="transparent")
-        capture_row.pack(anchor="w", pady=(0, 5))
+        self.capture_row = ctk.CTkFrame(
+            self.icon_buttons_frame,
+            fg_color="transparent"
+        )
+        self.capture_row.pack(anchor="w", pady=(0, 5))
 
         self.btn_capture_layout = ctk.CTkButton(
-            capture_row,
+            self.capture_row,
             text="Capture Desktop Layout",
             font=("Rubik UI", 15, "bold"),
             height=28,
@@ -856,8 +871,15 @@ class UtilityControlApp(ctk.CTk):
         )
         self.btn_capture_layout.pack(side="left")
 
+        # ✅ Tooltip belongs on the BUTTON (not a toggle)
+        CtkTooltip(
+            self.btn_capture_layout,
+            "Captures and restores icon layout on desktops.\n"
+            "Make sure you right click desktop → View → turn OFF Auto arrange icons."
+        )
+
         self.desktop_layout_status = ctk.CTkLabel(
-            capture_row,
+            self.capture_row,
             text=" ",
             width=140,
             anchor="w",
@@ -868,7 +890,7 @@ class UtilityControlApp(ctk.CTk):
 
         # --- Restore button directly under (tight) ---
         self.btn_restore_layout = ctk.CTkButton(
-            icon_buttons_frame,
+            self.icon_buttons_frame,
             text="Restore Layout",
             font=("Rubik UI", 15, "bold"),
             height=28,
@@ -876,6 +898,32 @@ class UtilityControlApp(ctk.CTk):
             command=self.actions.restore_desktop_layout
         )
         self.btn_restore_layout.pack(anchor="w", pady=(0, 0))
+
+        # ✅ Tooltip belongs on the RESTORE button
+        CtkTooltip(
+            self.btn_restore_layout,
+            "Restores a previously saved desktop icon layout.\n"
+            "Auto arrange icons must be turned OFF."
+        )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         # --------------------------------------------------------------
