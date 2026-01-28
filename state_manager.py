@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-CONFIG_PATH = "screen_mover_state.json"
+CONFIG_PATH = "app_state.json"
 
 def save_state(state: dict):
     with open(CONFIG_PATH, "w") as f:
@@ -31,7 +31,7 @@ def load_state() -> dict:
         
         "backup_folder_path": str(Path.home()),
         "brave_export_path": "",
-        "side_panel_open" : True,
+        "advanced_panel_open" : True,
 
 
         "left_section_states": {
@@ -43,7 +43,9 @@ def load_state() -> dict:
             "desktop_icon_organiser": True
         },
         "right_section_states": {
-            "Windows_utilities": False,
+            "master_toggle_right": False,
+            "sidebar_utils_section": False,
+            "windows_utilities": False,
             "drive_space_display": False,
             "bookmarks_exporter": False
         },
