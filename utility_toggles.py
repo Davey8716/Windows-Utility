@@ -3,9 +3,15 @@ import webbrowser
 import ctypes
 import win32gui
 import win32con
-import os 
-from screen_mover import SCREEN_MOVER
+import os
+import tkinter.filedialog as fd
+import shutil
 import customtkinter as ctk
+from tkinter import messagebox
+from screen_mover import SCREEN_MOVER
+from desktop_icon_layout import save_desktop_icon_layout
+from desktop_icon_layout import restore_desktop_icon_layout
+
 
 # ===================================================================
 #  Utility Actions Manager (Monolithic Class)
@@ -217,8 +223,7 @@ class UtilityActionsManager:
 
     def backup_pinned_shortcuts(self):
         """Backs up Windows taskbar pinned shortcuts into the chosen folder."""
-        import shutil
-        from tkinter import messagebox
+        
 
         print("[BACKUP] Starting backup of pinned shortcuts…")
 
@@ -294,7 +299,7 @@ class UtilityActionsManager:
 
     def change_backup_folder(self):
         """Allows the user to select a folder and updates the JSON."""
-        import tkinter.filedialog as fd
+        
 
         try:
             new_path = fd.askdirectory(title="Choose Backup Folder")
@@ -304,6 +309,63 @@ class UtilityActionsManager:
                 print(f"[DEBUG] Changed backup folder to: {new_path}")
         except Exception as e:
             print(f"[ERROR] change_backup_folder: {e}")
+            
+            
+    def capture_desktop_layout(self):
+        
+
+        out_path = fd.asksaveasfilename(
+            title="Save Desktop Icon Layout",
+            defaultextension=".json",
+            filetypes=[("Desktop Layout", "*.json")],
+            initialfile="desktop_layout.json",
+        )
+        if not out_path:
+            return
+
+        try:
+            count = save_desktop_icon_layout(out_path)
+
+            # inline feedback
+            if hasattr(self.app, "desktop_layout_status"):
+                self.app.desktop_layout_status.configure(text=f"Saved ({count})")
+                self.app.after(
+                    2500,
+                    lambda: self.app.desktop_layout_status.configure(text=" ")
+                )
+
+            # persist last path
+            self.app.saved_state["desktop_layout_last_path"] = out_path
+            self.app.save_all_settings()
+
+        except Exception as e:
+            print("[DESKTOP ICONS] Capture failed:", e)
+            
+            
+    def restore_desktop_layout(self):
+        
+
+        path = fd.askopenfilename(
+            title="Restore Desktop Icon Layout",
+            filetypes=[("Desktop Layout", "*.json")]
+        )
+        if not path:
+            return
+
+        try:
+            count = restore_desktop_icon_layout(path)
+
+            if hasattr(self.app, "desktop_layout_status"):
+                self.app.desktop_layout_status.configure(text=f"Restored ({count})")
+                self.app.after(
+                    2500,
+                    lambda: self.app.desktop_layout_status.configure(text=" ")
+                )
+
+        except Exception as e:
+            print("[DESKTOP ICONS] Restore failed:", e)
+
+
 
 # ===================================================================
 #  Minimize / Restore All Windows Except GUI
