@@ -7,11 +7,10 @@ import win32con
 import win32gui
 import win32api
 import win32process
-
+import json
 
 user32 = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
-
 
 LVM_FIRST = 0x1000
 LVM_GETITEMCOUNT = LVM_FIRST + 4
@@ -19,7 +18,6 @@ LVM_GETITEMTEXTW = LVM_FIRST + 115
 LVM_GETITEMPOSITION = LVM_FIRST + 16
 
 LVIF_TEXT = 0x0001
-
 
 class LVITEMW(ctypes.Structure):
     _fields_ = [
@@ -39,7 +37,6 @@ class LVITEMW(ctypes.Structure):
         ("piColFmt", wintypes.PINT),
         ("iGroup", ctypes.c_int),
     ]
-
 
 def _find_desktop_listview_hwnd() -> int | None:
     """
@@ -71,7 +68,6 @@ def _find_desktop_listview_hwnd() -> int | None:
     found = []
     win32gui.EnumWindows(enum_windows_cb, found)
     return found[0] if found else None
-
 
 def capture_desktop_icon_layout() -> list[dict]:
     """
@@ -188,7 +184,6 @@ def save_desktop_icon_layout(out_path: str) -> int:
         json.dump(payload, f, indent=2)
     return len(layout)
 
-
 def restore_desktop_icon_layout(json_path: str) -> int:
     """
     Restores desktop icon positions from a saved layout file.
@@ -197,14 +192,7 @@ def restore_desktop_icon_layout(json_path: str) -> int:
     - LVM_SETITEMPOSITION32 (write positions via remote POINT*)
     Returns number of icons restored.
     """
-    import json
-    import ctypes
-    from ctypes import wintypes
-    import win32con
-    import win32gui
-    import win32api
-    import win32process
-
+    
     kernel32 = ctypes.windll.kernel32
 
     LVM_FIRST = 0x1000

@@ -103,7 +103,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
     
         # ✅ REGISTER IT as a right-section state
         self.app.collapsible_sections.append(self.sidebar_utils_section)
-        self.sidebar_utils_section.wrapper.pack(fill="x", padx=12, pady=(2, 3))
+        self.sidebar_utils_section.wrapper.pack(fill="x", padx=12, pady=(5, 5))
         
         # 🔴 THIS LINE WAS MISSING
         self.build_sidebar_utilities()
@@ -177,8 +177,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         # OUTPUT CONSOLE (read-only)
         self.drive_space_output = ctk.CTkTextbox(
             drive_parent,
-            height=120,
-            font=("Consolas", 12),
+            height=100,
+            font=("Rubik", 14, "bold"),
             wrap="none",
         )
         self.drive_space_output.pack(fill="x", padx=5, pady=6)
@@ -250,8 +250,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.brave_export_entry = ctk.CTkEntry(
             self.advanced_section_3.content,
             textvariable=app.brave_export_path_var,
-            font=("Rubik UI", 15),
-            width=400,
+            font=("Rubik UI", 15, "bold"),
+            width=420,
             state="readonly"
         )
         self.brave_export_entry.pack(anchor="w", padx=5, pady=(5, 4))

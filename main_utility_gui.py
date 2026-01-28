@@ -806,8 +806,8 @@ class UtilityControlApp(ctk.CTk):
         self.entry_backup_path = ctk.CTkEntry(
             path_inner,
             textvariable=self.backup_path_var,
-            font=("Rubik UI", 15),
-            width = 400,
+            font=("Rubik UI", 15, "bold"),
+            width = 420,
             state="readonly"
         )
         self.entry_backup_path.pack(anchor="w", pady = (0,))
