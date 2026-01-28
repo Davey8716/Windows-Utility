@@ -1,6 +1,8 @@
 import os
 import customtkinter as ctk
 import subprocess
+import ctypes
+import sys
 from tooltips import CtkTooltip
 from collapsible_section import CollapsibleSection
 from main_utility_gui import get_drive_info
@@ -80,8 +82,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             app=self.app,
             initial_open=self.app.saved_state.get("right_section_states", {}).get("windows_utilities", False)
         )
-        self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(5, 6))
-        
+        self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(2, 3))
 
         CtkTooltip(
             self.windows_utility_section.toggle_btn,
@@ -102,7 +103,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
     
         # ✅ REGISTER IT as a right-section state
         self.app.collapsible_sections.append(self.sidebar_utils_section)
-        self.sidebar_utils_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+        self.sidebar_utils_section.wrapper.pack(fill="x", padx=12, pady=(2, 3))
         
         # 🔴 THIS LINE WAS MISSING
         self.build_sidebar_utilities()
@@ -122,7 +123,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
         # container row
         row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(anchor="w", padx=12, pady=(4, 8))
+        row.pack(anchor="w", padx=4, pady=(4, 8))
 
         # left column (System / Hardware)
         left_col = ctk.CTkFrame(row, fg_color="transparent")
@@ -160,8 +161,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         app.collapsible_sections.append(self.display_space_section)
 
         drive_parent = self.display_space_section.content
-        
-        
 
         btn_this_pc = ctk.CTkButton(
             drive_parent,
@@ -171,7 +170,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             command=self.app.open_this_pc,
         )
 
-        btn_this_pc.pack(anchor= "w",padx= 5, pady=(4, 4))
+        btn_this_pc.pack(anchor= "w",padx= 5, pady=(8, 6))
         
         CtkTooltip(btn_this_pc, "Takes you to Drives location.")
 
@@ -184,7 +183,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         )
         self.drive_space_output.pack(fill="x", padx=5, pady=6)
         self.drive_space_output.configure(state="disabled")
-
 
         def refresh_drive_display():
             self.drive_space_output.configure(state="normal")
@@ -206,18 +204,14 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
             self.drive_space_output.configure(state="disabled")
 
-
         # initial render
         refresh_drive_display()
-
 
         def schedule_drive_refresh():
             refresh_drive_display()
             self.app.after(10_000, schedule_drive_refresh)
 
-
         schedule_drive_refresh()
-
 
         # ==================================================
         # Universal Bookmarks Exporter
@@ -245,7 +239,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             font=("Rubik UI", 15, "bold"),
             command=app._run_brave_export,
         )
-        self.btn_brave_export.pack(anchor="w", padx=5, pady=(5, 4))
+        self.btn_brave_export.pack(anchor="w", padx=5, pady=(6, 6))
 
         CtkTooltip(
             self.btn_brave_export,
@@ -262,37 +256,21 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         )
         self.brave_export_entry.pack(anchor="w", padx=5, pady=(5, 4))
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+    def _run_elevated(self, command):
+        ctypes.windll.shell32.ShellExecuteW(
+            None,
+            "runas",                 # ← triggers UAC
+            "cmd.exe",
+            f"/k {command}",         # /k keeps window open
+            None,
+            1
+        )
+
+    def _is_admin(self):
+        try:
+            return ctypes.windll.shell32.IsUserAnAdmin()
+        except Exception:
+            return False
 
     # ==================================================
     # Windows Utilities
@@ -359,42 +337,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         )
 
         dropdown.set(placeholder)
-        dropdown.pack(anchor="w", padx=12, pady=(4, 8))
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        dropdown.pack(anchor="w", padx=5, pady=(6, 6))
+
     # ==================================================
     # Side Bar Utilities
     # ==================================================
@@ -421,6 +365,19 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Clipboard History": self.open_clipboard_history,
         }
         
+    def _ensure_admin(self):
+        if ctypes.windll.shell32.IsUserAnAdmin():
+            return True
+
+        ctypes.windll.shell32.ShellExecuteW(
+            None,
+            "runas",
+            sys.executable,
+            " ".join(sys.argv),
+            None,
+            1
+        )
+        return False
         
     def build_sidebar_utilities(self):
         parent = self.sidebar_utils_section.content
@@ -442,6 +399,19 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Quick Open",
             self._sidebar_quick_open_actions()
         )
+        
+        # ✅ ADD THIS
+        self._add_sidebar_dropdown(
+            parent,
+            "System Integrity & Disk Health",
+            self._sidebar_system_integrity_actions()
+        )
+        
+    def _sidebar_system_integrity_actions(self):
+        return {
+            "Run System File Checker (SFC)": self.run_sfc_scannow,
+            "Run Check Disk (CHKDSK)": self.run_chkdsk,
+        }
 
     def toggle_side_bar_utilities(self):
 
@@ -452,7 +422,7 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
         if new_state:
             if not section.wrapper.winfo_ismapped():
-                section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
+                section.wrapper.pack(fill="x", padx=5, pady=(6, 6))
         else:
             if section.wrapper.winfo_ismapped():
                 section.wrapper.pack_forget()
@@ -513,6 +483,16 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
         self.sidebar_output.delete("1.0", "end")
         os.system("start ms-settings:clipboard")
         self.sidebar_output.insert("end", "Opened Clipboard History.\n")
+        
+    def run_sfc_scannow(self):
+        if not self._ensure_admin():
+            return
+        self._run_and_output("sfc /scannow")
+
+    def run_chkdsk(self):
+        if not self._ensure_admin():
+            return
+        self._run_and_output("chkdsk")
 
     def _add_sidebar_dropdown(self, parent, title, actions_map):
         placeholder = f" {title} "
@@ -538,21 +518,6 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
         dropdown.set(placeholder)
         dropdown.pack(anchor ="w", padx=8, pady=4)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
     # ==================================================
     # Master Toggle Right
