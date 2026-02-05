@@ -10,1279 +10,661 @@ import win32gui
 import win32con
 import string
 import shutil
-import time
 from PIL import ImageGrab
 from tkinter import filedialog
 from datetime import datetime
-import customtkinter as ctk
 from tkinter import messagebox
-from tooltips import CtkTooltip
+from tooltips import QToolTip
 from pathlib import Path
 from screen_mover import SCREEN_MOVER
 from tray_toggles import TrayIconManager
 from universal_bookmarks_export import BraveBookmarksExporter
-from utility_toggles import switch_theme, UtilityActionsManager 
+from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from collapsible_section import CollapsibleSection
+from PyQt6.QtWidgets import (
+    QWidget,
+    QGridLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QScrollArea,
+    QHBoxLayout,
+    QCheckBox,
+    QLineEdit,
+    QApplication
+    
+)
 
-# Configure appearance
-ctk.set_appearance_mode("Dark")
-ctk.set_default_color_theme("blue")
+from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtWidgets import QSizePolicy
+
+# =======================================
+# These 3 functions possibly to be moved.
+# =======================================
 
 MUTEX_NAME = "Problems Gone"
 
-def get_drive_info():
-            drives = []
-            for letter in string.ascii_uppercase:
-                path = f"{letter}:\\"
-                if os.path.exists(path):
-                    try:
-                        total, used, free = shutil.disk_usage(path)
-                        drives.append({
-                            "drive": path,
-                            "total": total,
-                            "free": free
-                        })
-                    except Exception:
-                        pass
-            return drives
+# def get_drive_info():
+#             drives = []
+#             for letter in string.ascii_uppercase:
+#                 path = f"{letter}:\\"
+#                 if os.path.exists(path):
+#                     try:
+#                         total, used, free = shutil.disk_usage(path)
+#                         drives.append({
+#                             "drive": path,
+#                             "total": total,
+#                             "free": free,
+#                             "used": used
+#                         })
+#                     except Exception:
+#                         pass
+#             return drives
 
-def bring_existing_instance_to_front():
-    def enum_handler(hwnd, _):
-        title = win32gui.GetWindowText(hwnd)
+# def bring_existing_instance_to_front():
+#     def enum_handler(hwnd, _):
+#         title = win32gui.GetWindowText(hwnd)
 
-        if "Problems Gone" in title:
-            try:
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)     # handles withdrawn
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)  # handles minimized
-                win32gui.SetForegroundWindow(hwnd)
-            except Exception as e:
-                print("[RESTORE] failed:", e)
-            return False  # stop enumerating
+#         if "Problems Gone" in title:
+#             try:
+#                 win32gui.ShowWindow(hwnd, win32con.SW_SHOW)     # handles withdrawn
+#                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)  # handles minimized
+#                 win32gui.SetForegroundWindow(hwnd)
+#             except Exception as e:
+#                 print("[RESTORE] failed:", e)
+#             return False  # stop enumerating
 
-        return True
+#         return True
 
-    win32gui.EnumWindows(enum_handler, None)
+#     win32gui.EnumWindows(enum_handler, None)
+
+# def ensure_single_instance():
+#     kernel32 = ctypes.windll.kernel32
+#     mutex = kernel32.CreateMutexW(None, False, MUTEX_NAME)
+#     last_error = kernel32.GetLastError()
+
+#     ERROR_ALREADY_EXISTS = 183
+#     if last_error == ERROR_ALREADY_EXISTS:
+#         bring_existing_instance_to_front()
+#         sys.exit(0)
+
+#     return mutex
+
+# TEMP stub — Qt branch only
+class AdvancedToolsPanel(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.hide()
 
 
-def ensure_single_instance():
-    kernel32 = ctypes.windll.kernel32
-    mutex = kernel32.CreateMutexW(None, False, MUTEX_NAME)
-    last_error = kernel32.GetLastError()
-
-    ERROR_ALREADY_EXISTS = 183
-    if last_error == ERROR_ALREADY_EXISTS:
-        bring_existing_instance_to_front()
-        sys.exit(0)
-
-    return mutex
-
-# ===================================================================
-#  Main App Gui Left Side
-# ===================================================================
-
-class UtilityControlApp(ctk.CTk):
+class UtilityControlApp(QWidget):
     def __init__(self):
         super().__init__()
-        from right_utility_gui import AdvancedToolsPanel
-    
-        self.title("Problems Gone")
-        mutex = ensure_single_instance()
 
-        # ==============================================================
-        # Window / Topmost
-        # ==============================================================
-        self.attributes("-topmost", True)
+        # ---------------- Window ----------------
+        self.setWindowTitle("Problems Gone")
+        self.WINDOW_WIDTH = 505
+        self.WINDOW_HEIGHT = 1000
+        self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+        
+        # ✅ add these
+        self.state = load_state()
+        self.actions = UtilityActionsManager(self)
 
+        # ---------------- Build UI ----------------
+        self._build_ui()
+        
+
+        # ---------------- Always on top ----------------
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        self.show()
 
         ctypes.windll.user32.SetWindowPos(
-            self.winfo_id(),
+            int(self.winId()),
             -1,
             0, 0, 0, 0,
             0x0003
         )
 
-        # ==============================================================
-        # State / Actions
-        # ==============================================================
+    def _build_ui(self):
+
+        # ==================================================
+        # Root container
+        # ==================================================
+        self.root_container = QWidget(self)
+        self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+
+        self.root_layout = QGridLayout(self.root_container)
+        self.root_layout.setContentsMargins(0, 0, 0, 0)
+        self.root_layout.setSpacing(0)
+
+        self.root_layout.setColumnMinimumWidth(0, 425)
+        self.root_layout.setRowStretch(0, 1)
+
+        # ==================================================
+        # Scroll Area (LEFT)
+        # ==================================================
+        self.main_scroll = QScrollArea(self.root_container)
+        self.main_scroll.setWidgetResizable(True)
+        self.main_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.main_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.main_scroll.setFixedWidth(450)
+
+        self.root_layout.addWidget(self.main_scroll, 0, 0)
+
+        # ==================================================
+        # Scroll Contents
+        # ==================================================
+        self.main_frame = QWidget()
+        self.main_scroll.setWidget(self.main_frame)
+
+        self.main_layout = QVBoxLayout(self.main_frame)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(10)
         
-        self.saved_state = load_state()
-        self.actions = UtilityActionsManager(self)
+        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        # (later, after you add all sections)
         
-        # ==============================================================
-        # MAGNET/ OWNERSHIP
-        # ==============================================================
-        
-        self._ui_ready = False
-        self._syncing_windows = False
-        self._drag_owner = None
-
-        # ==============================================================
-        # Window geometry
-        # ==============================================================
-        
-        self.WINDOW_WIDTH = 505
-        self.WINDOW_HEIGHT = 1000
-        
-        btn_width = 120 # Large buttons
-        small_btn_width = 90 # Small buttons
-
-        self.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}")
-        self.expanded = False
-
-        self.resizable(False, False)
-
-        # ==============================================================
-        # Tray
-        # ==============================================================
-        self.tray = TrayIconManager(self)
-        self.tray.create_tray_icon()
-        self.protocol("WM_DELETE_WINDOW", self.tray.on_close_to_tray)
-
-        SCREEN_MOVER.start()
-        SCREEN_MOVER.app_root = self
-
-        # ==============================================================
-        # Variables (DEFINE ONCE, BEFORE WIDGETS) INITIALIZING STATE
-        # ==============================================================
-        
-        self.theme_var = ctk.BooleanVar(
-            value=self.saved_state.get("theme_dark", True)
-        )
-        switch_theme(self.theme_var.get())
-
-        self.main_always_on_top_enabled = ctk.BooleanVar(
-            value=self.saved_state.get("main_always_on_top_enabled", True)
-            
-        )
-        
-        self.right_always_on_top_enabled = self.saved_state.get(
-            "right_always_on_top_enabled", True
-        )
-
-        self.minimize_all_var = ctk.BooleanVar(
-            value=self.saved_state.get("minimize_all_enabled", False)
-        )
-
-        self.tooltips_enabled_var = ctk.BooleanVar(
-            value=self.saved_state.get("tooltips_enabled", True)
-        )
-        self.tooltips_enabled = self.tooltips_enabled_var.get()
-        
-        self.brave_export_path_var = ctk.StringVar(
-            value=self.saved_state.get("brave_export_path", "")
-        )
-        
-        self.power_toggle_var = ctk.BooleanVar(
-            value=self.saved_state.get("show_power_buttons", False)
-        )
-        
-        self._folder_status_after_id = None
-        
-        self.master_toggle_left_var = ctk.BooleanVar(
-            value=self.saved_state.get("master_toggle_left", True)
-        )
-        
-        self.sidebar_utils_section_var = ctk.BooleanVar(
-            value=self.saved_state.get("sidebar_utils_section", True)
-        )
-        
-        self.master_toggle_right_var = ctk.BooleanVar(
-            value=self.saved_state.get("master_toggle_right", True)
-        )
-
-        self.advanced_panel_open_var = ctk.BooleanVar(
-            value=bool(self.saved_state.get("advanced_panel_open", False))
-        )
-        self.expanded = self.advanced_panel_open_var.get
-        
-        self.bookmarks_exporter_var = ctk.BooleanVar(
-            value=self.saved_state.get("bookmarks_exporter", True)
-            
-        )
-        
-        # USB sub-toggle initializers (load from JSON)
-        self.opt_idle_var = ctk.BooleanVar(
-            value=self.saved_state.get("usb_idle_enabled", True)
-        )
-
-
-        self.opt_download_var = ctk.BooleanVar(
-            value=self.saved_state.get("usb_download_enabled", True)
-        )
-
-        self.opt_plug_var = ctk.BooleanVar(
-            value=self.saved_state.get("usb_plug_enabled", True)
-        )
-
-
-        self.collapsible_sections = []
-
-        # ==============================================================
-        # Root container (2 fixed columns, full height)
-        # ==============================================================
-        
-        self.root_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.root_container.pack(fill="both", expand=True)
-        
-        self.root_container.grid_propagate(False)
-        self.root_container.pack_propagate(False)
-    
-
-        self.root_container.columnconfigure(0, weight=0, minsize=425)
-        self.root_container.columnconfigure(1, weight=0, minsize=425)
-        self.root_container.rowconfigure(0, weight=1)
-        
-        self.bind("<Configure>", lambda e: self._sync_windows("main"))
-        self.bind("<ButtonPress-1>", lambda e: self._set_drag_owner("main"))
-        self.bind("<ButtonRelease-1>", lambda e: self._clear_drag_owner())
-        self.bind("<Configure>", self._on_main_configure)
-    
-        # ==============================================================
-        #  MAIN FRAMES LEFT HEADER
-        # ==============================================================
-        
-        self.main_frame = ctk.CTkScrollableFrame(
-            self.root_container,
-            width=450,
-            fg_color="transparent"
-        )
-        self.main_frame.grid(row=0, column=0, sticky="ns")
-
-        # --------------------------------------------------------------
-        # Title row (label + master collapse button)
-        # --------------------------------------------------------------
-
-        title_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        title_row.pack(fill="x", padx=10, pady=0)
-
-        title = ctk.CTkLabel(
-            title_row,
-            text="Problems Gone",
-            font=("Rubik UI", 20, "bold")
-        )
-        title.pack(padx = 25, pady = 5)
-
-        arrow_colors = self._get_arrow_colors()
-
-        self.master_collapse_btn_left = ctk.CTkButton(
-            title_row,
-            text="▾",
-            width=32,
-            height=28,
-            font=("Rubik UI", 18, "bold"),
-            fg_color="transparent",
-            text_color=arrow_colors["text"],
-            hover_color="#202020",
-            command=self.toggle_all_left_sections
-        )
-        self.master_collapse_btn_left.pack(side="right")
-
-        CtkTooltip(
-            self.master_collapse_btn_left,
-            "Master collapse toggle for all of these regions.\n"
-            
-        )
-
-        # ==============================================================
-        # Collapsible sections
-        # ==============================================================
-
-        self.misc_section = CollapsibleSection(
-            self.main_frame,
-            "User Interface",
-            section_id="user_interface",
-            app=self,
-            initial_open=self.saved_state.get("left_section_states", {}).get("user_interface", True)
-        )
-        self.collapsible_sections.append(self.misc_section)
-
-        toggles_row = ctk.CTkFrame(self.misc_section.content, fg_color="transparent")
-        toggles_row.pack(fill="x", padx=12, pady=0)
-
-        left_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
-        left_col.pack(side="left", anchor="nw")
-
-        self.power_right_col = ctk.CTkFrame(toggles_row, fg_color="transparent")
-
-        # -------------------------
-        # Dark Mode Toggle (LEFT)
-        # -------------------------
-
-        self.theme_switch = ctk.CTkSwitch(
-            left_col,
-            text="Dark Mode",
-            variable=self.theme_var,
-            command=self.actions.theme_toggle,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.theme_switch.pack(anchor="w", )
-
-        if self.theme_var.get():
-            self.theme_switch.configure(text="Dark Mode On")
-        else:
-            self.theme_switch.configure(text="Light Mode On")
-
-        CtkTooltip(self.theme_switch, "Light and Dark mode toggle.")
-
-
-        self.power_toggle = ctk.CTkSwitch(
-            left_col,
-            text="Show Power Buttons",
-            variable=self.power_toggle_var,
-            command=self.actions.toggle_power_buttons,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.power_toggle.pack(anchor="w", pady=(0, 0))
-        
-        if self:
-            self.power_toggle.configure(text="Power Options On")
-        else:
-            self.power_toggle.configure(text="Power Options Off")
-
-        CtkTooltip(
-            self.power_toggle,
-            "Toggles on/off power options \n"
-            "Made for clumsy people who might shutdown by mistake etc.\n"
-            "Remembers if it's on or off on startup.\n"
-        )
-
-        # -------------------------
-        # Always On Top Toggle (LEFT)
-        # -------------------------
-        
-        self.main_always_on_top_var = ctk.BooleanVar(
-            value=self.saved_state.get("main_always_on_top_enabled", True)
-        )
-
-        self.right_always_on_top_var = ctk.BooleanVar(
-            value=self.saved_state.get("right_always_on_top_enabled", True)
-        )
-        
-        self.always_on_top_var = self.main_always_on_top_var
-
-        self.always_on_top_switch = ctk.CTkSwitch(
-            left_col,
-            text="",
-            variable=self.always_on_top_var,
-            command=self.actions.always_on_top_toggle,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.always_on_top_switch.pack(anchor="w", pady=(0, 0))
-        
-        if self.always_on_top_var.get():
-            self.always_on_top_switch.configure(text="Always On Top On")
-        else:
-            self.always_on_top_switch.configure(text="Always On Top Off")
-
-        CtkTooltip(
-            self.always_on_top_switch,
-            "When off the app will show below other apps if they are maximized.\n"
-            "When on the app will always show on top of other apps.\n"
-        )
+        state = load_state()
         
 
-        # -------------------------
-        # Enable Tooltips Toggle (RIGHT)
-        # -------------------------
+        # ==================================================
+        # HEADER — App title + master collapse
+        # ==================================================
+        header = QWidget(self.main_frame)
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(10, 10, 10, 10)
 
-        self.tooltip_switch = ctk.CTkSwitch(
-            left_col,   # ✅ FIXED PARENT
-            text="",
-            variable=self.tooltips_enabled_var,
-            command=self.actions.tooltips_toggle,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.tooltip_switch.pack(anchor="w", pady=(0, 0))
+        title = QLabel("Problems Gone", header)
+        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+
+        master_btn = QPushButton("▾", header)
+        master_btn.setFixedSize(32, 28)
+        master_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        master_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #202020;
+            }
+        """)
+
+        header_layout.addWidget(title)
+        header_layout.addStretch()
+        header_layout.addWidget(master_btn)
+
+        self.main_layout.addWidget(header)
         
-        if self.tooltips_enabled_var.get():
-            self.tooltip_switch.configure(text="Tooltips On")
-        else:
-            self.tooltip_switch.configure(text="Tooltips Off")
-
-        CtkTooltip(
-            self.tooltip_switch,
-            "Enable all hover tooltips across the entire app."
-        )
-
-        # -------------------------
-        # Max/Min All Programs Toggle (RIGHT)
-        # -------------------------
-
-        self.minimize_all_switch = ctk.CTkSwitch(
-            left_col,
-            text="Max/Min All Programs",
-            variable=self.minimize_all_var,
-            command=self.actions.minimize_all_toggle,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.minimize_all_switch.pack(anchor="w", pady=(0, 0))
+        # ✅ MUST exist before you append
+        self.left_sections = []
+        self._sections_visible = True
         
-        if self:
-            self.minimize_all_switch.configure(text="Maximize All Off")
-        else:
-            self.minimize_all_switch.configure(text="Maximize All On")
-
-        CtkTooltip(
-            self.minimize_all_switch,
-            "When off all opened tabs are visible.\n"
-            "When toggled on all screens are minimized.\n"
-            "The App Gui itself stays maximized and in front of all other programs.\n"
-        )
-    
-        # ==========================
-        # RIGHT COLUMN
-        # ==========================
-
-        self.btn_sleep = ctk.CTkButton(
-            self.power_right_col,
-            text="Sleep",
-            width=small_btn_width,
-            command=lambda: os.system(
-                "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"
-            ),
-            font=("Rubik UI", 14, "bold")
-        )
-        
-        self.btn_lock = ctk.CTkButton(
-            self.power_right_col,
-            text="Lock PC",
-            width=small_btn_width,
-            command=lambda: ctypes.windll.user32.LockWorkStation(),
-            font=("Rubik UI", 14, "bold")
-        )
-        
-        self.btn_restart = ctk.CTkButton(
-            self.power_right_col,
-            text="Restart",
-            width=small_btn_width,
-            command=lambda: os.system("shutdown /r /t 0"),
-            font=("Rubik UI", 14, "bold")
-        )
-        
-        self.btn_shutdown = ctk.CTkButton(
-            self.power_right_col ,
-            text="Shutdown",
-            width=small_btn_width,
-            command=lambda: os.system("shutdown /s /t 0"),
-            font=("Rubik UI", 14, "bold")
-        )
-
-        # ------------------------------------------------------------------
-        #  Screen-Tab Mover Group Box(frame)
-        # ------------------------------------------------------------------
-        
-        self.mover_section = CollapsibleSection(
-            self.main_frame,
-            "Screen Mover",
-            section_id="screen_mover",
-            app = self,
-            initial_open=self.saved_state["left_section_states"].get("screen_mover", True)
-        )
-        self.collapsible_sections.append(self.mover_section)
-
-        self.mmb_var = ctk.BooleanVar(
-            value=self.saved_state.get("mmb_activation_enabled", True)
-        )
-
-        self.mmb_switch = ctk.CTkSwitch(
-            self.mover_section.content,
-            variable=self.mmb_var,
-            command=lambda: (
-                setattr(SCREEN_MOVER, "enable_mmb", self.mmb_var.get()),
-
-                self._sync_toggle_label(
-                    self.mmb_switch,
-                    "Middle Mouse To Move",
-                    self.mmb_var
-                ),
-                self.save_all_settings()
-            ),
-            font=("Rubik UI", 15, "bold")
-        )
-
-        self.mmb_switch.pack(anchor="w", padx=6, pady=(1,1))
-        
-        self._sync_toggle_label(
-            self.mmb_switch,
-            "Middle Mouse To Move",
-            self.mmb_var
-        )
-        
-
-        # Add tooltip
-        CtkTooltip(
-            self.mmb_switch,
-            "Click and hold the middle mouse.\n"
-            "At the top of any program window.\n"
-            "When the arrow appears, Move left or right.\n"
-            "To move the window to another screen."
-        )
-
-        # NEW: Keep Windows in Flick Zone toggle
-        self.auto_align_var = ctk.BooleanVar(value=self.saved_state.get("auto_align_enabled", False))
-        self.auto_align_switch = ctk.CTkSwitch(
-            self.mover_section.content,   # FIXED
-            text="Windows In Move Zone",
-            variable=self.auto_align_var,
-            command=self.actions.auto_align_toggle,     # <-- THIS WAS MISSING
-            font=("Rubik UI", 15, "bold")
-        )
-        self.auto_align_switch.pack(anchor="w", padx=6, pady=(0,1))
-        
-        self._sync_toggle_label(
-            self.auto_align_switch,
-            "Windows In Move Zone",
-            self.auto_align_var
-        )
-
-        CtkTooltip(
-            self.auto_align_switch,
-            "Keeps window title bars inside the flick activation zone.\n"
-            "Only activates after you finish dragging a window.\n"
-            "Never interferes during movement."
-        )
-
-        # ------------------------------------------------------------------
-        #  USB Reminder Sub-Options Frame  (UNCHANGED)
-        # ------------------------------------------------------------------
-        
-        usb_section = CollapsibleSection(
-            self.main_frame,
-            "Drive Reminder Options",
-            section_id="drive_reminder_options",
-            app = self,
-            initial_open=self.saved_state["left_section_states"].get("drive_reminder_options", True)
-        )
-        self.collapsible_sections.append(usb_section)
-
-        self.opt_idle = ctk.CTkSwitch(
-            usb_section.content,
-            text="Idle-plugged Reminder",
-            variable=self.opt_idle_var,
-            command=lambda: (
-                self._sync_toggle_label(
-                    self.opt_idle,
-                    "Idle-plugged Reminder",
-                    self.opt_idle_var
-                ),
-                self.save_all_settings()
-            ),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.opt_idle.pack(anchor="w", padx=5, pady=0)
-
-        self.opt_download = ctk.CTkSwitch(
-            usb_section.content,
-            text="Download-finished Reminder",
-            variable=self.opt_download_var,
-            command=lambda: (
-                self._sync_toggle_label(
-                    self.opt_download,
-                    "Download-finished Reminder",
-                    self.opt_download_var
-                ),
-                self.save_all_settings()
-            ),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.opt_download.pack(anchor="w", padx=5, pady=0)
-
-        self.opt_plug = ctk.CTkSwitch(
-            usb_section.content,
-            text="Plug / Unplug Notification",
-            variable=self.opt_plug_var,
-            command=lambda: (
-                self._sync_toggle_label(
-                    self.opt_plug,
-                    "Plug / Unplug Notification",
-                    self.opt_plug_var
-                ),
-                self.save_all_settings()
-            ),
-            font=("Rubik UI", 15, "bold")
-        )
-        self.opt_plug.pack(anchor="w", padx=5, pady=0)
-
-        self._sync_toggle_label(self.opt_idle, "Idle-plugged Reminder", self.opt_idle_var)
-        self._sync_toggle_label(self.opt_download, "Download-finished Reminder", self.opt_download_var)
-        self._sync_toggle_label(self.opt_plug, "Plug / Unplug Notification", self.opt_plug_var)
-
-        # --------------------------------------------------------------
-        #  Organising Utilities  (NEW GREY SECTION)
-        # --------------------------------------------------------------
-
-        organising_section = CollapsibleSection(
-            self.main_frame,
-            "Organising Utilities",
-            section_id="organising_utilities",
-            app = self,
-            initial_open=self.saved_state.get("left_section_states", {}).get("organising_utilities", True)
-        )
-        self.collapsible_sections.append(organising_section)
-        self.organise_frame = organising_section.content
-        
-        # --------------------------------------------------------------
-        # Desktop Screenshot Button (top)
-        # --------------------------------------------------------------
-
-        self.btn_desktop_screenshot = ctk.CTkButton(
-            self.organise_frame,
-            text="Desktop Screenshot",
-            width=btn_width,
-            command= self.take_desktop_screenshot,
-            font=("Rubik UI", 15, "bold")
-        )
-        self.btn_desktop_screenshot.pack(anchor="w", padx=10, pady=(5, 2))
-
-        CtkTooltip(
-            self.btn_desktop_screenshot,
-            "Minimizes the app, takes a full desktop screenshot.\n"
-            "Choose a save location, then minmizes the window."
-        )
-        
-        # --------------------------------------------------------------
-        # Folder Creator Row (button left, entry right)
-        # --------------------------------------------------------------
-
-        folder_row = ctk.CTkFrame(self.organise_frame, fg_color="transparent")
-        folder_row.pack(fill="x", padx=10, pady=(5, 2))
-
-        # left: button (same row)
-        self.btn_create_folder = ctk.CTkButton(
-            folder_row,
-            text="Folder To Desktop",
-            width=btn_width,
-            font=("Rubik UI", 15, "bold"),
-            command=self._create_desktop_folder,
-            state="disabled"
-        )
-        self.btn_create_folder.pack(side="left")
-
-        # right: entry + status (same row)
-        entry_group = ctk.CTkFrame(folder_row, fg_color="transparent")
-        entry_group.pack(side="right")
-
-        self.folder_name_var = ctk.StringVar()
-
-        self.folder_name_entry = ctk.CTkEntry(
-            entry_group,
-            placeholder_text="Folder name…",
-            textvariable=self.folder_name_var,
-            font=("Rubik UI", 15, "bold"),
-            width=250
-        )
-        self.folder_name_entry.pack(side="left", padx = 5)
-        
-        CtkTooltip(
-            self.btn_create_folder,
-            "Type a folder name in the box → Click to create.\n"
-            "A new folder will appear instantly on your Desktop.\n"
-            "Greyed out if no name entered.\n"
-            "App self minimizes after a few seconds.\n"
-        )
-        
-
-        self.folder_status_label = ctk.CTkLabel(
-            entry_group,
-            text=" ",                  # IMPORTANT: not empty, so it has width
-            width=300,
-            anchor="w",
-            font=("Rubik UI", 15,"bold"),
-            text_color="#1f6aa5"
-        )
-        self.folder_status_label.pack(side="left", padx=(3, 0))
-
-        self.folder_name_var.trace_add("write", self._update_create_folder_button)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-
-        # --------------------------------------------------------------
-        #  Desktop Backup  (NEW COLLAPSIBLE SECTION)
-        # --------------------------------------------------------------
-
-        desktop_backup_section = CollapsibleSection(
-            self.main_frame,
-            "Desktop Backup Utilities",
-            section_id="desktop_backup_utilities",
-            app=self,
-            initial_open=self.saved_state.get("left_section_states", {}).get("desktop_backup_utilities", True)
-        )
-        self.collapsible_sections.append(desktop_backup_section)
-        self.desktop_backup_frame = desktop_backup_section.content
-
-        # ===================================================================
-        #  Backup Taskbar + Open Backup
-        # ===================================================================
-
-        backup_buttons_frame = ctk.CTkFrame(
-            self.desktop_backup_frame,
-            fg_color="transparent"
-        )
-        backup_buttons_frame.pack(anchor="w", padx=10, pady=(5, 2))
-        
-        # BACKUP BUTTON ROW (button + inline status)
-        backup_row = ctk.CTkFrame(backup_buttons_frame, fg_color="transparent")
-        backup_row.pack(anchor="w", pady=(0, 5))
-
-        # BACKUP BUTTON (top)
-        self.btn_backup_pins = ctk.CTkButton(
-            backup_row,
-            text="Backup Taskbar",
-            font=("Rubik UI", 15, "bold"),
-            width=btn_width,
-            command=self._backup_taskbar_and_minimize
-        )
-        self.btn_backup_pins.pack(side="left")
-        
-        self.backup_status_label = ctk.CTkLabel(
-            backup_row,
-            text=" ",
-            width=140,
-            anchor="e",
-            font=("Rubik UI", 14, "bold"),
-            text_color="#1f6aa5"
-        )
-        self.backup_status_label.pack(anchor = "w", padx=(5, 0))
-
-        CtkTooltip(
-            self.btn_backup_pins,
-            "Backs up Taskbar icons to a folder chosen.\n"
-            "by Change Folder button.\n"
-        )
-
-        
-
-        # ===================================================================
-        #  Backup Folder Path Display + Change Button
-        # ===================================================================
-
-        path_inner = ctk.CTkFrame(
-            self.desktop_backup_frame,
-            fg_color="transparent"
-        )
-        path_inner.pack(fill="x", padx=10, pady=(5, 2))
-
-        # Variable must exist BEFORE entry
-        self.backup_path_var = ctk.StringVar(
-            value=self.saved_state.get("backup_folder_path", str(Path.home()))
-        )
-
-        self.btn_change_path = ctk.CTkButton(
-            path_inner,
-            text=" Change Folder",
-            width=btn_width,
-            font=("Rubik UI", 15, "bold"),
-            command=self.actions.change_backup_folder
-        )
-        self.btn_change_path.pack(anchor="w", pady = (0,5))
-
-        CtkTooltip(
-            self.btn_change_path,
-            "Chooses folder path for backing up Taskbar icons.\n"
-        )
-        
-        # OPEN BACKUP BUTTON (underneath)
-        self.btn_open_backup = ctk.CTkButton(
-            backup_buttons_frame,
-            text="Open Backup",
-            font=("Rubik UI", 15, "bold"),
-            width=btn_width,
-            command=self.actions.open_backup_folder
-        )
-        self.btn_open_backup.pack(anchor="w", pady = (5,2))
-
-        CtkTooltip(
-            self.btn_open_backup,
-            "Opens backed up Taskbar icons folder location.\n"
-        )
-
-        self.entry_backup_path = ctk.CTkEntry(
-            path_inner,
-            textvariable=self.backup_path_var,
-            font=("Rubik UI", 15, "bold"),
-            width = 420,
-            state="readonly"
-        )
-        self.entry_backup_path.pack(anchor="w", pady = (0,))
-
-        # -------------------------------------------------
-        # Final UI sync (ALL vars now exist)
-        # -------------------------------------------------
-        
-        # --------------------------------------------------------------
-        #  Desktop Icon Organiser
-        # --------------------------------------------------------------
-
-        self.desktop_icon_layout = CollapsibleSection(
-            self.main_frame,
-            "Desktop Icon Organiser",
-            section_id="desktop_icon_organiser",
-            app=self,
-            initial_open=self.saved_state.get("left_section_states", {}).get(
-                "desktop_icon_organiser", True
-            )
-        )
-        self.collapsible_sections.append(self.desktop_icon_layout)
-        self.desktop_icon_frame = self.desktop_icon_layout.content
-        
-
-
-
-
-
-
-
-
-
-
-        # ===================================================================
-        #  Capture Desktop Layout  (MATCHES Backup Taskbar structure)
-        # ===================================================================
-
-        self.icon_buttons_frame = ctk.CTkFrame(
-            self.desktop_icon_frame,
-            fg_color="transparent"
-        )
-        self.icon_buttons_frame.pack(anchor="w", padx=10, pady=(5, 5))
-
-        # --- ROW for Capture + status ---
-        self.capture_row = ctk.CTkFrame(
-            self.icon_buttons_frame,
-            fg_color="transparent"
-        )
-        self.capture_row.pack(anchor="w", pady=(0, 5))
-
-        self.btn_capture_layout = ctk.CTkButton(
-            self.capture_row,
-            text="Capture Desktop Layout",
-            font=("Rubik UI", 15, "bold"),
-            height=28,
-            width=btn_width,
-            command=self.actions.capture_desktop_layout
-        )
-        self.btn_capture_layout.pack(side="left")
-
-        # ✅ Tooltip belongs on the BUTTON (not a toggle)
-        CtkTooltip(
-            self.btn_capture_layout,
-            "Captures and restores icon layout on desktops.\n"
-            "Make sure you right click desktop → View → turn OFF Auto arrange icons."
-        )
-
-        self.desktop_layout_status = ctk.CTkLabel(
-            self.capture_row,
-            text=" ",
-            width=140,
-            anchor="w",
-            font=("Rubik UI", 15, "bold"),
-            text_color="#1f6aa5"
-        )
-        self.desktop_layout_status.pack(side="left", padx=(6, 0))
-
-        # --- Restore button directly under (tight) ---
-        self.btn_restore_layout = ctk.CTkButton(
-            self.icon_buttons_frame,
-            text="Restore Layout",
-            font=("Rubik UI", 15, "bold"),
-            height=28,
-            width=btn_width,
-            command=self.actions.restore_desktop_layout
-        )
-        self.btn_restore_layout.pack(anchor="w", pady=(0, 0))
-
-        # ✅ Tooltip belongs on the RESTORE button
-        CtkTooltip(
-            self.btn_restore_layout,
-            "Restores a previously saved desktop icon layout.\n"
-            "Auto arrange icons must be turned OFF."
-        )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # --------------------------------------------------------------
-        # Overlay expand button (CORRECT parent + placement)
-        # --------------------------------------------------------------
-
-        self.overlay_controls = ctk.CTkFrame(
-            self.root_container,
-            fg_color="transparent"
-        )
-
-        # Place relative to root_container, not the window
-        self.overlay_controls.place(
-            relx=1.0,
-            rely=0.5,
-            anchor="e",
-            x=-6
-        )
-
-        self.expand_btn = ctk.CTkButton(
-            self.overlay_controls,
-            text="▾",
-            width=28,
-            height=80,
-            corner_radius=8,
-            command=self.toggle_side_panel,
-            fg_color="#2a2a2a",
-            hover_color="#3a3a3a",
-            text_color="white",
-            font=("Rubik UI", 18, "bold")
-        )
-        self.expand_btn.pack()
-
-        CtkTooltip(self.expand_btn, "Toggles Advanced Tools panel.")
-
-        # Ensure it stays above scrollable content
-        self.overlay_controls.lift()
-        self.expand_btn.lift()
-        self.after(150, self._mark_ui_ready)
-
-        self.advanced_panel = AdvancedToolsPanel(self)
-        
-        # --------------------------------------------------
-        # Restore side panel open/closed state  ✅ CORRECT PLACE
-        # --------------------------------------------------
-        if self.advanced_panel_open_var.get():
-            self.advanced_panel.show()
-            self.expand_btn.configure(text="▸")
-        else:
-            self.advanced_panel.hide()
-            self.expand_btn.configure(text="▾")
-    
-        self.actions.toggle_power_buttons()
-        
-        self.update_idletasks() 
-        self.after_idle(self.update_idletasks)
-        self.after_idle(self.resize_to_fit)
-        
-        #  --------------------------------------------------
-        # Apply master left collapse override (FINAL)
-        # --------------------------------------------------
-
-        if not self.master_toggle_left_var.get():
-            for section in self.collapsible_sections:
-                if isinstance(section, CollapsibleSection) and section.parent == self.main_frame:
-                    if section.open:
-                        section.toggle()
-
-            self.master_collapse_btn_left.configure(text="▸")
-        else:
-            self.master_collapse_btn_left.configure(text="▾") 
-            
-    def set_desktop_layout_status(self, text, timeout=2500):
-        self.desktop_layout_status.configure(text=text)
-        self.after(timeout, lambda: self.desktop_layout_status.configure(text=" "))
-
-    # ==================================================
-    # End of muddafucking initilisation bro
-    # ==================================================
-    
-    def _backup_taskbar_and_minimize(self):
-        # run the actual backup
-        self.actions.backup_pinned_shortcuts()
-
-        # give time for status text to show
-        def minimize_both():
-            self.iconify()
-            if (
-                hasattr(self, "advanced_panel")
-                and self.advanced_panel
-                and self.advanced_panel.winfo_viewable()
-            ):
-                self.advanced_panel.iconify()
-
-        self.after(1200, minimize_both)
-
-    def _on_main_unmap(self, event=None):
-        # Ignore minimize
-        if self.state() == "iconic":
-            return
-
-        # Only act when actually withdrawn (to tray)
-        if self.state() != "withdrawn":
-            return
-
-        # Ensure right panel is not left floating
-        if (
-            hasattr(self, "advanced_panel_var")
-            and self.advanced_panel_var
-            and self.advanced_panel_var.winfo_exists()
-            and self.advanced_panel_var.winfo_viewable()
-        ):
-            self.toggle_side_panel()
+        # ==================================================
+        # Section factory
+        # ==================================================
+        def make_section(title_text):
+            section = QWidget(self.main_frame)
+            layout = QVBoxLayout(section)
+            layout.setContentsMargins(10, 5, 10, 5)
+
+            sec_header = QWidget(section)
+            sec_header_layout = QHBoxLayout(sec_header)
+            sec_header_layout.setContentsMargins(0, 0, 0, 0)
+
+            sec_title = QLabel(title_text, sec_header)
+            sec_title.setStyleSheet("font-size: 15px; font-weight: bold;")
+
+            toggle = QPushButton("▾", sec_header)
+            toggle.setFixedSize(28, 20)
+            toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+
+            sec_header_layout.addWidget(sec_title)
+            sec_header_layout.addStretch()
+            sec_header_layout.addWidget(toggle)
+
+            # ✅ attach content to section for master toggle
+            section.content = QWidget(section)
+            content = section.content
+
+            content_layout = QVBoxLayout(content)
+            content_layout.setContentsMargins(10, 5, 10, 5)
+
+            layout.addWidget(sec_header)
+            layout.addWidget(content)
             
 
-    def _on_main_configure(self, event=None):
-        """
-        If main window is minimized, iconify the right panel too.
-        Do NOT send anything to tray.
-        """
-        try:
-            if self.state() == "iconic":
-                if (
-                    hasattr(self, "advanced_panel_var")
-                    and self.advanced_panel_var
-                    and self.advanced_panel_var.winfo_exists()
-                ):
-                    self.advanced_panel_var.iconify()
-        except Exception:
-            pass
+            def toggle_section():
+                visible = content.isVisible()
+                content.setVisible(not visible)
+                toggle.setText("▸" if visible else "▾")
+
+            toggle.clicked.connect(toggle_section)
+
+            return section, content_layout
+
+        # ==================================================
+        # User Interface section (SIMPLE + STABLE)
+        # ==================================================
+        ui_section, ui_layout = make_section("User Interface")
+
+        self.main_layout.addWidget(ui_section)
+        self.left_sections.append(ui_section)
+
+        # ---- Dark Mode ----
+        dark_mode_cb = QCheckBox("Dark Mode")
+        dark_mode_cb.setChecked(state.get("theme_dark", True))
+        ui_layout.addWidget(dark_mode_cb)
+
+        # ---- Power Options master ----
+        power_cb = QCheckBox("Power Options")
+        power_cb.setChecked(state.get("power_options_enabled", False))
+        ui_layout.addWidget(power_cb)
+
+        # ---- Power Options container (VERTICAL, BELOW) ----
+        power_container = QWidget(ui_section.content)
+        power_layout = QVBoxLayout(power_container)
+        power_layout.setContentsMargins(20, 0, 0, 0)  # slight indent like CTk
+        power_layout.setSpacing(4)
+
+        ui_layout.addWidget(power_container)
+
+        sleep_cb = QCheckBox("Sleep")
+        sleep_cb.setChecked(state.get("power_sleep_enabled", False))
+        power_layout.addWidget(sleep_cb)
+
+        logout_cb = QCheckBox("Log out")
+        logout_cb.setChecked(state.get("power_logout_enabled", False))
+        power_layout.addWidget(logout_cb)
+
+        shutdown_cb = QCheckBox("Shutdown")
+        shutdown_cb.setChecked(state.get("power_shutdown_enabled", False))
+        power_layout.addWidget(shutdown_cb)
+
+        # ---- STATE HANDLERS ----
+        def save_sleep(checked: bool):
+            state["power_sleep_enabled"] = checked
+            save_state(state)
+
+        def save_logout(checked: bool):
+            state["power_logout_enabled"] = checked
+            save_state(state)
+
+        def save_shutdown(checked: bool):
+            state["power_shutdown_enabled"] = checked
+            save_state(state)
+
+        def update_power_visibility():
+            power_container.setVisible(power_cb.isChecked())
+
+        def on_power_master_changed(checked: bool):
+            state["power_options_enabled"] = checked
+            save_state(state)
+            update_power_visibility()
+
+        power_cb.stateChanged.connect(
+            lambda v: on_power_master_changed(v == Qt.CheckState.Checked)
+        )
+
+        sleep_cb.stateChanged.connect(lambda v: save_sleep(v == Qt.CheckState.Checked))
+        logout_cb.stateChanged.connect(lambda v: save_logout(v == Qt.CheckState.Checked))
+        shutdown_cb.stateChanged.connect(lambda v: save_shutdown(v == Qt.CheckState.Checked))
+
+        # Initial state
+        update_power_visibility()
+
+
+
+
+
+
+
+
         
-    def _set_backup_status_timed(self, text, duration_ms=2000):
-        if hasattr(self, "_backup_status_after_id") and self._backup_status_after_id:
-            self.after_cancel(self._backup_status_after_id)
+        always_on_top_cb = QCheckBox("Always on Top")
+        always_on_top_cb.setChecked(state.get("main_always_on_top_enabled", True))
+        ui_layout.addWidget(always_on_top_cb)
 
-        self.backup_status_label.configure(text=text)
-        self._backup_status_after_id = self.after(
-            duration_ms,
-            lambda: self.backup_status_label.configure(text="")
-    )   
+        def on_always_on_top_changed(checked):
+            self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
+            self.show()  # required for flag changes to apply
+
+            state["main_always_on_top_enabled"] = checked
+            save_state(state)
+
+        always_on_top_cb.stateChanged.connect(
+            lambda v: on_always_on_top_changed(v == Qt.CheckState.Checked)
+        )
         
-    def _mark_ui_ready(self):
-                self._ui_ready = True
+        tooltips_cb = QCheckBox("Enable Tooltips")
+        tooltips_cb.setChecked(state.get("tooltips_enabled", True))
+        ui_layout.addWidget(tooltips_cb)
 
-    # ==================================================
-    # Window magnet sync (main <-> advanced)
-    # ==================================================
+        def on_tooltips_changed(checked):
+            state["tooltips_enabled"] = checked
+            save_state(state)
 
-    def _sync_windows(self, source):
-        if self._syncing_windows:
-            return
+        tooltips_cb.stateChanged.connect(
+            lambda v: on_tooltips_changed(v == Qt.CheckState.Checked)
+        )
         
-        if not getattr(self, "_ui_ready", False):
-            return
+        # Minimize All
+        min_all_cb = QCheckBox("Minimize All On")
+        min_all_cb.setChecked(state.get("minimize_all_enabled", False))
+        ui_layout.addWidget(min_all_cb)
+
+        def on_min_all_changed(checked: bool):
+            state["minimize_all_enabled"] = checked
+            save_state(state)
+
+            # call logic if it exists
+            if hasattr(self.actions, "minimize_all_toggle"):
+                self.actions.minimize_all_toggle(checked)
+            elif hasattr(self.actions, "minimize_all"):
+                # alt naming
+                self.actions.minimize_all(checked)
+
+        min_all_cb.stateChanged.connect(lambda v: on_min_all_changed(v == Qt.CheckState.Checked))
+
+        # ==================================================
+        # Screen Mover section (visual only)
+        # ==================================================
+        screen_section, screen_layout = make_section("Screen Mover")
+
+        # -------------------------
+        # Screen Mover (placeholders, no logic yet)
+        # -------------------------
+
+        # Middle Mouse to Move
+        mmb_cb = QCheckBox("Middle Mouse to Move")
+        mmb_cb.setChecked(state.get("mmb_activation_enabled", True))
+        screen_layout.addWidget(mmb_cb)
+
+        def on_mmb_changed(checked: bool):
+            state["mmb_activation_enabled"] = checked
+            save_state(state)
+
+        mmb_cb.stateChanged.connect(
+            lambda v: on_mmb_changed(v == Qt.CheckState.Checked)
+        )
+
+
+        # Windows in Move Zone (auto-align)
+        auto_align_cb = QCheckBox("Windows in Move Zone")
+        auto_align_cb.setChecked(state.get("auto_align_enabled", False))
+        screen_layout.addWidget(auto_align_cb)
+
+        def on_auto_align_changed(checked: bool):
+            state["auto_align_enabled"] = checked
+            save_state(state)
+
+        auto_align_cb.stateChanged.connect(
+            lambda v: on_auto_align_changed(v == Qt.CheckState.Checked)
+        )
+
+
+        self.main_layout.addWidget(screen_section)
+        self.left_sections.append(screen_section)
+
         
-        # 🔑 advanced panel may not exist yet
-        if not hasattr(self, "advanced_panel_var"):
-            return
+        # ==================================================
+        # Drive Reminder Options (visual only)
+        # ==================================================
+        usb_section, usb_layout = make_section("Drive Reminder Options")
 
-        if self._drag_owner and self._drag_owner != source:
-            return
 
-        side = self.advanced_panel_var
-        if not side or not side.winfo_exists():
-            return
+        # Idle-plugged reminder
+        idle_cb = QCheckBox("Idle-plugged Reminder")
+        idle_cb.setChecked(state.get("usb_idle_enabled", True))
+        usb_layout.addWidget(idle_cb)
 
-        self._syncing_windows = True
-        try:
-            if source == "main":
-                x = self.winfo_x()
-                y = self.winfo_y()
+        def on_idle_changed(checked: bool):
+            state["usb_idle_enabled"] = checked
+            save_state(state)
 
-                target_x = x + self.winfo_width()
-                target_y = y
+        idle_cb.stateChanged.connect(
+            lambda v: on_idle_changed(v == Qt.CheckState.Checked)
+        )
 
-                if side.winfo_x() == target_x and side.winfo_y() == target_y:
-                    return
 
-                side.geometry(f"+{target_x}+{target_y}")
+        # Download-finished reminder
+        download_cb = QCheckBox("Download-finished Reminder")
+        download_cb.setChecked(state.get("usb_download_enabled", True))
+        usb_layout.addWidget(download_cb)
 
-            elif source == "side":
-                x = side.winfo_x()
-                y = side.winfo_y()
+        def on_download_changed(checked: bool):
+            state["usb_download_enabled"] = checked
+            save_state(state)
 
-                target_x = x - self.winfo_width()
-                target_y = y
+        download_cb.stateChanged.connect(
+            lambda v: on_download_changed(v == Qt.CheckState.Checked)
+        )
 
-                if self.winfo_x() == target_x and self.winfo_y() == target_y:
-                    return
+        # Plug / unplug notification
+        plug_cb = QCheckBox("Plug / Unplug Notification")
+        plug_cb.setChecked(state.get("usb_plug_enabled", True))
+        usb_layout.addWidget(plug_cb)
 
-                self.geometry(f"+{target_x}+{target_y}")
+        def on_plug_changed(checked: bool):
+            state["usb_plug_enabled"] = checked
+            save_state(state)
 
-        finally:
-            self._syncing_windows = False
+        plug_cb.stateChanged.connect(
+            lambda v: on_plug_changed(v == Qt.CheckState.Checked)
+        )
 
-    def _set_drag_owner(self, who):
-        self._drag_owner = who
+        self.main_layout.addWidget(usb_section)
+        self.left_sections.append(usb_section)
 
-    def _clear_drag_owner(self):
-        self._drag_owner = None
-
-    def _sync_toggle_label(self, switch, base_text, var):
-        if var.get():
-            switch.configure(text=f"{base_text} On")
-        else:
-            switch.configure(text=f"{base_text} Off")
         
-    def toggle_all_left_sections(self):
-        new_state = not self.master_toggle_left_var.get()
-        self.master_toggle_left_var.set(new_state)
+        # ==================================================
+        # Organising Utilities (visual only)
+        # ==================================================
+        org_section, org_layout = make_section("Organising Utilities")
 
-        for section in self.collapsible_sections:
-            if not isinstance(section, CollapsibleSection):
-                continue
+        # -------------------------
+        # Desktop Screenshot (placeholder toggle)
+        # -------------------------
+        screenshot_cb = QCheckBox("Desktop Screenshot")
+        screenshot_cb.setChecked(state.get("desktop_screenshot_enabled", True))
+        org_layout.addWidget(screenshot_cb)
 
-            if section.parent == self.main_frame:
-                if section.open != new_state:
-                    section.toggle()
+        def on_screenshot_changed(checked: bool):
+            state["desktop_screenshot_enabled"] = checked
+            save_state(state)
 
-        self.master_collapse_btn_left.configure(text="▾" if new_state else "▸")
-        self.save_all_settings()
+        screenshot_cb.stateChanged.connect(
+            lambda v: on_screenshot_changed(v == Qt.CheckState.Checked)
+        )
+
+        # -------------------------
+        # Folder → Desktop (placeholder toggle + input)
+        # -------------------------
+        folder_row = QWidget()
+        folder_row_layout = QHBoxLayout(folder_row)
+        folder_row_layout.setContentsMargins(0, 0, 0, 0)
+        folder_row_layout.setSpacing(8)
+
+        folder_cb = QCheckBox("Folder → Desktop")
+        folder_cb.setChecked(state.get("folder_to_desktop_enabled", False))
+
+        folder_input = QLineEdit()
+        folder_input.setPlaceholderText("Folder name")
+        folder_input.setText(state.get("folder_to_desktop_name", ""))
+        folder_input.setEnabled(folder_cb.isChecked())
+
+        folder_row_layout.addWidget(folder_cb)
+        folder_row_layout.addWidget(folder_input)
+
+        org_layout.addWidget(folder_row)
+
+        def on_folder_toggle(checked: bool):
+            state["folder_to_desktop_enabled"] = checked
+            folder_input.setEnabled(checked)
+            save_state(state)
+
+        def on_folder_name_changed(text: str):
+            state["folder_to_desktop_name"] = text
+            save_state(state)
+
+        folder_cb.stateChanged.connect(
+            lambda v: on_folder_toggle(v == Qt.CheckState.Checked)
+        )
+        folder_input.textChanged.connect(on_folder_name_changed)
+
+
+
+
+        self.main_layout.addWidget(org_section)
+        self.left_sections.append(org_section)
+
         
-        self.master_collapse_btn_left.configure(text="▾" if new_state else "▸")
-        self.save_all_settings()
+        # ==================================================
+        # Desktop Backup Utilities (visual only)
+        # ==================================================
+        backup_section, backup_layout = make_section("Desktop Backup Utilities")
+
+        # -------------------------
+        # Backup Taskbar (placeholder)
+        # -------------------------
+        backup_taskbar_cb = QCheckBox("Backup Taskbar")
+        backup_taskbar_cb.setChecked(state.get("backup_taskbar_enabled", True))
+        backup_layout.addWidget(backup_taskbar_cb)
+
+        def on_backup_taskbar_changed(checked: bool):
+            state["backup_taskbar_enabled"] = checked
+            save_state(state)
+
+        backup_taskbar_cb.stateChanged.connect(
+            lambda v: on_backup_taskbar_changed(v == Qt.CheckState.Checked)
+        )
         
-    def take_desktop_screenshot(self):
-        """
-        Universal desktop screenshotter:
-        - Iconifies main GUI
-        - Iconifies right panel if open
-        - Takes screenshot
-        - Prompts for save location
-        - Ends iconified (both panels)
-        """
+        # -------------------------
+        # Open Backup Folder (placeholder)
+        # -------------------------
+        open_backup_cb = QCheckBox("Open Backup Folder")
+        open_backup_cb.setChecked(state.get("open_backup_enabled", True))
+        backup_layout.addWidget(open_backup_cb)
 
-        try:
-            # -------------------------------------------------------
-            # 1) Iconify BOTH panels immediately
-            # -------------------------------------------------------
-            if (
-                hasattr(self, "advanced_panel")
-                and self.advanced_panel
-                and self.advanced_panel.winfo_viewable()
-            ):
-                self.advanced_panel.iconify()
+        def on_open_backup_changed(checked: bool):
+            state["open_backup_enabled"] = checked
+            save_state(state)
 
-            self.iconify()
-            self.update_idletasks()
-            time.sleep(0.3)  # ensure desktop is clean
+        open_backup_cb.stateChanged.connect(
+            lambda v: on_open_backup_changed(v == Qt.CheckState.Checked)
+        )
+        
+        # -------------------------
+        # Change Backup Folder (placeholder)
+        # -------------------------
+        change_backup_cb = QCheckBox("Change Backup Folder")
+        change_backup_cb.setChecked(state.get("change_backup_folder_enabled", False))
+        backup_layout.addWidget(change_backup_cb)
 
-            # -------------------------------------------------------
-            # 2) Capture full desktop
-            # -------------------------------------------------------
-            img = ImageGrab.grab()
+        def on_change_backup_changed(checked: bool):
+            state["change_backup_folder_enabled"] = checked
+            save_state(state)
 
-            # -------------------------------------------------------
-            # 3) Save dialog
-            # -------------------------------------------------------
-            default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+        change_backup_cb.stateChanged.connect(
+            lambda v: on_change_backup_changed(v == Qt.CheckState.Checked)
+        )
+        
+        
+        # -------------------------
+        # Backup output path (placeholder input)
+        # -------------------------
+        backup_path_input = QLineEdit()
+        backup_path_input.setPlaceholderText("Backup output folder path")
+        backup_path_input.setText(
+            state.get("backup_output_path", "")
+        )
+        backup_layout.addWidget(backup_path_input)
 
-            save_path = filedialog.asksaveasfilename(
-                title="Save Desktop Screenshot",
-                defaultextension=".png",
-                initialfile=default_name,
-                filetypes=[("PNG Image", "*.png")],
+        def on_backup_path_changed(text: str):
+            state["backup_output_path"] = text
+            save_state(state)
+
+        backup_path_input.textChanged.connect(on_backup_path_changed)
+
+
+
+
+        self.main_layout.addWidget(backup_section)
+        self.left_sections.append(backup_section)
+
+        
+        # ==================================================
+        # Desktop Icon Organiser (visual only)
+        # ==================================================
+        icon_section, icon_layout = make_section("Desktop Icon Organiser")
+
+        # -------------------------
+        # Desktop Icon Layout (placeholders)
+        # -------------------------
+
+        # Capture desktop layout
+        capture_layout_cb = QCheckBox("Capture Desktop Layout")
+        capture_layout_cb.setChecked(state.get("capture_desktop_layout_enabled", True))
+        icon_layout.addWidget(capture_layout_cb)
+
+        def on_capture_layout_changed(checked: bool):
+            state["capture_desktop_layout_enabled"] = checked
+            save_state(state)
+
+        capture_layout_cb.stateChanged.connect(
+            lambda v: on_capture_layout_changed(v == Qt.CheckState.Checked)
+        )
+
+
+        # Restore desktop layout
+        restore_layout_cb = QCheckBox("Restore Desktop Layout")
+        restore_layout_cb.setChecked(state.get("restore_desktop_layout_enabled", True))
+        icon_layout.addWidget(restore_layout_cb)
+
+        def on_restore_layout_changed(checked: bool):
+            state["restore_desktop_layout_enabled"] = checked
+            save_state(state)
+
+        restore_layout_cb.stateChanged.connect(
+            lambda v: on_restore_layout_changed(v == Qt.CheckState.Checked)
+        )
+
+        self.main_layout.addWidget(icon_section)
+        self.left_sections.append(icon_section)
+
+        
+        self.main_layout.addStretch(1)
+        
+        def toggle_all():
+            # If ANY section is visible → collapse all
+            any_visible = any(
+                section.content.isVisible()
+                for section in self.left_sections
             )
 
-            if save_path:
-                img.save(save_path)
-                print(f"[SCREENSHOT] Saved: {save_path}")
-            else:
-                print("[SCREENSHOT] Cancelled by user")
+            new_state = not any_visible
 
-        except Exception as e:
-            print("[SCREENSHOT] Error:", e)
+            master_btn.setText("▾" if new_state else "▸")
 
-        finally:
-            # -------------------------------------------------------
-            # 4) End state: keep both panels iconified
-            # -------------------------------------------------------
-            if (
-                hasattr(self, "advanced_panel")
-                and self.advanced_panel
-                and self.advanced_panel.winfo_exists()
-            ):
-                self.advanced_panel.iconify()
-
-            self.iconify()
-
-    def _choose_brave_export_path(self):
-        default_name = f"Brave_Bookmarks_Export_{datetime.now().strftime('%Y-%m-%d')}.html"
-
-        path = filedialog.asksaveasfilename(
-            parent=self,  # <- critical: owned by your CTk root
-            title="Save Brave Bookmarks As",
-            defaultextension=".html",
-            initialfile=default_name,
-            filetypes=[("HTML files", "*.html")],
-        )
-
-        if path:
-            self.brave_export_path_var.set(path)
-
-    def _run_brave_export(self):
-        default_name = f"Brave_Bookmarks_{datetime.now().strftime('%Y-%m-%d')}.html"
-
-        path = filedialog.asksaveasfilename(
-            parent=self,   # ✅ owned by CTk root
-            title="Save Brave Bookmarks As",
-            defaultextension=".html",
-            initialfile=default_name,
-            filetypes=[("HTML files", "*.html")]
-        )
-        
-        if not path:
-            return
-        
-        if path:
-            self.brave_export_path_var.set(path)
-            self.save_all_settings()
-            BraveBookmarksExporter().export_to_file(path)
+            for section in self.left_sections:
+                section.content.setVisible(new_state)
             
-            # 👇 get out of the way
-            self.iconify()
-            if hasattr(self, "advanced_panel") and self.advanced_panel.winfo_viewable():
-                self.advanced_panel.iconify()
-                
-                
-    def open_this_pc(self):
-        os.system("explorer shell:MyComputerFolder")
-
-        def minimize_both():
-            self.iconify()
-            if hasattr(self, "advanced_panel") and self.advanced_panel.winfo_viewable():
-                self.advanced_panel.iconify()
-
-        self.after(1000, minimize_both)
-
-    # ==============================================================
-    # Side panel toggle (NO UI CREATION HERE)
-    # ==============================================================
-    
-    def toggle_side_panel(self):
-        panel = self.advanced_panel
-
-        if panel.winfo_viewable():
-            panel.hide()
-            self.expand_btn.configure(text="▾")
-            self.advanced_panel_open_var.set(False)   # ← REQUIRED
-        else:
-            panel.show()
-            self.expand_btn.configure(text="▸")
-            self.advanced_panel_open_var.set(True)    # ← REQUIRED
+        master_btn.clicked.connect(toggle_all)
 
 
-        self.save_all_settings()
-    
     def _get_arrow_colors(self):
-        if ctk.get_appearance_mode() == "Dark":
+        palette = self.palette()
+        bg = palette.color(self.backgroundRole())
+
+        # Simple luminance check
+        is_dark = (bg.red() + bg.green() + bg.blue()) / 3 < 128
+
+        if is_dark:
             return {
                 "text": "#E6E6E6",
                 "hover": "#303030",
@@ -1292,256 +674,906 @@ class UtilityControlApp(ctk.CTk):
                 "text": "#1A1A1A",
                 "hover": "#D0D0D0",
             }
-
+        
     def update_collapsible_arrow_colours(self):
-        arrow_colors = self._get_arrow_colors()
+        colors = self._get_arrow_colors()
 
-        # LEFT (main window)
-        if hasattr(self, "master_collapse_btn_left"):
-            self.master_collapse_btn_left.configure(
-                text_color=arrow_colors["text"],
-                hover_color=arrow_colors["hover"],
-            )
+        style = f"""
+            QPushButton {{
+                color: {colors['text']};
+                background: transparent;
+                border: none;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {colors['hover']};
+            }}
+        """
 
-        # RIGHT (advanced panel)
-        if (
-            hasattr(self, "advanced_panel")
-            and self.advanced_panel
-            and hasattr(self.advanced_panel, "master_collapse_btn_right")
-        ):
-            self.advanced_panel.master_collapse_btn_right.configure(
-                text_color=arrow_colors["text"],
-                hover_color=arrow_colors["hover"],
-            )
+        for btn in getattr(self, "arrow_buttons", []):
+            btn.setStyleSheet(style)
 
-        # All section arrows (both panels)
-        for section in self.collapsible_sections:
-            if isinstance(section, CollapsibleSection):
-                section.update_arrow_color()
 
-    def apply_always_on_top(self, enabled: bool):
-        """Apply Always-on-Top state using both Tk and WinAPI."""
-        try:
-            self.attributes("-topmost", enabled)
-        except Exception as e:
-            print("[AlwaysOnTop] Tk error:", e)
+    # def _run_brave_export(self):
+    #     default_name = f"Brave_Bookmarks_{datetime.now().strftime('%Y-%m-%d')}.html"
 
-        try:
-            hwnd = self.winfo_id()
-            hWndTopMost = -1 if enabled else -2
-            ctypes.windll.user32.SetWindowPos(
-                hwnd,
-                hWndTopMost,
-                0, 0, 0, 0,
-                0x0003  # SWP_NOSIZE | SWP_NOMOVE
-            )
-        except Exception as e:
-            print("[AlwaysOnTop] WinAPI error:", e)
+    #     path, _ = QFileDialog.getSaveFileName(
+    #         self,  # QWidget parent ✔
+    #         "Save Brave Bookmarks As",
+    #         default_name,
+    #         "HTML files (*.html)"
+    #     )
 
-    def resize_to_fit(self):
-        """Keep the window height locked; never auto-resize to content."""
-        self.update_idletasks()  # Recalculate layout
+    #     if not path:
+    #         return
+
+    #     self.brave_export_path = path
+    #     self.save_all_settings()
+    #     BraveBookmarksExporter().export_to_file(path)
+        
+    
+        
+    # --------------------------------------------------
+    # Window close hook (replaces protocol WM_DELETE)
+    # --------------------------------------------------
+    def closeEvent(self, event):
+        """
+        Temporary behaviour:
+        real tray logic comes later with QSystemTrayIcon
+        """
+        # event.ignore()  # if you want tray-only close later
+        event.accept()
+
+    
+        
+        
+
+
+
+        # def on_auto_align_toggle():
+        #     enabled = self.auto_align_switch.isChecked()
+        #     self.auto_align_enabled = enabled
+
+        #     self.auto_align_switch.setText(
+        #         "Windows In Move Zone On" if enabled else "Windows In Move Zone Off"
+        #     )
+
+        #     self.actions.auto_align_toggle()
+
+        # self.auto_align_switch.stateChanged.connect(lambda _: on_auto_align_toggle())
+
+        # self.auto_align_switch.setToolTip(
+        #     "Keeps window title bars inside the flick activation zone.\n"
+        #     "Only activates after you finish dragging a window.\n"
+        #     "Never interferes during movement."
+        # )
+
+        # # initial label sync
+        # self.auto_align_switch.setText(
+        #     "Windows In Move Zone On" if self.auto_align_enabled else "Windows In Move Zone Off"
+        # )
+
+        # self.mover_section.content_layout.addWidget(self.auto_align_switch)
+
+        
+
+        # def on_idle_toggle():
+        #     enabled = self.opt_idle.isChecked()
+        #     self.opt_idle_enabled = enabled
+        #     self.opt_idle.setText(
+        #         "Idle-plugged Reminder On" if enabled else "Idle-plugged Reminder Off"
+        #     )
+        #     self.save_all_settings()
+
+        # self.opt_idle.stateChanged.connect(lambda _: on_idle_toggle())
+
+        # # initial label sync
+        # self.opt_idle.setText(
+        #     "Idle-plugged Reminder On" if self.opt_idle_enabled else "Idle-plugged Reminder Off"
+        # )
+
+        # self.usb_section.content_layout.addWidget(self.opt_idle)
+        
+        # self.opt_download_enabled = self.saved_state.get("usb_download_enabled", True)
+
+        # self.opt_download = QCheckBox(self.usb_section.content)
+        # self.opt_download.setChecked(self.opt_download_enabled)
+
+        # def on_download_toggle():
+        #     enabled = self.opt_download.isChecked()
+        #     self.opt_download_enabled = enabled
+        #     self.opt_download.setText(
+        #         "Download-finished Reminder On" if enabled else "Download-finished Reminder Off"
+        #     )
+        #     self.save_all_settings()
+
+        # self.opt_download.stateChanged.connect(lambda _: on_download_toggle())
+
+        # # initial label sync
+        # self.opt_download.setText(
+        #     "Download-finished Reminder On" if self.opt_download_enabled else "Download-finished Reminder Off"
+        # )
+
+        # self.usb_section.content_layout.addWidget(self.opt_download)
+        
+        
+        # self.opt_plug_enabled = self.saved_state.get("usb_plug_enabled", True)
+
+        # self.opt_plug = QCheckBox(self.usb_section.content)
+        # self.opt_plug.setChecked(self.opt_plug_enabled)
+
+        # def on_plug_toggle():
+        #     enabled = self.opt_plug.isChecked()
+        #     self.opt_plug_enabled = enabled
+        #     self.opt_plug.setText(
+        #         "Plug / Unplug Notification On" if enabled else "Plug / Unplug Notification Off"
+        #     )
+        #     self.save_all_settings()
+
+        # self.opt_plug.stateChanged.connect(lambda _: on_plug_toggle())
+
+        # # initial label sync
+        # self.opt_plug.setText(
+        #     "Plug / Unplug Notification On" if self.opt_plug_enabled else "Plug / Unplug Notification Off"
+        # )
+
+        # self.usb_section.content_layout.addWidget(self.opt_plug)
+
+        
+        # --------------------------------------------------------------
+        # Desktop Screenshot Button
+        # --------------------------------------------------------------
+
+        # self.btn_desktop_screenshot = QPushButton(
+        #     "Desktop Screenshot",
+        #     self.organise_frame
+        # )
+        # self.btn_desktop_screenshot.setFixedWidth(btn_width)
+        # self.btn_desktop_screenshot.clicked.connect(self.take_desktop_screenshot)
+
+        # self.btn_desktop_screenshot.setToolTip(
+        #     "Minimizes the app, takes a full desktop screenshot.\n"
+        #     "Choose a save location, then minimizes the window."
+        # )
+
+        # self.organising_section.content_layout.addWidget(
+        #     self.btn_desktop_screenshot,
+        #     alignment=Qt.AlignmentFlag.AlignLeft
+        # )
+        
+        # # --------------------------------------------------------------
+        # # Folder Creator Row
+        # # --------------------------------------------------------------
+
+        # folder_row = QWidget(self.organise_frame)
+        # folder_row_layout = QHBoxLayout(folder_row)
+        # folder_row_layout.setContentsMargins(10, 0, 10, 0)
+        # folder_row_layout.setSpacing(5)
+
+        # self.organising_section.content_layout.addWidget(folder_row)
+        
+        
+        # self.btn_create_folder = QPushButton(
+        #     "Folder To Desktop",
+        #     folder_row
+        # )
+        # self.btn_create_folder.setFixedWidth(btn_width)
+        # self.btn_create_folder.setEnabled(False)
+        # self.btn_create_folder.clicked.connect(self._create_desktop_folder)
+
+        # self.btn_create_folder.setToolTip(
+        #     "Type a folder name in the box → Click to create.\n"
+        #     "A new folder will appear instantly on your Desktop.\n"
+        #     "Greyed out if no name entered.\n"
+        #     "App self-minimizes after a few seconds."
+        # )
+
+        # folder_row_layout.addWidget(self.btn_create_folder)
+        
+        # entry_group = QWidget(folder_row)
+        # entry_layout = QHBoxLayout(entry_group)
+        # entry_layout.setContentsMargins(0, 0, 0, 0)
+        # entry_layout.setSpacing(5)
+
+        # folder_row_layout.addWidget(entry_group)
+        
+        # self.folder_name_entry = QLineEdit(entry_group)
+        # self.folder_name_entry.setPlaceholderText("Folder name…")
+        # self.folder_name_entry.setFixedWidth(250)
+
+        # entry_layout.addWidget(self.folder_name_entry)
+        
+        # self.folder_status_label = QLabel(" ", entry_group)  # keep width
+        # self.folder_status_label.setFixedWidth(300)
+        # self.folder_status_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        # self.folder_status_label.setStyleSheet(
+        #     "font-weight: bold; color: #1f6aa5;"
+        # )
+
+        # entry_layout.addWidget(self.folder_status_label)
+        
+        # self.folder_name_entry.textChanged.connect(
+        #     self._update_create_folder_button
+        # )
+
+
+        
+        # # ==============================================================
+        # # Backup Taskbar + Open Backup
+        # # ==============================================================
+
+        # backup_buttons_frame = QWidget(self.desktop_backup_frame)
+        # backup_buttons_layout = QVBoxLayout(backup_buttons_frame)
+        # backup_buttons_layout.setContentsMargins(10, 0, 10, 0)
+        # backup_buttons_layout.setSpacing(4)
+
+        # self.desktop_backup_section.content_layout.addWidget(
+        #     backup_buttons_frame,
+        #     alignment=Qt.AlignmentFlag.AlignLeft
+        # )
+        
+        # backup_row = QWidget(backup_buttons_frame)
+        # backup_row_layout = QHBoxLayout(backup_row)
+        # backup_row_layout.setContentsMargins(0, 0, 0, 0)
+        # backup_row_layout.setSpacing(5)
+
+        # backup_buttons_layout.addWidget(backup_row)
+        
+        # self.btn_backup_pins = QPushButton(
+        #     "Backup Taskbar",
+        #     backup_row
+        # )
+        # self.btn_backup_pins.setFixedWidth(btn_width)
+        # self.btn_backup_pins.clicked.connect(
+        #     self._backup_taskbar_and_minimize
+        # )
+
+        # self.btn_backup_pins.setToolTip(
+        #     "Backs up Taskbar icons to a folder chosen\n"
+        #     "by the Change Folder button."
+        # )
+
+        # backup_row_layout.addWidget(self.btn_backup_pins)
+        
+        # self.backup_status_label = QLabel(" ", backup_row)  # keep width
+        # self.backup_status_label.setFixedWidth(140)
+        # self.backup_status_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        # self.backup_status_label.setStyleSheet(
+        #     "font-weight: bold; color: #1f6aa5;"
+        # )
+
+        # backup_row_layout.addWidget(self.backup_status_label)
+
+
+        # # ===================================================================
+        # # Backup Folder Path Display + Change Button
+        # # ===================================================================
+
+        # path_inner = QWidget(self.desktop_backup_frame)
+        # path_inner_layout = QVBoxLayout(path_inner)
+        # path_inner_layout.setContentsMargins(10, 0, 10, 0)
+        # path_inner_layout.setSpacing(4)
+
+        # self.desktop_backup_section.content_layout.addWidget(path_inner)
+
+        # self.backup_folder_path = self.saved_state.get(
+        #     "backup_folder_path",
+        #     str(Path.home())
+        # )
+        
+        # self.btn_change_path = QPushButton(
+        #     "Change Folder",
+        #     path_inner
+        # )
+        # self.btn_change_path.setFixedWidth(btn_width)
+        # self.btn_change_path.clicked.connect(
+        #     self.actions.change_backup_folder
+        # )
+
+        # self.btn_change_path.setToolTip(
+        #     "Chooses folder path for backing up Taskbar icons."
+        # )
+
+        # path_inner_layout.addWidget(
+        #     self.btn_change_path,
+        #     alignment=Qt.AlignmentFlag.AlignLeft
+        # )
+        
+        # self.btn_open_backup = QPushButton(
+        #     "Open Backup",
+        #     backup_buttons_frame
+        # )
+        # self.btn_open_backup.setFixedWidth(btn_width)
+        # self.btn_open_backup.clicked.connect(
+        #     self.actions.open_backup_folder
+        # )
+
+        # self.btn_open_backup.setToolTip(
+        #     "Opens backed up Taskbar icons folder location."
+        # )
+
+        # backup_buttons_layout.addWidget(
+        #     self.btn_open_backup,
+        #     alignment=Qt.AlignmentFlag.AlignLeft
+        # )
+
+        # self.entry_backup_path = QLineEdit(path_inner)
+        # self.entry_backup_path.setText(self.backup_folder_path)
+        # self.entry_backup_path.setReadOnly(True)
+        # self.entry_backup_path.setFixedWidth(420)
+
+        # path_inner_layout.addWidget(self.entry_backup_path)
+
+        
+        
+        # # ==============================================================
+        # # Capture / Restore Desktop Layout
+        # # ==============================================================
+
+        # self.icon_buttons_frame = QWidget(self.desktop_icon_frame)
+        # icon_buttons_layout = QVBoxLayout(self.icon_buttons_frame)
+        # icon_buttons_layout.setContentsMargins(10, 0, 10, 0)
+        # icon_buttons_layout.setSpacing(4)
+
+        # self.desktop_icon_layout.content_layout.addWidget(
+        #     self.icon_buttons_frame,
+        #     alignment=Qt.AlignmentFlag.AlignLeft
+        # )
+        
+        # capture_row = QWidget(self.icon_buttons_frame)
+        # capture_row_layout = QHBoxLayout(capture_row)
+        # capture_row_layout.setContentsMargins(0, 0, 0, 0)
+        # capture_row_layout.setSpacing(6)
+
+        # icon_buttons_layout.addWidget(capture_row)
+        
+        # self.btn_capture_layout = QPushButton(
+        #     "Capture Desktop Layout",
+        #     capture_row
+        # )
+        # self.btn_capture_layout.setFixedWidth(btn_width)
+        # self.btn_capture_layout.setFixedHeight(28)
+        # self.btn_capture_layout.clicked.connect(
+        #     self.actions.capture_desktop_layout
+        # )
+
+        # self.btn_capture_layout.setToolTip(
+        #     "Captures and restores icon layout on desktops.\n"
+        #     "Make sure you right click Desktop → View → turn OFF Auto arrange icons."
+        # )
+
+        # capture_row_layout.addWidget(self.btn_capture_layout)
+        
+        # self.desktop_layout_status = QLabel(" ", capture_row)  # keep width
+        # self.desktop_layout_status.setFixedWidth(140)
+        # self.desktop_layout_status.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        # self.desktop_layout_status.setStyleSheet(
+        #     "font-weight: bold; color: #1f6aa5;"
+        # )
+
+        # capture_row_layout.addWidget(self.desktop_layout_status)
+        
+        
+        # self.btn_restore_layout = QPushButton(
+        #     "Restore Layout",
+        #     self.icon_buttons_frame
+        # )
+        # self.btn_restore_layout.setFixedWidth(btn_width)
+        # self.btn_restore_layout.setFixedHeight(28)
+        # self.btn_restore_layout.clicked.connect(
+        #     self.actions.restore_desktop_layout
+        # )
+
+        # self.btn_restore_layout.setToolTip(
+        #     "Restores a previously saved desktop icon layout.\n"
+        #     "Auto arrange icons must be turned OFF."
+        # )
+
+        # icon_buttons_layout.addWidget(
+        #     self.btn_restore_layout,
+        #     alignment=Qt.AlignmentFlag.AlignLeft
+        # )
+
+
+        # # --------------------------------------------------------------
+        # # Overlay expand button (RIGHT EDGE)
+        # # --------------------------------------------------------------
+
+        # self.overlay_controls = QWidget(self.root_container)
+        # self.overlay_controls.setFixedWidth(40)
+        # self.overlay_controls.setFixedHeight(100)
+        # self.overlay_controls.raise_()
+        
+        # self.expand_btn = QPushButton("▾", self.overlay_controls)
+        # self.expand_btn.setFixedSize(28, 80)
+        # self.expand_btn.clicked.connect(self.toggle_side_panel)
+
+        # self.expand_btn.setStyleSheet("""
+        #     QPushButton {
+        #         background-color: #2a2a2a;
+        #         color: white;
+        #         font-size: 18px;
+        #         font-weight: bold;
+        #         border-radius: 8px;
+        #     }
+        #     QPushButton:hover {
+        #         background-color: #3a3a3a;
+        #     }
+        # """)
+
+        # self.expand_btn.setToolTip("Toggles Advanced Tools panel.")
+        # self.expand_btn.move(6, 10)
+        # self.expand_btn.raise_()
+
+        
+    # def _position_overlay_controls(self):
+    #     """
+    #     Mimics CTk place(relx=1.0, rely=0.5, anchor='e', x=-6)
+    #     """
+    #     parent = self.root_container
+    #     if not parent:
+    #         return
+
+    #     pw = parent.width()
+    #     ph = parent.height()
+
+    #     ow = self.overlay_controls.width()
+    #     oh = self.overlay_controls.height()
+
+    #     x = pw - ow - 6
+    #     y = (ph - oh) // 2
+
+    #     self.overlay_controls.move(x, y)
+        
+    # def resizeEvent(self, event):
+    #     self._show_window("main")
+    #     self._on_main_configure(event)
+    #     self._position_overlay_controls()
+    #     super().resizeEvent(event)
+        
+    #     QTimer.singleShot(150, self._mark_ui_ready)
+        
+        
+    #     # --------------------------------------------------
+    #     # Restore side panel open / closed state
+    #     # --------------------------------------------------
+
+    #     if self.advanced_panel_open:
+    #         self.advanced_panel.show()
+    #         self.expand_btn.setText("▸")
+    #     else:
+    #         self.advanced_panel.hide()
+    #         self.expand_btn.setText("▾")
+            
+    #     self.actions.toggle_power_buttons()
+
+    #     self.update()
+    #     QTimer.singleShot(0, self.resize_to_fit)
+        
+        
+    #     # --------------------------------------------------
+    #     # Apply master left collapse override (FINAL)
+    #     # --------------------------------------------------
+
+    #     if not self.master_toggle_left:
+    #         for section in self.collapsible_sections:
+    #             if section.open:
+    #                 section.toggle()
+    #         self.master_collapse_btn_left.setText("▸")
+    #     else:
+    #         self.master_collapse_btn_left.setText("▾")
+            
+
+
+    #  FIX def set_desktop_layout_status(self, text, timeout=2500):
+    #     self.desktop_layout_status.configure(text=text)
+    #     self.after(timeout, lambda: self.desktop_layout_status.configure(text=" "))
+
+    # ==================================================
+    # End of muddafucking initilisation bro
+    # ==================================================
+    
+    # def _backup_taskbar_and_minimize(self):
+    #     # run the actual backup
+    #     self.actions.backup_pinned_shortcuts()
+
+        # give time for status text to show
+        #  FIX def minimize_both():
+        #     self.iconify()
+        #     if (
+        #         hasattr(self, "advanced_panel")
+        #         and self.advanced_panel
+        #         and self.advanced_panel.winfo_viewable()
+        #     ):
+        #         self.advanced_panel.iconify()
+
+        # FIX self.after(1200, minimize_both)
+
+    # def _on_main_unmap(self, event=None):
+    #     # Ignore minimize
+    #     if self.state() == "iconic":
+    #         return
+
+    #     # Only act when actually withdrawn (to tray)
+    #     if self.state() != "withdrawn":
+    #         return
+
+    #     # Ensure right panel is not left floating
+    #     if (
+    #         hasattr(self, "advanced_panel_var")
+    #         and self.advanced_panel_var
+    #         and self.advanced_panel_var.winfo_exists()
+    #         and self.advanced_panel_var.winfo_viewable()
+    #     ):
+    #         self.toggle_side_panel()
+            
+
+    # def _on_main_configure(self, event=None):
+    #     """
+    #     If main window is minimized, iconify the right panel too.
+    #     Do NOT send anything to tray.
+    #     """
+    #     try:
+    #         if self.state() == "iconic":
+    #             if (
+    #                 hasattr(self, "advanced_panel_var")
+    #                 and self.advanced_panel_var
+    #                 and self.advanced_panel_var.winfo_exists()
+    #             ):
+    #                 self.advanced_panel_var.iconify()
+    #     except Exception:
+    #         pass
+        
+    # def _set_backup_status_timed(self, text, duration_ms=2000):
+    # #  FIX   if hasattr(self, "_backup_status_after_id") and self._backup_status_after_id:
+    # #         self.after_cancel(self._backup_status_after_id)
+
+    # #     self.backup_status_label.configure(text=text)
+    # #     self._backup_status_after_id = self.after(
+    # #         duration_ms,
+    # #         lambda: self.backup_status_label.configure(text="")
+    # # )   
+        
+    # def _mark_ui_ready(self):
+    #             self._ui_ready = True
+
+    # # ==================================================
+    # # Window magnet sync (main <-> advanced)
+    # # ==================================================
+
+    # def _sync_windows(self, source):
+    #     if self._sync_windows:
+    #         return
+        
+    #     if not getattr(self, "_ui_ready", False):
+    #         return
+        
+    #     # 🔑 advanced panel may not exist yet
+    #     if not hasattr(self, "advanced_panel_var"):
+    #         return
+
+    #     if self._drag_owner and self._drag_owner != source:
+    #         return
+
+    #     side = self.advanced_panel_var
+    #     if not side or not side.winfo_exists():
+    #         return
+
+    #     self._syncing_windows = True
+    #     try:
+    #         if source == "main":
+    #             x = self.winfo_x()
+    #             y = self.winfo_y()
+
+    #             target_x = x + self.winfo_width()
+    #             target_y = y
+
+    #             if side.winfo_x() == target_x and side.winfo_y() == target_y:
+    #                 return
+
+    #             side.geometry(f"+{target_x}+{target_y}")
+
+    #         elif source == "side":
+    #             x = side.winfo_x()
+    #             y = side.winfo_y()
+
+    #             target_x = x - self.winfo_width()
+    #             target_y = y
+
+    #             if self.winfo_x() == target_x and self.winfo_y() == target_y:
+    #                 return
+
+    #             self.geometry(f"+{target_x}+{target_y}")
+
+    #     finally:
+    #         self._syncing_windows = False
+
+    # def _set_drag_owner(self, who):
+    #     self._drag_owner = who
+
+    # def _clear_drag_owner(self):
+    #     self._drag_owner = None
+
+    # def _sync_toggle_label(self, switch, base_text, var):
+    #     if var.get():
+    #         switch.configure(text=f"{base_text} On")
+    #     else:
+    #         switch.configure(text=f"{base_text} Off")
+        
+    
+        
+    # def take_desktop_screenshot(self):
+    #     """
+    #     Universal desktop screenshotter:
+    #     - Iconifies main GUI
+    #     - Iconifies right panel if open
+    #     - Takes screenshot
+    #     - Prompts for save location
+    #     - Ends iconified (both panels)
+    #     """
+
+    #     try:
+    #         # -------------------------------------------------------
+    #         # 1) Iconify BOTH panels immediately
+    #         # -------------------------------------------------------
+    #         if (
+    #             hasattr(self, "advanced_panel")
+    #             and self.advanced_panel
+    #             and self.advanced_panel.winfo_viewable()
+    #         ):
+    #             self.advanced_panel.iconify()
+
+    #         # # FIX Self.iconify
+    #         # self.update_idletasks()
+    #         # time.sleep(0.3)  # ensure desktop is clean
+
+    #         # -------------------------------------------------------
+    #         # 2) Capture full desktop
+    #         # -------------------------------------------------------
+    #         img = ImageGrab.grab()
+
+    #         # -------------------------------------------------------
+    #         # 3) Save dialog
+    #         # -------------------------------------------------------
+    #         default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+
+    #         save_path = filedialog.asksaveasfilename(
+    #             title="Save Desktop Screenshot",
+    #             defaultextension=".png",
+    #             initialfile=default_name,
+    #             filetypes=[("PNG Image", "*.png")],
+    #         )
+
+    #         if save_path:
+    #             img.save(save_path)
+    #             print(f"[SCREENSHOT] Saved: {save_path}")
+    #         else:
+    #             print("[SCREENSHOT] Cancelled by user")
+
+    #     except Exception as e:
+    #         print("[SCREENSHOT] Error:", e)
+
+    #     finally:
+    #         # -------------------------------------------------------
+    #         # 4) End state: keep both panels iconified
+    #         # -------------------------------------------------------
+    #         if (
+    #             hasattr(self, "advanced_panel")
+    #             and self.advanced_panel
+    #             and self.advanced_panel.winfo_exists()
+    #         ):
+    #             self.advanced_panel.iconify()
+
+    #         # FIX self.iconify()
+
+    # from PyQt6.QtWidgets import QFileDialog
+
+    # def _choose_brave_export_path(self):
+    #     default_name = f"Brave_Bookmarks_Export_{datetime.now().strftime('%Y-%m-%d')}.html"
+
+    #     path, _ = QFileDialog.getSaveFileName(
+    #         self,  # QWidget parent
+    #         "Save Brave Bookmarks As",
+    #         default_name,
+    #         "HTML files (*.html)"
+    #     )
+
+    #     if not path:
+    #         return
+
+    #     self.brave_export_path = path
+    #     self.save_all_settings()
+
+    
+                    
+    # def open_this_pc(self):
+    #     os.system("explorer shell:MyComputerFolder")
+
+        # def minimize_both():
+        #     self.iconify()
+        #     if hasattr(self, "advanced_panel") and self.advanced_panel.winfo_viewable():
+        #         self.advanced_panel.iconify()
+
+        # # FIX self.after
+
+    # ==============================================================
+    # Side panel toggle (NO UI CREATION HERE)
+    # ==============================================================
+    
+    # def toggle_side_panel(self):
+    #     panel = self.advanced_panel
+
+    #     if panel.winfo_viewable():
+    #         panel.hide()
+    #         self.expand_btn.configure(text="▾")
+    #         self.advanced_panel_open_var.set(False)   # ← REQUIRED
+    #     else:
+    #         panel.show()
+    #         self.expand_btn.configure(text="▸")
+    #         self.advanced_panel_open_var.set(True)    # ← REQUIRED
+
+
+    #     self.save_all_settings()
+    
+
+    # def apply_always_on_top(self, enabled: bool):
+    #     """Apply Always-on-Top state using both Tk and WinAPI."""
+    #     try:
+    #         self.attributes("-topmost", enabled)
+    #     except Exception as e:
+    #         print("[AlwaysOnTop] Tk error:", e)
+
+    #     try:
+    #         hwnd = self.winfo_id()
+    #         hWndTopMost = -1 if enabled else -2
+    #         ctypes.windll.user32.SetWindowPos(
+    #             hwnd,
+    #             hWndTopMost,
+    #             0, 0, 0, 0,
+    #             0x0003  # SWP_NOSIZE | SWP_NOMOVE
+    #         )
+    #     except Exception as e:
+    #         print("[AlwaysOnTop] WinAPI error:", e)
+
+    # def resize_to_fit(self):
+    #     """Keep the window height locked; never auto-resize to content."""
+    #     self.update_idletasks()  # Recalculate layout
 
     # ===================================================================
     #  Save ALL toggle states to JSON
     # ===================================================================
+
+    # def save_section_states(self):
+    #     """Save expanded/collapsed states of all collapsible sections."""
+    #     if not hasattr(self, "collapsible_sections"):
+    #         return
+        
+    #     left_states = {}
+    #     right_states = {}
+
+    #     for section in self.collapsible_sections:
+    #         if section.parent == self.main_frame:
+    #             left_states[section.section_id] = section.open
+    #         elif section.parent == self.side_frame:
+    #             right_states[section.section_id] = section.open
+
+    #     # Load current JSON
+    #     data = load_state()
+
+    #     # Update section states
+        
+    #     data["left_section_states"] = left_states
+    #     data["right_section_states"] = right_states
+        
+    #     print("collapsible count:", len(self.collapsible_sections))
+    #     print("collapsible count:", len(self.collapsible_sections))
+    #     for s in self.collapsible_sections:
+    #         print("sec:", s.section_id, "parent:", type(s.parent), "toplevel:", s.parent.winfo_toplevel())
+            
+    #     save_state(data)
+
+    # # ===================================================================
+    # #  Create Folder On Desktop
+    # # ===================================================================
     
-    def save_all_settings(self):
+    # def _create_desktop_folder(self):
+    #     folder_name = self.folder_name_var.get().strip()
 
-        left_states = {}
-        right_states = {}
+    #     if not folder_name:
+    #         return
 
-        old = load_state()
-        new = dict(old)
+    #     desktop = os.path.join(os.environ["USERPROFILE"], "Desktop")
+    #     new_path = os.path.join(desktop, folder_name)
 
-        # -------------------------
-        # Master switches
-        # -------------------------
-        new["master_toggle_left"] = self.master_toggle_left_var.get()
-        new["advanced_panel_open"] = self.advanced_panel_open_var.get()
-        
-        # -------------------------
-        # User interface
-        # -------------------------
-        new["theme_dark"] = self.theme_var.get()
-        new["show_power_buttons"] = self.power_toggle_var.get()
-        new["tooltips_enabled"] = self.tooltips_enabled_var.get()
-        new["main_always_on_top_enabled"] = self.main_always_on_top_var.get()
-        new["right_always_on_top_enabled"] = self.right_always_on_top_var.get()
-        new["minimize_all_enabled"] = self.minimize_all_var.get()
-        
-        # -------------------------
-        # Screen mover
-        # -------------------------
-        new["mmb_activation_enabled"] = self.mmb_var.get()
-        new["auto_align_enabled"] = self.auto_align_var.get()
+    #     try:
+    #         if os.path.exists(new_path):
+    #             messagebox.showerror(
+    #                 "Error",
+    #                 "A folder with that name already exists on Desktop."
+    #             )
+    #             return
 
-        # -------------------------
-        # USB settings
-        # -------------------------
-        new["usb_idle_enabled"] = self.opt_idle_var.get()
-        new["usb_download_enabled"] = self.opt_download_var.get()
-        new["usb_plug_enabled"] = self.opt_plug_var.get()
-        
-        new["brave_export_path"] = self.brave_export_path_var.get()
-        new["bookmarks_exporter"] = self.bookmarks_exporter_var.get()
-        
+    #         os.makedirs(new_path)
 
-        new["master_toggle_right"] = self.master_toggle_right_var.get()
+    #         # Clear entry
+    #         self.folder_name_var.set("")
 
-        # -------------------------
-        # Collapsible section states
-        # -------------------------
-        for section in self.collapsible_sections:
-            if not isinstance(section, CollapsibleSection):
-                continue
-
-            if section.parent == self.main_frame:
-                left_states[section.section_id] = section.open
-
-            elif (
-                hasattr(self, "advanced_panel")
-                and self.advanced_panel
-                and self.advanced_panel.winfo_exists()
-                and section.parent.winfo_toplevel() == self.advanced_panel
-            ):
-                right_states[section.section_id] = section.open
-
-
-        # ✅ NOW write them
-        new["left_section_states"] = left_states
-        new["right_section_states"] = right_states
-
-        # ✅ Kill legacy keys
-        new.pop("bookmarks_exporter", None)
-
-        save_state(new)
-
-    def save_section_states(self):
-        """Save expanded/collapsed states of all collapsible sections."""
-        if not hasattr(self, "collapsible_sections"):
-            return
-        
-        left_states = {}
-        right_states = {}
-
-        for section in self.collapsible_sections:
-            if section.parent == self.main_frame:
-                left_states[section.section_id] = section.open
-            elif section.parent == self.side_frame:
-                right_states[section.section_id] = section.open
-
-        # Load current JSON
-        data = load_state()
-
-        # Update section states
-        
-        data["left_section_states"] = left_states
-        data["right_section_states"] = right_states
-        
-        print("collapsible count:", len(self.collapsible_sections))
-        print("collapsible count:", len(self.collapsible_sections))
-        for s in self.collapsible_sections:
-            print("sec:", s.section_id, "parent:", type(s.parent), "toplevel:", s.parent.winfo_toplevel())
+    #         # Timed success message
+    #         self._set_folder_status_timed("Folder Made", 2000)
             
-        save_state(data)
+    #         def minimize_both():
+    #             if (
+    #                 hasattr(self, "advanced_panel")
+    #                 and self.advanced_panel
+    #                 and self.advanced_panel.winfo_viewable()
+    #             ):
+    #                 self.advanced_panel.iconify()
 
-    # ===================================================================
-    #  Create Folder On Desktop
-    # ===================================================================
+    #             # FIX self.iconify
+
+    #         # FIX self.after
+
+    #     except Exception as e:
+    #         messagebox.showerror(
+    #             "Error",
+    #             f"Could not create folder:\n{e}"
+    #         )
+            
+    # def _update_create_folder_button(self, *_):
+    #     name = self.folder_name_var.get().strip()
+        
+    #     if name:
+    #         self.btn_create_folder.configure(state="normal")
+    #         self.folder_status_label.configure(text="")
+    #     else:
+    #         self.btn_create_folder.configure(state="disabled")
+    #         self.folder_status_label.configure(text="")
+            
+    # def _set_folder_status_timed(self, text, duration_ms=2000):
+    #     # Cancel any existing timer
+    #     # FIX if self._folder_status_after_id:
+    #     #     self.after_cancel(self._folder_status_after_id)
+    #     #     self._folder_status_after_id = None
+
+    #     # Set text immediately
+    #     self.folder_status_label.configure(text=text)
+
+    #     # # FIX Schedule clear
+    #     # self._folder_status_after_id = self.after(
+    #     #     duration_ms,
+    #     #     lambda: self.folder_status_label.configure(text="")
+    #     # )
+
+    # # ---------------- Helpers that run on Tk main thread ----------------
     
-    def _create_desktop_folder(self):
-        folder_name = self.folder_name_var.get().strip()
-
-        if not folder_name:
-            return
-
-        desktop = os.path.join(os.environ["USERPROFILE"], "Desktop")
-        new_path = os.path.join(desktop, folder_name)
-
-        try:
-            if os.path.exists(new_path):
-                messagebox.showerror(
-                    "Error",
-                    "A folder with that name already exists on Desktop."
-                )
-                return
-
-            os.makedirs(new_path)
-
-            # Clear entry
-            self.folder_name_var.set("")
-
-            # Timed success message
-            self._set_folder_status_timed("Folder Made", 2000)
-            
-            def minimize_both():
-                if (
-                    hasattr(self, "advanced_panel")
-                    and self.advanced_panel
-                    and self.advanced_panel.winfo_viewable()
-                ):
-                    self.advanced_panel.iconify()
-
-                self.iconify()
-
-            self.after(3000, minimize_both)
-
-        except Exception as e:
-            messagebox.showerror(
-                "Error",
-                f"Could not create folder:\n{e}"
-            )
-            
-    def _update_create_folder_button(self, *_):
-        name = self.folder_name_var.get().strip()
+    # def _show_window(self):
         
-        if name:
-            self.btn_create_folder.configure(state="normal")
-            self.folder_status_label.configure(text="")
-        else:
-            self.btn_create_folder.configure(state="disabled")
-            self.folder_status_label.configure(text="")
-            
-    def _set_folder_status_timed(self, text, duration_ms=2000):
-        # Cancel any existing timer
-        if self._folder_status_after_id:
-            self.after_cancel(self._folder_status_after_id)
-            self._folder_status_after_id = None
-
-        # Set text immediately
-        self.folder_status_label.configure(text=text)
-
-        # Schedule clear
-        self._folder_status_after_id = self.after(
-            duration_ms,
-            lambda: self.folder_status_label.configure(text="")
-        )
-
-    # ---------------- Helpers that run on Tk main thread ----------------
-    
-    def _show_window(self):
-        self.deiconify()
-        self.after(10, self.lift)
-        try:
-            self.focus_force()
-        except:
-            pass
-        self.attributes("-topmost", True)
-        try:
-            ctypes.windll.user32.SetWindowPos(
-                self.winfo_id(),
-                -1,
-                0, 0, 0, 0,
-                0x0003
-            )
-        except Exception as e:
-            print("[TOPMOST] WinAPI failed:", e)
+    #     # FIX deiconify and lift for cute
+        
+    #     try:
+    #         self.focus_force()
+    #     except:
+    #         pass
+    #     self.attributes("-topmost", True)
+    #     try:
+    #         ctypes.windll.user32.SetWindowPos(
+    #             self.winfo_id(),
+    #             -1,
+    #             0, 0, 0, 0,
+    #             0x0003
+    #         )
+    #     except Exception as e:
+    #         print("[TOPMOST] WinAPI failed:", e)
     
 # ===================================================================
 # Launch App
 # ===================================================================
+def main():
+    app = QApplication(sys.argv)   # ✅ FIRST
+    window = UtilityControlApp()   # QWidget created AFTER
+    window.show()
+    sys.exit(app.exec())
+
 
 if __name__ == "__main__":
-    app = UtilityControlApp()
-    app.mainloop()
+    main()

@@ -1,8 +1,7 @@
 # desktop_icon_layout.py
-import json
 import ctypes
 from ctypes import wintypes
-
+from typing import List, Dict
 import win32con
 import win32gui
 import win32api
@@ -107,6 +106,13 @@ def capture_desktop_icon_layout() -> list[dict]:
             raise RuntimeError("VirtualAllocEx failed (could not allocate in explorer.exe).")
 
         layout = []
+
+
+
+
+
+
+
 
         for i in range(count):
             # Build LVITEMW locally
@@ -318,6 +324,16 @@ def restore_desktop_icon_layout(json_path: str) -> int:
                 continue
 
             x, y = pos
+            
+            ok = kernel32.ReadProcessMemory(
+                h_process.handle,
+                remote_point,
+                ctypes.byref(pt),
+                point_size,
+                ctypes.byref(read),
+            )
+            if not ok:
+                continue
 
             pt = wintypes.POINT(x, y)
             ok = kernel32.WriteProcessMemory(
