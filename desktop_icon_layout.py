@@ -203,7 +203,7 @@ def restore_desktop_icon_layout(json_path: str) -> int:
     LVM_FIRST = 0x1000
     LVM_GETITEMCOUNT = LVM_FIRST + 4
     LVM_GETITEMTEXTW = LVM_FIRST + 115
-    LVM_SETITEMPOSITION32 = LVM_FIRST + 49   # ✅ POINT* expected
+    LVM_SETITEMPOSITION32 = LVM_FIRST + 49
     LVIF_TEXT = 0x0001
 
     class LVITEMW(ctypes.Structure):
@@ -262,7 +262,6 @@ def restore_desktop_icon_layout(json_path: str) -> int:
     text_bytes = text_max * ctypes.sizeof(wintypes.WCHAR)
     lvitem_size = ctypes.sizeof(LVITEMW)
     point_size = ctypes.sizeof(wintypes.POINT)
-
     remote_text = None
     remote_lvitem = None
     remote_point = None
@@ -323,17 +322,6 @@ def restore_desktop_icon_layout(json_path: str) -> int:
                 continue
 
             x, y = pos
-            
-            ok = kernel32.ReadProcessMemory(
-                h_process.handle,
-                remote_point,
-                ctypes.byref(pt),
-                point_size,
-                ctypes.byref(read),
-            )
-            if not ok:
-                continue
-
             pt = wintypes.POINT(x, y)
             ok = kernel32.WriteProcessMemory(
                 h_process.handle,
@@ -345,7 +333,6 @@ def restore_desktop_icon_layout(json_path: str) -> int:
             if not ok:
                 continue
 
-            # ✅ correct: POSITION32 expects POINT*
             win32gui.SendMessage(lv_hwnd, LVM_SETITEMPOSITION32, i, remote_point)
             restored += 1
 

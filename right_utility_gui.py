@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from collapsible_section import CollapsibleSection
-from main_utility_gui import get_drive_info
+from main import get_drive_info
 from PySide6.QtWidgets import QPushButton, QTextEdit
 from PySide6.QtCore import QTimer
 from PySide6.QtCore import Qt, QPoint

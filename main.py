@@ -32,7 +32,6 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import Qt
 
-
 # =======================================
 # These 3 functions possibly to be moved.
 # =======================================
@@ -585,29 +584,23 @@ class UtilityControlApp(QWidget):
         change_backup_btn.toggled.connect(on_change_backup_changed)
 
         # -------------------------
-        # Desktop Icon Layout (placeholders)
+        # Desktop Icon Layout
         # -------------------------
 
         # Capture desktop layout
-        capture_layout_btn = make_toggle_button("Capture Desktop Layout", state.get("capture_desktop_layout_enabled", True))
+        capture_layout_btn = QPushButton("Capture Desktop Layout")
+        styles.apply_default_button_size(capture_layout_btn)
+        capture_layout_btn.setStyleSheet(styles.toggle_button_style())
         org_layout.addWidget(capture_layout_btn)
-
-        def on_capture_layout_changed(checked: bool):
-            state["capture_desktop_layout_enabled"] = checked
-            save_state(state)
-
-        capture_layout_btn.toggled.connect(on_capture_layout_changed)
+        capture_layout_btn.clicked.connect(self.capture_desktop_layout)
 
 
         # Restore desktop layout
-        restore_layout_btn = make_toggle_button("Restore Desktop Layout", state.get("restore_desktop_layout_enabled", True))
+        restore_layout_btn = QPushButton("Restore Desktop Layout")
+        styles.apply_default_button_size(restore_layout_btn)
+        restore_layout_btn.setStyleSheet(styles.toggle_button_style())
         org_layout.addWidget(restore_layout_btn)
-
-        def on_restore_layout_changed(checked: bool):
-            state["restore_desktop_layout_enabled"] = checked
-            save_state(state)
-
-        restore_layout_btn.toggled.connect(on_restore_layout_changed)
+        restore_layout_btn.clicked.connect(self.restore_desktop_layout)
 
         master_backup_row = QWidget()
         master_backup_row_layout = QHBoxLayout(master_backup_row)
@@ -766,6 +759,28 @@ class UtilityControlApp(QWidget):
 
         finally:
             pass
+
+    def capture_desktop_layout(self):
+        out_path = self.get_default_desktop_layout_path()
+        count = self.actions.capture_desktop_layout(out_path)
+
+        if count <= 0:
+            QMessageBox.warning(
+                self,
+                "Desktop Layout",
+                f"Could not capture desktop layout to:\n{out_path}"
+            )
+
+    def restore_desktop_layout(self):
+        layout_path = self.get_default_desktop_layout_path()
+        count = self.actions.restore_desktop_layout(layout_path)
+
+        if count <= 0:
+            QMessageBox.warning(
+                self,
+                "Desktop Layout",
+                f"Could not restore desktop layout from:\n{layout_path}"
+            )
 
     def _create_desktop_folder(self, folder_input: QLineEdit):
         folder_name = folder_input.text().strip()
