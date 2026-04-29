@@ -263,7 +263,7 @@ class UtilityControlApp(QWidget):
             frame.setObjectName("CollapsibleSectionFrame")
             frame.setStyleSheet(styles.collapsible_section_frame_style())
             frame_layout = QVBoxLayout(frame)
-            frame_layout.setContentsMargins(0, 0, 0, 0)
+            frame_layout.setContentsMargins(2, 2, 2, 2)
             frame_layout.setSpacing(0)
 
             section.content = QWidget(frame)
