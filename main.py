@@ -105,12 +105,13 @@ class UtilityControlApp(QWidget):
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
         self.WINDOW_HEIGHT = 800
-        self.advanced_settings_open = False
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         
         # ✅ add these
         self.state = load_state()
         self.saved_state = self.state
+        self.advanced_settings_open = bool(self.state.get("advanced_panel_open", False))
+        self.collapsible_sections = []
         self.actions = UtilityActionsManager(self)
 
         # ---------------- Build UI ----------------
@@ -251,9 +252,10 @@ class UtilityControlApp(QWidget):
         # ==================================================
         # Section factory
         # ==================================================
-        def make_section(title_text):
+        def make_section(title_text, section_id: str):
             section = QFrame(self.main_frame)
             section.setObjectName("CollapsibleSectionFrame")
+            section.section_id = section_id
             section.setStyleSheet(styles.collapsible_section_frame_style())
             layout = QVBoxLayout(section)
             layout.setContentsMargins(10, 5, 10, 5)
@@ -280,6 +282,8 @@ class UtilityControlApp(QWidget):
             # ✅ attach content to section for master toggle
             section.content = QWidget(section)
             content = section.content
+            initial_open = self.state.get("left_section_states", {}).get(section_id, True)
+            content.setVisible(initial_open)
 
             content_layout = QVBoxLayout(content)
             content_layout.setContentsMargins(10, 5, 10, 5)
@@ -294,8 +298,12 @@ class UtilityControlApp(QWidget):
                 toggle.setArrowType(
                     Qt.ArrowType.DownArrow if not visible else Qt.ArrowType.UpArrow
                 )
+                self.save_section_states()
 
             toggle.clicked.connect(toggle_section)
+            toggle.setArrowType(
+                Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
+            )
 
             return section, content_layout
 
@@ -336,7 +344,7 @@ class UtilityControlApp(QWidget):
         # ==================================================
         # User Interface section (SIMPLE + STABLE)
         # ==================================================
-        ui_section, ui_layout = make_section("User Interface")
+        ui_section, ui_layout = make_section("User Interface", "user_interface")
 
         self.main_layout.addWidget(ui_section)
         self.left_sections.append(ui_section)
@@ -456,7 +464,7 @@ class UtilityControlApp(QWidget):
         # ==================================================
         # Screen Mover section (visual only)
         # ==================================================
-        screen_section, screen_layout = make_section("Screen Mover")
+        screen_section, screen_layout = make_section("Screen Mover", "screen_mover")
 
         # -------------------------
         # Screen Mover (placeholders, no logic yet)
@@ -489,7 +497,7 @@ class UtilityControlApp(QWidget):
         # ==================================================
         # Drive Reminder Options (visual only)
         # ==================================================
-        usb_section, usb_layout = make_section("Drive Reminder Options")
+        usb_section, usb_layout = make_section("Drive Reminder Options", "drive_reminder_options")
 
         # Idle-plugged reminder
         idle_btn = make_toggle_button("Idle-plugged Reminder", state.get("usb_idle_enabled", True))
@@ -529,7 +537,7 @@ class UtilityControlApp(QWidget):
         # ==================================================
         # Organising Utilities (grouped under one title frame)
         # ==================================================
-        org_section, org_layout = make_section("Organising Utilities")
+        org_section, org_layout = make_section("Organising Utilities", "organising_utilities")
 
         self.backup_path = self._get_master_backup_dir()
         # -------------------------
@@ -632,7 +640,6 @@ class UtilityControlApp(QWidget):
         self.main_layout.addWidget(org_section)
         self.left_sections.append(org_section)
 
-        
         self.main_layout.addStretch(1)
         
         def toggle_all():
@@ -652,6 +659,13 @@ class UtilityControlApp(QWidget):
                 section.content.setVisible(new_state)
             
         master_btn.clicked.connect(toggle_all)
+
+        if self.advanced_settings_open:
+            self.WINDOW_WIDTH = self.EXPANDED_WIDTH
+            self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+            self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+            self.advanced_settings_panel.show()
+            self.advanced_settings_toggle.setArrowType(Qt.ArrowType.LeftArrow)
 
         self._position_advanced_settings_toggle()
 
@@ -846,7 +860,6 @@ class UtilityControlApp(QWidget):
                 f"Could not create folder:\n{e}"
             )
 
-
     def _get_arrow_colors(self):
         palette = self.palette()
         bg = palette.color(self.backgroundRole())
@@ -872,423 +885,38 @@ class UtilityControlApp(QWidget):
         for btn in getattr(self, "arrow_buttons", []):
             btn.setStyleSheet(style)
 
-    # def _run_brave_export(self):
-    #     default_name = f"Brave_Bookmarks_{datetime.now().strftime('%Y-%m-%d')}.html"
+    def save_section_states(self):
+        left_states = {}
+        for section in self.left_sections:
+            section_id = getattr(section, "section_id", None)
+            if section_id and hasattr(section, "content"):
+                left_states[section_id] = section.content.isVisible()
 
-    #     path, _ = QFileDialog.getSaveFileName(
-    #         self,  # QWidget parent ✔
-    #         "Save Brave Bookmarks As",
-    #         default_name,
-    #         "HTML files (*.html)"
-    #     )
+        if left_states:
+            self.state["left_section_states"] = left_states
 
-    #     if not path:
-    #         return
+        right_states = {}
+        for section in self.collapsible_sections:
+            section_id = getattr(section, "section_id", None)
+            is_open = getattr(section, "is_open", None)
+            if section_id and is_open is not None:
+                right_states[section_id] = bool(is_open)
 
-    #     self.brave_export_path = path
-    #     self.save_all_settings()
-    #     BraveBookmarksExporter().export_to_file(path)
-        
-    # --------------------------------------------------
-    # Window close hook (replaces protocol WM_DELETE)
-    # --------------------------------------------------
+        if right_states:
+            self.state["right_section_states"] = right_states
+
+    def save_all_settings(self):
+        self.save_section_states()
+        self.state["advanced_panel_open"] = self.advanced_settings_open
+        self.state["main_always_on_top_enabled"] = bool(
+            self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
+        )
+        save_state(self.state)
+
     def closeEvent(self, event):
-        """
-        Temporary behaviour:
-        real tray logic comes later with QSystemTrayIcon
-        """
-        # event.ignore()  # if you want tray-only close later
+        self.save_all_settings()
         event.accept()
 
-        # def on_auto_align_toggle():
-        #     enabled = self.auto_align_switch.isChecked()
-        #     self.auto_align_enabled = enabled
-
-        #     self.auto_align_switch.setText(
-        #         "Windows In Move Zone On" if enabled else "Windows In Move Zone Off"
-        #     )
-
-        #     self.actions.auto_align_toggle()
-
-        # self.auto_align_switch.stateChanged.connect(lambda _: on_auto_align_toggle())
-
-        # self.auto_align_switch.setToolTip(
-        #     "Keeps window title bars inside the flick activation zone.\n"
-        #     "Only activates after you finish dragging a window.\n"
-        #     "Never interferes during movement."
-        # )
-
-        # # initial label sync
-        # self.auto_align_switch.setText(
-        #     "Windows In Move Zone On" if self.auto_align_enabled else "Windows In Move Zone Off"
-        # )
-
-        # self.mover_section.content_layout.addWidget(self.auto_align_switch)
-
-        
-
-        # def on_idle_toggle():
-        #     enabled = self.opt_idle.isChecked()
-        #     self.opt_idle_enabled = enabled
-        #     self.opt_idle.setText(
-        #         "Idle-plugged Reminder On" if enabled else "Idle-plugged Reminder Off"
-        #     )
-        #     self.save_all_settings()
-
-        # self.opt_idle.stateChanged.connect(lambda _: on_idle_toggle())
-
-        # # initial label sync
-        # self.opt_idle.setText(
-        #     "Idle-plugged Reminder On" if self.opt_idle_enabled else "Idle-plugged Reminder Off"
-        # )
-
-        # self.usb_section.content_layout.addWidget(self.opt_idle)
-        
-        # self.opt_download_enabled = self.saved_state.get("usb_download_enabled", True)
-
-        # self.opt_download = QCheckBox(self.usb_section.content)
-        # self.opt_download.setChecked(self.opt_download_enabled)
-
-        # def on_download_toggle():
-        #     enabled = self.opt_download.isChecked()
-        #     self.opt_download_enabled = enabled
-        #     self.opt_download.setText(
-        #         "Download-finished Reminder On" if enabled else "Download-finished Reminder Off"
-        #     )
-        #     self.save_all_settings()
-
-        # self.opt_download.stateChanged.connect(lambda _: on_download_toggle())
-
-        # # initial label sync
-        # self.opt_download.setText(
-        #     "Download-finished Reminder On" if self.opt_download_enabled else "Download-finished Reminder Off"
-        # )
-
-        # self.usb_section.content_layout.addWidget(self.opt_download)
-        
-        
-        # self.opt_plug_enabled = self.saved_state.get("usb_plug_enabled", True)
-
-        # self.opt_plug = QCheckBox(self.usb_section.content)
-        # self.opt_plug.setChecked(self.opt_plug_enabled)
-
-        # def on_plug_toggle():
-        #     enabled = self.opt_plug.isChecked()
-        #     self.opt_plug_enabled = enabled
-        #     self.opt_plug.setText(
-        #         "Plug / Unplug Notification On" if enabled else "Plug / Unplug Notification Off"
-        #     )
-        #     self.save_all_settings()
-
-        # self.opt_plug.stateChanged.connect(lambda _: on_plug_toggle())
-
-        # # initial label sync
-        # self.opt_plug.setText(
-        #     "Plug / Unplug Notification On" if self.opt_plug_enabled else "Plug / Unplug Notification Off"
-        # )
-
-        # self.usb_section.content_layout.addWidget(self.opt_plug)
-
-        # # --------------------------------------------------------------
-        # # Folder Creator Row
-        # # --------------------------------------------------------------
-
-        # folder_row = QWidget(self.organise_frame)
-        # folder_row_layout = QHBoxLayout(folder_row)
-        # folder_row_layout.setContentsMargins(10, 0, 10, 0)
-        # folder_row_layout.setSpacing(5)
-
-        # self.organising_section.content_layout.addWidget(folder_row)
-        
-        
-        # self.btn_create_folder = QPushButton(
-        #     "Folder To Desktop",
-        #     folder_row
-        # )
-        # self.btn_create_folder.setFixedWidth(btn_width)
-        # self.btn_create_folder.setEnabled(False)
-        # self.btn_create_folder.clicked.connect(self._create_desktop_folder)
-
-        # self.btn_create_folder.setToolTip(
-        #     "Type a folder name in the box → Click to create.\n"
-        #     "A new folder will appear instantly on your Desktop.\n"
-        #     "Greyed out if no name entered.\n"
-        #     "App self-minimizes after a few seconds."
-        # )
-
-        # folder_row_layout.addWidget(self.btn_create_folder)
-        
-        # entry_group = QWidget(folder_row)
-        # entry_layout = QHBoxLayout(entry_group)
-        # entry_layout.setContentsMargins(0, 0, 0, 0)
-        # entry_layout.setSpacing(5)
-
-        # folder_row_layout.addWidget(entry_group)
-        
-        # self.folder_name_entry = QLineEdit(entry_group)
-        # self.folder_name_entry.setPlaceholderText("Folder name…")
-        # self.folder_name_entry.setFixedWidth(250)
-
-        # entry_layout.addWidget(self.folder_name_entry)
-        
-        # self.folder_status_label = QLabel(" ", entry_group)  # keep width
-        # self.folder_status_label.setFixedWidth(300)
-        # self.folder_status_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        # self.folder_status_label.setStyleSheet(
-        #     "font-weight: bold; color: #1f6aa5;"
-        # )
-
-        # entry_layout.addWidget(self.folder_status_label)
-        
-        # self.folder_name_entry.textChanged.connect(
-        #     self._update_create_folder_button
-        # )
-
-
-        
-        # # ==============================================================
-        # # Backup Taskbar + Open Backup
-        # # ==============================================================
-
-        # backup_buttons_frame = QWidget(self.desktop_backup_frame)
-        # backup_buttons_layout = QVBoxLayout(backup_buttons_frame)
-        # backup_buttons_layout.setContentsMargins(10, 0, 10, 0)
-        # backup_buttons_layout.setSpacing(4)
-
-        # self.desktop_backup_section.content_layout.addWidget(
-        #     backup_buttons_frame,
-        #     alignment=Qt.AlignmentFlag.AlignLeft
-        # )
-        
-        # backup_row = QWidget(backup_buttons_frame)
-        # backup_row_layout = QHBoxLayout(backup_row)
-        # backup_row_layout.setContentsMargins(0, 0, 0, 0)
-        # backup_row_layout.setSpacing(5)
-
-        # backup_buttons_layout.addWidget(backup_row)
-        
-        # self.btn_backup_pins = QPushButton(
-        #     "Backup Taskbar",
-        #     backup_row
-        # )
-        # self.btn_backup_pins.setFixedWidth(btn_width)
-        # self.btn_backup_pins.clicked.connect(
-        #     self._backup_taskbar_and_minimize
-        # )
-
-        # self.btn_backup_pins.setToolTip(
-        #     "Backs up Taskbar icons to a folder chosen\n"
-        #     "by the Change Folder button."
-        # )
-
-        # backup_row_layout.addWidget(self.btn_backup_pins)
-        
-        # self.backup_status_label = QLabel(" ", backup_row)  # keep width
-        # self.backup_status_label.setFixedWidth(140)
-        # self.backup_status_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        # self.backup_status_label.setStyleSheet(
-        #     "font-weight: bold; color: #1f6aa5;"
-        # )
-
-        # backup_row_layout.addWidget(self.backup_status_label)
-
-        # # ===================================================================
-        # # Backup Folder Path Display + Change Button
-        # # ===================================================================
-
-        # path_inner = QWidget(self.desktop_backup_frame)
-        # path_inner_layout = QVBoxLayout(path_inner)
-        # path_inner_layout.setContentsMargins(10, 0, 10, 0)
-        # path_inner_layout.setSpacing(4)
-
-        # self.desktop_backup_section.content_layout.addWidget(path_inner)
-
-        # self.backup_folder_path = self.saved_state.get(
-        #     "backup_folder_path",
-        #     str(Path.home())
-        # )
-        
-        # self.btn_change_path = QPushButton(
-        #     "Change Folder",
-        #     path_inner
-        # )
-        # self.btn_change_path.setFixedWidth(btn_width)
-        # self.btn_change_path.clicked.connect(
-        #     self.actions.change_backup_folder
-        # )
-
-        # self.btn_change_path.setToolTip(
-        #     "Chooses folder path for backing up Taskbar icons."
-        # )
-
-        # path_inner_layout.addWidget(
-        #     self.btn_change_path,
-        #     alignment=Qt.AlignmentFlag.AlignLeft
-        # )
-        
-        # self.btn_open_backup = QPushButton(
-        #     "Open Backup",
-        #     backup_buttons_frame
-        # )
-        # self.btn_open_backup.setFixedWidth(btn_width)
-        # self.btn_open_backup.clicked.connect(
-        #     self.actions.open_backup_folder
-        # )
-
-        # self.btn_open_backup.setToolTip(
-        #     "Opens backed up Taskbar icons folder location."
-        # )
-
-        # backup_buttons_layout.addWidget(
-        #     self.btn_open_backup,
-        #     alignment=Qt.AlignmentFlag.AlignLeft
-        # )
-
-        # self.entry_backup_path = QLineEdit(path_inner)
-        # self.entry_backup_path.setText(self.backup_folder_path)
-        # self.entry_backup_path.setReadOnly(True)
-        # self.entry_backup_path.setFixedWidth(420)
-
-        # path_inner_layout.addWidget(self.entry_backup_path)
-
-    # ==================================================
-    # End of muddafucking initilisation bro
-    # ==================================================
-    
-    # def _backup_taskbar_and_minimize(self):
-    #     # run the actual backup
-    #     self.actions.backup_pinned_shortcuts()
-
-    # def _set_backup_status_timed(self, text, duration_ms=2000):
-    # #  FIX   if hasattr(self, "_backup_status_after_id") and self._backup_status_after_id:
-    # #         self.after_cancel(self._backup_status_after_id)
-
-    # #     self.backup_status_label.configure(text=text)
-    # #     self._backup_status_after_id = self.after(
-    # #         duration_ms,
-    # #         lambda: self.backup_status_label.configure(text="")
-    # # )   
-        
-    # def _sync_toggle_label(self, switch, base_text, var):
-    #     if var.get():
-    #         switch.configure(text=f"{base_text} On")
-    #     else:
-    #         switch.configure(text=f"{base_text} Off")
-
-    # from PyQt6.QtWidgets import QFileDialog
-
-    # def _choose_brave_export_path(self):
-    #     default_name = f"Brave_Bookmarks_Export_{datetime.now().strftime('%Y-%m-%d')}.html"
-
-    #     path, _ = QFileDialog.getSaveFileName(
-    #         self,  # QWidget parent
-    #         "Save Brave Bookmarks As",
-    #         default_name,
-    #         "HTML files (*.html)"
-    #     )
-
-    #     if not path:
-    #         return
-
-    #     self.brave_export_path = path
-    #     self.save_all_settings()
-
-
-    # def open_this_pc(self):
-    #     os.system("explorer shell:MyComputerFolder")
-
-    # def apply_always_on_top(self, enabled: bool):
-    #     """Apply Always-on-Top state using both Tk and WinAPI."""
-    #     try:
-    #         self.attributes("-topmost", enabled)
-    #     except Exception as e:
-    #         print("[AlwaysOnTop] Tk error:", e)
-
-    #     try:
-    #         hwnd = self.winfo_id()
-    #         hWndTopMost = -1 if enabled else -2
-    #         ctypes.windll.user32.SetWindowPos(
-    #             hwnd,
-    #             hWndTopMost,
-    #             0, 0, 0, 0,
-    #             0x0003  # SWP_NOSIZE | SWP_NOMOVE
-    #         )
-    #     except Exception as e:
-    #         print("[AlwaysOnTop] WinAPI error:", e)
-
-    # def resize_to_fit(self):
-    #     """Keep the window height locked; never auto-resize to content."""
-    #     self.update_idletasks()  # Recalculate layout
-
-    # ===================================================================
-    #  Save ALL toggle states to JSON
-    # ===================================================================
-
-    # def save_section_states(self):
-    #     """Save expanded/collapsed states of all collapsible sections."""
-    #     if not hasattr(self, "collapsible_sections"):
-    #         return
-        
-    #     left_states = {}
-    #     right_states = {}
-
-    #     for section in self.collapsible_sections:
-    #         if section.parent == self.main_frame:
-    #             left_states[section.section_id] = section.open
-    #         elif section.parent == self.side_frame:
-    #             right_states[section.section_id] = section.open
-
-    #     # Load current JSON
-    #     data = load_state()
-
-    #     # Update section states
-        
-    #     data["left_section_states"] = left_states
-    #     data["right_section_states"] = right_states
-        
-    #     print("collapsible count:", len(self.collapsible_sections))
-    #     print("collapsible count:", len(self.collapsible_sections))
-    #     for s in self.collapsible_sections:
-    #         print("sec:", s.section_id, "parent:", type(s.parent), "toplevel:", s.parent.winfo_toplevel())
-            
-    #     save_state(data)
-            
-    # def _set_folder_status_timed(self, text, duration_ms=2000):
-    #     # Cancel any existing timer
-    #     # FIX if self._folder_status_after_id:
-    #     #     self.after_cancel(self._folder_status_after_id)
-    #     #     self._folder_status_after_id = None
-
-    #     # Set text immediately
-    #     self.folder_status_label.configure(text=text)
-
-    #     # # FIX Schedule clear
-    #     # self._folder_status_after_id = self.after(
-    #     #     duration_ms,
-    #     #     lambda: self.folder_status_label.configure(text="")
-    #     # )
-
-    # # ---------------- Helpers that run on Tk main thread ----------------
-    
-    # def _show_window(self):
-        
-    #     # FIX deiconify and lift for cute
-        
-    #     try:
-    #         self.focus_force()
-    #     except:
-    #         pass
-    #     self.attributes("-topmost", True)
-    #     try:
-    #         ctypes.windll.user32.SetWindowPos(
-    #             self.winfo_id(),
-    #             -1,
-    #             0, 0, 0, 0,
-    #             0x0003
-    #         )
-    #     except Exception as e:
-    #         print("[TOPMOST] WinAPI failed:", e)
-    
 # ===================================================================
 # Launch App
 # ===================================================================
@@ -1302,3 +930,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
