@@ -1137,97 +1137,6 @@ class UtilityControlApp(QWidget):
         #     alignment=Qt.AlignmentFlag.AlignLeft
         # )
 
-
-        # # --------------------------------------------------------------
-        # # Overlay expand button (RIGHT EDGE)
-        # # --------------------------------------------------------------
-
-        # self.overlay_controls = QWidget(self.root_container)
-        # self.overlay_controls.setFixedWidth(40)
-        # self.overlay_controls.setFixedHeight(100)
-        # self.overlay_controls.raise_()
-        
-        # self.expand_btn = QPushButton("▾", self.overlay_controls)
-        # self.expand_btn.setFixedSize(28, 80)
-        # self.expand_btn.clicked.connect(self.toggle_side_panel)
-
-        # self.expand_btn.setStyleSheet("""
-        #     QPushButton {
-        #         background-color: #2a2a2a;
-        #         color: white;
-        #         font-size: 18px;
-        #         font-weight: bold;
-        #         border-radius: 8px;
-        #     }
-        #     QPushButton:hover {
-        #         background-color: #3a3a3a;
-        #     }
-        # """)
-
-        # self.expand_btn.setToolTip("Toggles Advanced Tools panel.")
-        # self.expand_btn.move(6, 10)
-        # self.expand_btn.raise_()
-
-        
-    # def _position_overlay_controls(self):
-    #     """
-    #     Mimics CTk place(relx=1.0, rely=0.5, anchor='e', x=-6)
-    #     """
-    #     parent = self.root_container
-    #     if not parent:
-    #         return
-
-    #     pw = parent.width()
-    #     ph = parent.height()
-
-    #     ow = self.overlay_controls.width()
-    #     oh = self.overlay_controls.height()
-
-    #     x = pw - ow - 6
-    #     y = (ph - oh) // 2
-
-    #     self.overlay_controls.move(x, y)
-        
-    # def resizeEvent(self, event):
-    #     self._show_window("main")
-    #     self._on_main_configure(event)
-    #     self._position_overlay_controls()
-    #     super().resizeEvent(event)
-        
-    #     QTimer.singleShot(150, self._mark_ui_ready)
-        
-        
-    #     # --------------------------------------------------
-    #     # Restore side panel open / closed state
-    #     # --------------------------------------------------
-
-    #     if self.advanced_panel_open:
-    #         self.advanced_panel.show()
-    #         self.expand_btn.setText("▸")
-    #     else:
-    #         self.advanced_panel.hide()
-    #         self.expand_btn.setText("▾")
-            
-    #     self.actions.toggle_power_buttons()
-
-    #     self.update()
-    #     QTimer.singleShot(0, self.resize_to_fit)
-        
-        
-    #     # --------------------------------------------------
-    #     # Apply master left collapse override (FINAL)
-    #     # --------------------------------------------------
-
-    #     if not self.master_toggle_left:
-    #         for section in self.collapsible_sections:
-    #             if section.open:
-    #                 section.toggle()
-    #         self.master_collapse_btn_left.setText("▸")
-    #     else:
-    #         self.master_collapse_btn_left.setText("▾")
-            
-
-
     #  FIX def set_desktop_layout_status(self, text, timeout=2500):
     #     self.desktop_layout_status.configure(text=text)
     #     self.after(timeout, lambda: self.desktop_layout_status.configure(text=" "))
@@ -1240,53 +1149,6 @@ class UtilityControlApp(QWidget):
     #     # run the actual backup
     #     self.actions.backup_pinned_shortcuts()
 
-        # give time for status text to show
-        #  FIX def minimize_both():
-        #     self.iconify()
-        #     if (
-        #         hasattr(self, "advanced_panel")
-        #         and self.advanced_panel
-        #         and self.advanced_panel.winfo_viewable()
-        #     ):
-        #         self.advanced_panel.iconify()
-
-        # FIX self.after(1200, minimize_both)
-
-    # def _on_main_unmap(self, event=None):
-    #     # Ignore minimize
-    #     if self.state() == "iconic":
-    #         return
-
-    #     # Only act when actually withdrawn (to tray)
-    #     if self.state() != "withdrawn":
-    #         return
-
-    #     # Ensure right panel is not left floating
-    #     if (
-    #         hasattr(self, "advanced_panel_var")
-    #         and self.advanced_panel_var
-    #         and self.advanced_panel_var.winfo_exists()
-    #         and self.advanced_panel_var.winfo_viewable()
-    #     ):
-    #         self.toggle_side_panel()
-            
-
-    # def _on_main_configure(self, event=None):
-    #     """
-    #     If main window is minimized, iconify the right panel too.
-    #     Do NOT send anything to tray.
-    #     """
-    #     try:
-    #         if self.state() == "iconic":
-    #             if (
-    #                 hasattr(self, "advanced_panel_var")
-    #                 and self.advanced_panel_var
-    #                 and self.advanced_panel_var.winfo_exists()
-    #             ):
-    #                 self.advanced_panel_var.iconify()
-    #     except Exception:
-    #         pass
-        
     # def _set_backup_status_timed(self, text, duration_ms=2000):
     # #  FIX   if hasattr(self, "_backup_status_after_id") and self._backup_status_after_id:
     # #         self.after_cancel(self._backup_status_after_id)
@@ -1297,66 +1159,6 @@ class UtilityControlApp(QWidget):
     # #         lambda: self.backup_status_label.configure(text="")
     # # )   
         
-    # def _mark_ui_ready(self):
-    #             self._ui_ready = True
-
-    # # ==================================================
-    # # Window magnet sync (main <-> advanced)
-    # # ==================================================
-
-    # def _sync_windows(self, source):
-    #     if self._sync_windows:
-    #         return
-        
-    #     if not getattr(self, "_ui_ready", False):
-    #         return
-        
-    #     # 🔑 advanced panel may not exist yet
-    #     if not hasattr(self, "advanced_panel_var"):
-    #         return
-
-    #     if self._drag_owner and self._drag_owner != source:
-    #         return
-
-    #     side = self.advanced_panel_var
-    #     if not side or not side.winfo_exists():
-    #         return
-
-    #     self._syncing_windows = True
-    #     try:
-    #         if source == "main":
-    #             x = self.winfo_x()
-    #             y = self.winfo_y()
-
-    #             target_x = x + self.winfo_width()
-    #             target_y = y
-
-    #             if side.winfo_x() == target_x and side.winfo_y() == target_y:
-    #                 return
-
-    #             side.geometry(f"+{target_x}+{target_y}")
-
-    #         elif source == "side":
-    #             x = side.winfo_x()
-    #             y = side.winfo_y()
-
-    #             target_x = x - self.winfo_width()
-    #             target_y = y
-
-    #             if self.winfo_x() == target_x and self.winfo_y() == target_y:
-    #                 return
-
-    #             self.geometry(f"+{target_x}+{target_y}")
-
-    #     finally:
-    #         self._syncing_windows = False
-
-    # def _set_drag_owner(self, who):
-    #     self._drag_owner = who
-
-    # def _clear_drag_owner(self):
-    #     self._drag_owner = None
-
     # def _sync_toggle_label(self, switch, base_text, var):
     #     if var.get():
     #         switch.configure(text=f"{base_text} On")
@@ -1376,20 +1178,6 @@ class UtilityControlApp(QWidget):
     #     """
 
     #     try:
-    #         # -------------------------------------------------------
-    #         # 1) Iconify BOTH panels immediately
-    #         # -------------------------------------------------------
-    #         if (
-    #             hasattr(self, "advanced_panel")
-    #             and self.advanced_panel
-    #             and self.advanced_panel.winfo_viewable()
-    #         ):
-    #             self.advanced_panel.iconify()
-
-    #         # # FIX Self.iconify
-    #         # self.update_idletasks()
-    #         # time.sleep(0.3)  # ensure desktop is clean
-
     #         # -------------------------------------------------------
     #         # 2) Capture full desktop
     #         # -------------------------------------------------------
@@ -1417,17 +1205,7 @@ class UtilityControlApp(QWidget):
     #         print("[SCREENSHOT] Error:", e)
 
     #     finally:
-    #         # -------------------------------------------------------
-    #         # 4) End state: keep both panels iconified
-    #         # -------------------------------------------------------
-    #         if (
-    #             hasattr(self, "advanced_panel")
-    #             and self.advanced_panel
-    #             and self.advanced_panel.winfo_exists()
-    #         ):
-    #             self.advanced_panel.iconify()
-
-    #         # FIX self.iconify()
+    #         pass
 
     # from PyQt6.QtWidgets import QFileDialog
 
@@ -1451,33 +1229,6 @@ class UtilityControlApp(QWidget):
                     
     # def open_this_pc(self):
     #     os.system("explorer shell:MyComputerFolder")
-
-        # def minimize_both():
-        #     self.iconify()
-        #     if hasattr(self, "advanced_panel") and self.advanced_panel.winfo_viewable():
-        #         self.advanced_panel.iconify()
-
-        # # FIX self.after
-
-    # ==============================================================
-    # Side panel toggle (NO UI CREATION HERE)
-    # ==============================================================
-    
-    # def toggle_side_panel(self):
-    #     panel = self.advanced_panel
-
-    #     if panel.winfo_viewable():
-    #         panel.hide()
-    #         self.expand_btn.configure(text="▾")
-    #         self.advanced_panel_open_var.set(False)   # ← REQUIRED
-    #     else:
-    #         panel.show()
-    #         self.expand_btn.configure(text="▸")
-    #         self.advanced_panel_open_var.set(True)    # ← REQUIRED
-
-
-    #     self.save_all_settings()
-    
 
     # def apply_always_on_top(self, enabled: bool):
     #     """Apply Always-on-Top state using both Tk and WinAPI."""
