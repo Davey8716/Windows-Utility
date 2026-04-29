@@ -186,23 +186,6 @@ class UtilityActionsManager:
 
         return enabled
 
-    def auto_align_toggle(self, enabled: bool | None = None):
-        if enabled is None:
-            enabled = bool(
-                getattr(
-                    getattr(self.app, "auto_align_var", None),
-                    "get",
-                    lambda: False
-                )()
-            )
-
-        SCREEN_MOVER.auto_align_enabled = enabled
-
-        if self.app and hasattr(self.app, "save_all_settings"):
-            self.app.save_all_settings()
-
-        return enabled
-
     def backup_pinned_shortcuts(self, backup_folder: str | None = None) -> int:
         print("[BACKUP] Starting backup of pinned shortcuts…")
 

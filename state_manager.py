@@ -19,7 +19,7 @@ def load_state() -> dict:
         "master_toggle_left": True,
         
         "mmb_activation_enabled": True,
-        "auto_align_enabled": False,
+        "title_bar_dock_enabled": True,
 
         "usb_idle_enabled": True,
         "usb_download_enabled": True,

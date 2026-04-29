@@ -121,6 +121,8 @@ class UtilityControlApp(QWidget):
 
         self._build_ui()
         self.tray_manager.create_tray_icon()
+        SCREEN_MOVER.configure(app_hwnd=int(self.winId()))
+        SCREEN_MOVER.start()
         
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.show()
@@ -447,23 +449,28 @@ class UtilityControlApp(QWidget):
 
         mmb_btn = make_toggle_button("Middle Mouse to Move", state.get("mmb_activation_enabled", True))
         screen_layout.addWidget(mmb_btn)
-        self.register_tooltip(mmb_btn, "Lets you drag windows with the middle mouse button.")
+        self.register_tooltip(mmb_btn, "Lets you move a window by middle-clicking the tracked title-bar dock.")
 
         def on_mmb_changed(checked: bool):
             state["mmb_activation_enabled"] = checked
             save_state(state)
+            SCREEN_MOVER.enable_mmb = checked
 
         mmb_btn.toggled.connect(on_mmb_changed)
 
-        auto_align_btn = make_toggle_button("Windows in Move Zone", state.get("auto_align_enabled", False))
-        screen_layout.addWidget(auto_align_btn)
-        self.register_tooltip(auto_align_btn, "Keeps moved windows aligned within the activation zone.")
+        title_bar_dock_btn = make_toggle_button("Title Bar Dock", state.get("title_bar_dock_enabled", True))
+        screen_layout.addWidget(title_bar_dock_btn)
+        self.register_tooltip(
+            title_bar_dock_btn,
+            "Shows a small left/right mover dock when you hover an app window's title bar.",
+        )
 
-        def on_auto_align_changed(checked: bool):
-            state["auto_align_enabled"] = checked
+        def on_title_bar_dock_changed(checked: bool):
+            state["title_bar_dock_enabled"] = checked
             save_state(state)
+            SCREEN_MOVER.title_bar_dock_enabled = checked
 
-        auto_align_btn.toggled.connect(on_auto_align_changed)
+        title_bar_dock_btn.toggled.connect(on_title_bar_dock_changed)
         self.main_layout.addWidget(screen_section)
         self.left_sections.append(screen_section)
 
