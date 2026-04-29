@@ -295,7 +295,7 @@ class UtilityControlApp(QWidget):
             content.setVisible(initial_open)
 
             content_layout = QVBoxLayout(content)
-            content_layout.setContentsMargins(10, 5, 10, 5)
+            content_layout.setContentsMargins(10, 10, 10, 10)
 
             layout.addWidget(sec_header)
             frame_layout.addWidget(content)
