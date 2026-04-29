@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QToolTip
 
 
 class QtTooltipManager(QObject):
-    def __init__(self, widget, text, delay=500):
+    def __init__(self, widget, text, delay=250):
         super().__init__(widget)
 
         self.widget = widget

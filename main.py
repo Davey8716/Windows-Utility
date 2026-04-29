@@ -823,7 +823,7 @@ class UtilityControlApp(QWidget):
         for btn in getattr(self, "arrow_buttons", []):
             btn.setStyleSheet(style)
 
-    def register_tooltip(self, widget: QWidget, text: str, delay: int = 500):
+    def register_tooltip(self, widget: QWidget, text: str, delay: int = 10):
         manager = QtTooltipManager(widget, text, delay=delay)
         self._tooltip_managers.append(manager)
         return manager
