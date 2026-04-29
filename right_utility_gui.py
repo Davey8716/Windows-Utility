@@ -2,8 +2,8 @@
 import sys
 import subprocess
 import ctypes
-
 import styles
+
 from PySide6.QtWidgets import (
     QDialog,
     QWidget,
@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout
 )
 from PySide6.QtCore import Qt
-
 from collapsible_section import CollapsibleSection
 from main import get_drive_info
 from PySide6.QtWidgets import QPushButton, QTextEdit
@@ -27,18 +26,14 @@ from PySide6.QtWidgets import QComboBox
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QPushButton, QLineEdit
 
-
 class AdvancedToolsPanel(QDialog):
     def __init__(self, app):
         super().__init__(app)
         self.app = app
 
-        # --------------------------------------------------
-        # Window config
-        # --------------------------------------------------
         self.setWindowTitle("")
         self.setFixedWidth(505)
-        self.hide()  # start hidden
+        self.hide() 
 
         self._desired_topmost = self.app.right_always_on_top_var
 
@@ -47,15 +42,9 @@ class AdvancedToolsPanel(QDialog):
             self._desired_topmost
         )
 
-        # --------------------------------------------------
-        # Root layout
-        # --------------------------------------------------
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
 
-        # --------------------------------------------------
-        # Scrollable content
-        # --------------------------------------------------
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -69,17 +58,11 @@ class AdvancedToolsPanel(QDialog):
         self.side_layout.setContentsMargins(10, 5, 10, 5)
         self.side_layout.setSpacing(6)
 
-        # --------------------------------------------------
-        # Title
-        # --------------------------------------------------
         self.advanced_title = QLabel("Advanced Tools")
         self.advanced_title.setStyleSheet(styles.label_style(font_size=20))
         self.advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.side_layout.addWidget(self.advanced_title)
 
-        # --------------------------------------------------
-        # Title row
-        # --------------------------------------------------
         title_row = QWidget()
         title_row_layout = QHBoxLayout(title_row)
         title_row_layout.setContentsMargins(0, 0, 0, 0)
@@ -107,9 +90,6 @@ class AdvancedToolsPanel(QDialog):
         title_row_layout.addWidget(self.master_collapse_btn_right)
         self.side_layout.addWidget(title_row)
 
-        # ==================================================
-        # Windows Utilities
-        # ==================================================
         self.windows_utility_section = CollapsibleSection(
             title="Windows Utilities",
             section_id="windows_utilities",
@@ -128,12 +108,8 @@ class AdvancedToolsPanel(QDialog):
         )
 
         self.app.collapsible_sections.append(self.windows_utility_section)
-
         parent = self.windows_utility_section.content
 
-        # ==================================================
-        # Side Bar Utilities
-        # ==================================================
         self.sidebar_utils_section = CollapsibleSection(
             title="Side Bar Utilities",
             section_id="sidebar_utils_section",
@@ -159,9 +135,6 @@ class AdvancedToolsPanel(QDialog):
 
         self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
 
-        # --------------------------------------------------
-        # Two-column dropdown container
-        # --------------------------------------------------
         row = QWidget()
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(4, 4, 4, 8)
@@ -189,12 +162,6 @@ class AdvancedToolsPanel(QDialog):
             self._startup_power_utilities()
         )
 
-    
-        # ==================================================
-        # Drive Space Display
-        # ==================================================
-
-        
         self.display_space_section = CollapsibleSection(
             title="Drive Space Display",
             section_id="drive_space_display",
@@ -212,12 +179,8 @@ class AdvancedToolsPanel(QDialog):
         )
 
         self.app.collapsible_sections.append(self.display_space_section)
-
         drive_parent = self.display_space_section.content_layout
 
-        # --------------------------------------------------
-        # Open This PC button
-        # --------------------------------------------------
         btn_this_pc = QPushButton("Open This PC")
         styles.apply_default_button_size(btn_this_pc)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
@@ -227,9 +190,6 @@ class AdvancedToolsPanel(QDialog):
 
         drive_parent.addWidget(btn_this_pc)
 
-        # --------------------------------------------------
-        # OUTPUT CONSOLE (read-only)
-        # --------------------------------------------------
         self.drive_space_output = QTextEdit()
         self.drive_space_output.setFixedHeight(100)
         self.drive_space_output.setReadOnly(True)
@@ -237,9 +197,6 @@ class AdvancedToolsPanel(QDialog):
 
         drive_parent.addWidget(self.drive_space_output)
 
-        # --------------------------------------------------
-        # Refresh logic
-        # --------------------------------------------------
         def refresh_drive_display():
             self.drive_space_output.clear()
 
@@ -257,20 +214,11 @@ class AdvancedToolsPanel(QDialog):
 
                 self.drive_space_output.append(line)
 
-        # initial render
         refresh_drive_display()
 
-        # --------------------------------------------------
-        # Scheduled refresh (10s)
-        # --------------------------------------------------
         self.drive_refresh_timer = QTimer(self)
         self.drive_refresh_timer.timeout.connect(refresh_drive_display)
         self.drive_refresh_timer.start(10_000)
-
-        # ==================================================
-        # Universal Bookmarks Exporter
-        # ==================================================
-
 
         self.bookmarks_exporter_section = CollapsibleSection(
             title="Universal Bookmarks Exporter",
@@ -284,9 +232,6 @@ class AdvancedToolsPanel(QDialog):
         self.side_layout.addWidget(self.bookmarks_exporter_section)
         self.app.collapsible_sections.append(self.bookmarks_exporter_section)
 
-        # --------------------------------------------------
-        # Export Brave Bookmarks button
-        # --------------------------------------------------
         self.btn_brave_export = QPushButton("Export Brave Bookmarks")
         styles.apply_default_button_size(self.btn_brave_export)
         self.btn_brave_export.setStyleSheet(styles.button_text_style(15))
@@ -301,16 +246,11 @@ class AdvancedToolsPanel(QDialog):
 
         self.bookmarks_exporter_section.content_layout.addWidget(self.btn_brave_export)
 
-        # --------------------------------------------------
-        # Output path display (read-only)
-        # --------------------------------------------------
         self.brave_export_entry = QLineEdit()
         self.brave_export_entry.setReadOnly(True)
         self.brave_export_entry.setFixedWidth(420)
         self.brave_export_entry.setStyleSheet(styles.line_edit_style(15))
 
-        # If app.brave_export_path_var is a QString/QLineEdit source:
-        # call this whenever it changes
         self.brave_export_entry.setText(
             str(self.app.brave_export_path_var)
         )
@@ -336,24 +276,18 @@ class AdvancedToolsPanel(QDialog):
     def _run_elevated(self, command: str):
         ctypes.windll.shell32.ShellExecuteW(
             None,
-            "runas",          # triggers UAC
+            "runas",         
             "cmd.exe",
-            f"/k {command}",  # keep window open
+            f"/k {command}",  
             None,
             1
         )
-
 
     def _is_admin(self) -> bool:
         try:
             return ctypes.windll.shell32.IsUserAnAdmin()
         except Exception:
             return False
-
-
-    # ==================================================
-    # Windows Utilities
-    # ==================================================
 
     def _system_utilities(self):
         return {
@@ -363,7 +297,6 @@ class AdvancedToolsPanel(QDialog):
             "Task Manager": lambda: subprocess.Popen(["taskmgr"]),
         }
 
-
     def _hardware_utilities(self):
         return {
             "Device Manager": lambda: subprocess.Popen(["devmgmt.msc"]),
@@ -371,7 +304,6 @@ class AdvancedToolsPanel(QDialog):
             "Services": lambda: subprocess.Popen(["services.msc"]),
             "Event Viewer": lambda: subprocess.Popen(["eventvwr.msc"]),
         }
-
 
     def _network_utilities(self):
         return {
@@ -381,7 +313,6 @@ class AdvancedToolsPanel(QDialog):
             "Router Login": self.app.actions.open_router_page,
         }
 
-
     def _startup_power_utilities(self):
         return {
             "Startup Apps": lambda: subprocess.Popen(
@@ -389,11 +320,6 @@ class AdvancedToolsPanel(QDialog):
             ),
             "Power Options": lambda: subprocess.Popen(["powercfg.cpl"]),
         }
-
-        
-    # ==================================================
-    # Drop down helper for windows utils
-    # ==================================================
 
     def _add_windows_dropdown(self, parent_layout, label, actions_map):
         placeholder = f" {label} "
@@ -413,22 +339,15 @@ class AdvancedToolsPanel(QDialog):
             if not action:
                 return
 
-            # minimize BOTH windows to taskbar
             self.app.showMinimized()
             self.showMinimized()
 
             action()
 
-            # reset dropdown back to placeholder
             combo.setCurrentText(placeholder)
 
         combo.currentTextChanged.connect(runner)
-
         parent_layout.addWidget(combo)
-        
-    # ==================================================
-    # Side Bar Utilities
-    # ==================================================
 
     def _sidebar_network_actions(self):
         return {
@@ -452,8 +371,6 @@ class AdvancedToolsPanel(QDialog):
             "Open Startup Folder": self.open_startup_folder,
             "Clipboard History": self.open_clipboard_history,
         }
-
-    import ctypes
 
     def _ensure_admin(self):
         try:
@@ -493,7 +410,6 @@ class AdvancedToolsPanel(QDialog):
             self._sidebar_quick_open_actions()
         )
 
-        # ✅ System integrity section
         self._add_sidebar_dropdown(
             parent_layout,
             "System Integrity & Disk Health",
@@ -529,10 +445,6 @@ class AdvancedToolsPanel(QDialog):
             output = str(e)
 
         self.sidebar_output.append(output)
-
-    # ====================================
-    # Dropdown calls
-    # ====================================
 
     def flush_dns(self):
         self._run_and_output("ipconfig /flushdns")
@@ -575,7 +487,6 @@ class AdvancedToolsPanel(QDialog):
             return
         self._run_and_output("sfc /scannow")
 
-
     def run_chkdsk(self):
         if not self._ensure_admin():
             return
@@ -599,7 +510,6 @@ class AdvancedToolsPanel(QDialog):
             if action:
                 action()
 
-            # reset after run
             combo.setCurrentText(placeholder)
 
         combo.currentTextChanged.connect(runner)
@@ -625,40 +535,28 @@ class AdvancedToolsPanel(QDialog):
 
         self.app.save_all_settings()
 
-    # ==================================================
-    # Visibility helpers
-    # ==================================================
-
     def show(self):
-        # sync before showing
         self.app._sync_windows("main")
-
         self.showNormal()
-
-        # re-apply topmost if needed
         self.setWindowFlag(
             Qt.WindowType.WindowStaysOnTopHint,
             bool(self._desired_topmost)
         )
-        self.show()  # required after changing flags
+        self.show()
 
         self.raise_()
         self.activateWindow()
 
-
     def hide(self):
         self.hide()
 
-        # mirror CTk state cleanup
         if hasattr(self.app, "expanded"):
             self.app.expanded = False
         if hasattr(self.app, "expand_btn"):
-            # Qt equivalent: button text setter
             self.app.expand_btn.setText("▾")
 
 
     def _position_next_to_main(self):
-        # Ensure geometry is up to date
         self.app.repaint()
         self.app.updateGeometry()
 
@@ -668,16 +566,11 @@ class AdvancedToolsPanel(QDialog):
 
         self.move(QPoint(x, y))
 
-
     def _on_close(self):
-        # same logic as toggle close
         self.app.advanced_panel_open_state = False
         self.hide()
         self.app.save_all_settings()
 
-    # --------------------------------------------------
-    # Event hooks
-    # --------------------------------------------------
     def closeEvent(self, event):
         self._on_close()
         event.accept()

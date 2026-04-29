@@ -21,7 +21,6 @@ ICON_BUTTON_HEIGHT = 28
 SECTION_TOGGLE_WIDTH = 28
 SECTION_TOGGLE_HEIGHT = 20
 
-
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
 
@@ -36,7 +35,6 @@ def label_style(font_size: int | None = None, bold: bool = True, color: QColor |
     if color is not None:
         parts.append(f"color: {qcolor_css(color)};")
     return " ".join(parts)
-
 
 def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
     return f"""
@@ -54,7 +52,6 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
         }}
     """
 
-
 def collapsible_section_frame_style(border_color: QColor | None = None, radius: int = 10) -> str:
     border = border_color or TEXT_DARK
     return f"""
@@ -64,7 +61,6 @@ def collapsible_section_frame_style(border_color: QColor | None = None, radius: 
             background-color: transparent;
         }}
     """
-
 
 def organizing_button_style(font_size: int | None = None) -> str:
     font_rule = f"font-size: {font_size}px;" if font_size is not None else ""
@@ -76,7 +72,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             font-weight: bold;
             color: {qcolor_css(TEXT_LIGHT)};
             border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
-            border-radius: 6px;
+            border-radius: 3px;
             background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
         }}
         QPushButton:hover {{
@@ -95,26 +91,20 @@ def organizing_button_style(font_size: int | None = None) -> str:
         }}
     """
 
-
 def toggle_button_style() -> str:
     return organizing_button_style()
-
 
 def text_edit_style(font_family: str, font_size: int) -> str:
     return label_style(font_size=font_size, bold=True, font_family=font_family)
 
-
 def button_text_style(font_size: int) -> str:
     return organizing_button_style(font_size=font_size)
-
 
 def line_edit_style(font_size: int) -> str:
     return label_style(font_size=font_size, bold=True)
 
-
 def combo_style(font_size: int) -> str:
     return label_style(font_size=font_size, bold=True)
-
 
 def apply_default_button_size(button) -> None:
     button.setFixedSize(DEFAULT_BUTTON_WIDTH, DEFAULT_BUTTON_HEIGHT)

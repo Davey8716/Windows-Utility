@@ -1,7 +1,3 @@
-# ===================================================================
-#  Screen Tab Mover + USB Reminder Control Panel
-#  Modern UI using CustomTkinter
-# ===================================================================
 
 import sys
 import ctypes
@@ -16,6 +12,7 @@ from screen_mover import SCREEN_MOVER
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from tooltips import QtTooltipManager
+from PySide6.QtCore import Qt, QTimer
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -32,12 +29,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox
 )
-
-from PySide6.QtCore import Qt, QTimer
-
-# =======================================
-# These 3 functions possibly to be moved.
-# =======================================
 
 MUTEX_NAME = "Windows Resurface"
 
@@ -59,22 +50,32 @@ MUTEX_NAME = "Windows Resurface"
 #             return drives
 
 def bring_existing_instance_to_front():
+    target_hwnd = None
+
     def enum_handler(hwnd, _):
+        nonlocal target_hwnd
         title = win32gui.GetWindowText(hwnd)
 
-        if "Windows Resurface" in title:
-            try:
-                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                win32gui.SetForegroundWindow(hwnd)
-            except Exception as e:
-                print("[RESTORE] failed:", e)
-            return False
+        if "Windows Resurface" in title and hwnd != 0:
+            target_hwnd = hwnd
 
         return True
 
-    win32gui.EnumWindows(enum_handler, None)
+    try:
+        win32gui.EnumWindows(enum_handler, None)
+    except Exception as e:
+        print("[RESTORE] enumeration failed:", e)
+        return
 
+    if not target_hwnd:
+        return
+
+    try:
+        win32gui.ShowWindow(target_hwnd, win32con.SW_SHOW)
+        win32gui.ShowWindow(target_hwnd, win32con.SW_RESTORE)
+        win32gui.SetForegroundWindow(target_hwnd)
+    except Exception as e:
+        print("[RESTORE] failed:", e)
 
 def ensure_single_instance():
     kernel32 = ctypes.windll.kernel32
@@ -88,7 +89,6 @@ def ensure_single_instance():
 
     return mutex
 
-# TEMP stub — Qt branch only
 class AdvancedToolsPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -99,7 +99,6 @@ class UtilityControlApp(QWidget):
     def __init__(self):
         super().__init__()
 
-        # ---------------- Window ----------------
         self.setWindowTitle("Windows Resurface")
         self.COLLAPSED_WIDTH = 505
         self.EXPANDED_WIDTH = 1045
@@ -108,7 +107,6 @@ class UtilityControlApp(QWidget):
         self.WINDOW_HEIGHT = 800
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         
-        # ✅ add these
         self.state = load_state()
         self.saved_state = self.state
         self.tooltips_enabled = bool(self.state.get("tooltips_enabled", True))
@@ -117,11 +115,8 @@ class UtilityControlApp(QWidget):
         self.collapsible_sections = []
         self.actions = UtilityActionsManager(self)
 
-        # ---------------- Build UI ----------------
         self._build_ui()
         
-
-        # ---------------- Always on top ----------------
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.show()
 
@@ -134,9 +129,6 @@ class UtilityControlApp(QWidget):
 
     def _build_ui(self):
 
-        # ==================================================
-        # Root container
-        # ==================================================
         self.root_container = QWidget(self)
         self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
 
@@ -149,9 +141,6 @@ class UtilityControlApp(QWidget):
         self.root_layout.setColumnStretch(1, 0)
         self.root_layout.setRowStretch(0, 1)
 
-        # ==================================================
-        # Scroll Area (LEFT)
-        # ==================================================
         self.main_scroll = QScrollArea(self.root_container)
         self.main_scroll.setWidgetResizable(True)
         self.main_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -161,9 +150,6 @@ class UtilityControlApp(QWidget):
 
         self.root_layout.addWidget(self.main_scroll, 0, 0)
 
-        # ==================================================
-        # Advanced Settings panel (RIGHT)
-        # ==================================================
         self.advanced_settings_panel = QFrame(self.root_container)
         self.advanced_settings_panel.setFixedWidth(self.ADVANCED_PANEL_WIDTH)
 
@@ -190,9 +176,6 @@ class UtilityControlApp(QWidget):
         self.root_layout.addWidget(self.advanced_settings_panel, 0, 1)
         self.advanced_settings_panel.hide()
 
-        # ==================================================
-        # Right-edge panel toggle
-        # ==================================================
         self.advanced_settings_toggle = QToolButton(self.root_container)
         self.advanced_settings_toggle.setFixedSize(
             styles.ICON_BUTTON_WIDTH,
@@ -208,9 +191,6 @@ class UtilityControlApp(QWidget):
         )
         self.advanced_settings_toggle.raise_()
 
-        # ==================================================
-        # Scroll Contents
-        # ==================================================
         self.main_frame = QWidget()
         self.main_scroll.setWidget(self.main_frame)
 
@@ -219,14 +199,9 @@ class UtilityControlApp(QWidget):
         self.main_layout.setSpacing(10)
         
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        # (later, after you add all sections)
         
         state = load_state()
         
-
-        # ==================================================
-        # HEADER — App title + master collapse
-        # ==================================================
         header = QWidget(self.main_frame)
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 10, 10, 10)
@@ -248,13 +223,9 @@ class UtilityControlApp(QWidget):
 
         self.main_layout.addWidget(header,alignment= Qt.AlignCenter)
         
-        # ✅ MUST exist before you append
         self.left_sections = []
         self._sections_visible = True
-        
-        # ==================================================
-        # Section factory
-        # ==================================================
+
         def make_section(title_text, section_id: str):
             section = QWidget(self.main_frame)
             section.section_id = section_id
@@ -288,7 +259,6 @@ class UtilityControlApp(QWidget):
             frame_layout.setContentsMargins(0, 0, 0, 0)
             frame_layout.setSpacing(0)
 
-            # ✅ attach content to section for master toggle
             section.content = QWidget(frame)
             content = section.content
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
@@ -351,11 +321,7 @@ class UtilityControlApp(QWidget):
             install_green_flash(button)
             return button
 
-        # ==================================================
-        # User Interface section (SIMPLE + STABLE)
-        # ==================================================
         ui_section, ui_layout = make_section("User Interface", "user_interface")
-
         self.main_layout.addWidget(ui_section)
         self.left_sections.append(ui_section)
 
@@ -380,7 +346,6 @@ class UtilityControlApp(QWidget):
         ui_rows_layout.setAlignment(ui_left_col, Qt.AlignmentFlag.AlignTop)
         ui_rows_layout.setAlignment(ui_right_col, Qt.AlignmentFlag.AlignTop)
 
-        # ---- Dark Mode ----
         dark_mode_btn = make_toggle_button("Dark Mode", state.get("theme_dark", True))
         ui_left_layout.addWidget(dark_mode_btn)
         self.register_tooltip(dark_mode_btn, "Switches the app between dark and light appearance.")
@@ -397,12 +362,10 @@ class UtilityControlApp(QWidget):
         ui_left_layout.addWidget(min_all_btn)
         self.register_tooltip(min_all_btn, "Controls whether the minimize-all utility is enabled.")
 
-        # ---- Power Options master ----
         power_btn = make_toggle_button("Power Options", state.get("power_options_enabled", False))
         ui_right_layout.addWidget(power_btn)
         self.register_tooltip(power_btn, "Shows or hides the power action buttons.")
 
-        # ---- Power Options container (VERTICAL, BELOW) ----
         power_container = QWidget(ui_right_col)
         power_layout = QVBoxLayout(power_container)
         power_layout.setContentsMargins(0, 0, 0, 0)
@@ -422,7 +385,6 @@ class UtilityControlApp(QWidget):
         power_layout.addWidget(shutdown_btn)
         self.register_tooltip(shutdown_btn, "Enables the shutdown action shortcut.")
 
-        # ---- STATE HANDLERS ----
         def save_sleep(checked: bool):
             state["power_sleep_enabled"] = checked
             save_state(state)
@@ -448,12 +410,11 @@ class UtilityControlApp(QWidget):
         logout_btn.toggled.connect(save_logout)
         shutdown_btn.toggled.connect(save_shutdown)
 
-        # Initial state
         update_power_visibility()
 
         def on_always_on_top_changed(checked):
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
-            self.show()  # required for flag changes to apply
+            self.show() 
 
             state["main_always_on_top_enabled"] = checked
             save_state(state)
@@ -471,25 +432,14 @@ class UtilityControlApp(QWidget):
             state["minimize_all_enabled"] = checked
             save_state(state)
 
-            # call logic if it exists
             if hasattr(self.actions, "minimize_all_toggle"):
                 self.actions.minimize_all_toggle(checked)
             elif hasattr(self.actions, "minimize_all"):
-                # alt naming
                 self.actions.minimize_all(checked)
 
         min_all_btn.toggled.connect(on_min_all_changed)
-
-        # ==================================================
-        # Screen Mover section (visual only)
-        # ==================================================
         screen_section, screen_layout = make_section("Screen Mover", "screen_mover")
 
-        # -------------------------
-        # Screen Mover (placeholders, no logic yet)
-        # -------------------------
-
-        # Middle Mouse to Move
         mmb_btn = make_toggle_button("Middle Mouse to Move", state.get("mmb_activation_enabled", True))
         screen_layout.addWidget(mmb_btn)
         self.register_tooltip(mmb_btn, "Lets you drag windows with the middle mouse button.")
@@ -500,8 +450,6 @@ class UtilityControlApp(QWidget):
 
         mmb_btn.toggled.connect(on_mmb_changed)
 
-
-        # Windows in Move Zone (auto-align)
         auto_align_btn = make_toggle_button("Windows in Move Zone", state.get("auto_align_enabled", False))
         screen_layout.addWidget(auto_align_btn)
         self.register_tooltip(auto_align_btn, "Keeps moved windows aligned within the activation zone.")
@@ -511,16 +459,11 @@ class UtilityControlApp(QWidget):
             save_state(state)
 
         auto_align_btn.toggled.connect(on_auto_align_changed)
-
         self.main_layout.addWidget(screen_section)
         self.left_sections.append(screen_section)
 
-        # ==================================================
-        # Drive Reminder Options (visual only)
-        # ==================================================
         usb_section, usb_layout = make_section("Drive Reminder Options", "drive_reminder_options")
 
-        # Idle-plugged reminder
         idle_btn = make_toggle_button("Idle-plugged Reminder", state.get("usb_idle_enabled", True))
         usb_layout.addWidget(idle_btn)
         self.register_tooltip(idle_btn, "Controls the idle plugged-in drive reminder.")
@@ -531,8 +474,6 @@ class UtilityControlApp(QWidget):
 
         idle_btn.toggled.connect(on_idle_changed)
 
-
-        # Download-finished reminder
         download_btn = make_toggle_button("Download-finished Reminder", state.get("usb_download_enabled", True))
         usb_layout.addWidget(download_btn)
         self.register_tooltip(download_btn, "Controls the finished-download drive reminder.")
@@ -543,7 +484,6 @@ class UtilityControlApp(QWidget):
 
         download_btn.toggled.connect(on_download_changed)
 
-        # Plug / unplug notification
         plug_btn = make_toggle_button("Plug / Unplug Notification", state.get("usb_plug_enabled", True))
         usb_layout.addWidget(plug_btn)
         self.register_tooltip(plug_btn, "Controls notifications for drive plug and unplug events.")
@@ -557,25 +497,15 @@ class UtilityControlApp(QWidget):
         self.main_layout.addWidget(usb_section)
         self.left_sections.append(usb_section)
 
-        
-        # ==================================================
-        # Organising Utilities (grouped under one title frame)
-        # ==================================================
         org_section, org_layout = make_section("Organising Utilities", "organising_utilities")
-
         self.backup_path = self._get_master_backup_dir()
-        # -------------------------
-        # Desktop Screenshot
-        # -------------------------
+
         screenshot_btn = QPushButton("Desktop Screenshot")
         style_organizing_button(screenshot_btn)
         org_layout.addWidget(screenshot_btn)
         screenshot_btn.clicked.connect(self.take_desktop_screenshot)
         self.register_tooltip(screenshot_btn, "Captures the desktop and saves it to the master backup folder.")
 
-        # -------------------------
-        # Folder → Desktop
-        # -------------------------
         folder_row = QWidget()
         folder_row_layout = QHBoxLayout(folder_row)
         folder_row_layout.setContentsMargins(0, 0, 0, 0)
@@ -608,37 +538,24 @@ class UtilityControlApp(QWidget):
         folder_btn.clicked.connect(on_create_folder_clicked)
         folder_input.textChanged.connect(on_folder_name_changed)
 
-        # -------------------------
-        # Backup Taskbar
-        # -------------------------
         backup_taskbar_btn = QPushButton("Backup Taskbar")
         style_organizing_button(backup_taskbar_btn)
         org_layout.addWidget(backup_taskbar_btn)
         backup_taskbar_btn.clicked.connect(self.backup_taskbar_apps)
         self.register_tooltip(backup_taskbar_btn, "Backs up pinned taskbar shortcuts into the TaskBarApps folder.")
 
-        # -------------------------
-        # Open Backup Folder
-        # -------------------------
         open_backup_btn = QPushButton("Open Backup Folder")
         style_organizing_button(open_backup_btn)
         org_layout.addWidget(open_backup_btn)
         open_backup_btn.clicked.connect(self.open_taskbar_backup_folder)
         self.register_tooltip(open_backup_btn, "Opens the TaskBarApps backup folder inside the master backup path.")
         
-        # -------------------------
-        # Desktop Icon Layout
-        # -------------------------
-
-        # Capture desktop layout
         capture_layout_btn = QPushButton("Capture Desktop Layout")
         style_organizing_button(capture_layout_btn)
         org_layout.addWidget(capture_layout_btn)
         capture_layout_btn.clicked.connect(self.capture_desktop_layout)
         self.register_tooltip(capture_layout_btn, "Saves the current desktop icon layout to the master backup location.")
 
-
-        # Restore desktop layout
         restore_layout_btn = QPushButton("Restore Desktop Layout")
         style_organizing_button(restore_layout_btn)
         org_layout.addWidget(restore_layout_btn)
@@ -676,7 +593,6 @@ class UtilityControlApp(QWidget):
         self.main_layout.addStretch(1)
         
         def toggle_all():
-            # If ANY section is visible → collapse all
             any_visible = any(
                 section.content.isVisible()
                 for section in self.left_sections
@@ -777,24 +693,9 @@ class UtilityControlApp(QWidget):
         return self._build_master_output_path("desktop_screenshot.png")
 
     def take_desktop_screenshot(self):
-        """
-        Universal desktop screenshotter:
-        - Iconifies main GUI
-        - Iconifies right panel if open
-        - Takes screenshot
-        - Uses the master backup location automatically
-        - Ends iconified (both panels)
-        """
-
         try:
-            # -------------------------------------------------------
-            # 2) Capture full desktop
-            # -------------------------------------------------------
             img = ImageGrab.grab()
 
-            # -------------------------------------------------------
-            # 3) Build save path from master backup folder
-            # -------------------------------------------------------
             default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             save_dir = Path(self._get_master_backup_dir())
             save_dir.mkdir(parents=True, exist_ok=True)
@@ -897,7 +798,6 @@ class UtilityControlApp(QWidget):
         palette = self.palette()
         bg = palette.color(self.backgroundRole())
 
-        # Simple luminance check
         is_dark = (bg.red() + bg.green() + bg.blue()) / 3 < 128
 
         if is_dark:
@@ -955,9 +855,6 @@ class UtilityControlApp(QWidget):
         self.save_all_settings()
         event.accept()
 
-# ===================================================================
-# Launch App
-# ===================================================================
 def main():
     mutex = ensure_single_instance()
     app = QApplication(sys.argv)

@@ -11,18 +11,11 @@ import win32con
 import win32gui
 import win32process
 
+from pynput import mouse
 from state_manager import load_state
-
-# ==============================================================
-# Gesture activation band (top of screen)
-# ==============================================================
 
 ACTIVATION_Y_MIN = 0
 ACTIVATION_Y_MAX = 30
-
-# ==============================================================
-# Screen Mover Background Worker (GUI-agnostic, Qt-safe)
-# ==============================================================
 
 class ScreenMoverWorker:
     def __init__(self):
@@ -32,19 +25,10 @@ class ScreenMoverWorker:
         self.mouse_listener = None
         self.lock = threading.Lock()
 
-        
-        # -------------------------
-        # GUI / dispatcher hooks (Qt-safe)
-        # -------------------------
-        # Optional callable: dispatcher(fn) → runs fn on GUI thread
         self.dispatch_ui = None
 
-        # Overlay enable flag (GUI may toggle)
         self.overlay_enabled = True
 
-        # -------------------------
-        # Gesture / state
-        # -------------------------
         self.mmb_down = False
         self.lmb_down = False
         self.gesture_active = False
@@ -52,22 +36,15 @@ class ScreenMoverWorker:
 
         self.gesture_hwnd = None
 
-        # Flick tracking
         self.flick_start_x = None
         self.flick_start_time = None
         self.flick_threshold_px = 25
         self.flick_max_time = 0.35
 
-        # -------------------------
-        # Auto-align tracking
-        # -------------------------
         self.auto_align_enabled = False
         self.last_rect = None
         self.last_move_time = 0
 
-        # -------------------------
-        # Activation toggles (GUI-controlled)
-        # -------------------------
         self.enable_mmb = False
         self.mmb_ui_enabled = True
         
@@ -75,16 +52,7 @@ class ScreenMoverWorker:
     def hwnd(self):
         return self.overlay.hwnd if self.overlay else None
 
-        
-    # ==============================================================
-    # Window nudger (force align)
-    # ==============================================================
-
     def _force_align_all_windows(self):
-        """
-        When auto-align is enabled, immediately scan all windows and gently move
-        any that are below the flick zone threshold back into the activation zone.
-        """
         if not self.auto_align_enabled:
             return
 
@@ -92,7 +60,6 @@ class ScreenMoverWorker:
             windows = []
 
             def enum_handler(hwnd, _):
-                # Must be visible and not minimized
                 if not win32gui.IsWindowVisible(hwnd):
                     return
                 if win32gui.IsIconic(hwnd):
@@ -105,11 +72,9 @@ class ScreenMoverWorker:
 
             for hwnd in windows:
                 try:
-                    # Skip overlay window
                     if self and hwnd == self.hwnd:
                         continue
 
-                    # Skip protected / system windows
                     try:
                         _, pid = win32process.GetWindowThreadProcessId(hwnd)
                         exe = psutil.Process(pid).name().lower()
@@ -125,16 +90,13 @@ class ScreenMoverWorker:
                     except Exception:
                         continue
 
-                    # Window geometry
                     left, top, right, bottom = win32gui.GetWindowRect(hwnd)
                     width = right - left
                     height = bottom - top
 
-                    # Already within activation band
                     if top <= threshold:
                         continue
 
-                    # Nudge window toward top edge
                     try:
                         win32gui.SetWindowPos(
                             hwnd,
@@ -156,23 +118,14 @@ class ScreenMoverWorker:
         except Exception as outer_e:
             print("[FORCE-ALIGN] EnumWindows error:", outer_e)
 
-        
-    
-    
-
-    # ==============================================================
-    # System window detection
-    # ==============================================================
-
     def _is_system_window(self, hwnd):
-        """Return True if the window belongs to Explorer or Windows shell UI."""
         try:
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
             exe = psutil.Process(pid).name().lower()
 
             return exe in (
-                "explorer.exe",                # Taskbar, tray, shell
-                "shellexperiencehost.exe",     # Windows 10/11 shell UI
+                "explorer.exe",                
+                "shellexperiencehost.exe",     
                 "startmenuexperiencehost.exe",
                 "searchhost.exe",
                 "widgets.exe",
@@ -180,16 +133,13 @@ class ScreenMoverWorker:
         except Exception:
             return False
 
-        
     def show(self, x: int, y: int, paint_callback):
-        """Create or raise the overlay at screen position."""
         try:
             import win32api, win32con, win32gui
         except Exception:
             print("[OVERLAY] WinAPI missing")
             return
 
-        # Already exists → raise it
         if self.hwnd and win32gui.IsWindow(self.hwnd):
             win32gui.SetWindowPos(
                 self.hwnd,
@@ -214,7 +164,7 @@ class ScreenMoverWorker:
         try:
             win32gui.RegisterClass(wndclass)
         except Exception:
-            pass  # class may already be registered
+            pass 
 
         self.hwnd = win32gui.CreateWindowEx(
             win32con.WS_EX_TOPMOST
@@ -238,7 +188,6 @@ class ScreenMoverWorker:
             print("[OVERLAY] Failed to create overlay")
             return
 
-        # Rounded corners
         rgn = win32gui.CreateRoundRectRgn(0, 0, width, height, 16, 16)
         win32gui.SetWindowRgn(self.hwnd, rgn, True)
 
@@ -265,16 +214,7 @@ class ScreenMoverWorker:
         finally:
             self.hwnd = None
             
-    # ==============================================================
-    # Soft auto-align (active window)
-    # ==============================================================
-        
     def _soft_auto_align_active_window(self):
-        """
-        Gently nudge the active window upward so its title bar stays inside the
-        flick activation zone. Runs only after drags and never touches
-        minimized or maximized windows.
-        """
         if not self.auto_align_enabled:
             return
 
@@ -285,13 +225,9 @@ class ScreenMoverWorker:
 
             hwnd = win._hWnd
 
-            # Skip overlay window
             if self and hwnd == self.hwnd:
                 return
 
-            # ----------------------------------------------------------
-            # Skip protected / system windows
-            # ----------------------------------------------------------
             try:
                 _, pid = win32process.GetWindowThreadProcessId(hwnd)
                 exe = psutil.Process(pid).name().lower()
@@ -307,13 +243,11 @@ class ScreenMoverWorker:
             except Exception:
                 return
 
-            # Skip minimized or maximized windows
             placement = win32gui.GetWindowPlacement(hwnd)
             show_cmd = placement[1]
             if show_cmd in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
                 return
 
-            # Current geometry
             left, top, right, bottom = win32gui.GetWindowRect(hwnd)
             width = right - left
             height = bottom - top
@@ -322,7 +256,6 @@ class ScreenMoverWorker:
             if top <= threshold:
                 return
 
-            # Nudge window upward without resizing
             try:
                 win32gui.SetWindowPos(
                     hwnd,
@@ -341,16 +274,8 @@ class ScreenMoverWorker:
         except Exception as outer_error:
             print("[AUTO-ALIGN] Outer error:", outer_error)
         
-    # ==============================================================
-    # Window mover
-    # ==============================================================
-
     def move_active_window(self, direction: str):
-        """Move the active window between monitors, preserving size/state."""
         try:
-            # ----------------------------------------------------------
-            # Resolve target hwnd (gesture-safe)
-            # ----------------------------------------------------------
             hwnd = self.gesture_hwnd
 
             if not hwnd:
@@ -360,7 +285,6 @@ class ScreenMoverWorker:
                     return
                 hwnd = win._hWnd
 
-            # If overlay somehow became foreground, recover real window
             if self.overlay and hwnd == self.overlay.hwnd:
                 hwnd = win32gui.GetForegroundWindow()
 
@@ -368,9 +292,6 @@ class ScreenMoverWorker:
                 print("[MOVE] Invalid target window.")
                 return
 
-            # ----------------------------------------------------------
-            # Enumerate monitors
-            # ----------------------------------------------------------
             monitors = win32api.EnumDisplayMonitors()
             if len(monitors) < 2:
                 print("[MOVE] Only one monitor detected — skipping move.")
@@ -394,9 +315,6 @@ class ScreenMoverWorker:
             target_info = win32api.GetMonitorInfo(monitor_handles[target_idx])
             t_left, t_top, t_right, t_bottom = target_info["Work"]
 
-            # ----------------------------------------------------------
-            # Window placement state
-            # ----------------------------------------------------------
             placement = win32gui.GetWindowPlacement(hwnd)
             show_cmd = placement[1]
             was_maximized = (show_cmd == win32con.SW_SHOWMAXIMIZED)
@@ -405,9 +323,6 @@ class ScreenMoverWorker:
             restored_width = right - left
             restored_height = bottom - top
 
-            # ----------------------------------------------------------
-            # Restore if minimized or maximized
-            # ----------------------------------------------------------
             if show_cmd in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 time.sleep(0.02)
@@ -416,9 +331,6 @@ class ScreenMoverWorker:
                 restored_width = right - left
                 restored_height = bottom - top
 
-            # ----------------------------------------------------------
-            # Move window (preserve size)
-            # ----------------------------------------------------------
             cur_left, cur_top, _, _ = win32gui.GetWindowRect(hwnd)
 
             win32gui.SetWindowPos(
@@ -433,9 +345,6 @@ class ScreenMoverWorker:
 
             time.sleep(0.02)
 
-            # ----------------------------------------------------------
-            # Re-maximize if needed
-            # ----------------------------------------------------------
             if was_maximized:
                 win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
 
@@ -447,24 +356,17 @@ class ScreenMoverWorker:
         except Exception as e:
             print(f"[ERROR] move_active_window: {e}")
         
-    # ==============================================================
-    # Gesture lifecycle (Qt-safe, GUI-agnostic)
-    # ==============================================================
-
     def begin_gesture(self, x, y):
-        """Enter gesture mode and show overlay (GUI-dispatched if provided)."""
         if not self.enable_mmb:
             return
 
         self.gesture_active = True
 
-        # Resolve window under cursor at gesture start
         try:
             self.gesture_hwnd = win32gui.WindowFromPoint((x, y))
         except Exception:
             self.gesture_hwnd = None
         finally:
-            # Flick baseline MUST always be set
             self.flick_start_x = x
             self.flick_start_time = time.time()
 
@@ -476,7 +378,6 @@ class ScreenMoverWorker:
         def _show():
             self.show(x, y)
 
-        # GUI-neutral dispatch (Qt can supply dispatcher)
         try:
             if callable(self.dispatch_ui):
                 self.dispatch_ui(_show)
@@ -485,12 +386,7 @@ class ScreenMoverWorker:
         except Exception as e:
             print("[OVERLAY] Show dispatch failed:", e)
 
-    # ==============================================================
-    # Gesture end
-    # ==============================================================
-
     def end_gesture(self):
-        """Exit gesture mode and hide overlay (GUI-dispatched if provided)."""
         if not self.gesture_active:
             return
 
@@ -517,7 +413,6 @@ class ScreenMoverWorker:
             print("[OVERLAY] Hide dispatch failed:", e)
         
     def worker_loop(self):
-        """Background loop: handles flick detection and auto-align."""
         print("[THREAD] Screen mover loop started.")
 
         SLEEP_INTERVAL = 0.01
@@ -528,9 +423,6 @@ class ScreenMoverWorker:
 
             now = time.time()
 
-            # --------------------------------------------------
-            # 1) Flick detection (gesture active)
-            # --------------------------------------------------
             if self.gesture_active and self.flick_start_x is not None:
                 try:
                     x, _ = win32api.GetCursorPos()
@@ -544,20 +436,15 @@ class ScreenMoverWorker:
                     self.move_active_window(direction)
                     self.end_gesture()
 
-                    # Skip auto-align this cycle for responsiveness
                     time.sleep(SLEEP_INTERVAL)
                     continue
 
-            # --------------------------------------------------
-            # 2) Soft auto-align (idle state)
-            # --------------------------------------------------
             if self.auto_align_enabled and not self.gesture_active:
                 try:
                     win = gw.getActiveWindow()
                     if win:
                         hwnd = win._hWnd
 
-                        # Ignore overlay or system windows
                         if (
                             self
                             and hwnd == self.hwnd
@@ -566,12 +453,10 @@ class ScreenMoverWorker:
                         else:
                             rect = win32gui.GetWindowRect(hwnd)
 
-                            # Window moved since last tick
                             if self.last_rect != rect:
                                 self.last_rect = rect
                                 self.last_move_time = now
                             else:
-                                # Window idle long enough → nudge
                                 if (now - self.last_move_time) >= 0.20:
                                     self._soft_auto_align_active_window()
 
@@ -579,10 +464,6 @@ class ScreenMoverWorker:
                     print("[AUTO-ALIGN] Error:", e)
 
             time.sleep(SLEEP_INTERVAL)
-
-    # ==============================================================
-    # Worker lifecycle
-    # ==============================================================
 
     def start(self):
         with self.lock:
@@ -592,12 +473,10 @@ class ScreenMoverWorker:
             print("[INFO] Starting Screen-Tab Mover backend…")
             self.enabled = True
 
-            # Load persisted state (GUI-independent)
             state = load_state()
             self.enable_mmb = state.get("mmb_activation_enabled", False)
             self.auto_align_enabled = state.get("auto_align_enabled", False)
 
-            # Background worker loop
             self.thread = threading.Thread(
                 target=self.worker_loop,
                 name="ScreenMoverWorker",
@@ -605,14 +484,10 @@ class ScreenMoverWorker:
             )
             self.thread.start()
 
-            # Global mouse hook
-            from pynput import mouse
-
             self.listener = mouse.Listener(
                 on_click=self.on_mouse_click
             )
             self.listener.start()
-
 
     def stop(self):
         with self.lock:
@@ -626,23 +501,16 @@ class ScreenMoverWorker:
                 self.mouse_listener.stop()
                 self.mouse_listener = None
                 
-    # ==============================================================
-    # Mouse hook
-    # ==============================================================
 
     def on_mouse_click(self, x, y, button, pressed, injected):
         if not self.enabled or not self.enable_mmb:
             return
 
-        # Track button state
         if button == mouse.Button.middle:
             self.mmb_down = pressed
         elif button == mouse.Button.left:
             self.lmb_down = pressed
 
-        # ---------------------------------------------------------
-        # Cancel active gesture
-        # ---------------------------------------------------------
         if self.gesture_active and self.activation_method == "MMB":
             if button == mouse.Button.middle:
                 if not pressed:
@@ -654,12 +522,8 @@ class ScreenMoverWorker:
                 self.activation_method = None
                 return
 
-            # Do not allow re-activation while active
             return
 
-        # ---------------------------------------------------------
-        # Activate gesture (MMB)
-        # ---------------------------------------------------------
         if (
             button == mouse.Button.middle
             and pressed
@@ -669,20 +533,10 @@ class ScreenMoverWorker:
             self.activation_method = "MMB"
             self.begin_gesture(x, y)
 
-
-# ==============================================================
-# Win32 Flick Overlay (GUI-agnostic)
-# ==============================================================
-
 class FlickOverlay:
     def __init__(self):
         self.hwnd = self._create_overlay_window()
 
-
-    # ==============================================================
-    # Overlay paint handler (Win32, stateless)
-    # ==============================================================
-    
     def _create_overlay_window(self):
         WNDPROC = ctypes.WINFUNCTYPE(
             ctypes.c_long,
@@ -720,15 +574,12 @@ class FlickOverlay:
         hdc, paint_struct = win32gui.BeginPaint(hwnd)
 
         try:
-            # Transparent background for text
             win32gui.SetBkMode(hdc, win32con.TRANSPARENT)
 
-            # Fill background (black, fully invisible due to layered window)
             rect = win32gui.GetClientRect(hwnd)
             bg_brush = win32gui.CreateSolidBrush(win32api.RGB(0, 0, 0))
             win32gui.FillRect(hdc, rect, bg_brush)
 
-            # Font definition
             logfont = win32gui.LOGFONT()
             logfont.lfHeight = -35
             logfont.lfWeight = 900
@@ -738,10 +589,8 @@ class FlickOverlay:
             font = win32gui.CreateFontIndirect(logfont)
             old_font = win32gui.SelectObject(hdc, font)
 
-            # Arrow colour
             win32gui.SetTextColor(hdc, win32api.RGB(0, 178, 255))
 
-            # Draw arrows
             win32gui.DrawText(
                 hdc,
                 "⮜   ⮞",
@@ -762,23 +611,12 @@ class FlickOverlay:
 
         return 0
 
-
-    # ==============================================================
-    # Flick detection
-    # ==============================================================
-
     def _check_flick(self, current_x):
         """Detect flick at any time while gesture is active."""
         if self.flick_start_x is None:
             return False
 
         return abs(current_x - self.flick_start_x) >= self.flick_threshold_px
-
-    
-    
-    # ==============================================================
-    # Overlay hider (Qt-safe wrapper)
-    # ==============================================================
 
     def hide_overlay(self):
         """Hide and destroy the Win32 overlay if it exists."""
@@ -790,10 +628,6 @@ class FlickOverlay:
                 self.hide()
         except Exception as e:
             print("[OVERLAY] Hide failed:", e)
-
-    # ==============================================================
-    # Global worker instance
-    # ==============================================================
 
 SCREEN_MOVER = ScreenMoverWorker()
 

@@ -14,12 +14,7 @@ class QtTooltipManager(QObject):
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._show_tooltip)
 
-        # Attach events
         widget.installEventFilter(self)
-
-    # --------------------------------------------------
-    # Event filter
-    # --------------------------------------------------
 
     def eventFilter(self, obj, event):
         etype = event.type()
@@ -32,18 +27,12 @@ class QtTooltipManager(QObject):
 
         elif etype in (QEvent.Type.Leave, QEvent.Type.MouseButtonPress):
             self._hide()
-
         return False
-
-    # --------------------------------------------------
-    # Tooltip logic
-    # --------------------------------------------------
 
     def _schedule(self):
         self._timer.start(self.delay)
 
     def _show_tooltip(self):
-        # Global toggle lives on app
         app = self.widget.window()
         if hasattr(app, "tooltips_enabled") and not app.tooltips_enabled:
             return

@@ -10,14 +10,9 @@ class TrayIconManager(QObject):
         self.app = app
         self.tray = None
 
-    # ==================================================
-    # Create Tray Icon
-    # ==================================================
-
     def create_tray_icon(self):
         self.tray = QSystemTrayIcon(self.app)
 
-        # Use app icon if set, otherwise fallback
         icon = self.app.windowIcon()
         if icon.isNull():
             icon = QIcon.fromTheme("applications-system")
@@ -41,10 +36,6 @@ class TrayIconManager(QObject):
         self.tray.activated.connect(self.on_tray_activated)
         self.tray.show()
 
-    # ==================================================
-    # Actions
-    # ==================================================
-
     def toggle_window(self):
         if self.app.isVisible():
             self.app.hide()
@@ -64,17 +55,9 @@ class TrayIconManager(QObject):
 
         self.app.close()
 
-    # ==================================================
-    # Tray Click Behaviour
-    # ==================================================
-
     def on_tray_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.toggle_window()
-
-    # ==================================================
-    # Close → tray behaviour
-    # ==================================================
 
     def on_close_to_tray(self):
         self.app.hide()

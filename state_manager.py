@@ -8,11 +8,7 @@ def save_state(state: dict):
         json.dump(state, f, indent=4)
 
 def load_state() -> dict:
-    
-    # ================================================================
-    # DEFAULTS (used when file doesn't exist)
-    # ================================================================
-    
+
     DEFAULTS = {
         "theme_dark": True,
         "main_always_on_top_enabled": True,
@@ -53,30 +49,20 @@ def load_state() -> dict:
         },
     }
 
-    # ================================================================
-    # Case 1: File missing → return defaults
-    # ================================================================
-    
     if not os.path.exists(CONFIG_PATH):
         return DEFAULTS.copy()
 
-    # ================================================================
-    # Case 2: File exists → load it
-    # ================================================================
+
     
     try:
         with open(CONFIG_PATH, "r") as f:
             data = json.load(f)
 
-        # Ensure missing keys never break older configs
         for key, value in DEFAULTS.items():
             data.setdefault(key, value)
 
         return data
 
-    # ================================================================
-    # Case 3: File unreadable / corrupted → return defaults
-    # ================================================================
     
     except Exception:
         return DEFAULTS.copy()
