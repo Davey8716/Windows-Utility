@@ -6,10 +6,12 @@
 
 import sys
 import ctypes
+from pathlib import Path
 
 
 from screen_mover import SCREEN_MOVER
 
+import styles
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 
@@ -21,10 +23,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QScrollArea,
     QHBoxLayout,
-    QCheckBox,
     QLineEdit,
-    QApplication
-    
+    QApplication,
 )
 
 from PySide6.QtCore import Qt
@@ -96,11 +96,12 @@ class UtilityControlApp(QWidget):
         # ---------------- Window ----------------
         self.setWindowTitle("Problems Gone")
         self.WINDOW_WIDTH = 505
-        self.WINDOW_HEIGHT = 1000
+        self.WINDOW_HEIGHT = 800
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         
         # ✅ add these
         self.state = load_state()
+        self.saved_state = self.state
         self.actions = UtilityActionsManager(self)
 
         # ---------------- Build UI ----------------
@@ -168,22 +169,14 @@ class UtilityControlApp(QWidget):
         header_layout.setContentsMargins(10, 10, 10, 10)
 
         title = QLabel("Problems Gone", header)
-        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+        title.setStyleSheet(styles.label_style(font_size=20))
 
         master_btn = QPushButton("▾", header)
-        master_btn.setFixedSize(32, 28)
+        master_btn.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
         master_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        master_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: none;
-                font-size: 18px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #202020;
-            }
-        """)
+        master_btn.setStyleSheet(
+            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
+        )
 
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -208,11 +201,14 @@ class UtilityControlApp(QWidget):
             sec_header_layout.setContentsMargins(0, 0, 0, 0)
 
             sec_title = QLabel(title_text, sec_header)
-            sec_title.setStyleSheet("font-size: 15px; font-weight: bold;")
+            sec_title.setStyleSheet(styles.label_style(font_size=15))
 
             toggle = QPushButton("▾", sec_header)
-            toggle.setFixedSize(28, 20)
+            toggle.setFixedSize(styles.SECTION_TOGGLE_WIDTH, styles.SECTION_TOGGLE_HEIGHT)
             toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+            toggle.setStyleSheet(
+                styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK, font_size=16)
+            )
 
             sec_header_layout.addWidget(sec_title)
             sec_header_layout.addStretch()
@@ -238,6 +234,15 @@ class UtilityControlApp(QWidget):
 
             return section, content_layout
 
+        def make_toggle_button(text: str, checked: bool = False):
+            button = QPushButton(text)
+            button.setCheckable(True)
+            button.setChecked(checked)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            styles.apply_default_button_size(button)
+            button.setStyleSheet(styles.toggle_button_style())
+            return button
+
         # ==================================================
         # User Interface section (SIMPLE + STABLE)
         # ==================================================
@@ -246,35 +251,60 @@ class UtilityControlApp(QWidget):
         self.main_layout.addWidget(ui_section)
         self.left_sections.append(ui_section)
 
+        ui_rows = QWidget(ui_section.content)
+        ui_rows_layout = QHBoxLayout(ui_rows)
+        ui_rows_layout.setContentsMargins(0, 0, 0, 0)
+        ui_rows_layout.setSpacing(12)
+        ui_layout.addWidget(ui_rows)
+
+        ui_left_col = QWidget(ui_rows)
+        ui_left_layout = QVBoxLayout(ui_left_col)
+        ui_left_layout.setContentsMargins(0, 0, 0, 0)
+        ui_left_layout.setSpacing(6)
+
+        ui_right_col = QWidget(ui_rows)
+        ui_right_layout = QVBoxLayout(ui_right_col)
+        ui_right_layout.setContentsMargins(0, 0, 0, 0)
+        ui_right_layout.setSpacing(6)
+
+        ui_rows_layout.addWidget(ui_left_col)
+        ui_rows_layout.addWidget(ui_right_col)
+        ui_rows_layout.setAlignment(ui_left_col, Qt.AlignmentFlag.AlignTop)
+        ui_rows_layout.setAlignment(ui_right_col, Qt.AlignmentFlag.AlignTop)
+
         # ---- Dark Mode ----
-        dark_mode_cb = QCheckBox("Dark Mode")
-        dark_mode_cb.setChecked(state.get("theme_dark", True))
-        ui_layout.addWidget(dark_mode_cb)
+        dark_mode_btn = make_toggle_button("Dark Mode", state.get("theme_dark", True))
+        ui_left_layout.addWidget(dark_mode_btn)
+
+        always_on_top_btn = make_toggle_button("Always on Top", state.get("main_always_on_top_enabled", True))
+        ui_left_layout.addWidget(always_on_top_btn)
+
+        tooltips_btn = make_toggle_button("Enable Tooltips", state.get("tooltips_enabled", True))
+        ui_left_layout.addWidget(tooltips_btn)
+
+        min_all_btn = make_toggle_button("Minimize All On", state.get("minimize_all_enabled", False))
+        ui_left_layout.addWidget(min_all_btn)
 
         # ---- Power Options master ----
-        power_cb = QCheckBox("Power Options")
-        power_cb.setChecked(state.get("power_options_enabled", False))
-        ui_layout.addWidget(power_cb)
+        power_btn = make_toggle_button("Power Options", state.get("power_options_enabled", False))
+        ui_right_layout.addWidget(power_btn)
 
         # ---- Power Options container (VERTICAL, BELOW) ----
-        power_container = QWidget(ui_section.content)
+        power_container = QWidget(ui_right_col)
         power_layout = QVBoxLayout(power_container)
-        power_layout.setContentsMargins(20, 0, 0, 0)  # slight indent like CTk
-        power_layout.setSpacing(4)
+        power_layout.setContentsMargins(0, 0, 0, 0)
+        power_layout.setSpacing(6)
 
-        ui_layout.addWidget(power_container)
+        ui_right_layout.addWidget(power_container)
 
-        sleep_cb = QCheckBox("Sleep")
-        sleep_cb.setChecked(state.get("power_sleep_enabled", False))
-        power_layout.addWidget(sleep_cb)
+        sleep_btn = make_toggle_button("Sleep", state.get("power_sleep_enabled", False))
+        power_layout.addWidget(sleep_btn)
 
-        logout_cb = QCheckBox("Log out")
-        logout_cb.setChecked(state.get("power_logout_enabled", False))
-        power_layout.addWidget(logout_cb)
+        logout_btn = make_toggle_button("Log out", state.get("power_logout_enabled", False))
+        power_layout.addWidget(logout_btn)
 
-        shutdown_cb = QCheckBox("Shutdown")
-        shutdown_cb.setChecked(state.get("power_shutdown_enabled", False))
-        power_layout.addWidget(shutdown_cb)
+        shutdown_btn = make_toggle_button("Shutdown", state.get("power_shutdown_enabled", False))
+        power_layout.addWidget(shutdown_btn)
 
         # ---- STATE HANDLERS ----
         def save_sleep(checked: bool):
@@ -290,20 +320,17 @@ class UtilityControlApp(QWidget):
             save_state(state)
 
         def update_power_visibility():
-            power_container.setVisible(power_cb.isChecked())
+            power_container.setVisible(power_btn.isChecked())
 
         def on_power_master_changed(checked: bool):
             state["power_options_enabled"] = checked
             save_state(state)
             update_power_visibility()
 
-        power_cb.stateChanged.connect(
-            lambda v: on_power_master_changed(v == Qt.CheckState.Checked)
-        )
-
-        sleep_cb.stateChanged.connect(lambda v: save_sleep(v == Qt.CheckState.Checked))
-        logout_cb.stateChanged.connect(lambda v: save_logout(v == Qt.CheckState.Checked))
-        shutdown_cb.stateChanged.connect(lambda v: save_shutdown(v == Qt.CheckState.Checked))
+        power_btn.toggled.connect(on_power_master_changed)
+        sleep_btn.toggled.connect(save_sleep)
+        logout_btn.toggled.connect(save_logout)
+        shutdown_btn.toggled.connect(save_shutdown)
 
         # Initial state
         update_power_visibility()
@@ -315,11 +342,6 @@ class UtilityControlApp(QWidget):
 
 
 
-        
-        always_on_top_cb = QCheckBox("Always on Top")
-        always_on_top_cb.setChecked(state.get("main_always_on_top_enabled", True))
-        ui_layout.addWidget(always_on_top_cb)
-
         def on_always_on_top_changed(checked):
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
             self.show()  # required for flag changes to apply
@@ -327,27 +349,14 @@ class UtilityControlApp(QWidget):
             state["main_always_on_top_enabled"] = checked
             save_state(state)
 
-        always_on_top_cb.stateChanged.connect(
-            lambda v: on_always_on_top_changed(v == Qt.CheckState.Checked)
-        )
+        always_on_top_btn.toggled.connect(on_always_on_top_changed)
         
-        tooltips_cb = QCheckBox("Enable Tooltips")
-        tooltips_cb.setChecked(state.get("tooltips_enabled", True))
-        ui_layout.addWidget(tooltips_cb)
-
         def on_tooltips_changed(checked):
             state["tooltips_enabled"] = checked
             save_state(state)
 
-        tooltips_cb.stateChanged.connect(
-            lambda v: on_tooltips_changed(v == Qt.CheckState.Checked)
-        )
+        tooltips_btn.toggled.connect(on_tooltips_changed)
         
-        # Minimize All
-        min_all_cb = QCheckBox("Minimize All On")
-        min_all_cb.setChecked(state.get("minimize_all_enabled", False))
-        ui_layout.addWidget(min_all_cb)
-
         def on_min_all_changed(checked: bool):
             state["minimize_all_enabled"] = checked
             save_state(state)
@@ -359,7 +368,7 @@ class UtilityControlApp(QWidget):
                 # alt naming
                 self.actions.minimize_all(checked)
 
-        min_all_cb.stateChanged.connect(lambda v: on_min_all_changed(v == Qt.CheckState.Checked))
+        min_all_btn.toggled.connect(on_min_all_changed)
 
         # ==================================================
         # Screen Mover section (visual only)
@@ -371,31 +380,25 @@ class UtilityControlApp(QWidget):
         # -------------------------
 
         # Middle Mouse to Move
-        mmb_cb = QCheckBox("Middle Mouse to Move")
-        mmb_cb.setChecked(state.get("mmb_activation_enabled", True))
-        screen_layout.addWidget(mmb_cb)
+        mmb_btn = make_toggle_button("Middle Mouse to Move", state.get("mmb_activation_enabled", True))
+        screen_layout.addWidget(mmb_btn)
 
         def on_mmb_changed(checked: bool):
             state["mmb_activation_enabled"] = checked
             save_state(state)
 
-        mmb_cb.stateChanged.connect(
-            lambda v: on_mmb_changed(v == Qt.CheckState.Checked)
-        )
+        mmb_btn.toggled.connect(on_mmb_changed)
 
 
         # Windows in Move Zone (auto-align)
-        auto_align_cb = QCheckBox("Windows in Move Zone")
-        auto_align_cb.setChecked(state.get("auto_align_enabled", False))
-        screen_layout.addWidget(auto_align_cb)
+        auto_align_btn = make_toggle_button("Windows in Move Zone", state.get("auto_align_enabled", False))
+        screen_layout.addWidget(auto_align_btn)
 
         def on_auto_align_changed(checked: bool):
             state["auto_align_enabled"] = checked
             save_state(state)
 
-        auto_align_cb.stateChanged.connect(
-            lambda v: on_auto_align_changed(v == Qt.CheckState.Checked)
-        )
+        auto_align_btn.toggled.connect(on_auto_align_changed)
 
 
         self.main_layout.addWidget(screen_section)
@@ -409,68 +412,57 @@ class UtilityControlApp(QWidget):
 
 
         # Idle-plugged reminder
-        idle_cb = QCheckBox("Idle-plugged Reminder")
-        idle_cb.setChecked(state.get("usb_idle_enabled", True))
-        usb_layout.addWidget(idle_cb)
+        idle_btn = make_toggle_button("Idle-plugged Reminder", state.get("usb_idle_enabled", True))
+        usb_layout.addWidget(idle_btn)
 
         def on_idle_changed(checked: bool):
             state["usb_idle_enabled"] = checked
             save_state(state)
 
-        idle_cb.stateChanged.connect(
-            lambda v: on_idle_changed(v == Qt.CheckState.Checked)
-        )
+        idle_btn.toggled.connect(on_idle_changed)
 
 
         # Download-finished reminder
-        download_cb = QCheckBox("Download-finished Reminder")
-        download_cb.setChecked(state.get("usb_download_enabled", True))
-        usb_layout.addWidget(download_cb)
+        download_btn = make_toggle_button("Download-finished Reminder", state.get("usb_download_enabled", True))
+        usb_layout.addWidget(download_btn)
 
         def on_download_changed(checked: bool):
             state["usb_download_enabled"] = checked
             save_state(state)
 
-        download_cb.stateChanged.connect(
-            lambda v: on_download_changed(v == Qt.CheckState.Checked)
-        )
+        download_btn.toggled.connect(on_download_changed)
 
         # Plug / unplug notification
-        plug_cb = QCheckBox("Plug / Unplug Notification")
-        plug_cb.setChecked(state.get("usb_plug_enabled", True))
-        usb_layout.addWidget(plug_cb)
+        plug_btn = make_toggle_button("Plug / Unplug Notification", state.get("usb_plug_enabled", True))
+        usb_layout.addWidget(plug_btn)
 
         def on_plug_changed(checked: bool):
             state["usb_plug_enabled"] = checked
             save_state(state)
 
-        plug_cb.stateChanged.connect(
-            lambda v: on_plug_changed(v == Qt.CheckState.Checked)
-        )
+        plug_btn.toggled.connect(on_plug_changed)
 
         self.main_layout.addWidget(usb_section)
         self.left_sections.append(usb_section)
 
         
         # ==================================================
-        # Organising Utilities (visual only)
+        # Organising Utilities (grouped under one title frame)
         # ==================================================
         org_section, org_layout = make_section("Organising Utilities")
 
+        self.backup_path = self._get_master_backup_dir()
         # -------------------------
         # Desktop Screenshot (placeholder toggle)
         # -------------------------
-        screenshot_cb = QCheckBox("Desktop Screenshot")
-        screenshot_cb.setChecked(state.get("desktop_screenshot_enabled", True))
-        org_layout.addWidget(screenshot_cb)
+        screenshot_btn = make_toggle_button("Desktop Screenshot", state.get("desktop_screenshot_enabled", True))
+        org_layout.addWidget(screenshot_btn)
 
         def on_screenshot_changed(checked: bool):
             state["desktop_screenshot_enabled"] = checked
             save_state(state)
 
-        screenshot_cb.stateChanged.connect(
-            lambda v: on_screenshot_changed(v == Qt.CheckState.Checked)
-        )
+        screenshot_btn.toggled.connect(on_screenshot_changed)
 
         # -------------------------
         # Folder → Desktop (placeholder toggle + input)
@@ -480,15 +472,15 @@ class UtilityControlApp(QWidget):
         folder_row_layout.setContentsMargins(0, 0, 0, 0)
         folder_row_layout.setSpacing(8)
 
-        folder_cb = QCheckBox("Folder → Desktop")
-        folder_cb.setChecked(state.get("folder_to_desktop_enabled", False))
+        folder_btn = make_toggle_button("Folder → Desktop", state.get("folder_to_desktop_enabled", False))
 
         folder_input = QLineEdit()
         folder_input.setPlaceholderText("Folder name")
         folder_input.setText(state.get("folder_to_desktop_name", ""))
-        folder_input.setEnabled(folder_cb.isChecked())
+        folder_input.setEnabled(folder_btn.isChecked())
+        folder_input.setReadOnly(False)
 
-        folder_row_layout.addWidget(folder_cb)
+        folder_row_layout.addWidget(folder_btn)
         folder_row_layout.addWidget(folder_input)
 
         org_layout.addWidget(folder_row)
@@ -502,130 +494,97 @@ class UtilityControlApp(QWidget):
             state["folder_to_desktop_name"] = text
             save_state(state)
 
-        folder_cb.stateChanged.connect(
-            lambda v: on_folder_toggle(v == Qt.CheckState.Checked)
-        )
+        folder_btn.toggled.connect(on_folder_toggle)
         folder_input.textChanged.connect(on_folder_name_changed)
-
-
-
-
-        self.main_layout.addWidget(org_section)
-        self.left_sections.append(org_section)
-
-        
-        # ==================================================
-        # Desktop Backup Utilities (visual only)
-        # ==================================================
-        backup_section, backup_layout = make_section("Desktop Backup Utilities")
 
         # -------------------------
         # Backup Taskbar (placeholder)
         # -------------------------
-        backup_taskbar_cb = QCheckBox("Backup Taskbar")
-        backup_taskbar_cb.setChecked(state.get("backup_taskbar_enabled", True))
-        backup_layout.addWidget(backup_taskbar_cb)
+        backup_taskbar_btn = make_toggle_button("Backup Taskbar", state.get("backup_taskbar_enabled", True))
+        org_layout.addWidget(backup_taskbar_btn)
 
         def on_backup_taskbar_changed(checked: bool):
             state["backup_taskbar_enabled"] = checked
             save_state(state)
 
-        backup_taskbar_cb.stateChanged.connect(
-            lambda v: on_backup_taskbar_changed(v == Qt.CheckState.Checked)
-        )
+        backup_taskbar_btn.toggled.connect(on_backup_taskbar_changed)
         
         # -------------------------
         # Open Backup Folder (placeholder)
         # -------------------------
-        open_backup_cb = QCheckBox("Open Backup Folder")
-        open_backup_cb.setChecked(state.get("open_backup_enabled", True))
-        backup_layout.addWidget(open_backup_cb)
+        open_backup_btn = make_toggle_button("Open Backup Folder", state.get("open_backup_enabled", True))
+        org_layout.addWidget(open_backup_btn)
 
         def on_open_backup_changed(checked: bool):
             state["open_backup_enabled"] = checked
             save_state(state)
 
-        open_backup_cb.stateChanged.connect(
-            lambda v: on_open_backup_changed(v == Qt.CheckState.Checked)
-        )
+        open_backup_btn.toggled.connect(on_open_backup_changed)
         
         # -------------------------
         # Change Backup Folder (placeholder)
         # -------------------------
-        change_backup_cb = QCheckBox("Change Backup Folder")
-        change_backup_cb.setChecked(state.get("change_backup_folder_enabled", False))
-        backup_layout.addWidget(change_backup_cb)
+        change_backup_btn = make_toggle_button("Change Backup Folder", state.get("change_backup_folder_enabled", False))
+        org_layout.addWidget(change_backup_btn)
 
         def on_change_backup_changed(checked: bool):
             state["change_backup_folder_enabled"] = checked
             save_state(state)
 
-        change_backup_cb.stateChanged.connect(
-            lambda v: on_change_backup_changed(v == Qt.CheckState.Checked)
-        )
-        
-        
-        # -------------------------
-        # Backup output path (placeholder input)
-        # -------------------------
-        backup_path_input = QLineEdit()
-        backup_path_input.setPlaceholderText("Backup output folder path")
-        backup_path_input.setText(
-            state.get("backup_output_path", "")
-        )
-        backup_layout.addWidget(backup_path_input)
-
-        def on_backup_path_changed(text: str):
-            state["backup_output_path"] = text
-            save_state(state)
-
-        backup_path_input.textChanged.connect(on_backup_path_changed)
-
-
-
-
-        self.main_layout.addWidget(backup_section)
-        self.left_sections.append(backup_section)
-
-        
-        # ==================================================
-        # Desktop Icon Organiser (visual only)
-        # ==================================================
-        icon_section, icon_layout = make_section("Desktop Icon Organiser")
+        change_backup_btn.toggled.connect(on_change_backup_changed)
 
         # -------------------------
         # Desktop Icon Layout (placeholders)
         # -------------------------
 
         # Capture desktop layout
-        capture_layout_cb = QCheckBox("Capture Desktop Layout")
-        capture_layout_cb.setChecked(state.get("capture_desktop_layout_enabled", True))
-        icon_layout.addWidget(capture_layout_cb)
+        capture_layout_btn = make_toggle_button("Capture Desktop Layout", state.get("capture_desktop_layout_enabled", True))
+        org_layout.addWidget(capture_layout_btn)
 
         def on_capture_layout_changed(checked: bool):
             state["capture_desktop_layout_enabled"] = checked
             save_state(state)
 
-        capture_layout_cb.stateChanged.connect(
-            lambda v: on_capture_layout_changed(v == Qt.CheckState.Checked)
-        )
+        capture_layout_btn.toggled.connect(on_capture_layout_changed)
 
 
         # Restore desktop layout
-        restore_layout_cb = QCheckBox("Restore Desktop Layout")
-        restore_layout_cb.setChecked(state.get("restore_desktop_layout_enabled", True))
-        icon_layout.addWidget(restore_layout_cb)
+        restore_layout_btn = make_toggle_button("Restore Desktop Layout", state.get("restore_desktop_layout_enabled", True))
+        org_layout.addWidget(restore_layout_btn)
 
         def on_restore_layout_changed(checked: bool):
             state["restore_desktop_layout_enabled"] = checked
             save_state(state)
 
-        restore_layout_cb.stateChanged.connect(
-            lambda v: on_restore_layout_changed(v == Qt.CheckState.Checked)
-        )
+        restore_layout_btn.toggled.connect(on_restore_layout_changed)
 
-        self.main_layout.addWidget(icon_section)
-        self.left_sections.append(icon_section)
+        master_backup_row = QWidget()
+        master_backup_row_layout = QHBoxLayout(master_backup_row)
+        master_backup_row_layout.setContentsMargins(0, 0, 0, 0)
+        master_backup_row_layout.setSpacing(8)
+
+        master_backup_btn = QPushButton("Master Backup Path")
+        master_backup_btn.setCheckable(True)
+        master_backup_btn.setChecked(True)
+        styles.apply_default_button_size(master_backup_btn)
+        master_backup_btn.setStyleSheet(styles.toggle_button_style())
+        master_backup_row_layout.addWidget(master_backup_btn)
+
+        self.backup_path_input = QLineEdit()
+        self.backup_path_input.setPlaceholderText("Backup output folder path")
+        self.backup_path_input.setText(self._get_master_backup_dir())
+        self.backup_path_input.setReadOnly(False)
+        master_backup_row_layout.addWidget(self.backup_path_input)
+
+        org_layout.addWidget(master_backup_row)
+
+        def on_master_backup_path_changed(text: str):
+            self._set_master_backup_dir(text)
+
+        self.backup_path_input.textChanged.connect(on_master_backup_path_changed)
+
+        self.main_layout.addWidget(org_section)
+        self.left_sections.append(org_section)
 
         
         self.main_layout.addStretch(1)
@@ -646,6 +605,39 @@ class UtilityControlApp(QWidget):
             
         master_btn.clicked.connect(toggle_all)
 
+    def _get_master_backup_dir(self) -> str:
+        return (
+            self.state.get("master_backup_output_path")
+            or self.state.get("backup_output_path")
+            or self.state.get("backup_folder_path")
+            or str(Path.home())
+        )
+
+    def _set_master_backup_dir(self, path: str):
+        clean_path = path.strip()
+        self.backup_path = clean_path
+        self.state["master_backup_output_path"] = clean_path
+        self.state["backup_output_path"] = clean_path
+        self.state["backup_folder_path"] = clean_path
+
+        if hasattr(self, "backup_path_input") and self.backup_path_input.text() != clean_path:
+            self.backup_path_input.setText(clean_path)
+
+        save_state(self.state)
+
+    def _build_master_output_path(self, filename: str) -> str:
+        base_dir = self._get_master_backup_dir().strip()
+        return str(Path(base_dir) / filename) if base_dir else filename
+
+    def get_default_taskbar_backup_dir(self) -> str:
+        return self._get_master_backup_dir()
+
+    def get_default_desktop_layout_path(self) -> str:
+        return self._build_master_output_path("desktop_icon_layout.json")
+
+    def get_default_screenshot_path(self) -> str:
+        return self._build_master_output_path("desktop_screenshot.png")
+
 
     def _get_arrow_colors(self):
         palette = self.palette()
@@ -656,29 +648,18 @@ class UtilityControlApp(QWidget):
 
         if is_dark:
             return {
-                "text": "#E6E6E6",
-                "hover": "#303030",
+                "text": styles.TEXT_LIGHT,
+                "hover": styles.SURFACE_HOVER_DARK,
             }
         else:
             return {
-                "text": "#1A1A1A",
-                "hover": "#D0D0D0",
+                "text": styles.TEXT_DARK,
+                "hover": styles.SURFACE_HOVER_LIGHT,
             }
         
     def update_collapsible_arrow_colours(self):
         colors = self._get_arrow_colors()
-
-        style = f"""
-            QPushButton {{
-                color: {colors['text']};
-                background: transparent;
-                border: none;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: {colors['hover']};
-            }}
-        """
+        style = styles.arrow_button_style(colors["text"], colors["hover"], font_size=18)
 
         for btn in getattr(self, "arrow_buttons", []):
             btn.setStyleSheet(style)

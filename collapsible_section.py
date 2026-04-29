@@ -3,6 +3,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout
 )
 
+import styles
+
 
 
 class CollapsibleSection(QWidget):
@@ -28,7 +30,7 @@ class CollapsibleSection(QWidget):
         self.header_layout.setContentsMargins(10, 0, 10, 0)
 
         self.label = QLabel(title_text, self.header)
-        self.label.setStyleSheet("font-weight: bold;")
+        self.label.setStyleSheet(styles.label_style())
         self.header_layout.addWidget(self.label)
 
         self.header_layout.addStretch()
@@ -37,8 +39,14 @@ class CollapsibleSection(QWidget):
             "▾" if initial_open else "▸",
             self.header
         )
-        self.toggle_btn.setFixedSize(30, 20)
+        self.toggle_btn.setFixedSize(
+            styles.SECTION_TOGGLE_WIDTH,
+            styles.SECTION_TOGGLE_HEIGHT
+        )
         self.toggle_btn.setFlat(True)
+        self.toggle_btn.setStyleSheet(
+            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK, font_size=16)
+        )
         self.toggle_btn.clicked.connect(self.toggle)
 
         self.header_layout.addWidget(self.toggle_btn)

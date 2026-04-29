@@ -3,6 +3,7 @@ import sys
 import subprocess
 import ctypes
 
+import styles
 from PySide6.QtWidgets import (
     QDialog,
     QWidget,
@@ -71,9 +72,7 @@ class AdvancedToolsPanel(QDialog):
         # Title
         # --------------------------------------------------
         self.advanced_title = QLabel("Advanced Tools")
-        self.advanced_title.setStyleSheet(
-            "font-size: 20px; font-weight: bold;"
-        )
+        self.advanced_title.setStyleSheet(styles.label_style(font_size=20))
         self.advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.side_layout.addWidget(self.advanced_title)
 
@@ -87,9 +86,12 @@ class AdvancedToolsPanel(QDialog):
         title_row_layout.addStretch()
 
         self.master_collapse_btn_right = QPushButton("▾")
-        self.master_collapse_btn_right.setFixedSize(32, 28)
+        self.master_collapse_btn_right.setFixedSize(
+            styles.ICON_BUTTON_WIDTH,
+            styles.ICON_BUTTON_HEIGHT
+        )
         self.master_collapse_btn_right.setStyleSheet(
-            "font-size: 18px; font-weight: bold; background: transparent;"
+            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
         )
         self.master_collapse_btn_right.clicked.connect(
             self.toggle_all_right_sections
@@ -148,9 +150,7 @@ class AdvancedToolsPanel(QDialog):
 
         self.sidebar_output = QTextEdit()
         self.sidebar_output.setFixedHeight(120)
-        self.sidebar_output.setStyleSheet(
-            "font-family: Consolas; font-size: 15px; font-weight: bold;"
-        )
+        self.sidebar_output.setStyleSheet(styles.text_edit_style("Consolas", 15))
 
         self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
 
@@ -213,10 +213,8 @@ class AdvancedToolsPanel(QDialog):
         # Open This PC button
         # --------------------------------------------------
         btn_this_pc = QPushButton("Open This PC")
-        btn_this_pc.setFixedHeight(28)
-        btn_this_pc.setStyleSheet(
-            "font-size: 14px; font-weight: bold;"
-        )
+        styles.apply_default_button_size(btn_this_pc)
+        btn_this_pc.setStyleSheet(styles.button_text_style(14))
         btn_this_pc.clicked.connect(self.app.open_this_pc)
         btn_this_pc.setToolTip("Takes you to Drives location.")
 
@@ -228,9 +226,7 @@ class AdvancedToolsPanel(QDialog):
         self.drive_space_output = QTextEdit()
         self.drive_space_output.setFixedHeight(100)
         self.drive_space_output.setReadOnly(True)
-        self.drive_space_output.setStyleSheet(
-            "font-family: Rubik; font-size: 14px; font-weight: bold;"
-        )
+        self.drive_space_output.setStyleSheet(styles.text_edit_style("Rubik", 14))
 
         drive_parent.addWidget(self.drive_space_output)
 
@@ -285,10 +281,8 @@ class AdvancedToolsPanel(QDialog):
         # Export Brave Bookmarks button
         # --------------------------------------------------
         self.btn_brave_export = QPushButton("Export Brave Bookmarks")
-        self.btn_brave_export.setFixedWidth(180)
-        self.btn_brave_export.setStyleSheet(
-            "font-size: 15px; font-weight: bold;"
-        )
+        styles.apply_default_button_size(self.btn_brave_export)
+        self.btn_brave_export.setStyleSheet(styles.button_text_style(15))
         self.btn_brave_export.clicked.connect(self.app._run_brave_export)
 
         self.btn_brave_export.setToolTip(
@@ -304,9 +298,7 @@ class AdvancedToolsPanel(QDialog):
         self.brave_export_entry = QLineEdit()
         self.brave_export_entry.setReadOnly(True)
         self.brave_export_entry.setFixedWidth(420)
-        self.brave_export_entry.setStyleSheet(
-            "font-size: 15px; font-weight: bold;"
-        )
+        self.brave_export_entry.setStyleSheet(styles.line_edit_style(15))
 
         # If app.brave_export_path_var is a QString/QLineEdit source:
         # call this whenever it changes
@@ -387,9 +379,7 @@ class AdvancedToolsPanel(QDialog):
         combo.addItem(placeholder)
         combo.addItems(sorted(actions_map.keys()))
         combo.setCurrentText(placeholder)
-        combo.setStyleSheet(
-            "font-size: 15px; font-weight: bold;"
-        )
+        combo.setStyleSheet(styles.combo_style(15))
 
         def runner(text: str):
             if text == placeholder:
@@ -575,9 +565,7 @@ class AdvancedToolsPanel(QDialog):
         combo.addItem(placeholder)
         combo.addItems(actions_map.keys())
         combo.setCurrentText(placeholder)
-        combo.setStyleSheet(
-            "font-size: 14px; font-weight: bold;"
-        )
+        combo.setStyleSheet(styles.combo_style(14))
 
         def runner(text: str):
             if text == placeholder:

@@ -1,0 +1,84 @@
+from PySide6.QtGui import QColor
+
+TEXT_LIGHT = QColor(230, 230, 230)
+TEXT_DARK = QColor(26, 26, 26)
+SURFACE_DARK = QColor(32, 32, 32)
+SURFACE_HOVER_DARK = QColor(48, 48, 48)
+SURFACE_HOVER_LIGHT = QColor(208, 208, 208)
+BUTTON_BORDER = QColor(74, 74, 74)
+BUTTON_ACTIVE_BG = QColor(47, 93, 58)
+BUTTON_ACTIVE_BORDER = QColor(93, 162, 113)
+STATUS_ACCENT = QColor(31, 106, 165)
+
+DEFAULT_BUTTON_WIDTH = 170
+DEFAULT_BUTTON_HEIGHT = 30
+ICON_BUTTON_WIDTH = 32
+ICON_BUTTON_HEIGHT = 28
+SECTION_TOGGLE_WIDTH = 28
+SECTION_TOGGLE_HEIGHT = 20
+
+def qcolor_css(color: QColor) -> str:
+    return color.name(QColor.NameFormat.HexRgb)
+
+def label_style(font_size: int | None = None, bold: bool = True, color: QColor | None = None, font_family: str | None = None) -> str:
+    parts = []
+    if font_family:
+        parts.append(f"font-family: {font_family};")
+    if font_size is not None:
+        parts.append(f"font-size: {font_size}px;")
+    if bold:
+        parts.append("font-weight: bold;")
+    if color is not None:
+        parts.append(f"color: {qcolor_css(color)};")
+    return " ".join(parts)
+
+
+def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
+    return f"""
+        QPushButton {{
+            color: {qcolor_css(text_color)};
+            background: transparent;
+            border: none;
+            font-size: {font_size}px;
+            font-weight: bold;
+        }}
+        QPushButton:hover {{
+            background-color: {qcolor_css(hover_color)};
+        }}
+    """
+
+
+def toggle_button_style() -> str:
+    return f"""
+        QPushButton {{
+            text-align: center;
+            padding: 4px 8px;
+            border: 1px solid {qcolor_css(BUTTON_BORDER)};
+            border-radius: 6px;
+            background-color: {qcolor_css(SURFACE_DARK)};
+        }}
+        QPushButton:checked {{
+            background-color: {qcolor_css(BUTTON_ACTIVE_BG)};
+            border: 1px solid {qcolor_css(BUTTON_ACTIVE_BORDER)};
+        }}
+    """
+
+
+def text_edit_style(font_family: str, font_size: int) -> str:
+    return label_style(font_size=font_size, bold=True, font_family=font_family)
+
+
+def button_text_style(font_size: int) -> str:
+    return f"{label_style(font_size=font_size, bold=True)} text-align: center; padding: 4px 8px;"
+
+
+def line_edit_style(font_size: int) -> str:
+    return label_style(font_size=font_size, bold=True)
+
+
+def combo_style(font_size: int) -> str:
+    return label_style(font_size=font_size, bold=True)
+
+
+def apply_default_button_size(button) -> None:
+    button.setFixedSize(DEFAULT_BUTTON_WIDTH, DEFAULT_BUTTON_HEIGHT)

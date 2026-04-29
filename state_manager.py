@@ -29,6 +29,8 @@ def load_state() -> dict:
         "usb_download_enabled": True,
         "usb_plug_enabled": True,
         
+        "master_backup_output_path": str(Path.home()),
+        "backup_output_path": str(Path.home()),
         "backup_folder_path": str(Path.home()),
         "brave_export_path": "",
         "advanced_panel_open" : True,

@@ -5,6 +5,7 @@ import win32gui
 import win32con
 import os
 import shutil
+from PySide6.QtCore import Qt
 
 from screen_mover import SCREEN_MOVER
 from desktop_icon_layout import save_desktop_icon_layout
@@ -238,7 +239,7 @@ class UtilityActionsManager:
 
             # Qt window handling (preferred)
             if hasattr(self.app, "setWindowFlag"):
-                from PyQt6.QtCore import Qt
+              
                 self.app.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
                 self.app.show()
 
@@ -301,8 +302,8 @@ class UtilityActionsManager:
 
         if backup_folder is None and self.app:
             backup_folder = getattr(
-                getattr(self.app, "backup_path_var", None),
-                "get",
+                self.app,
+                "get_default_taskbar_backup_dir",
                 lambda: None
             )()
 
@@ -347,8 +348,8 @@ class UtilityActionsManager:
         """
         if path is None and self.app:
             path = getattr(
-                getattr(self.app, "backup_path_var", None),
-                "get",
+                self.app,
+                "get_default_taskbar_backup_dir",
                 lambda: None
             )()
 
@@ -373,7 +374,10 @@ class UtilityActionsManager:
             return False
 
         if self.app:
-            setattr(self.app, "backup_path", new_path)
+            if hasattr(self.app, "_set_master_backup_dir"):
+                self.app._set_master_backup_dir(new_path)
+            else:
+                setattr(self.app, "backup_path", new_path)
 
             if hasattr(self.app, "save_all_settings"):
                 self.app.save_all_settings()
@@ -385,7 +389,7 @@ class UtilityActionsManager:
     #  Desktop Icon Layout - Capture
     # ===================================================================
 
-    def capture_desktop_layout(self, out_path: str) -> int:
+    def capture_desktop_layout(self, out_path: str | None = None) -> int:
         """
         Capture desktop icon layout.
 
@@ -395,6 +399,13 @@ class UtilityActionsManager:
         Returns:
             Number of icons captured
         """
+        if not out_path and self.app:
+            out_path = getattr(
+                self.app,
+                "get_default_desktop_layout_path",
+                lambda: None
+            )()
+
         if not out_path:
             return 0
 
@@ -418,7 +429,7 @@ class UtilityActionsManager:
     #  Desktop Icon Layout - Restore
     # ===================================================================
 
-    def restore_desktop_layout(self, path: str) -> int:
+    def restore_desktop_layout(self, path: str | None = None) -> int:
         """
         Restore desktop icon layout from a JSON file.
 
@@ -428,6 +439,13 @@ class UtilityActionsManager:
         Returns:
             Number of icons restored
         """
+        if not path and self.app:
+            path = getattr(
+                self.app,
+                "get_default_desktop_layout_path",
+                lambda: None
+            )()
+
         if not path:
             return 0
 
