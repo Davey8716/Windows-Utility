@@ -102,7 +102,7 @@ class UtilityControlApp(QWidget):
 
         self.setWindowTitle("Windows Resurface")
         self.setStyleSheet(styles.window_style())
-        self.COLLAPSED_WIDTH = 505
+        self.COLLAPSED_WIDTH = 485
         self.EXPANDED_WIDTH = 1045
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
@@ -260,6 +260,7 @@ class UtilityControlApp(QWidget):
             sec_header_layout.addWidget(toggle)
 
             frame = QFrame(section)
+            section.frame = frame
             frame.setObjectName("CollapsibleSectionFrame")
             frame.setStyleSheet(styles.collapsible_section_frame_style())
             frame_layout = QVBoxLayout(frame)
@@ -270,6 +271,7 @@ class UtilityControlApp(QWidget):
             content = section.content
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
             content.setVisible(initial_open)
+            frame.setVisible(initial_open)
 
             content_layout = QVBoxLayout(content)
             content_layout.setContentsMargins(10, 10, 10, 10)
@@ -282,6 +284,7 @@ class UtilityControlApp(QWidget):
             def toggle_section():
                 visible = content.isVisible()
                 content.setVisible(not visible)
+                frame.setVisible(not visible)
                 toggle.setArrowType(
                     Qt.ArrowType.DownArrow if not visible else Qt.ArrowType.UpArrow
                 )
@@ -335,18 +338,18 @@ class UtilityControlApp(QWidget):
         ui_rows = QWidget(ui_section.content)
         ui_rows_layout = QHBoxLayout(ui_rows)
         ui_rows_layout.setContentsMargins(0, 0, 0, 0)
-        ui_rows_layout.setSpacing(12)
+        ui_rows_layout.setSpacing(10)
         ui_layout.addWidget(ui_rows)
 
         ui_left_col = QWidget(ui_rows)
         ui_left_layout = QVBoxLayout(ui_left_col)
         ui_left_layout.setContentsMargins(0, 0, 0, 0)
-        ui_left_layout.setSpacing(6)
+        ui_left_layout.setSpacing(10)
 
         ui_right_col = QWidget(ui_rows)
         ui_right_layout = QVBoxLayout(ui_right_col)
         ui_right_layout.setContentsMargins(0, 0, 0, 0)
-        ui_right_layout.setSpacing(6)
+        ui_right_layout.setSpacing(10)
 
         ui_rows_layout.addWidget(ui_left_col)
         ui_rows_layout.addWidget(ui_right_col)
@@ -376,7 +379,7 @@ class UtilityControlApp(QWidget):
         power_container = QWidget(ui_right_col)
         power_layout = QVBoxLayout(power_container)
         power_layout.setContentsMargins(0, 0, 0, 0)
-        power_layout.setSpacing(6)
+        power_layout.setSpacing(10)
 
         ui_right_layout.addWidget(power_container)
 
@@ -618,6 +621,8 @@ class UtilityControlApp(QWidget):
 
             for section in self.left_sections:
                 section.content.setVisible(new_state)
+                if hasattr(section, "frame"):
+                    section.frame.setVisible(new_state)
             
         master_btn.clicked.connect(toggle_all)
 

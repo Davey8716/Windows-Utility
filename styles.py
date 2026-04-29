@@ -68,6 +68,30 @@ def window_style() -> str:
             background-color: {qcolor_css(WINDOW_BG)};
             color: {qcolor_css(TEXT_LIGHT)};
         }}
+        QScrollBar:vertical {{
+            background-color: {qcolor_css(PANEL_BG)};
+            width: 12px;
+            margin: 2px 2px 2px 2px;
+            border: 1px solid {qcolor_css(PANEL_BORDER)};
+            border-radius: 6px;
+        }}
+        QScrollBar::handle:vertical {{
+            background-color: {qcolor_css(PANEL_HOVER)};
+            min-height: 28px;
+            border: 1px solid {qcolor_css(PANEL_BORDER)};
+            border-radius: 6px;
+        }}
+        QScrollBar::handle:vertical:hover {{
+            background-color: {qcolor_css(STATUS_ACCENT)};
+        }}
+        QScrollBar::add-line:vertical,
+        QScrollBar::sub-line:vertical,
+        QScrollBar::add-page:vertical,
+        QScrollBar::sub-page:vertical {{
+            background: transparent;
+            border: none;
+            height: 0px;
+        }}
     """
 
 def organizing_button_style(font_size: int | None = None) -> str:

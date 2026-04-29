@@ -69,6 +69,7 @@ class CollapsibleSection(QWidget):
         self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(10, 10, 10, 10)
 
+        self.container.setVisible(initial_open)
         self.content.setVisible(initial_open)
         self.container_layout.addWidget(self.content)
 
@@ -86,6 +87,7 @@ class CollapsibleSection(QWidget):
     # -------------------------------------------------
     def toggle(self):
         self.open = not self.open
+        self.container.setVisible(self.open)
         self.content.setVisible(self.open)
         self.toggle_btn.setArrowType(
             Qt.ArrowType.DownArrow if self.open else Qt.ArrowType.UpArrow
