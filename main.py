@@ -95,7 +95,6 @@ class AdvancedToolsPanel(QWidget):
         super().__init__(parent)
         self.hide()
 
-
 class UtilityControlApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -450,19 +449,14 @@ class UtilityControlApp(QWidget):
         min_all_btn.toggled.connect(on_min_all_changed)
         screen_section, screen_layout = make_section("Screen Mover", "screen_mover")
 
-        mmb_btn = make_toggle_button("Middle Mouse to Move", state.get("mmb_activation_enabled", True))
-        screen_layout.addWidget(mmb_btn)
-        self.register_tooltip(mmb_btn, "Lets you move a window by middle-clicking the tracked title-bar dock.")
-
-        def on_mmb_changed(checked: bool):
-            state["mmb_activation_enabled"] = checked
-            save_state(state)
-            SCREEN_MOVER.enable_mmb = checked
-
-        mmb_btn.toggled.connect(on_mmb_changed)
+        screen_row = QWidget(screen_section.content)
+        screen_row_layout = QHBoxLayout(screen_row)
+        screen_row_layout.setContentsMargins(0, 0, 0, 0)
+        screen_row_layout.setSpacing(10)
+        screen_layout.addWidget(screen_row)
 
         title_bar_dock_btn = make_toggle_button("Title Bar Dock", state.get("title_bar_dock_enabled", True))
-        screen_layout.addWidget(title_bar_dock_btn)
+        screen_row_layout.addWidget(title_bar_dock_btn)
         self.register_tooltip(
             title_bar_dock_btn,
             "Shows a small left/right mover dock when you hover an app window's title bar.",
@@ -474,6 +468,17 @@ class UtilityControlApp(QWidget):
             SCREEN_MOVER.title_bar_dock_enabled = checked
 
         title_bar_dock_btn.toggled.connect(on_title_bar_dock_changed)
+
+        mmb_btn = make_toggle_button("Middle Mouse to Move", state.get("mmb_activation_enabled", True))
+        screen_row_layout.addWidget(mmb_btn)
+        self.register_tooltip(mmb_btn, "Lets you move a window by middle-clicking the tracked title-bar dock.")
+
+        def on_mmb_changed(checked: bool):
+            state["mmb_activation_enabled"] = checked
+            save_state(state)
+            SCREEN_MOVER.enable_mmb = checked
+
+        mmb_btn.toggled.connect(on_mmb_changed)
         self.main_layout.addWidget(screen_section)
         self.left_sections.append(screen_section)
 
