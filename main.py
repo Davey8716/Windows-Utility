@@ -9,6 +9,8 @@ from pathlib import Path
 from datetime import datetime
 import styles
 from PIL import ImageGrab
+import win32gui
+import win32con
 
 from screen_mover import SCREEN_MOVER
 from utility_toggles import  UtilityActionsManager 
@@ -55,34 +57,35 @@ MUTEX_NAME = "Problems Gone"
 #                         pass
 #             return drives
 
-# def bring_existing_instance_to_front():
-#     def enum_handler(hwnd, _):
-#         title = win32gui.GetWindowText(hwnd)
+def bring_existing_instance_to_front():
+    def enum_handler(hwnd, _):
+        title = win32gui.GetWindowText(hwnd)
 
-#         if "Problems Gone" in title:
-#             try:
-#                 win32gui.ShowWindow(hwnd, win32con.SW_SHOW)     # handles withdrawn
-#                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)  # handles minimized
-#                 win32gui.SetForegroundWindow(hwnd)
-#             except Exception as e:
-#                 print("[RESTORE] failed:", e)
-#             return False  # stop enumerating
+        if "Problems Gone" in title:
+            try:
+                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+                win32gui.SetForegroundWindow(hwnd)
+            except Exception as e:
+                print("[RESTORE] failed:", e)
+            return False
 
-#         return True
+        return True
 
-#     win32gui.EnumWindows(enum_handler, None)
+    win32gui.EnumWindows(enum_handler, None)
 
-# def ensure_single_instance():
-#     kernel32 = ctypes.windll.kernel32
-#     mutex = kernel32.CreateMutexW(None, False, MUTEX_NAME)
-#     last_error = kernel32.GetLastError()
 
-#     ERROR_ALREADY_EXISTS = 183
-#     if last_error == ERROR_ALREADY_EXISTS:
-#         bring_existing_instance_to_front()
-#         sys.exit(0)
+def ensure_single_instance():
+    kernel32 = ctypes.windll.kernel32
+    mutex = kernel32.CreateMutexW(None, False, MUTEX_NAME)
+    last_error = kernel32.GetLastError()
 
-#     return mutex
+    ERROR_ALREADY_EXISTS = 183
+    if last_error == ERROR_ALREADY_EXISTS:
+        bring_existing_instance_to_front()
+        sys.exit(0)
+
+    return mutex
 
 # TEMP stub — Qt branch only
 class AdvancedToolsPanel(QWidget):
@@ -1248,8 +1251,10 @@ class UtilityControlApp(QWidget):
 # Launch App
 # ===================================================================
 def main():
+    mutex = ensure_single_instance()
     app = QApplication(sys.argv)   # ✅ FIRST
     window = UtilityControlApp()   # QWidget created AFTER
+    window._instance_mutex = mutex
     window.show()
     sys.exit(app.exec())
 
