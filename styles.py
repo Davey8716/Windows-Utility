@@ -46,7 +46,6 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
             background: transparent;
             border: none;
             padding: 0px;
-            font-size: {font_size}px;
             font-weight: bold;
             text-align: center;
         }}
