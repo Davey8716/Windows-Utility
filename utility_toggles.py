@@ -353,12 +353,17 @@ class UtilityActionsManager:
                 lambda: None
             )()
 
-        if path and os.path.isdir(path):
+        if not path:
+            print("[DEBUG] open_backup_folder: no path resolved")
+            return False
+
+        try:
+            os.makedirs(path, exist_ok=True)
             os.startfile(path)
             return True
-
-        print("[DEBUG] open_backup_folder: path does not exist")
-        return False
+        except Exception as e:
+            print(f"[DEBUG] open_backup_folder failed: {e}")
+            return False
 
     # ===================================================================
     #  Desktop Icon Layout - Capture

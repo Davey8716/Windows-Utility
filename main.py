@@ -38,7 +38,7 @@ from PySide6.QtCore import Qt
 # These 3 functions possibly to be moved.
 # =======================================
 
-MUTEX_NAME = "Problems Gone"
+MUTEX_NAME = "Windows Resurface"
 
 # def get_drive_info():
 #             drives = []
@@ -61,7 +61,7 @@ def bring_existing_instance_to_front():
     def enum_handler(hwnd, _):
         title = win32gui.GetWindowText(hwnd)
 
-        if "Problems Gone" in title:
+        if "Windows Resurface" in title:
             try:
                 win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
@@ -99,7 +99,7 @@ class UtilityControlApp(QWidget):
         super().__init__()
 
         # ---------------- Window ----------------
-        self.setWindowTitle("Problems Gone")
+        self.setWindowTitle("Windows Resurface")
         self.COLLAPSED_WIDTH = 505
         self.EXPANDED_WIDTH = 1045
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
@@ -551,28 +551,22 @@ class UtilityControlApp(QWidget):
         folder_input.textChanged.connect(on_folder_name_changed)
 
         # -------------------------
-        # Backup Taskbar (placeholder)
+        # Backup Taskbar
         # -------------------------
-        backup_taskbar_btn = make_toggle_button("Backup Taskbar", state.get("backup_taskbar_enabled", True))
+        backup_taskbar_btn = QPushButton("Backup Taskbar")
+        styles.apply_default_button_size(backup_taskbar_btn)
+        backup_taskbar_btn.setStyleSheet(styles.toggle_button_style())
         org_layout.addWidget(backup_taskbar_btn)
+        backup_taskbar_btn.clicked.connect(self.backup_taskbar_apps)
 
-        def on_backup_taskbar_changed(checked: bool):
-            state["backup_taskbar_enabled"] = checked
-            save_state(state)
-
-        backup_taskbar_btn.toggled.connect(on_backup_taskbar_changed)
-        
         # -------------------------
-        # Open Backup Folder (placeholder)
+        # Open Backup Folder
         # -------------------------
-        open_backup_btn = make_toggle_button("Open Backup Folder", state.get("open_backup_enabled", True))
+        open_backup_btn = QPushButton("Open Backup Folder")
+        styles.apply_default_button_size(open_backup_btn)
+        open_backup_btn.setStyleSheet(styles.toggle_button_style())
         org_layout.addWidget(open_backup_btn)
-
-        def on_open_backup_changed(checked: bool):
-            state["open_backup_enabled"] = checked
-            save_state(state)
-
-        open_backup_btn.toggled.connect(on_open_backup_changed)
+        open_backup_btn.clicked.connect(self.open_taskbar_backup_folder)
         
         # -------------------------
         # Desktop Icon Layout
@@ -708,7 +702,8 @@ class UtilityControlApp(QWidget):
         return str(Path(base_dir) / filename) if base_dir else filename
 
     def get_default_taskbar_backup_dir(self) -> str:
-        return self._get_master_backup_dir()
+        base_dir = self._get_master_backup_dir().strip() or str(Path.home())
+        return str(Path(base_dir) / "TaskBarApps")
 
     def get_default_desktop_layout_path(self) -> str:
         return self._build_master_output_path("desktop_icon_layout.json")
@@ -750,6 +745,37 @@ class UtilityControlApp(QWidget):
 
         finally:
             pass
+
+    def backup_taskbar_apps(self):
+        backup_dir = self.get_default_taskbar_backup_dir()
+        count = self.actions.backup_pinned_shortcuts(backup_dir)
+
+        if count > 0:
+            QMessageBox.information(
+                self,
+                "Backup Taskbar",
+                f"Backed up {count} taskbar shortcut(s) to:\n{backup_dir}"
+            )
+            return
+
+        QMessageBox.warning(
+            self,
+            "Backup Taskbar",
+            "No taskbar shortcuts were backed up."
+        )
+
+    def open_taskbar_backup_folder(self):
+        path = self.get_default_taskbar_backup_dir()
+        opened = self.actions.open_backup_folder(path)
+
+        if opened:
+            return
+
+        QMessageBox.warning(
+            self,
+            "Open Backup Folder",
+            f"Could not open backup folder:\n{path}"
+        )
 
     def capture_desktop_layout(self):
         out_path = self.get_default_desktop_layout_path()
@@ -1048,7 +1074,6 @@ class UtilityControlApp(QWidget):
 
         # backup_row_layout.addWidget(self.backup_status_label)
 
-
         # # ===================================================================
         # # Backup Folder Path Display + Change Button
         # # ===================================================================
@@ -1107,7 +1132,6 @@ class UtilityControlApp(QWidget):
         # self.entry_backup_path.setFixedWidth(420)
 
         # path_inner_layout.addWidget(self.entry_backup_path)
-
 
     # ==================================================
     # End of muddafucking initilisation bro
@@ -1252,12 +1276,11 @@ class UtilityControlApp(QWidget):
 # ===================================================================
 def main():
     mutex = ensure_single_instance()
-    app = QApplication(sys.argv)   # ✅ FIRST
-    window = UtilityControlApp()   # QWidget created AFTER
+    app = QApplication(sys.argv)
+    window = UtilityControlApp()   
     window._instance_mutex = mutex
     window.show()
     sys.exit(app.exec())
-
 
 if __name__ == "__main__":
     main()
