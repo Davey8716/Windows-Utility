@@ -1,5 +1,5 @@
-from PyQt6.QtCore import QObject, QTimer, QPoint
-from PyQt6.QtWidgets import QToolTip
+from PySide6.QtCore import QObject, QTimer, QPoint
+from PySide6.QtWidgets import QToolTip
 
 
 class QtTooltipManager(QObject):

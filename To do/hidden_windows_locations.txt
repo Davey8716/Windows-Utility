@@ -23,3 +23,5 @@ Most used but hidden Windows locations:
 21. Resource Monitor
 22. Services (services.msc)
 23. Windows Memory Diagnostic
+24.control /name Microsoft.AutoPlay
+

@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QSystemTrayIcon, QMenu
-from PyQt6.QtGui import QIcon, QAction
-from PyQt6.QtCore import QObject
+from PySide6.QtWidgets import QSystemTrayIcon, QMenu
+from PySide6.QtGui import QIcon, QAction
+from PySide6.QtCore import QObject
 from screen_mover import SCREEN_MOVER
 
 

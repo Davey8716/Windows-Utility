@@ -3,7 +3,7 @@ import sys
 import subprocess
 import ctypes
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QDialog,
     QWidget,
     QLabel,
@@ -13,17 +13,17 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout
 )
-from PyQt6.QtCore import Qt
+from PySide6.QtCore import Qt
 
 from collapsible_section import CollapsibleSection
 from main_utility_gui import get_drive_info
-from PyQt6.QtWidgets import QPushButton, QTextEdit
-from PyQt6.QtCore import QTimer
-from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtWidgets import QComboBox
-from PyQt6.QtWidgets import QComboBox
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QPushButton, QLineEdit
+from PySide6.QtWidgets import QPushButton, QTextEdit
+from PySide6.QtCore import QTimer
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtWidgets import QComboBox
+from PySide6.QtWidgets import QComboBox
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QPushButton, QLineEdit
 
 
 class AdvancedToolsPanel(QDialog):

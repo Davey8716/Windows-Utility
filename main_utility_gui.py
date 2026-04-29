@@ -3,26 +3,17 @@
 #  Modern UI using CustomTkinter
 # ===================================================================
 
-import os
+
 import sys
 import ctypes
-import win32gui
-import win32con
-import string
-import shutil
-from PIL import ImageGrab
-from tkinter import filedialog
-from datetime import datetime
-from tkinter import messagebox
-from tooltips import QToolTip
-from pathlib import Path
+
+
 from screen_mover import SCREEN_MOVER
-from tray_toggles import TrayIconManager
-from universal_bookmarks_export import BraveBookmarksExporter
+
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
-from collapsible_section import CollapsibleSection
-from PyQt6.QtWidgets import (
+
+from PySide6.QtWidgets import (
     QWidget,
     QGridLayout,
     QLabel,
@@ -36,9 +27,8 @@ from PyQt6.QtWidgets import (
     
 )
 
-from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtWidgets import QFileDialog
-from PyQt6.QtWidgets import QSizePolicy
+from PySide6.QtCore import Qt
+
 
 # =======================================
 # These 3 functions possibly to be moved.

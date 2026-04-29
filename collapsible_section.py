@@ -1,8 +1,8 @@
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QFrame, QLabel, QPushButton,
     QVBoxLayout, QHBoxLayout
 )
-from PyQt6.QtCore import Qt
+
 
 
 class CollapsibleSection(QWidget):

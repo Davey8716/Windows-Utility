@@ -1,0 +1,34 @@
+Date : 2026-04-02 08:26:52
+Directory : c:\Users\davey\Desktop\Projects\Windows_Utility
+Total : 10 files,  2060 codes, 1400 comments, 909 blanks, all 4369 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |         10 |      2,060 |      1,400 |        909 |      4,369 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                          | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                             |         10 |      2,060 |      1,400 |        909 |      4,369 |
++-------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                      | language | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\davey\Desktop\Projects\Windows_Utility\collapsible_section.py        | Python   |         44 |         14 |         17 |         75 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\desktop_icon_layout.py        | Python   |        274 |         34 |         67 |        375 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\drive_reminder_logic.py       | Python   |          0 |          0 |          1 |          1 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\main_utility_gui.py           | Python   |        384 |        893 |        292 |      1,569 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\right_utility_gui.py          | Python   |        447 |         80 |        180 |        707 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\screen_mover.py               | Python   |        491 |        146 |        181 |        818 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\tooltips.py                   | Python   |         30 |          8 |         16 |         54 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\tray_toggles.py               | Python   |         47 |         13 |         21 |         81 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\universal_bookmarks_export.py | Python   |         78 |         19 |         28 |        125 |
+| c:\Users\davey\Desktop\Projects\Windows_Utility\utility_toggles.py            | Python   |        265 |        193 |        106 |        564 |
+| Total                                                                         |          |      2,060 |      1,400 |        909 |      4,369 |
++-------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
