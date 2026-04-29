@@ -26,7 +26,8 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QApplication,
     QFrame,
-    QFileDialog
+    QFileDialog,
+    QMessageBox
 )
 
 from PySide6.QtCore import Qt
@@ -514,19 +515,20 @@ class UtilityControlApp(QWidget):
         screenshot_btn.clicked.connect(self.take_desktop_screenshot)
 
         # -------------------------
-        # Folder → Desktop (placeholder toggle + input)
+        # Folder → Desktop
         # -------------------------
         folder_row = QWidget()
         folder_row_layout = QHBoxLayout(folder_row)
         folder_row_layout.setContentsMargins(0, 0, 0, 0)
         folder_row_layout.setSpacing(8)
 
-        folder_btn = make_toggle_button("Folder → Desktop", state.get("folder_to_desktop_enabled", False))
+        folder_btn = QPushButton("Folder → Desktop")
+        styles.apply_default_button_size(folder_btn)
+        folder_btn.setStyleSheet(styles.toggle_button_style())
 
         folder_input = QLineEdit()
         folder_input.setPlaceholderText("Folder name")
         folder_input.setText(state.get("folder_to_desktop_name", ""))
-        folder_input.setEnabled(folder_btn.isChecked())
         folder_input.setReadOnly(False)
 
         folder_row_layout.addWidget(folder_btn)
@@ -534,16 +536,16 @@ class UtilityControlApp(QWidget):
 
         org_layout.addWidget(folder_row)
 
-        def on_folder_toggle(checked: bool):
-            state["folder_to_desktop_enabled"] = checked
-            folder_input.setEnabled(checked)
-            save_state(state)
-
         def on_folder_name_changed(text: str):
             state["folder_to_desktop_name"] = text
+            folder_btn.setEnabled(bool(text.strip()))
             save_state(state)
 
-        folder_btn.toggled.connect(on_folder_toggle)
+        def on_create_folder_clicked():
+            self._create_desktop_folder(folder_input)
+
+        folder_btn.setEnabled(bool(folder_input.text().strip()))
+        folder_btn.clicked.connect(on_create_folder_clicked)
         folder_input.textChanged.connect(on_folder_name_changed)
 
         # -------------------------
@@ -765,6 +767,35 @@ class UtilityControlApp(QWidget):
         finally:
             pass
 
+    def _create_desktop_folder(self, folder_input: QLineEdit):
+        folder_name = folder_input.text().strip()
+        if not folder_name:
+            return
+
+        desktop = Path.home() / "Desktop"
+        new_path = desktop / folder_name
+
+        try:
+            if new_path.exists():
+                QMessageBox.warning(
+                    self,
+                    "Error",
+                    "A folder with that name already exists on Desktop."
+                )
+                return
+
+            new_path.mkdir(parents=True, exist_ok=False)
+            folder_input.clear()
+            self.state["folder_to_desktop_name"] = ""
+            save_state(self.state)
+
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                "Error",
+                f"Could not create folder:\n{e}"
+            )
+
 
     def _get_arrow_colors(self):
         palette = self.palette()
@@ -908,28 +939,6 @@ class UtilityControlApp(QWidget):
 
         # self.usb_section.content_layout.addWidget(self.opt_plug)
 
-        
-        # --------------------------------------------------------------
-        # Desktop Screenshot Button
-        # --------------------------------------------------------------
-
-        # self.btn_desktop_screenshot = QPushButton(
-        #     "Desktop Screenshot",
-        #     self.organise_frame
-        # )
-        # self.btn_desktop_screenshot.setFixedWidth(btn_width)
-        # self.btn_desktop_screenshot.clicked.connect(self.take_desktop_screenshot)
-
-        # self.btn_desktop_screenshot.setToolTip(
-        #     "Minimizes the app, takes a full desktop screenshot.\n"
-        #     "Choose a save location, then minimizes the window."
-        # )
-
-        # self.organising_section.content_layout.addWidget(
-        #     self.btn_desktop_screenshot,
-        #     alignment=Qt.AlignmentFlag.AlignLeft
-        # )
-        
         # # --------------------------------------------------------------
         # # Folder Creator Row
         # # --------------------------------------------------------------
@@ -1209,8 +1218,7 @@ class UtilityControlApp(QWidget):
     #     self.brave_export_path = path
     #     self.save_all_settings()
 
-    
-                    
+
     # def open_this_pc(self):
     #     os.system("explorer shell:MyComputerFolder")
 
