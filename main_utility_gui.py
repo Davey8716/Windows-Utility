@@ -3,15 +3,14 @@
 #  Modern UI using CustomTkinter
 # ===================================================================
 
-
 import sys
 import ctypes
 from pathlib import Path
-
+from datetime import datetime
+import styles
+from PIL import ImageGrab
 
 from screen_mover import SCREEN_MOVER
-
-import styles
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 
@@ -398,13 +397,6 @@ class UtilityControlApp(QWidget):
         # Initial state
         update_power_visibility()
 
-
-
-
-
-
-
-
         def on_always_on_top_changed(checked):
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)
             self.show()  # required for flag changes to apply
@@ -463,16 +455,13 @@ class UtilityControlApp(QWidget):
 
         auto_align_btn.toggled.connect(on_auto_align_changed)
 
-
         self.main_layout.addWidget(screen_section)
         self.left_sections.append(screen_section)
 
-        
         # ==================================================
         # Drive Reminder Options (visual only)
         # ==================================================
         usb_section, usb_layout = make_section("Drive Reminder Options")
-
 
         # Idle-plugged reminder
         idle_btn = make_toggle_button("Idle-plugged Reminder", state.get("usb_idle_enabled", True))
@@ -516,16 +505,13 @@ class UtilityControlApp(QWidget):
 
         self.backup_path = self._get_master_backup_dir()
         # -------------------------
-        # Desktop Screenshot (placeholder toggle)
+        # Desktop Screenshot
         # -------------------------
-        screenshot_btn = make_toggle_button("Desktop Screenshot", state.get("desktop_screenshot_enabled", True))
+        screenshot_btn = QPushButton("Desktop Screenshot")
+        styles.apply_default_button_size(screenshot_btn)
+        screenshot_btn.setStyleSheet(styles.toggle_button_style())
         org_layout.addWidget(screenshot_btn)
-
-        def on_screenshot_changed(checked: bool):
-            state["desktop_screenshot_enabled"] = checked
-            save_state(state)
-
-        screenshot_btn.toggled.connect(on_screenshot_changed)
+        screenshot_btn.clicked.connect(self.take_desktop_screenshot)
 
         # -------------------------
         # Folder → Desktop (placeholder toggle + input)
@@ -744,6 +730,41 @@ class UtilityControlApp(QWidget):
     def get_default_screenshot_path(self) -> str:
         return self._build_master_output_path("desktop_screenshot.png")
 
+    def take_desktop_screenshot(self):
+        """
+        Universal desktop screenshotter:
+        - Iconifies main GUI
+        - Iconifies right panel if open
+        - Takes screenshot
+        - Uses the master backup location automatically
+        - Ends iconified (both panels)
+        """
+
+        try:
+            # -------------------------------------------------------
+            # 2) Capture full desktop
+            # -------------------------------------------------------
+            img = ImageGrab.grab()
+
+            # -------------------------------------------------------
+            # 3) Build save path from master backup folder
+            # -------------------------------------------------------
+            default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            save_dir = Path(self._get_master_backup_dir())
+            save_dir.mkdir(parents=True, exist_ok=True)
+            save_path = save_dir / default_name
+
+            img.save(save_path)
+            self.state["desktop_screenshot_last_path"] = str(save_path)
+            save_state(self.state)
+            print(f"[SCREENSHOT] Saved: {save_path}")
+
+        except Exception as e:
+            print("[SCREENSHOT] Error:", e)
+
+        finally:
+            pass
+
 
     def _get_arrow_colors(self):
         palette = self.palette()
@@ -770,7 +791,6 @@ class UtilityControlApp(QWidget):
         for btn in getattr(self, "arrow_buttons", []):
             btn.setStyleSheet(style)
 
-
     # def _run_brave_export(self):
     #     default_name = f"Brave_Bookmarks_{datetime.now().strftime('%Y-%m-%d')}.html"
 
@@ -788,8 +808,6 @@ class UtilityControlApp(QWidget):
     #     self.save_all_settings()
     #     BraveBookmarksExporter().export_to_file(path)
         
-    
-        
     # --------------------------------------------------
     # Window close hook (replaces protocol WM_DELETE)
     # --------------------------------------------------
@@ -800,12 +818,6 @@ class UtilityControlApp(QWidget):
         """
         # event.ignore()  # if you want tray-only close later
         event.accept()
-
-    
-        
-        
-
-
 
         # def on_auto_align_toggle():
         #     enabled = self.auto_align_switch.isChecked()
@@ -1178,48 +1190,6 @@ class UtilityControlApp(QWidget):
     #         switch.configure(text=f"{base_text} On")
     #     else:
     #         switch.configure(text=f"{base_text} Off")
-        
-    
-        
-    # def take_desktop_screenshot(self):
-    #     """
-    #     Universal desktop screenshotter:
-    #     - Iconifies main GUI
-    #     - Iconifies right panel if open
-    #     - Takes screenshot
-    #     - Prompts for save location
-    #     - Ends iconified (both panels)
-    #     """
-
-    #     try:
-    #         # -------------------------------------------------------
-    #         # 2) Capture full desktop
-    #         # -------------------------------------------------------
-    #         img = ImageGrab.grab()
-
-    #         # -------------------------------------------------------
-    #         # 3) Save dialog
-    #         # -------------------------------------------------------
-    #         default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-
-    #         save_path = filedialog.asksaveasfilename(
-    #             title="Save Desktop Screenshot",
-    #             defaultextension=".png",
-    #             initialfile=default_name,
-    #             filetypes=[("PNG Image", "*.png")],
-    #         )
-
-    #         if save_path:
-    #             img.save(save_path)
-    #             print(f"[SCREENSHOT] Saved: {save_path}")
-    #         else:
-    #             print("[SCREENSHOT] Cancelled by user")
-
-    #     except Exception as e:
-    #         print("[SCREENSHOT] Error:", e)
-
-    #     finally:
-    #         pass
 
     # from PyQt6.QtWidgets import QFileDialog
 
