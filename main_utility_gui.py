@@ -26,7 +26,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLineEdit,
     QApplication,
-    QFrame
+    QFrame,
+    QFileDialog
 )
 
 from PySide6.QtCore import Qt
@@ -626,8 +627,6 @@ class UtilityControlApp(QWidget):
         master_backup_row_layout.setSpacing(8)
 
         master_backup_btn = QPushButton("Master Backup Path")
-        master_backup_btn.setCheckable(True)
-        master_backup_btn.setChecked(True)
         styles.apply_default_button_size(master_backup_btn)
         master_backup_btn.setStyleSheet(styles.toggle_button_style())
         master_backup_row_layout.addWidget(master_backup_btn)
@@ -635,7 +634,7 @@ class UtilityControlApp(QWidget):
         self.backup_path_input = QLineEdit()
         self.backup_path_input.setPlaceholderText("Backup output folder path")
         self.backup_path_input.setText(self._get_master_backup_dir())
-        self.backup_path_input.setReadOnly(False)
+        self.backup_path_input.setReadOnly(True)
         master_backup_row_layout.addWidget(self.backup_path_input)
 
         org_layout.addWidget(master_backup_row)
@@ -643,6 +642,7 @@ class UtilityControlApp(QWidget):
         def on_master_backup_path_changed(text: str):
             self._set_master_backup_dir(text)
 
+        master_backup_btn.clicked.connect(self._choose_master_backup_dir)
         self.backup_path_input.textChanged.connect(on_master_backup_path_changed)
 
         self.main_layout.addWidget(org_section)
@@ -679,6 +679,17 @@ class UtilityControlApp(QWidget):
             or str(Path.home())
         )
 
+    def _choose_master_backup_dir(self):
+        start_dir = self._get_master_backup_dir().strip() or str(Path.home())
+        selected_dir = QFileDialog.getExistingDirectory(
+            self,
+            "Choose Master Backup Folder",
+            start_dir
+        )
+
+        if selected_dir:
+            self._set_master_backup_dir(selected_dir)
+
     def toggle_advanced_settings_panel(self):
         self.advanced_settings_open = not self.advanced_settings_open
 
@@ -707,6 +718,9 @@ class UtilityControlApp(QWidget):
 
     def _set_master_backup_dir(self, path: str):
         clean_path = path.strip()
+        if not clean_path:
+            return
+
         self.backup_path = clean_path
         self.state["master_backup_output_path"] = clean_path
         self.state["backup_output_path"] = clean_path
