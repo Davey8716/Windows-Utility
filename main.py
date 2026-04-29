@@ -253,12 +253,11 @@ class UtilityControlApp(QWidget):
         # Section factory
         # ==================================================
         def make_section(title_text, section_id: str):
-            section = QFrame(self.main_frame)
-            section.setObjectName("CollapsibleSectionFrame")
+            section = QWidget(self.main_frame)
             section.section_id = section_id
-            section.setStyleSheet(styles.collapsible_section_frame_style())
             layout = QVBoxLayout(section)
             layout.setContentsMargins(10, 5, 10, 5)
+            layout.setSpacing(4)
 
             sec_header = QWidget(section)
             sec_header_layout = QHBoxLayout(sec_header)
@@ -279,8 +278,15 @@ class UtilityControlApp(QWidget):
             sec_header_layout.addStretch()
             sec_header_layout.addWidget(toggle)
 
+            frame = QFrame(section)
+            frame.setObjectName("CollapsibleSectionFrame")
+            frame.setStyleSheet(styles.collapsible_section_frame_style())
+            frame_layout = QVBoxLayout(frame)
+            frame_layout.setContentsMargins(0, 0, 0, 0)
+            frame_layout.setSpacing(0)
+
             # ✅ attach content to section for master toggle
-            section.content = QWidget(section)
+            section.content = QWidget(frame)
             content = section.content
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
             content.setVisible(initial_open)
@@ -289,7 +295,8 @@ class UtilityControlApp(QWidget):
             content_layout.setContentsMargins(10, 5, 10, 5)
 
             layout.addWidget(sec_header)
-            layout.addWidget(content)
+            frame_layout.addWidget(content)
+            layout.addWidget(frame)
             
 
             def toggle_section():

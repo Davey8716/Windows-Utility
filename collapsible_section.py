@@ -21,23 +21,14 @@ class CollapsibleSection(QWidget):
         # ===============================
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 10, 0, 0)
-        self.main_layout.setSpacing(0)
-
-        self.container = QFrame(self)
-        self.container.setObjectName("CollapsibleSectionFrame")
-        self.container.setStyleSheet(styles.collapsible_section_frame_style())
-        self.main_layout.addWidget(self.container)
-
-        self.container_layout = QVBoxLayout(self.container)
-        self.container_layout.setContentsMargins(0, 0, 0, 0)
-        self.container_layout.setSpacing(4)
+        self.main_layout.setSpacing(4)
 
         # ===============================
         # Header row
         # ===============================
-        self.header = QFrame(self.container)
+        self.header = QFrame(self)
         self.header_layout = QHBoxLayout(self.header)
-        self.header_layout.setContentsMargins(10, 0, 10, 0)
+        self.header_layout.setContentsMargins(0, 0, 0, 0)
 
         self.label = QLabel(title_text, self.header)
         self.label.setStyleSheet(styles.label_style())
@@ -60,7 +51,16 @@ class CollapsibleSection(QWidget):
         self.toggle_btn.clicked.connect(self.toggle)
 
         self.header_layout.addWidget(self.toggle_btn)
-        self.container_layout.addWidget(self.header)
+        self.main_layout.addWidget(self.header)
+
+        self.container = QFrame(self)
+        self.container.setObjectName("CollapsibleSectionFrame")
+        self.container.setStyleSheet(styles.collapsible_section_frame_style())
+        self.main_layout.addWidget(self.container)
+
+        self.container_layout = QVBoxLayout(self.container)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
+        self.container_layout.setSpacing(0)
 
         # ===============================
         # Content frame
