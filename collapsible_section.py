@@ -1,7 +1,8 @@
 from PySide6.QtWidgets import (
-    QWidget, QFrame, QLabel, QPushButton,
+    QWidget, QFrame, QLabel, QToolButton,
     QVBoxLayout, QHBoxLayout
 )
+from PySide6.QtCore import Qt
 
 import styles
 
@@ -20,12 +21,21 @@ class CollapsibleSection(QWidget):
         # ===============================
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 10, 0, 0)
-        self.main_layout.setSpacing(4)
+        self.main_layout.setSpacing(0)
+
+        self.container = QFrame(self)
+        self.container.setObjectName("CollapsibleSectionFrame")
+        self.container.setStyleSheet(styles.collapsible_section_frame_style())
+        self.main_layout.addWidget(self.container)
+
+        self.container_layout = QVBoxLayout(self.container)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
+        self.container_layout.setSpacing(4)
 
         # ===============================
         # Header row
         # ===============================
-        self.header = QFrame(self)
+        self.header = QFrame(self.container)
         self.header_layout = QHBoxLayout(self.header)
         self.header_layout.setContentsMargins(10, 0, 10, 0)
 
@@ -35,32 +45,41 @@ class CollapsibleSection(QWidget):
 
         self.header_layout.addStretch()
 
-        self.toggle_btn = QPushButton(
-            "▾" if initial_open else "▸",
-            self.header
-        )
+        self.toggle_btn = QToolButton(self.header)
         self.toggle_btn.setFixedSize(
             styles.SECTION_TOGGLE_WIDTH,
             styles.SECTION_TOGGLE_HEIGHT
         )
         self.toggle_btn.setFlat(True)
+        self.toggle_btn.setArrowType(
+            Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
+        )
         self.toggle_btn.setStyleSheet(
             styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK, font_size=16)
         )
         self.toggle_btn.clicked.connect(self.toggle)
 
         self.header_layout.addWidget(self.toggle_btn)
-        self.main_layout.addWidget(self.header)
+        self.container_layout.addWidget(self.header)
 
         # ===============================
         # Content frame
         # ===============================
-        self.content = QFrame(self)
+        self.content = QFrame(self.container)
         self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(10, 0, 10, 10)
 
         self.content.setVisible(initial_open)
-        self.main_layout.addWidget(self.content)
+        self.container_layout.addWidget(self.content)
+
+    @property
+    def is_open(self):
+        return self.open
+
+    def set_open(self, is_open):
+        if self.open == is_open:
+            return
+        self.toggle()
 
     # -------------------------------------------------
     # Toggle open / closed
@@ -68,7 +87,9 @@ class CollapsibleSection(QWidget):
     def toggle(self):
         self.open = not self.open
         self.content.setVisible(self.open)
-        self.toggle_btn.setText("▾" if self.open else "▸")
+        self.toggle_btn.setArrowType(
+            Qt.ArrowType.DownArrow if self.open else Qt.ArrowType.UpArrow
+        )
 
         # Resize window if supported
         if hasattr(self.app, "resize_to_fit"):

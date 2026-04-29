@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QLabel,
     QPushButton,
+    QToolButton,
     QScrollArea,
     QTextEdit,
     QVBoxLayout,
@@ -85,11 +86,12 @@ class AdvancedToolsPanel(QDialog):
 
         title_row_layout.addStretch()
 
-        self.master_collapse_btn_right = QPushButton("▾")
+        self.master_collapse_btn_right = QToolButton()
         self.master_collapse_btn_right.setFixedSize(
             styles.ICON_BUTTON_WIDTH,
             styles.ICON_BUTTON_HEIGHT
         )
+        self.master_collapse_btn_right.setArrowType(Qt.ArrowType.DownArrow)
         self.master_collapse_btn_right.setStyleSheet(
             styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
         )
@@ -586,6 +588,9 @@ class AdvancedToolsPanel(QDialog):
     def toggle_all_right_sections(self):
         new_state = not self.app.master_toggle_right_state
         self.app.master_toggle_right_state = new_state
+        self.master_collapse_btn_right.setArrowType(
+            Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
+        )
 
         for section in self.app.collapsible_sections:
             if not hasattr(section, "set_open"):

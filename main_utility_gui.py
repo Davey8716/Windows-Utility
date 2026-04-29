@@ -20,11 +20,13 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QLabel,
     QPushButton,
+    QToolButton,
     QVBoxLayout,
     QScrollArea,
     QHBoxLayout,
     QLineEdit,
     QApplication,
+    QFrame
 )
 
 from PySide6.QtCore import Qt
@@ -95,8 +97,12 @@ class UtilityControlApp(QWidget):
 
         # ---------------- Window ----------------
         self.setWindowTitle("Problems Gone")
-        self.WINDOW_WIDTH = 505
+        self.COLLAPSED_WIDTH = 505
+        self.EXPANDED_WIDTH = 1045
+        self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
+        self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
         self.WINDOW_HEIGHT = 800
+        self.advanced_settings_open = False
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         
         # ✅ add these
@@ -132,6 +138,8 @@ class UtilityControlApp(QWidget):
         self.root_layout.setSpacing(0)
 
         self.root_layout.setColumnMinimumWidth(0, 425)
+        self.root_layout.setColumnStretch(0, 0)
+        self.root_layout.setColumnStretch(1, 0)
         self.root_layout.setRowStretch(0, 1)
 
         # ==================================================
@@ -142,8 +150,56 @@ class UtilityControlApp(QWidget):
         self.main_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.main_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.main_scroll.setFixedWidth(450)
+        self.main_scroll.setViewportMargins(0, 0, 12, 0)
 
         self.root_layout.addWidget(self.main_scroll, 0, 0)
+
+        # ==================================================
+        # Advanced Settings panel (RIGHT)
+        # ==================================================
+        self.advanced_settings_panel = QFrame(self.root_container)
+        self.advanced_settings_panel.setFixedWidth(self.ADVANCED_PANEL_WIDTH)
+
+        self.advanced_settings_layout = QVBoxLayout(self.advanced_settings_panel)
+        self.advanced_settings_layout.setContentsMargins(0, 0, 0, 0)
+        self.advanced_settings_layout.setSpacing(10)
+        self.advanced_settings_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        advanced_header = QWidget(self.advanced_settings_panel)
+        advanced_header_layout = QHBoxLayout(advanced_header)
+        advanced_header_layout.setContentsMargins(10, 10, 10, 10)
+
+        advanced_title = QLabel("Advanced Settings", advanced_header)
+        advanced_title.setStyleSheet(styles.label_style(font_size=20))
+        advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        advanced_header_layout.addStretch()
+        advanced_header_layout.addWidget(advanced_title)
+        advanced_header_layout.addStretch()
+
+        self.advanced_settings_layout.addWidget(advanced_header)
+        self.advanced_settings_layout.addStretch(1)
+
+        self.root_layout.addWidget(self.advanced_settings_panel, 0, 1)
+        self.advanced_settings_panel.hide()
+
+        # ==================================================
+        # Right-edge panel toggle
+        # ==================================================
+        self.advanced_settings_toggle = QToolButton(self.root_container)
+        self.advanced_settings_toggle.setFixedSize(
+            styles.ICON_BUTTON_WIDTH,
+            styles.ICON_BUTTON_HEIGHT
+        )
+        self.advanced_settings_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.advanced_settings_toggle.setArrowType(Qt.ArrowType.RightArrow)
+        self.advanced_settings_toggle.setStyleSheet(
+            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
+        )
+        self.advanced_settings_toggle.clicked.connect(
+            self.toggle_advanced_settings_panel
+        )
+        self.advanced_settings_toggle.raise_()
 
         # ==================================================
         # Scroll Contents
@@ -168,12 +224,13 @@ class UtilityControlApp(QWidget):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 10, 10, 10)
 
-        title = QLabel("Problems Gone", header)
+        title = QLabel("Windows Resurface", header)
         title.setStyleSheet(styles.label_style(font_size=20))
 
-        master_btn = QPushButton("▾", header)
+        master_btn = QToolButton(header)
         master_btn.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
         master_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        master_btn.setArrowType(Qt.ArrowType.DownArrow)
         master_btn.setStyleSheet(
             styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
         )
@@ -182,7 +239,7 @@ class UtilityControlApp(QWidget):
         header_layout.addStretch()
         header_layout.addWidget(master_btn)
 
-        self.main_layout.addWidget(header)
+        self.main_layout.addWidget(header,alignment= Qt.AlignCenter)
         
         # ✅ MUST exist before you append
         self.left_sections = []
@@ -192,7 +249,9 @@ class UtilityControlApp(QWidget):
         # Section factory
         # ==================================================
         def make_section(title_text):
-            section = QWidget(self.main_frame)
+            section = QFrame(self.main_frame)
+            section.setObjectName("CollapsibleSectionFrame")
+            section.setStyleSheet(styles.collapsible_section_frame_style())
             layout = QVBoxLayout(section)
             layout.setContentsMargins(10, 5, 10, 5)
 
@@ -203,9 +262,10 @@ class UtilityControlApp(QWidget):
             sec_title = QLabel(title_text, sec_header)
             sec_title.setStyleSheet(styles.label_style(font_size=15))
 
-            toggle = QPushButton("▾", sec_header)
+            toggle = QToolButton(sec_header)
             toggle.setFixedSize(styles.SECTION_TOGGLE_WIDTH, styles.SECTION_TOGGLE_HEIGHT)
             toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+            toggle.setArrowType(Qt.ArrowType.DownArrow)
             toggle.setStyleSheet(
                 styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK, font_size=16)
             )
@@ -228,7 +288,9 @@ class UtilityControlApp(QWidget):
             def toggle_section():
                 visible = content.isVisible()
                 content.setVisible(not visible)
-                toggle.setText("▸" if visible else "▾")
+                toggle.setArrowType(
+                    Qt.ArrowType.DownArrow if not visible else Qt.ArrowType.UpArrow
+                )
 
             toggle.clicked.connect(toggle_section)
 
@@ -598,12 +660,16 @@ class UtilityControlApp(QWidget):
 
             new_state = not any_visible
 
-            master_btn.setText("▾" if new_state else "▸")
+            master_btn.setArrowType(
+                Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
+            )
 
             for section in self.left_sections:
                 section.content.setVisible(new_state)
             
         master_btn.clicked.connect(toggle_all)
+
+        self._position_advanced_settings_toggle()
 
     def _get_master_backup_dir(self) -> str:
         return (
@@ -612,6 +678,32 @@ class UtilityControlApp(QWidget):
             or self.state.get("backup_folder_path")
             or str(Path.home())
         )
+
+    def toggle_advanced_settings_panel(self):
+        self.advanced_settings_open = not self.advanced_settings_open
+
+        if self.advanced_settings_open:
+            self.WINDOW_WIDTH = self.EXPANDED_WIDTH
+            self.advanced_settings_panel.show()
+            self.advanced_settings_toggle.setArrowType(Qt.ArrowType.LeftArrow)
+        else:
+            self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
+            self.advanced_settings_panel.hide()
+            self.advanced_settings_toggle.setArrowType(Qt.ArrowType.RightArrow)
+
+        self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+        self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+        self._position_advanced_settings_toggle()
+
+    def _position_advanced_settings_toggle(self):
+        x = self.width() - self.advanced_settings_toggle.width() - 6
+        y = (self.height() - self.advanced_settings_toggle.height()) // 2
+        self.advanced_settings_toggle.move(x, y)
+
+    def resizeEvent(self, event):
+        self.root_container.setGeometry(0, 0, self.width(), self.height())
+        self._position_advanced_settings_toggle()
+        super().resizeEvent(event)
 
     def _set_master_backup_dir(self, path: str):
         clean_path = path.strip()

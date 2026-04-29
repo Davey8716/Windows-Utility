@@ -17,6 +17,7 @@ ICON_BUTTON_HEIGHT = 28
 SECTION_TOGGLE_WIDTH = 28
 SECTION_TOGGLE_HEIGHT = 20
 
+
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
 
@@ -35,15 +36,28 @@ def label_style(font_size: int | None = None, bold: bool = True, color: QColor |
 
 def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
     return f"""
-        QPushButton {{
+        QPushButton, QToolButton {{
             color: {qcolor_css(text_color)};
             background: transparent;
             border: none;
+            padding: 0px;
             font-size: {font_size}px;
             font-weight: bold;
+            text-align: center;
         }}
-        QPushButton:hover {{
+        QPushButton:hover, QToolButton:hover {{
             background-color: {qcolor_css(hover_color)};
+        }}
+    """
+
+
+def collapsible_section_frame_style(border_color: QColor | None = None, radius: int = 10) -> str:
+    border = border_color or TEXT_DARK
+    return f"""
+        QFrame#CollapsibleSectionFrame {{
+            border: 2px solid {qcolor_css(border)};
+            border-radius: {radius}px;
+            background-color: transparent;
         }}
     """
 
