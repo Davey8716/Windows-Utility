@@ -1,14 +1,18 @@
 from PySide6.QtGui import QColor
 
-TEXT_LIGHT = QColor(230, 230, 230)
-TEXT_DARK = QColor(26, 26, 26)
-SURFACE_DARK = QColor(32, 32, 32)
-SURFACE_HOVER_DARK = QColor(48, 48, 48)
-SURFACE_HOVER_LIGHT = QColor(208, 208, 208)
-BUTTON_BORDER = QColor(74, 74, 74)
+WINDOW_BG = QColor(40, 40, 50)
+PANEL_BG = QColor(58, 72, 96)
+PANEL_HOVER = QColor(74, 111, 168)
+PANEL_BORDER = QColor(255, 255, 255)
+TEXT_LIGHT = QColor(255, 255, 255)
+TEXT_DARK = QColor(255, 255, 255)
+SURFACE_DARK = PANEL_BG
+SURFACE_HOVER_DARK = PANEL_HOVER
+SURFACE_HOVER_LIGHT = PANEL_HOVER
+BUTTON_BORDER = PANEL_BORDER
 BUTTON_ACTIVE_BG = QColor(47, 93, 58)
 BUTTON_ACTIVE_BORDER = QColor(93, 162, 113)
-STATUS_ACCENT = QColor(31, 106, 165)
+STATUS_ACCENT = QColor(45, 125, 210)
 ORGANIZE_BUTTON_BG = QColor(38, 92, 52)
 ORGANIZE_BUTTON_HOVER = QColor(49, 115, 65)
 ORGANIZE_BUTTON_PRESSED = QColor(72, 152, 91)
@@ -32,8 +36,7 @@ def label_style(font_size: int | None = None, bold: bool = True, color: QColor |
         parts.append(f"font-size: {font_size}px;")
     if bold:
         parts.append("font-weight: bold;")
-    if color is not None:
-        parts.append(f"color: {qcolor_css(color)};")
+    parts.append(f"color: {qcolor_css(color or TEXT_LIGHT)};")
     return " ".join(parts)
 
 def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
@@ -53,12 +56,21 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
     """
 
 def collapsible_section_frame_style(border_color: QColor | None = None, radius: int = 10) -> str:
-    border = border_color or TEXT_DARK
+    border = border_color or PANEL_BORDER
     return f"""
         QFrame#CollapsibleSectionFrame {{
             border: 2px solid {qcolor_css(border)};
             border-radius: {radius}px;
-            background-color: transparent;
+            background-color: {qcolor_css(PANEL_BG)};
+        }}
+    """
+
+
+def window_style() -> str:
+    return f"""
+        QWidget {{
+            background-color: {qcolor_css(WINDOW_BG)};
+            color: {qcolor_css(TEXT_LIGHT)};
         }}
     """
 
@@ -95,16 +107,50 @@ def toggle_button_style() -> str:
     return organizing_button_style()
 
 def text_edit_style(font_family: str, font_size: int) -> str:
-    return label_style(font_size=font_size, bold=True, font_family=font_family)
+    return f"""
+        QTextEdit {{
+            {label_style(font_size=font_size, bold=True, font_family=font_family)}
+            background-color: {qcolor_css(PANEL_BG)};
+            border: 2px solid {qcolor_css(PANEL_BORDER)};
+            border-radius: 6px;
+            selection-background-color: {qcolor_css(PANEL_HOVER)};
+        }}
+    """
 
 def button_text_style(font_size: int) -> str:
     return organizing_button_style(font_size=font_size)
 
 def line_edit_style(font_size: int) -> str:
-    return label_style(font_size=font_size, bold=True)
+    return f"""
+        QLineEdit {{
+            {label_style(font_size=font_size, bold=True)}
+            background-color: {qcolor_css(PANEL_BG)};
+            border: 2px solid {qcolor_css(PANEL_BORDER)};
+            border-radius: 6px;
+            padding: 4px 8px;
+            selection-background-color: {qcolor_css(PANEL_HOVER)};
+        }}
+    """
 
 def combo_style(font_size: int) -> str:
-    return label_style(font_size=font_size, bold=True)
+    return f"""
+        QComboBox {{
+            {label_style(font_size=font_size, bold=True)}
+            background-color: {qcolor_css(PANEL_BG)};
+            border: 2px solid {qcolor_css(PANEL_BORDER)};
+            border-radius: 6px;
+            padding: 4px 8px;
+        }}
+        QComboBox:hover {{
+            background-color: {qcolor_css(PANEL_HOVER)};
+        }}
+        QComboBox QAbstractItemView {{
+            background-color: {qcolor_css(PANEL_BG)};
+            color: {qcolor_css(TEXT_LIGHT)};
+            selection-background-color: {qcolor_css(PANEL_HOVER)};
+            border: 2px solid {qcolor_css(PANEL_BORDER)};
+        }}
+    """
 
 def apply_default_button_size(button) -> None:
     button.setFixedSize(DEFAULT_BUTTON_WIDTH, DEFAULT_BUTTON_HEIGHT)

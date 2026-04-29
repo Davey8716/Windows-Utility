@@ -53,6 +53,7 @@ class TrayIconManager(QObject):
         if self.tray:
             self.tray.hide()
 
+        setattr(self.app, "_quit_requested", True)
         self.app.close()
 
     def on_tray_activated(self, reason):

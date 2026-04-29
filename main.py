@@ -9,6 +9,7 @@ import win32gui
 import win32con
 
 from screen_mover import SCREEN_MOVER
+from tray_toggles import TrayIconManager
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from tooltips import QtTooltipManager
@@ -100,6 +101,7 @@ class UtilityControlApp(QWidget):
         super().__init__()
 
         self.setWindowTitle("Windows Resurface")
+        self.setStyleSheet(styles.window_style())
         self.COLLAPSED_WIDTH = 505
         self.EXPANDED_WIDTH = 1045
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
@@ -113,9 +115,12 @@ class UtilityControlApp(QWidget):
         self._tooltip_managers = []
         self.advanced_settings_open = bool(self.state.get("advanced_panel_open", False))
         self.collapsible_sections = []
+        self._quit_requested = False
         self.actions = UtilityActionsManager(self)
+        self.tray_manager = TrayIconManager(self)
 
         self._build_ui()
+        self.tray_manager.create_tray_icon()
         
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.show()
@@ -853,7 +858,19 @@ class UtilityControlApp(QWidget):
 
     def closeEvent(self, event):
         self.save_all_settings()
-        event.accept()
+        if self._quit_requested:
+            event.accept()
+            return
+
+        event.ignore()
+        self.hide()
+        if getattr(self, "tray_manager", None) and self.tray_manager.tray:
+            self.tray_manager.tray.showMessage(
+                "Windows Resurface",
+                "Still running in the system tray.",
+                self.tray_manager.tray.icon(),
+                2000
+            )
 
 def main():
     mutex = ensure_single_instance()
