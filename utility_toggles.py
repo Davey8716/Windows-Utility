@@ -361,31 +361,6 @@ class UtilityActionsManager:
         return False
 
     # ===================================================================
-    #  Organising Utilities - Change Backup Folder Path
-    # ===================================================================
-
-    def change_backup_folder(self, new_path: str) -> bool:
-        """
-        Qt-aligned:
-        - Qt supplies folder path
-        - This method only persists it
-        """
-        if not new_path:
-            return False
-
-        if self.app:
-            if hasattr(self.app, "_set_master_backup_dir"):
-                self.app._set_master_backup_dir(new_path)
-            else:
-                setattr(self.app, "backup_path", new_path)
-
-            if hasattr(self.app, "save_all_settings"):
-                self.app.save_all_settings()
-
-        print(f"[DEBUG] Changed backup folder to: {new_path}")
-        return True
-
-    # ===================================================================
     #  Desktop Icon Layout - Capture
     # ===================================================================
 

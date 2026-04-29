@@ -572,18 +572,6 @@ class UtilityControlApp(QWidget):
         open_backup_btn.toggled.connect(on_open_backup_changed)
         
         # -------------------------
-        # Change Backup Folder (placeholder)
-        # -------------------------
-        change_backup_btn = make_toggle_button("Change Backup Folder", state.get("change_backup_folder_enabled", False))
-        org_layout.addWidget(change_backup_btn)
-
-        def on_change_backup_changed(checked: bool):
-            state["change_backup_folder_enabled"] = checked
-            save_state(state)
-
-        change_backup_btn.toggled.connect(on_change_backup_changed)
-
-        # -------------------------
         # Desktop Icon Layout
         # -------------------------
 
@@ -1117,79 +1105,6 @@ class UtilityControlApp(QWidget):
 
         # path_inner_layout.addWidget(self.entry_backup_path)
 
-        
-        
-        # # ==============================================================
-        # # Capture / Restore Desktop Layout
-        # # ==============================================================
-
-        # self.icon_buttons_frame = QWidget(self.desktop_icon_frame)
-        # icon_buttons_layout = QVBoxLayout(self.icon_buttons_frame)
-        # icon_buttons_layout.setContentsMargins(10, 0, 10, 0)
-        # icon_buttons_layout.setSpacing(4)
-
-        # self.desktop_icon_layout.content_layout.addWidget(
-        #     self.icon_buttons_frame,
-        #     alignment=Qt.AlignmentFlag.AlignLeft
-        # )
-        
-        # capture_row = QWidget(self.icon_buttons_frame)
-        # capture_row_layout = QHBoxLayout(capture_row)
-        # capture_row_layout.setContentsMargins(0, 0, 0, 0)
-        # capture_row_layout.setSpacing(6)
-
-        # icon_buttons_layout.addWidget(capture_row)
-        
-        # self.btn_capture_layout = QPushButton(
-        #     "Capture Desktop Layout",
-        #     capture_row
-        # )
-        # self.btn_capture_layout.setFixedWidth(btn_width)
-        # self.btn_capture_layout.setFixedHeight(28)
-        # self.btn_capture_layout.clicked.connect(
-        #     self.actions.capture_desktop_layout
-        # )
-
-        # self.btn_capture_layout.setToolTip(
-        #     "Captures and restores icon layout on desktops.\n"
-        #     "Make sure you right click Desktop → View → turn OFF Auto arrange icons."
-        # )
-
-        # capture_row_layout.addWidget(self.btn_capture_layout)
-        
-        # self.desktop_layout_status = QLabel(" ", capture_row)  # keep width
-        # self.desktop_layout_status.setFixedWidth(140)
-        # self.desktop_layout_status.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        # self.desktop_layout_status.setStyleSheet(
-        #     "font-weight: bold; color: #1f6aa5;"
-        # )
-
-        # capture_row_layout.addWidget(self.desktop_layout_status)
-        
-        
-        # self.btn_restore_layout = QPushButton(
-        #     "Restore Layout",
-        #     self.icon_buttons_frame
-        # )
-        # self.btn_restore_layout.setFixedWidth(btn_width)
-        # self.btn_restore_layout.setFixedHeight(28)
-        # self.btn_restore_layout.clicked.connect(
-        #     self.actions.restore_desktop_layout
-        # )
-
-        # self.btn_restore_layout.setToolTip(
-        #     "Restores a previously saved desktop icon layout.\n"
-        #     "Auto arrange icons must be turned OFF."
-        # )
-
-        # icon_buttons_layout.addWidget(
-        #     self.btn_restore_layout,
-        #     alignment=Qt.AlignmentFlag.AlignLeft
-        # )
-
-    #  FIX def set_desktop_layout_status(self, text, timeout=2500):
-    #     self.desktop_layout_status.configure(text=text)
-    #     self.after(timeout, lambda: self.desktop_layout_status.configure(text=" "))
 
     # ==================================================
     # End of muddafucking initilisation bro
@@ -1292,63 +1207,6 @@ class UtilityControlApp(QWidget):
     #         print("sec:", s.section_id, "parent:", type(s.parent), "toplevel:", s.parent.winfo_toplevel())
             
     #     save_state(data)
-
-    # # ===================================================================
-    # #  Create Folder On Desktop
-    # # ===================================================================
-    
-    # def _create_desktop_folder(self):
-    #     folder_name = self.folder_name_var.get().strip()
-
-    #     if not folder_name:
-    #         return
-
-    #     desktop = os.path.join(os.environ["USERPROFILE"], "Desktop")
-    #     new_path = os.path.join(desktop, folder_name)
-
-    #     try:
-    #         if os.path.exists(new_path):
-    #             messagebox.showerror(
-    #                 "Error",
-    #                 "A folder with that name already exists on Desktop."
-    #             )
-    #             return
-
-    #         os.makedirs(new_path)
-
-    #         # Clear entry
-    #         self.folder_name_var.set("")
-
-    #         # Timed success message
-    #         self._set_folder_status_timed("Folder Made", 2000)
-            
-    #         def minimize_both():
-    #             if (
-    #                 hasattr(self, "advanced_panel")
-    #                 and self.advanced_panel
-    #                 and self.advanced_panel.winfo_viewable()
-    #             ):
-    #                 self.advanced_panel.iconify()
-
-    #             # FIX self.iconify
-
-    #         # FIX self.after
-
-    #     except Exception as e:
-    #         messagebox.showerror(
-    #             "Error",
-    #             f"Could not create folder:\n{e}"
-    #         )
-            
-    # def _update_create_folder_button(self, *_):
-    #     name = self.folder_name_var.get().strip()
-        
-    #     if name:
-    #         self.btn_create_folder.configure(state="normal")
-    #         self.folder_status_label.configure(text="")
-    #     else:
-    #         self.btn_create_folder.configure(state="disabled")
-    #         self.folder_status_label.configure(text="")
             
     # def _set_folder_status_timed(self, text, duration_ms=2000):
     #     # Cancel any existing timer
