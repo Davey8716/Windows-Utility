@@ -99,7 +99,8 @@ class AdvancedToolsPanel(QDialog):
             self.toggle_all_right_sections
         )
 
-        self.master_collapse_btn_right.setToolTip(
+        self.app.register_tooltip(
+            self.master_collapse_btn_right,
             "Master collapse toggle for all of these regions."
         )
 
@@ -120,7 +121,8 @@ class AdvancedToolsPanel(QDialog):
 
         self.side_layout.addWidget(self.windows_utility_section)
 
-        self.windows_utility_section.toggle_btn.setToolTip(
+        self.app.register_tooltip(
+            self.windows_utility_section.toggle_btn,
             "Shows windows utilities here instead grouped by type\n"
             "not having to have them all cluttering up your taskbar."
         )
@@ -146,7 +148,8 @@ class AdvancedToolsPanel(QDialog):
 
         self.build_sidebar_utilities()
 
-        self.sidebar_utils_section.toggle_btn.setToolTip(
+        self.app.register_tooltip(
+            self.sidebar_utils_section.toggle_btn,
             "Side bar actions menus."
         )
 
@@ -203,7 +206,8 @@ class AdvancedToolsPanel(QDialog):
 
         self.side_layout.addWidget(self.display_space_section)
 
-        self.display_space_section.toggle_btn.setToolTip(
+        self.app.register_tooltip(
+            self.display_space_section.toggle_btn,
             "Shows disk usage for all detected drives."
         )
 
@@ -219,7 +223,7 @@ class AdvancedToolsPanel(QDialog):
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
         btn_this_pc.clicked.connect(self.app.open_this_pc)
-        btn_this_pc.setToolTip("Takes you to Drives location.")
+        self.app.register_tooltip(btn_this_pc, "Takes you to Drives location.")
 
         drive_parent.addWidget(btn_this_pc)
 
@@ -289,7 +293,8 @@ class AdvancedToolsPanel(QDialog):
         self._install_green_flash(self.btn_brave_export)
         self.btn_brave_export.clicked.connect(self.app._run_brave_export)
 
-        self.btn_brave_export.setToolTip(
+        self.app.register_tooltip(
+            self.btn_brave_export,
             "Exports brave bookmarks to a file path of your choice,\n"
             "remembers last saved location."
         )

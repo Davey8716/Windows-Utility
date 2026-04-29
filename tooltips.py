@@ -1,4 +1,4 @@
-from PySide6.QtCore import QObject, QTimer, QPoint
+from PySide6.QtCore import QObject, QTimer, QPoint, QEvent
 from PySide6.QtWidgets import QToolTip
 
 
@@ -24,10 +24,13 @@ class QtTooltipManager(QObject):
     def eventFilter(self, obj, event):
         etype = event.type()
 
-        if etype == event.Type.Enter:
+        if etype == QEvent.Type.Enter:
             self._schedule()
 
-        elif etype in (event.Type.Leave, event.Type.MouseButtonPress):
+        elif etype == QEvent.Type.ToolTip:
+            return True
+
+        elif etype in (QEvent.Type.Leave, QEvent.Type.MouseButtonPress):
             self._hide()
 
         return False
