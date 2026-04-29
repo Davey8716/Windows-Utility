@@ -49,9 +49,6 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
             font-weight: bold;
             text-align: center;
         }}
-        QPushButton:hover, QToolButton:hover {{
-            background-color: {qcolor_css(hover_color)};
-        }}
     """
 
 def collapsible_section_frame_style(border_color: QColor | None = None, radius: int = 10) -> str:
