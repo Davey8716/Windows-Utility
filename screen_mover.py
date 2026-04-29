@@ -1,6 +1,7 @@
 import ctypes
 import threading
 import time
+from ctypes import wintypes
 
 from pynput import mouse
 
@@ -18,6 +19,14 @@ DOCK_WIDTH = 92
 DOCK_HEIGHT = 28
 DOCK_TOP_OFFSET = 14
 LOOP_SLEEP = 0.03
+LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
+WNDPROC_TYPE = ctypes.WINFUNCTYPE(
+    LRESULT,
+    wintypes.HWND,
+    wintypes.UINT,
+    wintypes.WPARAM,
+    wintypes.LPARAM,
+)
 
 
 class DockOverlayButton:
@@ -34,14 +43,7 @@ class DockOverlayButton:
             return
 
         hinstance = win32api.GetModuleHandle(None)
-        wnd_proc_type = ctypes.WINFUNCTYPE(
-            ctypes.c_long,
-            ctypes.c_int,
-            ctypes.c_uint,
-            ctypes.c_int,
-            ctypes.c_int,
-        )
-        self._wnd_proc = wnd_proc_type(self._window_proc)
+        self._wnd_proc = WNDPROC_TYPE(self._window_proc)
 
         wndclass = win32gui.WNDCLASS()
         wndclass.hInstance = hinstance
@@ -73,13 +75,17 @@ class DockOverlayButton:
         win32gui.SetLayeredWindowAttributes(self.hwnd, 0, 240, win32con.LWA_ALPHA)
 
     def _window_proc(self, hwnd, msg, wparam, lparam):
-        if msg == win32con.WM_PAINT:
-            return self._paint(hwnd)
+        try:
+            if msg == win32con.WM_PAINT:
+                return self._paint(hwnd)
 
-        if msg == win32con.WM_ERASEBKGND:
-            return 1
+            if msg == win32con.WM_ERASEBKGND:
+                return 1
 
-        return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+            return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
+        except Exception as e:
+            print(f"[DOCK] WNDPROC error: {e}")
+            return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
     def _paint(self, hwnd):
         hdc, paint_struct = win32gui.BeginPaint(hwnd)
