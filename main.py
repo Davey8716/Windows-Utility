@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
     QMessageBox
 )
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 
 # =======================================
 # These 3 functions possibly to be moved.
@@ -306,6 +306,31 @@ class UtilityControlApp(QWidget):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             styles.apply_default_button_size(button)
             button.setStyleSheet(styles.toggle_button_style())
+            install_green_flash(button)
+            return button
+
+        def install_green_flash(button: QPushButton):
+            def flash_active():
+                button.setProperty("flashActive", True)
+                button.style().unpolish(button)
+                button.style().polish(button)
+                QTimer.singleShot(180, clear_flash)
+
+            def clear_flash():
+                button.setProperty("flashActive", False)
+                button.style().unpolish(button)
+                button.style().polish(button)
+
+            button.clicked.connect(flash_active)
+            return button
+
+        def style_organizing_button(button: QPushButton):
+            button.setCheckable(True)
+            button.setAutoExclusive(False)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            styles.apply_default_button_size(button)
+            button.setStyleSheet(styles.organizing_button_style())
+            install_green_flash(button)
             return button
 
         # ==================================================
@@ -511,8 +536,7 @@ class UtilityControlApp(QWidget):
         # Desktop Screenshot
         # -------------------------
         screenshot_btn = QPushButton("Desktop Screenshot")
-        styles.apply_default_button_size(screenshot_btn)
-        screenshot_btn.setStyleSheet(styles.toggle_button_style())
+        style_organizing_button(screenshot_btn)
         org_layout.addWidget(screenshot_btn)
         screenshot_btn.clicked.connect(self.take_desktop_screenshot)
 
@@ -525,8 +549,7 @@ class UtilityControlApp(QWidget):
         folder_row_layout.setSpacing(8)
 
         folder_btn = QPushButton("Folder → Desktop")
-        styles.apply_default_button_size(folder_btn)
-        folder_btn.setStyleSheet(styles.toggle_button_style())
+        style_organizing_button(folder_btn)
 
         folder_input = QLineEdit()
         folder_input.setPlaceholderText("Folder name")
@@ -554,8 +577,7 @@ class UtilityControlApp(QWidget):
         # Backup Taskbar
         # -------------------------
         backup_taskbar_btn = QPushButton("Backup Taskbar")
-        styles.apply_default_button_size(backup_taskbar_btn)
-        backup_taskbar_btn.setStyleSheet(styles.toggle_button_style())
+        style_organizing_button(backup_taskbar_btn)
         org_layout.addWidget(backup_taskbar_btn)
         backup_taskbar_btn.clicked.connect(self.backup_taskbar_apps)
 
@@ -563,8 +585,7 @@ class UtilityControlApp(QWidget):
         # Open Backup Folder
         # -------------------------
         open_backup_btn = QPushButton("Open Backup Folder")
-        styles.apply_default_button_size(open_backup_btn)
-        open_backup_btn.setStyleSheet(styles.toggle_button_style())
+        style_organizing_button(open_backup_btn)
         org_layout.addWidget(open_backup_btn)
         open_backup_btn.clicked.connect(self.open_taskbar_backup_folder)
         
@@ -574,16 +595,14 @@ class UtilityControlApp(QWidget):
 
         # Capture desktop layout
         capture_layout_btn = QPushButton("Capture Desktop Layout")
-        styles.apply_default_button_size(capture_layout_btn)
-        capture_layout_btn.setStyleSheet(styles.toggle_button_style())
+        style_organizing_button(capture_layout_btn)
         org_layout.addWidget(capture_layout_btn)
         capture_layout_btn.clicked.connect(self.capture_desktop_layout)
 
 
         # Restore desktop layout
         restore_layout_btn = QPushButton("Restore Desktop Layout")
-        styles.apply_default_button_size(restore_layout_btn)
-        restore_layout_btn.setStyleSheet(styles.toggle_button_style())
+        style_organizing_button(restore_layout_btn)
         org_layout.addWidget(restore_layout_btn)
         restore_layout_btn.clicked.connect(self.restore_desktop_layout)
 
@@ -593,8 +612,7 @@ class UtilityControlApp(QWidget):
         master_backup_row_layout.setSpacing(8)
 
         master_backup_btn = QPushButton("Master Backup Path")
-        styles.apply_default_button_size(master_backup_btn)
-        master_backup_btn.setStyleSheet(styles.toggle_button_style())
+        style_organizing_button(master_backup_btn)
         master_backup_row_layout.addWidget(master_backup_btn)
 
         self.backup_path_input = QLineEdit()

@@ -9,6 +9,10 @@ BUTTON_BORDER = QColor(74, 74, 74)
 BUTTON_ACTIVE_BG = QColor(47, 93, 58)
 BUTTON_ACTIVE_BORDER = QColor(93, 162, 113)
 STATUS_ACCENT = QColor(31, 106, 165)
+ORGANIZE_BUTTON_BG = QColor(38, 92, 52)
+ORGANIZE_BUTTON_HOVER = QColor(49, 115, 65)
+ORGANIZE_BUTTON_PRESSED = QColor(72, 152, 91)
+ORGANIZE_BUTTON_BORDER = QColor(102, 182, 120)
 
 DEFAULT_BUTTON_WIDTH = 170
 DEFAULT_BUTTON_HEIGHT = 30
@@ -62,20 +66,38 @@ def collapsible_section_frame_style(border_color: QColor | None = None, radius: 
     """
 
 
-def toggle_button_style() -> str:
+def organizing_button_style(font_size: int | None = None) -> str:
+    font_rule = f"font-size: {font_size}px;" if font_size is not None else ""
     return f"""
         QPushButton {{
             text-align: center;
             padding: 4px 8px;
-            border: 1px solid {qcolor_css(BUTTON_BORDER)};
+            {font_rule}
+            font-weight: bold;
+            color: {qcolor_css(TEXT_LIGHT)};
+            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
             border-radius: 6px;
-            background-color: {qcolor_css(SURFACE_DARK)};
+            background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
         }}
+        QPushButton:hover {{
+            background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+        }}
+        QPushButton:pressed,
+        QPushButton[flashActive="true"],
         QPushButton:checked {{
-            background-color: {qcolor_css(BUTTON_ACTIVE_BG)};
-            border: 1px solid {qcolor_css(BUTTON_ACTIVE_BORDER)};
+            background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
+            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+        }}
+        QPushButton:disabled {{
+            color: {qcolor_css(TEXT_LIGHT)};
+            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+            background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
         }}
     """
+
+
+def toggle_button_style() -> str:
+    return organizing_button_style()
 
 
 def text_edit_style(font_family: str, font_size: int) -> str:
@@ -83,7 +105,7 @@ def text_edit_style(font_family: str, font_size: int) -> str:
 
 
 def button_text_style(font_size: int) -> str:
-    return f"{label_style(font_size=font_size, bold=True)} text-align: center; padding: 4px 8px;"
+    return organizing_button_style(font_size=font_size)
 
 
 def line_edit_style(font_size: int) -> str:

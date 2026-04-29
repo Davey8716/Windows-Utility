@@ -217,6 +217,7 @@ class AdvancedToolsPanel(QDialog):
         btn_this_pc = QPushButton("Open This PC")
         styles.apply_default_button_size(btn_this_pc)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
+        self._install_green_flash(btn_this_pc)
         btn_this_pc.clicked.connect(self.app.open_this_pc)
         btn_this_pc.setToolTip("Takes you to Drives location.")
 
@@ -285,6 +286,7 @@ class AdvancedToolsPanel(QDialog):
         self.btn_brave_export = QPushButton("Export Brave Bookmarks")
         styles.apply_default_button_size(self.btn_brave_export)
         self.btn_brave_export.setStyleSheet(styles.button_text_style(15))
+        self._install_green_flash(self.btn_brave_export)
         self.btn_brave_export.clicked.connect(self.app._run_brave_export)
 
         self.btn_brave_export.setToolTip(
@@ -309,6 +311,21 @@ class AdvancedToolsPanel(QDialog):
         )
 
         self.bookmarks_exporter_section.content_layout.addWidget(self.brave_export_entry)
+
+    def _install_green_flash(self, button: QPushButton):
+        def flash_active():
+            button.setProperty("flashActive", True)
+            button.style().unpolish(button)
+            button.style().polish(button)
+            QTimer.singleShot(180, clear_flash)
+
+        def clear_flash():
+            button.setProperty("flashActive", False)
+            button.style().unpolish(button)
+            button.style().polish(button)
+
+        button.clicked.connect(flash_active)
+        return button
 
 
     def _run_elevated(self, command: str):
