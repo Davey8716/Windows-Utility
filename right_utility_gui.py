@@ -9,12 +9,13 @@ import styles
 from collapsible_section import CollapsibleSection, SECTION_FRAME_MAX_WIDTH
 from state_manager import save_state
 from universal_bookmarks_export import BraveBookmarksExporter
-from PySide6.QtCore import QPoint, Qt, QTimer
+from PySide6.QtCore import QPoint, QSize, Qt, QTimer
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QListWidgetItem,
     QListWidget,
     QPushButton,
     QScrollArea,
@@ -314,9 +315,16 @@ class AdvancedToolsPanel(QWidget):
 
         self.drive_space_list = QListWidget()
         self.drive_space_list.setFixedHeight(120)
+        self.drive_space_list.setSpacing(0)
+        self.drive_space_list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+        )
+        self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self.drive_space_list.setWordWrap(False)
         self.drive_space_list.setStyleSheet(
             """
             QListWidget {
+                %s
                 background-color: %s;
                 color: %s;
                 border: 2px solid %s;
@@ -324,7 +332,8 @@ class AdvancedToolsPanel(QWidget):
                 padding: 6px;
             }
             QListWidget::item {
-                padding: 4px 6px;
+                padding: 1px 6px;
+                margin: 0px;
             }
             QListWidget::item:selected {
                 background-color: %s;
@@ -332,6 +341,7 @@ class AdvancedToolsPanel(QWidget):
             }
             """
             % (
+                styles.label_style(font_size=15, bold=True, font_family="Consolas"),
                 styles.qcolor_css(styles.PANEL_BG),
                 styles.qcolor_css(styles.TEXT_LIGHT),
                 styles.qcolor_css(styles.PANEL_BORDER),
@@ -343,13 +353,19 @@ class AdvancedToolsPanel(QWidget):
 
         def refresh_drive_display():
             self.drive_space_list.clear()
+            metrics = self.drive_space_list.fontMetrics()
             for d in get_drive_info():
                 used_gb = (d["total"] - d["free"]) / (1024 ** 3)
                 total_gb = d["total"] / (1024 ** 3)
                 free_gb = d["free"] / (1024 ** 3)
-                self.drive_space_list.addItem(
-                    f"{d['drive']}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  Total: {total_gb:.1f} GB"
+                text = (
+                    f"{d['drive']}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  "
+                    f"Total: {total_gb:.1f} GB"
                 )
+                item = QListWidgetItem(text)
+                item_width = metrics.horizontalAdvance(text) + 24
+                item.setSizeHint(QSize(item_width, 20))
+                self.drive_space_list.addItem(item)
 
         refresh_drive_display()
         self.drive_refresh_timer = QTimer(self)
