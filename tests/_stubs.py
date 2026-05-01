@@ -230,6 +230,7 @@ def install_dependency_stubs():
         win32gui.ShowWindow = lambda *_args, **_kwargs: None
         win32gui.SetForegroundWindow = lambda *_args, **_kwargs: None
         win32gui.EnumWindows = lambda callback, extra: None
+        win32gui.PostMessage = lambda *_args, **_kwargs: None
         sys.modules["win32gui"] = win32gui
 
     if "win32con" not in sys.modules:
@@ -238,6 +239,7 @@ def install_dependency_stubs():
         win32con.SW_RESTORE = 9
         win32con.SW_SHOW = 5
         win32con.SW_SHOWMINIMIZED = 2
+        win32con.WM_CLOSE = 16
         sys.modules["win32con"] = win32con
 
     if "PIL" not in sys.modules:

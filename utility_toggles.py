@@ -5,6 +5,7 @@ import win32gui
 import win32con
 import os
 import shutil
+from pathlib import Path
 from PySide6.QtCore import Qt
 
 from screen_mover import SCREEN_MOVER
@@ -261,6 +262,29 @@ class UtilityActionsManager:
             print(f"[DEBUG] open_backup_folder failed: {e}")
             return False
 
+    def is_backup_folder_open(self, path: str | None = None) -> bool:
+        resolved_path = _resolve_backup_folder_path(path, self.app)
+        if not resolved_path:
+            return False
+
+        return bool(find_explorer_windows_for_folder(resolved_path))
+
+    def close_backup_folder(self, path: str | None = None) -> bool:
+        resolved_path = _resolve_backup_folder_path(path, self.app)
+        if not resolved_path:
+            return False
+
+        handles = find_explorer_windows_for_folder(resolved_path)
+        closed_any = False
+        for hwnd in handles:
+            try:
+                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                closed_any = True
+            except Exception as e:
+                print(f"[DEBUG] close_backup_folder failed for hwnd {hwnd}: {e}")
+
+        return closed_any
+
     def capture_desktop_layout(self, out_path: str | None = None) -> int:
         if not out_path and self.app:
             out_path = getattr(
@@ -373,3 +397,68 @@ def usb_reminder_intent(enabled: bool) -> bool:
 def mover_options_intent(enabled: bool) -> bool:
     print(f"[INFO] Screen Mover options intent → {enabled}")
     return enabled
+
+
+def _resolve_backup_folder_path(path: str | None, app=None) -> str | None:
+    if path:
+        return path
+
+    if app:
+        return getattr(
+            app,
+            "get_default_taskbar_backup_dir",
+            lambda: None
+        )()
+
+    return None
+
+
+def _is_explorer_folder_window(hwnd: int, folder_name: str) -> bool:
+    try:
+        if not win32gui.IsWindowVisible(hwnd):
+            return False
+    except Exception:
+        return False
+
+    try:
+        class_name = win32gui.GetClassName(hwnd)
+    except Exception:
+        class_name = ""
+
+    if class_name not in {"CabinetWClass", "ExploreWClass"}:
+        return False
+
+    try:
+        title = win32gui.GetWindowText(hwnd).strip()
+    except Exception:
+        title = ""
+
+    if not title:
+        return False
+
+    normalized_title = title.casefold()
+    normalized_folder_name = folder_name.casefold()
+    return (
+        normalized_title == normalized_folder_name
+        or normalized_title.endswith(f" - {normalized_folder_name}")
+        or normalized_folder_name in normalized_title
+    )
+
+
+def find_explorer_windows_for_folder(path: str) -> list[int]:
+    folder_name = Path(path).name.strip()
+    if not folder_name:
+        return []
+
+    handles: list[int] = []
+
+    def enum_handler(hwnd, _):
+        if _is_explorer_folder_window(hwnd, folder_name):
+            handles.append(hwnd)
+
+    try:
+        win32gui.EnumWindows(enum_handler, None)
+    except Exception as e:
+        print(f"[DEBUG] find_explorer_windows_for_folder failed: {e}")
+
+    return handles

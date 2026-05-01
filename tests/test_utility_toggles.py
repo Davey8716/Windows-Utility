@@ -73,6 +73,36 @@ class UtilityTogglesTests(unittest.TestCase):
 
         self.assertFalse(opened)
 
+    def test_is_backup_folder_open_returns_true_when_matching_explorer_window_exists(self):
+        manager = utility_toggles.UtilityActionsManager()
+
+        def enum_windows(callback, extra):
+            callback(101, extra)
+            callback(202, extra)
+
+        with patch.object(utility_toggles.win32gui, "EnumWindows", side_effect=enum_windows), \
+             patch.object(utility_toggles.win32gui, "IsWindowVisible", return_value=True), \
+             patch.object(utility_toggles.win32gui, "GetClassName", side_effect=["CabinetWClass", "Notepad"]), \
+             patch.object(utility_toggles.win32gui, "GetWindowText", side_effect=["TaskBarApps", "Notes"]):
+            self.assertTrue(manager.is_backup_folder_open(r"C:\Backups\TaskBarApps"))
+
+    def test_close_backup_folder_posts_wm_close_to_matching_windows(self):
+        manager = utility_toggles.UtilityActionsManager()
+
+        def enum_windows(callback, extra):
+            callback(101, extra)
+            callback(202, extra)
+
+        with patch.object(utility_toggles.win32gui, "EnumWindows", side_effect=enum_windows), \
+             patch.object(utility_toggles.win32gui, "IsWindowVisible", return_value=True), \
+             patch.object(utility_toggles.win32gui, "GetClassName", side_effect=["CabinetWClass", "CabinetWClass"]), \
+             patch.object(utility_toggles.win32gui, "GetWindowText", side_effect=["TaskBarApps", "Downloads"]), \
+             patch.object(utility_toggles.win32gui, "PostMessage") as post_message:
+            closed = manager.close_backup_folder(r"C:\Backups\TaskBarApps")
+
+        self.assertTrue(closed)
+        post_message.assert_called_once_with(101, utility_toggles.win32con.WM_CLOSE, 0, 0)
+
     def test_capture_desktop_layout_updates_saved_path(self):
         app = SimpleNamespace(saved_state={}, save_all_settings=lambda: setattr(app, "saved", True))
         app.saved = False

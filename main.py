@@ -95,6 +95,7 @@ class UtilityControlApp(QWidget):
         self.tooltips_enabled = bool(self.state.get("tooltips_enabled", True))
         self._tooltip_managers = []
         self._active_message_boxes = []
+        self._taskbar_backup_folder_open = False
         self.advanced_settings_open = bool(self.state.get("advanced_panel_open", False))
         self.collapsible_sections = []
         self._quit_requested = False
@@ -557,8 +558,12 @@ class UtilityControlApp(QWidget):
         open_backup_btn = QPushButton("Open Backup Folder")
         style_organizing_button(open_backup_btn)
         org_layout.addWidget(open_backup_btn)
+        self.open_backup_btn = open_backup_btn
         open_backup_btn.clicked.connect(self.open_taskbar_backup_folder)
-        self.register_tooltip(open_backup_btn, "Opens the TaskBarApps backup folder inside the master backup path.")
+        self.register_tooltip(
+            open_backup_btn,
+            "Opens the TaskBarApps backup folder inside the master backup path, or closes it if already open.",
+        )
         
         capture_layout_btn = QPushButton("Capture Desktop Layout")
         style_organizing_button(capture_layout_btn)
@@ -607,6 +612,12 @@ class UtilityControlApp(QWidget):
 
         master_backup_btn.clicked.connect(self._choose_master_backup_dir)
         self.backup_path_input.textChanged.connect(on_master_backup_path_changed)
+        self._taskbar_backup_folder_timer = QTimer(self)
+        self._taskbar_backup_folder_timer.timeout.connect(
+            self._refresh_taskbar_backup_folder_button
+        )
+        self._taskbar_backup_folder_timer.start(1000)
+        self._refresh_taskbar_backup_folder_button()
 
         self.main_layout.addWidget(org_section)
         self.left_sections.append(org_section)
@@ -732,6 +743,17 @@ class UtilityControlApp(QWidget):
     def get_default_screenshot_path(self) -> str:
         return self._build_master_output_path("desktop_screenshot.png")
 
+    def _refresh_taskbar_backup_folder_button(self):
+        is_open = self.actions.is_backup_folder_open(
+            self.get_default_taskbar_backup_dir()
+        )
+        self._taskbar_backup_folder_open = is_open
+
+        if hasattr(self, "open_backup_btn"):
+            self.open_backup_btn.setText(
+                "Close Backup Folder" if is_open else "Open Backup Folder"
+            )
+
     def _show_timed_message(
         self,
         icon: QMessageBox.Icon,
@@ -804,9 +826,25 @@ class UtilityControlApp(QWidget):
 
     def open_taskbar_backup_folder(self):
         path = self.get_default_taskbar_backup_dir()
+        if self.actions.is_backup_folder_open(path):
+            closed = self.actions.close_backup_folder(path)
+            self._refresh_taskbar_backup_folder_button()
+
+            if closed:
+                return
+
+            QMessageBox.warning(
+                self,
+                "Close Backup Folder",
+                f"Could not close backup folder:\n{path}"
+            )
+            return
+
         opened = self.actions.open_backup_folder(path)
+        self._refresh_taskbar_backup_folder_button()
 
         if opened:
+            QTimer.singleShot(500, self._refresh_taskbar_backup_folder_button)
             return
 
         QMessageBox.warning(
