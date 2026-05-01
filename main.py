@@ -669,6 +669,7 @@ class UtilityControlApp(QWidget):
 
     def toggle_advanced_settings_panel(self):
         self.advanced_settings_open = not self.advanced_settings_open
+        self.state["advanced_panel_open"] = self.advanced_settings_open
 
         if self.advanced_settings_open:
             self.WINDOW_WIDTH = self.EXPANDED_WIDTH
@@ -682,6 +683,7 @@ class UtilityControlApp(QWidget):
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         self._position_advanced_settings_toggle()
+        save_state(self.state)
 
     def _position_advanced_settings_toggle(self):
         x = self.width() - self.advanced_settings_toggle.width() - 6
@@ -880,6 +882,7 @@ class UtilityControlApp(QWidget):
         self.state["main_always_on_top_enabled"] = bool(
             self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
         )
+        self.state["advanced_panel_open"] = self.advanced_settings_open
         save_state(self.state)
 
     def closeEvent(self, event):

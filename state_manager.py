@@ -18,6 +18,7 @@ DEFAULTS = {
     "usb_download_enabled": True,
     "usb_plug_enabled": True,
     "master_backup_output_path": str(Path.home()),
+    "advanced_panel_open": False,
     "master_toggle_left": True,
     "master_toggle_right": False,
     "left_section_states": {
