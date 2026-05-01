@@ -172,5 +172,9 @@ def combo_style(font_size: int) -> str:
         }}
     """
 
-def apply_default_button_size(button) -> None:
-    button.setFixedSize(DEFAULT_BUTTON_WIDTH, DEFAULT_BUTTON_HEIGHT)
+def apply_default_button_size(
+    button,
+    width: int = DEFAULT_BUTTON_WIDTH,
+    height: int = DEFAULT_BUTTON_HEIGHT,
+) -> None:
+    button.setFixedSize(width, height)

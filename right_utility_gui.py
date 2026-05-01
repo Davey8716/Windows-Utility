@@ -58,9 +58,12 @@ class AdvancedToolsPanel(QWidget):
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll.setViewportMargins(0, 0, 12, 0)
         root_layout.addWidget(self.scroll)
 
         self.side_frame = QWidget()
+        self.side_frame.setFixedWidth(self.app.main_scroll.width())
         self.scroll.setWidget(self.side_frame)
 
         self.side_layout = QVBoxLayout(self.side_frame)
@@ -178,22 +181,26 @@ class AdvancedToolsPanel(QWidget):
 
         quick_row = QWidget()
         quick_row_layout = QHBoxLayout(quick_row)
-        quick_row_layout.setContentsMargins(0, 0, 0, 8)
-        quick_row_layout.setSpacing(8)
+        quick_row_layout.setContentsMargins(0, 0, 0, 10)
+        quick_row_layout.setSpacing(10)
         parent_layout.addWidget(quick_row)
 
         left_col = QWidget()
         left_col_layout = QVBoxLayout(left_col)
         left_col_layout.setContentsMargins(0, 0, 0, 0)
-        left_col_layout.setSpacing(8)
+        left_col_layout.setSpacing(10)
 
         right_col = QWidget()
         right_col_layout = QVBoxLayout(right_col)
         right_col_layout.setContentsMargins(0, 0, 0, 0)
-        right_col_layout.setSpacing(8)
+        right_col_layout.setSpacing(10)
 
         quick_row_layout.addWidget(left_col)
         quick_row_layout.addWidget(right_col)
+        quick_row_layout.setStretch(0, 1)
+        quick_row_layout.setStretch(1, 1)
+        quick_row_layout.setAlignment(left_col, Qt.AlignmentFlag.AlignTop)
+        quick_row_layout.setAlignment(right_col, Qt.AlignmentFlag.AlignTop)
 
         self._add_action_button(
             left_col_layout,
@@ -218,8 +225,8 @@ class AdvancedToolsPanel(QWidget):
 
         self.power_actions_row = QWidget()
         power_layout = QHBoxLayout(self.power_actions_row)
-        power_layout.setContentsMargins(0, 0, 0, 8)
-        power_layout.setSpacing(8)
+        power_layout.setContentsMargins(0, 0, 0, 10)
+        power_layout.setSpacing(10)
         parent_layout.addWidget(self.power_actions_row)
 
         self._add_action_button(
@@ -251,21 +258,25 @@ class AdvancedToolsPanel(QWidget):
         row = QWidget()
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(8)
+        row_layout.setSpacing(10)
         parent_layout.addWidget(row)
 
         left_drop_col = QWidget()
         left_drop_layout = QVBoxLayout(left_drop_col)
         left_drop_layout.setContentsMargins(0, 0, 0, 0)
-        left_drop_layout.setSpacing(6)
+        left_drop_layout.setSpacing(10)
 
         right_drop_col = QWidget()
         right_drop_layout = QVBoxLayout(right_drop_col)
         right_drop_layout.setContentsMargins(0, 0, 0, 0)
-        right_drop_layout.setSpacing(6)
+        right_drop_layout.setSpacing(10)
 
         row_layout.addWidget(left_drop_col)
         row_layout.addWidget(right_drop_col)
+        row_layout.setStretch(0, 1)
+        row_layout.setStretch(1, 1)
+        row_layout.setAlignment(left_drop_col, Qt.AlignmentFlag.AlignTop)
+        row_layout.setAlignment(right_drop_col, Qt.AlignmentFlag.AlignTop)
 
         self._add_windows_dropdown(
             left_drop_layout, "System", self._system_utilities()
@@ -337,7 +348,7 @@ class AdvancedToolsPanel(QWidget):
 
     def _build_bookmarks_exporter(self):
         self.btn_brave_export = QPushButton("Export Brave Bookmarks")
-        styles.apply_default_button_size(self.btn_brave_export)
+        styles.apply_default_button_size(self.btn_brave_export, width=210)
         self.btn_brave_export.setStyleSheet(styles.button_text_style(15))
         self._install_green_flash(self.btn_brave_export)
         self.btn_brave_export.clicked.connect(self._run_brave_export)
@@ -349,7 +360,7 @@ class AdvancedToolsPanel(QWidget):
 
         self.brave_export_entry = QLineEdit()
         self.brave_export_entry.setReadOnly(True)
-        self.brave_export_entry.setFixedWidth(420)
+        self.brave_export_entry.setFixedWidth(365)
         self.brave_export_entry.setStyleSheet(styles.line_edit_style(15))
         self.brave_export_entry.setText(self.app.state.get("brave_export_path", ""))
         self.bookmarks_exporter_section.content_layout.addWidget(self.brave_export_entry)
