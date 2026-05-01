@@ -13,6 +13,7 @@ from PySide6.QtCore import QPoint, QSize, Qt, QTimer
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QListWidgetItem,
@@ -486,23 +487,38 @@ class AdvancedToolsPanel(QWidget):
 
     def build_sidebar_utilities(self):
         parent_layout = self.sidebar_utils_section.content_layout
+        dropdown_grid = QWidget()
+        grid_layout = QGridLayout(dropdown_grid)
+        grid_layout.setContentsMargins(0, 0, 0, 0)
+        grid_layout.setHorizontalSpacing(10)
+        grid_layout.setVerticalSpacing(10)
+        parent_layout.addWidget(dropdown_grid)
+
         self._add_sidebar_dropdown(
-            parent_layout,
+            grid_layout,
+            0,
+            0,
             "Network / System Quick Fix",
             self._sidebar_network_actions(),
         )
         self._add_sidebar_dropdown(
-            parent_layout,
+            grid_layout,
+            0,
+            1,
             "Cleanup / Quick Actions",
             self._sidebar_cleanup_actions(),
         )
         self._add_sidebar_dropdown(
-            parent_layout,
+            grid_layout,
+            1,
+            0,
             "Quick Open",
             self._sidebar_quick_open_actions(),
         )
         self._add_sidebar_dropdown(
-            parent_layout,
+            grid_layout,
+            1,
+            1,
             "System Integrity & Disk Health",
             self._sidebar_system_integrity_actions(),
         )
@@ -588,10 +604,11 @@ class AdvancedToolsPanel(QWidget):
         if self._ensure_admin():
             self._run_and_output("chkdsk")
 
-    def _add_sidebar_dropdown(self, parent_layout, title, actions_map):
+    def _add_sidebar_dropdown(self, parent_layout, row, column, title, actions_map):
         placeholder = f" {title} "
         combo = QComboBox()
-        combo.setFixedWidth(260)
+        combo.setMinimumWidth(180)
+        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         combo.addItem(placeholder)
         combo.addItems(actions_map.keys())
         combo.setCurrentText(placeholder)
@@ -606,7 +623,7 @@ class AdvancedToolsPanel(QWidget):
             combo.setCurrentText(placeholder)
 
         combo.currentTextChanged.connect(runner)
-        parent_layout.addWidget(combo)
+        parent_layout.addWidget(combo, row, column)
 
     def _open_this_pc(self):
         subprocess.Popen(["explorer", "shell:MyComputerFolder"])
