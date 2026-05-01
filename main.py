@@ -875,12 +875,19 @@ class UtilityControlApp(QWidget):
         layout_path = self.get_default_desktop_layout_path()
         count = self.actions.restore_desktop_layout(layout_path)
 
-        if count <= 0:
-            QMessageBox.warning(
-                self,
+        if count > 0:
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
                 "Desktop Layout",
-                f"Could not restore desktop layout from:\n{layout_path}"
+                f"Desktop icons restored from:\n{layout_path}",
             )
+            return
+
+        self._show_timed_message(
+            QMessageBox.Icon.Warning,
+            "Desktop Layout",
+            f"Could not restore desktop layout from:\n{layout_path}",
+        )
 
     def _create_desktop_folder(self, folder_input: QLineEdit):
         folder_name = folder_input.text().strip()
