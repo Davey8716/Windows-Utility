@@ -25,8 +25,16 @@ class UtilityTogglesTests(unittest.TestCase):
     def test_should_skip_false_for_visible_toplevel_window_with_title(self):
         with patch.object(utility_toggles.win32gui, "IsWindowVisible", return_value=True), \
              patch.object(utility_toggles.win32gui, "GetWindowText", return_value="Editor"), \
+             patch.object(utility_toggles.win32gui, "GetClassName", return_value="Notepad"), \
              patch.object(utility_toggles.win32gui, "GetParent", return_value=0):
             self.assertFalse(utility_toggles._should_skip(11, 10))
+
+    def test_should_skip_true_for_settings_app_window(self):
+        with patch.object(utility_toggles.win32gui, "IsWindowVisible", return_value=True), \
+             patch.object(utility_toggles.win32gui, "GetWindowText", return_value="Settings"), \
+             patch.object(utility_toggles.win32gui, "GetClassName", return_value="ApplicationFrameWindow"), \
+             patch.object(utility_toggles.win32gui, "GetParent", return_value=0):
+            self.assertTrue(utility_toggles._should_skip(11, 10))
 
     def test_toggle_power_buttons_saves_settings(self):
         app = SimpleNamespace(save_all_settings=lambda: setattr(app, "saved", True))

@@ -317,6 +317,15 @@ def _should_skip(hwnd: int, skip_hwnd: int) -> bool:
     if win32gui.GetParent(hwnd) != 0:
         return True
 
+    try:
+        class_name = win32gui.GetClassName(hwnd)
+    except Exception:
+        class_name = ""
+
+    normalized_title = title.strip().lower()
+    if class_name == "ApplicationFrameWindow" and normalized_title.startswith("settings"):
+        return True
+
     return False
 
 def minimize_all_except_gui(skip_hwnd: int) -> None:

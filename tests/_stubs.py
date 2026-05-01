@@ -199,6 +199,7 @@ def install_dependency_stubs():
     if "win32gui" not in sys.modules:
         win32gui = types.ModuleType("win32gui")
         win32gui.GetWindowText = lambda _hwnd: ""
+        win32gui.GetClassName = lambda _hwnd: ""
         win32gui.IsWindowVisible = lambda _hwnd: True
         win32gui.GetParent = lambda _hwnd: 0
         win32gui.GetWindowPlacement = lambda _hwnd: (None, 0)
