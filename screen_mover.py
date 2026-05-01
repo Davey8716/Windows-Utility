@@ -214,10 +214,23 @@ class ScreenMoverWorker:
             "dwm.exe",
         }
 
+    def _is_owned_by_app(self, hwnd):
+        if not self.app_hwnd or not hwnd or hwnd == self.app_hwnd:
+            return False
+
+        try:
+            owner_hwnd = win32gui.GetWindow(hwnd, getattr(win32con, "GW_OWNER", 4))
+        except Exception:
+            return False
+
+        return owner_hwnd == self.app_hwnd
+
     def _is_window_eligible(self, hwnd):
         if not hwnd or not win32gui.IsWindow(hwnd) or not win32gui.IsWindowVisible(hwnd):
             return False
         if hwnd == self.app_hwnd or hwnd == self.dock_overlay.hwnd:
+            return False
+        if self._is_owned_by_app(hwnd):
             return False
         if self._is_system_window(hwnd):
             return False
