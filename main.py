@@ -86,7 +86,7 @@ class UtilityControlApp(QWidget):
         self.EXPANDED_WIDTH = 935
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
-        self.WINDOW_HEIGHT = 800
+        self.WINDOW_HEIGHT = 875
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         
         self.state = load_state()
@@ -213,14 +213,14 @@ class UtilityControlApp(QWidget):
             section = QWidget(self.main_frame)
             section.section_id = section_id
             section.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            section.setMaximumWidth(390)
+            section.setMaximumWidth(405)
             layout = QVBoxLayout(section)
             layout.setContentsMargins(10, 5, 10, 5)
             layout.setSpacing(4)
 
             sec_header = QWidget(section)
             sec_header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            sec_header.setMaximumWidth(390)
+            sec_header.setMaximumWidth(405)
             sec_header_layout = QHBoxLayout(sec_header)
             sec_header_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -243,7 +243,7 @@ class UtilityControlApp(QWidget):
             section.frame = frame
             frame.setObjectName("CollapsibleSectionFrame")
             frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            frame.setMaximumWidth(390)
+            frame.setMaximumWidth(405)
             frame.setStyleSheet(styles.collapsible_section_frame_style())
             frame_layout = QVBoxLayout(frame)
             frame_layout.setContentsMargins(2, 2, 2, 2)
@@ -252,7 +252,7 @@ class UtilityControlApp(QWidget):
             section.content = QWidget(frame)
             content = section.content
             content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            content.setMaximumWidth(390)
+            content.setMaximumWidth(405)
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
             content.setVisible(initial_open)
             frame.setVisible(initial_open)
@@ -717,6 +717,10 @@ class UtilityControlApp(QWidget):
     def get_default_taskbar_backup_dir(self) -> str:
         base_dir = self._get_master_backup_dir().strip() or str(Path.home())
         return str(Path(base_dir) / "TaskBarApps")
+
+    def get_default_bookmarks_export_dir(self) -> str:
+        base_dir = self._get_master_backup_dir().strip() or str(Path.home())
+        return str(Path(base_dir) / "Bookmarks")
 
     def get_default_desktop_layout_path(self) -> str:
         return self._build_master_output_path("desktop_icon_layout.json")

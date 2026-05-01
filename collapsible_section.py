@@ -6,9 +6,7 @@ from PySide6.QtCore import Qt
 
 import styles
 
-SECTION_FRAME_MAX_WIDTH = 390
-
-
+SECTION_FRAME_MAX_WIDTH = 400
 
 class CollapsibleSection(QWidget):
     def __init__(self, parent, title_text, section_id, app, initial_open=True):

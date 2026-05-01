@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QPushButton,
     QScrollArea,
@@ -365,16 +364,9 @@ class AdvancedToolsPanel(QWidget):
         self.btn_brave_export.clicked.connect(self._run_brave_export)
         self.app.register_tooltip(
             self.btn_brave_export,
-            "Exports Brave bookmarks and remembers the last saved path.",
+            "Exports Brave bookmarks into the Bookmarks folder inside the master backup path.",
         )
         self.bookmarks_exporter_section.content_layout.addWidget(self.btn_brave_export)
-
-        self.brave_export_entry = QLineEdit()
-        self.brave_export_entry.setReadOnly(True)
-        self.brave_export_entry.setFixedWidth(365)
-        self.brave_export_entry.setStyleSheet(styles.line_edit_style(15))
-        self.brave_export_entry.setText(self.app.state.get("brave_export_path", ""))
-        self.bookmarks_exporter_section.content_layout.addWidget(self.brave_export_entry)
 
     def _add_action_button(self, parent_layout, label, action):
         button = QPushButton(label)
@@ -604,21 +596,19 @@ class AdvancedToolsPanel(QWidget):
         subprocess.Popen(["explorer", "shell:MyComputerFolder"])
 
     def _run_brave_export(self):
-        default_path = self.app.state.get("brave_export_path", "")
-        start_dir = str(Path(default_path).parent) if default_path else str(Path.home())
+        start_dir = Path(self.app.get_default_bookmarks_export_dir())
+        start_dir.mkdir(parents=True, exist_ok=True)
         out_path, _ = QFileDialog.getSaveFileName(
             self,
             "Export Brave Bookmarks",
-            str(Path(start_dir) / "Brave_Bookmarks.html"),
+            str(start_dir / "Brave_Bookmarks.html"),
             "HTML Files (*.html)",
         )
         if not out_path:
             return False
 
         if BraveBookmarksExporter().export_to_file(out_path):
-            self.app.state["brave_export_path"] = out_path
             save_state(self.app.state)
-            self.brave_export_entry.setText(out_path)
             return True
 
         return False
