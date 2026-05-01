@@ -151,6 +151,7 @@ class AdvancedToolsPanel(QWidget):
 
         self.sidebar_output = QTextEdit()
         self.sidebar_output.setFixedHeight(120)
+        self.sidebar_output.setReadOnly(True)
         self.sidebar_output.setStyleSheet(styles.text_edit_style("Consolas", 15))
         self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
 
