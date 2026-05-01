@@ -69,6 +69,7 @@ class AdvancedToolsPanel(QWidget):
         self.side_layout = QVBoxLayout(self.side_frame)
         self.side_layout.setContentsMargins(10, 5, 10, 5)
         self.side_layout.setSpacing(6)
+        self.side_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title_row = QWidget()
         title_row.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
