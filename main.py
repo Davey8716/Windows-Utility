@@ -761,10 +761,13 @@ class UtilityControlApp(QWidget):
         text: str,
         timeout_ms: int = 10_000,
     ) -> QMessageBox:
+        timeout_seconds = max(1, timeout_ms // 1000)
         message_box = QMessageBox(self)
         message_box.setIcon(icon)
         message_box.setWindowTitle(title)
-        message_box.setText(f"{text}\n\nThis message will close in 10 seconds.")
+        message_box.setText(
+            f"{text}\n\nThis message will close in {timeout_seconds} seconds."
+        )
         message_box.setStandardButtons(QMessageBox.StandardButton.NoButton)
         message_box.setModal(False)
         self._active_message_boxes.append(message_box)
@@ -802,9 +805,21 @@ class UtilityControlApp(QWidget):
             self.state["desktop_screenshot_last_path"] = str(save_path)
             save_state(self.state)
             print(f"[SCREENSHOT] Saved: {save_path}")
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
+                "Desktop Screenshot",
+                f"Desktop screenshot saved to:\n{save_path}",
+                timeout_ms=5_000,
+            )
 
         except Exception as e:
             print("[SCREENSHOT] Error:", e)
+            self._show_timed_message(
+                QMessageBox.Icon.Warning,
+                "Desktop Screenshot",
+                f"Could not save desktop screenshot:\n{e}",
+                timeout_ms=5_000,
+            )
 
     def backup_taskbar_apps(self):
         backup_dir = self.get_default_taskbar_backup_dir()
