@@ -74,7 +74,14 @@ class AdvancedToolsPanel(QDialog):
             styles.ICON_BUTTON_WIDTH,
             styles.ICON_BUTTON_HEIGHT
         )
-        self.master_collapse_btn_right.setArrowType(Qt.ArrowType.DownArrow)
+        self.app.master_toggle_right_state = bool(
+            self.app.saved_state.get("master_toggle_right", False)
+        )
+        self.master_collapse_btn_right.setArrowType(
+            Qt.ArrowType.DownArrow
+            if self.app.master_toggle_right_state
+            else Qt.ArrowType.UpArrow
+        )
         self.master_collapse_btn_right.setStyleSheet(
             styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
         )
@@ -520,6 +527,7 @@ class AdvancedToolsPanel(QDialog):
     def toggle_all_right_sections(self):
         new_state = not self.app.master_toggle_right_state
         self.app.master_toggle_right_state = new_state
+        self.app.state["master_toggle_right"] = new_state
         self.master_collapse_btn_right.setArrowType(
             Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
         )

@@ -6,6 +6,21 @@ from unittest.mock import patch
 
 import state_manager
 
+EXPECTED_PERSISTED_KEYS = {
+    "theme_dark",
+    "main_always_on_top_enabled",
+    "tooltips_enabled",
+    "minimize_all_enabled",
+    "power_options_enabled",
+    "mmb_activation_enabled",
+    "title_bar_dock_enabled",
+    "master_backup_output_path",
+    "master_toggle_left",
+    "master_toggle_right",
+    "left_section_states",
+    "right_section_states",
+}
+
 
 class StateManagerTests(unittest.TestCase):
     def make_temp_dir(self, name: str) -> Path:
@@ -16,7 +31,7 @@ class StateManagerTests(unittest.TestCase):
 
     def test_load_state_returns_defaults_when_file_missing(self):
         config_path = self.make_temp_dir("state-missing") / "missing.json"
-        with patch.object(state_manager, "CONFIG_PATH", str(config_path)):
+        with patch.object(state_manager, "get_config_path", return_value=config_path):
             state = state_manager.load_state()
 
         self.assertTrue(state["theme_dark"])
@@ -27,7 +42,7 @@ class StateManagerTests(unittest.TestCase):
         config_path = self.make_temp_dir("state-merge") / "state.json"
         config_path.write_text(json.dumps({"theme_dark": False}), encoding="utf-8")
 
-        with patch.object(state_manager, "CONFIG_PATH", str(config_path)):
+        with patch.object(state_manager, "get_config_path", return_value=config_path):
             state = state_manager.load_state()
 
         self.assertFalse(state["theme_dark"])
@@ -36,14 +51,32 @@ class StateManagerTests(unittest.TestCase):
 
     def test_save_state_writes_json_file(self):
         config_path = self.make_temp_dir("state-save") / "state.json"
-        payload = {"feature": True, "count": 2}
+        payload = {
+            "feature": True,
+            "theme_dark": False,
+            "master_backup_output_path": "C:\\Backups",
+            "left_section_states": {"screen_mover": False},
+        }
 
-        with patch.object(state_manager, "CONFIG_PATH", str(config_path)):
+        with patch.object(state_manager, "get_config_path", return_value=config_path):
             state_manager.save_state(payload)
 
         saved = json.loads(config_path.read_text(encoding="utf-8"))
 
-        self.assertEqual(saved, payload)
+        self.assertEqual(set(saved), EXPECTED_PERSISTED_KEYS)
+        self.assertFalse(saved["theme_dark"])
+        self.assertEqual(saved["master_backup_output_path"], "C:\\Backups")
+        self.assertFalse(saved["left_section_states"]["screen_mover"])
+        self.assertNotIn("feature", saved)
+
+    def test_get_config_path_uses_local_app_data(self):
+        with patch.dict("os.environ", {"LOCALAPPDATA": r"C:\Users\Test\AppData\Local"}, clear=False):
+            config_path = state_manager.get_config_path()
+
+        self.assertEqual(
+            config_path,
+            Path(r"C:\Users\Test\AppData\Local") / "Windows Resurface" / "app_state.json",
+        )
 
 
 if __name__ == "__main__":

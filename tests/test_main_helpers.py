@@ -83,6 +83,8 @@ class MainHelperTests(unittest.TestCase):
 
         self.assertEqual(app.state["left_section_states"], {"left-a": True, "left-b": False})
         self.assertEqual(app.state["right_section_states"], {"right-a": True, "right-b": False})
+        self.assertFalse(app.state["master_toggle_left"])
+        self.assertFalse(app.state["master_toggle_right"])
 
 
 if __name__ == "__main__":

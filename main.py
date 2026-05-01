@@ -206,7 +206,7 @@ class UtilityControlApp(QWidget):
         
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
-        state = load_state()
+        state = self.state
         
         header = QWidget(self.main_frame)
         header_layout = QHBoxLayout(header)
@@ -230,7 +230,7 @@ class UtilityControlApp(QWidget):
         self.main_layout.addWidget(header,alignment= Qt.AlignCenter)
         
         self.left_sections = []
-        self._sections_visible = True
+        self.master_toggle_left_state = bool(state.get("master_toggle_left", True))
 
         def make_section(title_text, section_id: str):
             section = QWidget(self.main_frame)
@@ -393,6 +393,12 @@ class UtilityControlApp(QWidget):
         shutdown_btn = make_toggle_button("Shutdown", state.get("power_shutdown_enabled", False))
         power_layout.addWidget(shutdown_btn)
         self.register_tooltip(shutdown_btn, "Enables the shutdown action shortcut.")
+
+        def on_dark_mode_changed(checked: bool):
+            state["theme_dark"] = checked
+            save_state(state)
+
+        dark_mode_btn.toggled.connect(on_dark_mode_changed)
 
         def save_sleep(checked: bool):
             state["power_sleep_enabled"] = checked
@@ -619,6 +625,8 @@ class UtilityControlApp(QWidget):
             )
 
             new_state = not any_visible
+            self.master_toggle_left_state = new_state
+            self.state["master_toggle_left"] = new_state
 
             master_btn.setArrowType(
                 Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
@@ -628,8 +636,13 @@ class UtilityControlApp(QWidget):
                 section.content.setVisible(new_state)
                 if hasattr(section, "frame"):
                     section.frame.setVisible(new_state)
+
+            self.save_all_settings()
             
         master_btn.clicked.connect(toggle_all)
+        master_btn.setArrowType(
+            Qt.ArrowType.DownArrow if self.master_toggle_left_state else Qt.ArrowType.UpArrow
+        )
 
         if self.advanced_settings_open:
             self.WINDOW_WIDTH = self.EXPANDED_WIDTH
@@ -854,6 +867,7 @@ class UtilityControlApp(QWidget):
 
         if left_states:
             self.state["left_section_states"] = left_states
+            self.state["master_toggle_left"] = all(left_states.values())
 
         right_states = {}
         for section in self.collapsible_sections:
@@ -864,10 +878,10 @@ class UtilityControlApp(QWidget):
 
         if right_states:
             self.state["right_section_states"] = right_states
+            self.state["master_toggle_right"] = all(right_states.values())
 
     def save_all_settings(self):
         self.save_section_states()
-        self.state["advanced_panel_open"] = self.advanced_settings_open
         self.state["main_always_on_top_enabled"] = bool(
             self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
         )
