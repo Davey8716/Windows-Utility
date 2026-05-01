@@ -166,6 +166,40 @@ class RightUtilityGuiTests(unittest.TestCase):
 
         popen.assert_called_once_with(["shutdown", "/s", "/t", "0"])
 
+    def test_run_sfc_scannow_uses_plain_command_arguments(self):
+        panel = self.make_panel()
+        with patch.object(panel, "_is_admin", return_value=True), \
+             patch.object(panel, "_run_and_output") as run_and_output:
+            panel.run_sfc_scannow()
+
+        run_and_output.assert_called_once_with(["sfc", "/scannow"])
+
+    def test_run_chkdsk_uses_plain_command_arguments(self):
+        panel = self.make_panel()
+        with patch.dict(right_utility_gui.os.environ, {"SystemDrive": "C:"}), \
+             patch.object(panel, "_is_admin", return_value=True), \
+             patch.object(panel, "_run_and_output") as run_and_output:
+            panel.run_chkdsk()
+
+        run_and_output.assert_called_once_with(["chkdsk", "C:"])
+
+    def test_run_sfc_scannow_uses_elevated_runner_when_not_admin(self):
+        panel = self.make_panel()
+        with patch.object(panel, "_is_admin", return_value=False), \
+             patch.object(panel, "_run_elevated_and_output") as run_elevated:
+            panel.run_sfc_scannow()
+
+        run_elevated.assert_called_once_with(["sfc", "/scannow"])
+
+    def test_run_chkdsk_uses_elevated_runner_when_not_admin(self):
+        panel = self.make_panel()
+        with patch.dict(right_utility_gui.os.environ, {"SystemDrive": "C:"}), \
+             patch.object(panel, "_is_admin", return_value=False), \
+             patch.object(panel, "_run_elevated_and_output") as run_elevated:
+            panel.run_chkdsk()
+
+        run_elevated.assert_called_once_with(["chkdsk", "C:"])
+
 
 if __name__ == "__main__":
     unittest.main()

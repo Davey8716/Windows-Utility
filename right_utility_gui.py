@@ -3,13 +3,15 @@ import os
 import shutil
 import string
 import subprocess
+import tempfile
+import uuid
 from pathlib import Path
 
 import styles
 from collapsible_section import CollapsibleSection, SECTION_FRAME_MAX_WIDTH
 from state_manager import save_state
 from universal_bookmarks_export import BraveBookmarksExporter
-from PySide6.QtCore import QPoint, QSize, Qt, QTimer
+from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -54,6 +56,10 @@ class AdvancedToolsPanel(QWidget):
     def __init__(self, app):
         super().__init__(app)
         self.app = app
+        self._sidebar_process = None
+        self._sidebar_output_timer = None
+        self._sidebar_output_path = None
+        self._sidebar_output_offset = 0
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -511,36 +517,179 @@ class AdvancedToolsPanel(QWidget):
             "Run Check Disk (CHKDSK)": self.run_chkdsk,
         }
 
-    def _ensure_admin(self):
+    def _is_admin(self):
         try:
-            if ctypes.windll.shell32.IsUserAnAdmin():
-                return True
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
         except Exception:
-            pass
+            return False
 
-        ctypes.windll.shell32.ShellExecuteW(
-            None,
-            "runas",
-            os.sys.executable,
-            " ".join(os.sys.argv),
-            None,
-            1,
+    def _stop_sidebar_output_timer(self):
+        timer = self._sidebar_output_timer
+        if timer is not None:
+            timer.stop()
+            timer.deleteLater()
+            self._sidebar_output_timer = None
+
+    def _reset_sidebar_process(self):
+        if self._sidebar_process is not None:
+            self._sidebar_process.kill()
+            self._sidebar_process.deleteLater()
+            self._sidebar_process = None
+        self._stop_sidebar_output_timer()
+        self._sidebar_output_path = None
+        self._sidebar_output_offset = 0
+
+    def _append_sidebar_output(self, text: str):
+        if not text:
+            return
+        cursor = self.sidebar_output.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        cursor.insertText(text)
+        self.sidebar_output.setTextCursor(cursor)
+        self.sidebar_output.ensureCursorVisible()
+
+    def _read_process_output(self):
+        process = self._sidebar_process
+        if not process:
+            return
+
+        stdout_text = bytes(process.readAllStandardOutput()).decode(
+            "utf-8",
+            errors="replace",
         )
-        return False
+        stderr_text = bytes(process.readAllStandardError()).decode(
+            "utf-8",
+            errors="replace",
+        )
+        self._append_sidebar_output(stdout_text)
+        self._append_sidebar_output(stderr_text)
 
-    def _run_and_output(self, cmd, shell=True):
+    def _append_file_output(self, path: str | None):
+        if not path or not os.path.exists(path):
+            return
+
+        offset = self._sidebar_output_offset
+        try:
+            with open(path, "rb") as handle:
+                handle.seek(offset)
+                chunk = handle.read()
+        except OSError:
+            return
+
+        if not chunk:
+            return
+
+        self._sidebar_output_offset = offset + len(chunk)
+        self._append_sidebar_output(chunk.decode("utf-8", errors="replace"))
+
+    def _poll_elevated_output(self):
+        self._append_file_output(self._sidebar_output_path)
+
+    def _on_process_finished(self, exit_code: int, exit_status):
+        self._read_process_output()
+        self._poll_elevated_output()
+
+        if self.sidebar_output.toPlainText().strip():
+            self._append_sidebar_output(
+                f"\n\n[Process finished with exit code {exit_code}]"
+            )
+        else:
+            self.sidebar_output.setPlainText(
+                f"[no output]\n\n[Process finished with exit code {exit_code}]"
+            )
+
+        self._reset_sidebar_process()
+
+    def _run_and_output(self, cmd, shell=False):
         self.sidebar_output.clear()
         try:
-            result = subprocess.run(
-                cmd,
-                shell=shell,
-                capture_output=True,
-                text=True,
-            )
-            output = result.stdout or result.stderr or "[no output]"
+            self._reset_sidebar_process()
+
+            process = QProcess(self)
+            process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+            process.readyReadStandardOutput.connect(self._read_process_output)
+            process.readyReadStandardError.connect(self._read_process_output)
+            process.finished.connect(self._on_process_finished)
+            self._sidebar_process = process
+
+            if isinstance(cmd, str):
+                if shell:
+                    process.start("cmd.exe", ["/c", cmd])
+                else:
+                    process.startCommand(cmd)
+            else:
+                process.start(cmd[0], cmd[1:])
+
+            if not process.waitForStarted(3000):
+                output = "Could not start process."
+                self._sidebar_process = None
+                process.deleteLater()
+                self.sidebar_output.setPlainText(output)
+                return
+
+            self.sidebar_output.setPlainText(f"Running: {process.program()}\n")
         except Exception as e:
             output = str(e)
-        self.sidebar_output.append(output)
+            self.sidebar_output.setPlainText(output)
+
+    def _run_elevated_and_output(self, command: list[str]):
+        self.sidebar_output.clear()
+        self._reset_sidebar_process()
+
+        token = uuid.uuid4().hex
+        base_dir = Path.home() / "AppData" / "Local" / "Temp"
+        base_dir.mkdir(parents=True, exist_ok=True)
+        output_path = base_dir / f"windows_resurface_{token}.log"
+        output_path.write_text("", encoding="utf-8")
+
+        exe_path = command[0]
+        args = command[1:]
+        def quote_ps(value: str) -> str:
+            return "'" + value.replace("'", "''") + "'"
+
+        cmd_parts = [exe_path, *args]
+        cmd_text = subprocess.list2cmdline(cmd_parts)
+        log_text = subprocess.list2cmdline([str(output_path)])
+        cmd_wrapper = f'{cmd_text} > {log_text} 2>&1'
+        quoted_args = ", ".join(
+            quote_ps(arg) for arg in ["/c", cmd_wrapper]
+        )
+        args_expr = f"@({quoted_args})"
+        ps_command = (
+            f"$p = Start-Process -FilePath 'cmd.exe' "
+            f"-ArgumentList {args_expr} -Verb RunAs "
+            f"-PassThru -Wait; "
+            f"exit $p.ExitCode"
+        )
+
+        process = QProcess(self)
+        process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+        process.readyReadStandardOutput.connect(self._read_process_output)
+        process.readyReadStandardError.connect(self._read_process_output)
+        process.finished.connect(self._on_process_finished)
+        self._sidebar_process = process
+        self._sidebar_output_path = str(output_path)
+
+        timer = QTimer(self)
+        timer.timeout.connect(self._poll_elevated_output)
+        timer.start(250)
+        self._sidebar_output_timer = timer
+
+        process.start(
+            "powershell.exe",
+            ["-NoProfile", "-Command", ps_command],
+        )
+
+        if not process.waitForStarted(3000):
+            self._reset_sidebar_process()
+            self.sidebar_output.setPlainText("Could not start elevated process.")
+            return
+
+        command_text = " ".join(command)
+        self.sidebar_output.setPlainText(
+            f"Running: {command_text}\n"
+            "Waiting for administrator approval if prompted...\n\n"
+        )
 
     def flush_dns(self):
         self._run_and_output("ipconfig /flushdns")
@@ -579,12 +728,21 @@ class AdvancedToolsPanel(QWidget):
         self.sidebar_output.append("Opened Clipboard History.")
 
     def run_sfc_scannow(self):
-        if self._ensure_admin():
-            self._run_and_output("sfc /scannow")
+        if self._is_admin():
+            self._run_and_output(["sfc", "/scannow"])
+            return
+
+        self._run_elevated_and_output(["sfc", "/scannow"])
 
     def run_chkdsk(self):
-        if self._ensure_admin():
-            self._run_and_output("chkdsk")
+        system_drive = os.environ.get("SystemDrive", "C:")
+        command = ["chkdsk", system_drive]
+
+        if self._is_admin():
+            self._run_and_output(command)
+            return
+
+        self._run_elevated_and_output(command)
 
     def _add_sidebar_dropdown(self, parent_layout, row, column, title, actions_map):
         placeholder = f" {title} "

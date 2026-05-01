@@ -147,6 +147,23 @@ class _DummyQTimer:
         return None
 
 
+class _DummyQProcess(_BaseWidget):
+    class ProcessChannelMode:
+        SeparateChannels = 0
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.readyReadStandardOutput = _DummySignal()
+        self.readyReadStandardError = _DummySignal()
+        self.finished = _DummySignal()
+
+    def readAllStandardOutput(self):
+        return b""
+
+    def readAllStandardError(self):
+        return b""
+
+
 class _DummyToolTip:
     @staticmethod
     def showText(*_args, **_kwargs):
@@ -180,6 +197,7 @@ def install_dependency_stubs():
 
         qtcore.Qt = _DummyQt
         qtcore.QTimer = _DummyQTimer
+        qtcore.QProcess = _DummyQProcess
         qtcore.QObject = _BaseWidget
         qtcore.QPoint = _DummyPoint
         qtcore.QSize = _DummySize
