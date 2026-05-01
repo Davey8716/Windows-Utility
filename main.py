@@ -519,7 +519,7 @@ class UtilityControlApp(QWidget):
         folder_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         folder_row_layout = QHBoxLayout(folder_row)
         folder_row_layout.setContentsMargins(0, 0, 0, 0)
-        folder_row_layout.setSpacing(8)
+        folder_row_layout.setSpacing(10)
 
         folder_btn = QPushButton("Folder → Desktop")
         style_organizing_button(folder_btn)
@@ -529,6 +529,7 @@ class UtilityControlApp(QWidget):
         folder_input.setPlaceholderText("Folder name")
         folder_input.setText(state.get("folder_to_desktop_name", ""))
         folder_input.setReadOnly(False)
+        folder_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
         folder_input.setStyleSheet(styles.line_edit_style(15))
         self.register_tooltip(folder_input, "Enter the name of the folder to create on the desktop.")
 
@@ -553,7 +554,7 @@ class UtilityControlApp(QWidget):
         taskbar_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         taskbar_row_layout = QHBoxLayout(taskbar_row)
         taskbar_row_layout.setContentsMargins(0, 0, 0, 0)
-        taskbar_row_layout.setSpacing(8)
+        taskbar_row_layout.setSpacing(10)
         org_layout.addWidget(taskbar_row)
 
         backup_taskbar_btn = QPushButton("Backup Taskbar")
@@ -576,7 +577,7 @@ class UtilityControlApp(QWidget):
         layout_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout_row_layout = QHBoxLayout(layout_row)
         layout_row_layout.setContentsMargins(0, 0, 0, 0)
-        layout_row_layout.setSpacing(8)
+        layout_row_layout.setSpacing(10)
         org_layout.addWidget(layout_row)
 
         capture_layout_btn = QPushButton("Capture Desktop Layout")
@@ -604,7 +605,7 @@ class UtilityControlApp(QWidget):
         master_backup_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         master_backup_row_layout = QHBoxLayout(master_backup_row)
         master_backup_row_layout.setContentsMargins(0, 0, 0, 0)
-        master_backup_row_layout.setSpacing(8)
+        master_backup_row_layout.setSpacing(10)
 
         master_backup_btn = QPushButton("Master Backup Path")
         style_organizing_button(master_backup_btn)
@@ -615,6 +616,7 @@ class UtilityControlApp(QWidget):
         self.backup_path_input.setPlaceholderText("Backup output folder path")
         self.backup_path_input.setText(self._get_master_backup_dir())
         self.backup_path_input.setReadOnly(True)
+        self.backup_path_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
         self.backup_path_input.setStyleSheet(styles.line_edit_style(15))
         master_backup_row_layout.addWidget(self.backup_path_input)
         self.register_tooltip(self.backup_path_input, "Shows the current master backup folder path.")
