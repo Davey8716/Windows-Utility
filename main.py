@@ -8,6 +8,7 @@ from PIL import ImageGrab
 import win32gui
 import win32con
 
+from right_utility_gui import AdvancedToolsPanel as RightAdvancedToolsPanel
 from screen_mover import SCREEN_MOVER
 from tray_toggles import TrayIconManager
 from utility_toggles import  UtilityActionsManager 
@@ -91,11 +92,6 @@ def ensure_single_instance():
 
     return mutex
 
-class AdvancedToolsPanel(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.hide()
-
 class UtilityControlApp(QWidget):
     def __init__(self):
         super().__init__()
@@ -165,20 +161,8 @@ class UtilityControlApp(QWidget):
         self.advanced_settings_layout.setSpacing(10)
         self.advanced_settings_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        advanced_header = QWidget(self.advanced_settings_panel)
-        advanced_header_layout = QHBoxLayout(advanced_header)
-        advanced_header_layout.setContentsMargins(10, 10, 10, 10)
-
-        advanced_title = QLabel("Advanced Settings", advanced_header)
-        advanced_title.setStyleSheet(styles.label_style(font_size=20))
-        advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        advanced_header_layout.addStretch()
-        advanced_header_layout.addWidget(advanced_title)
-        advanced_header_layout.addStretch()
-
-        self.advanced_settings_layout.addWidget(advanced_header)
-        self.advanced_settings_layout.addStretch(1)
+        self.right_tools_panel = RightAdvancedToolsPanel(self)
+        self.advanced_settings_layout.addWidget(self.right_tools_panel)
 
         self.root_layout.addWidget(self.advanced_settings_panel, 0, 1)
         self.advanced_settings_panel.hide()

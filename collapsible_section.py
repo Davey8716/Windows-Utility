@@ -41,7 +41,7 @@ class CollapsibleSection(QWidget):
             styles.SECTION_TOGGLE_WIDTH,
             styles.SECTION_TOGGLE_HEIGHT
         )
-        self.toggle_btn.setFlat(True)
+        self.toggle_btn.setAutoRaise(True)
         self.toggle_btn.setArrowType(
             Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
         )

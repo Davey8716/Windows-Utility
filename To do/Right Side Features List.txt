@@ -1,0 +1,104 @@
+APP NAME
+--------
+Windows Resurface
+
+DESCRIPTION
+-----------
+Utility focused on exposing commonly used but hidden Windows tools and locations.
+UI should match Windows theme as closely as possible.
+
+
+CORE HIDDEN WINDOWS LOCATIONS
+-----------------------------
+Event Viewer
+System Information (msinfo32)
+Disk Management
+Network Reset / Network Diagnostics
+Credential Manager
+Local Users & Groups
+Temp Files (%temp%)
+Prefetch
+Disk Cleanup (cleanmgr)
+Startup Folder (shell:startup)
+Common Startup Folder (shell:common startup)
+Clipboard History
+Windows Update Troubleshooter
+Storage Sense / Cleanup Recommendations
+Installed Programs (appwiz.cpl)
+Advanced Display Settings
+Windows Defender / Virus & Threat Protection
+Hosts File
+System Restore / Restore Points
+Reliability Monitor (perfmon /rel)
+Resource Monitor
+Services (services.msc)
+Windows Memory Diagnostic
+AutoPlay Settings (control /name Microsoft.AutoPlay)
+
+
+SIDEBAR UTILITIES
+-----------------
+[Network]
+- Flush DNS
+- Renew IP
+
+[System]
+- Restart Explorer
+- Restart Bluetooth
+
+[Cleanup]
+- Clear Temp Files
+- Clear Clipboard
+
+[Quick Access]
+- Open Downloads
+- Open Startup Folder
+- Display Settings
+- Sound Devices
+
+[Repair]
+- System Scan
+- DISM Repair
+
+
+CATEGORIES
+----------
+1. System Diagnostics
+   - Event Viewer
+   - System Information
+   - Reliability Monitor
+   - Resource Monitor
+   - Windows Memory Diagnostic
+
+2. System Maintenance
+   - Disk Management
+   - Disk Cleanup
+   - Storage Sense
+   - System Restore
+   - Prefetch
+   - Temp Files
+
+3. Accounts & Credentials
+   - Credential Manager
+   - Local Users & Groups
+
+4. Network Tools
+   - Network Reset
+   - Network Diagnostics
+
+5. Startup & App Control
+   - Startup Folder
+   - Common Startup Folder
+   - Installed Programs
+
+6. Security & Protection
+   - Windows Defender
+   - Hosts File
+
+7. Core System Tools
+   - Services
+   - Clipboard History
+
+8. Display & Hardware
+   - Advanced Display Settings
+   - Sound Devices

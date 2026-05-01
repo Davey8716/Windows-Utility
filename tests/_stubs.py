@@ -128,6 +128,10 @@ class _DummyFileDialog:
     def getExistingDirectory(*_args, **_kwargs):
         return ""
 
+    @staticmethod
+    def getSaveFileName(*_args, **_kwargs):
+        return ("", "")
+
 
 class _DummyQTimer:
     @staticmethod
@@ -177,10 +181,13 @@ def install_dependency_stubs():
         qtwidgets.QLabel = _BaseWidget
         qtwidgets.QPushButton = _BaseWidget
         qtwidgets.QToolButton = _BaseWidget
+        qtwidgets.QComboBox = _BaseWidget
         qtwidgets.QVBoxLayout = _BaseWidget
         qtwidgets.QScrollArea = _BaseWidget
         qtwidgets.QHBoxLayout = _BaseWidget
         qtwidgets.QLineEdit = _BaseWidget
+        qtwidgets.QTextEdit = _BaseWidget
+        qtwidgets.QListWidget = _BaseWidget
         qtwidgets.QApplication = _BaseWidget
         qtwidgets.QFrame = _BaseWidget
         qtwidgets.QSizePolicy = _DummySizePolicy

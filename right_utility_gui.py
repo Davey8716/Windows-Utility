@@ -1,46 +1,56 @@
-
-import sys
-import subprocess
 import ctypes
-import styles
+import os
+import shutil
+import string
+import subprocess
+from pathlib import Path
 
+import styles
+from collapsible_section import CollapsibleSection
+from state_manager import save_state
+from universal_bookmarks_export import BraveBookmarksExporter
+from PySide6.QtCore import QPoint, Qt, QTimer
 from PySide6.QtWidgets import (
-    QDialog,
-    QWidget,
+    QComboBox,
+    QFileDialog,
+    QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QListWidget,
     QPushButton,
-    QToolButton,
     QScrollArea,
     QTextEdit,
+    QToolButton,
     QVBoxLayout,
-    QHBoxLayout
+    QWidget,
 )
-from PySide6.QtCore import Qt
-from collapsible_section import CollapsibleSection
-from main import get_drive_info
-from PySide6.QtWidgets import QPushButton, QTextEdit
-from PySide6.QtCore import QTimer
-from PySide6.QtCore import Qt, QPoint
-from PySide6.QtWidgets import QComboBox
-from PySide6.QtWidgets import QComboBox
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QPushButton, QLineEdit
 
-class AdvancedToolsPanel(QDialog):
+
+def get_drive_info():
+    drives = []
+    for letter in string.ascii_uppercase:
+        path = f"{letter}:\\"
+        if not os.path.exists(path):
+            continue
+        try:
+            total, used, free = shutil.disk_usage(path)
+        except Exception:
+            continue
+        drives.append(
+            {
+                "drive": path,
+                "total": total,
+                "free": free,
+                "used": used,
+            }
+        )
+    return drives
+
+
+class AdvancedToolsPanel(QWidget):
     def __init__(self, app):
         super().__init__(app)
         self.app = app
-
-        self.setWindowTitle("")
-        self.setFixedWidth(505)
-        self.hide() 
-
-        self._desired_topmost = self.app.right_always_on_top_var
-
-        self.setWindowFlag(
-            Qt.WindowType.WindowStaysOnTopHint,
-            self._desired_topmost
-        )
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -48,7 +58,6 @@ class AdvancedToolsPanel(QDialog):
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
         root_layout.addWidget(self.scroll)
 
         self.side_frame = QWidget()
@@ -66,13 +75,12 @@ class AdvancedToolsPanel(QDialog):
         title_row = QWidget()
         title_row_layout = QHBoxLayout(title_row)
         title_row_layout.setContentsMargins(0, 0, 0, 0)
-
         title_row_layout.addStretch()
 
         self.master_collapse_btn_right = QToolButton()
         self.master_collapse_btn_right.setFixedSize(
             styles.ICON_BUTTON_WIDTH,
-            styles.ICON_BUTTON_HEIGHT
+            styles.ICON_BUTTON_HEIGHT,
         )
         self.app.master_toggle_right_state = bool(
             self.app.saved_state.get("master_toggle_right", False)
@@ -88,181 +96,272 @@ class AdvancedToolsPanel(QDialog):
         self.master_collapse_btn_right.clicked.connect(
             self.toggle_all_right_sections
         )
-
         self.app.register_tooltip(
             self.master_collapse_btn_right,
-            "Master collapse toggle for all of these regions."
+            "Master collapse toggle for all of these regions.",
         )
-
         title_row_layout.addWidget(self.master_collapse_btn_right)
         self.side_layout.addWidget(title_row)
 
         self.windows_utility_section = CollapsibleSection(
-            title="Windows Utilities",
+            parent=self.side_frame,
+            title_text="Windows Utilities",
             section_id="windows_utilities",
             app=self.app,
             initial_open=self.app.saved_state
-                .get("right_section_states", {})
-                .get("windows_utilities", False)
+            .get("right_section_states", {})
+            .get("windows_utilities", False),
         )
-
         self.side_layout.addWidget(self.windows_utility_section)
-
+        self.app.collapsible_sections.append(self.windows_utility_section)
         self.app.register_tooltip(
             self.windows_utility_section.toggle_btn,
-            "Shows windows utilities here instead grouped by type\n"
-            "not having to have them all cluttering up your taskbar."
+            "Shows windows utilities grouped by type and quick actions.",
         )
 
-        self.app.collapsible_sections.append(self.windows_utility_section)
-        parent = self.windows_utility_section.content
+        self._build_windows_utilities()
 
         self.sidebar_utils_section = CollapsibleSection(
-            title="Side Bar Utilities",
+            parent=self.side_frame,
+            title_text="Side Bar Utilities",
             section_id="sidebar_utils_section",
             app=self.app,
             initial_open=self.app.saved_state
-                .get("right_section_states", {})
-                .get("sidebar_utils_section", False)
+            .get("right_section_states", {})
+            .get("sidebar_utils_section", False),
         )
-
         self.app.collapsible_sections.append(self.sidebar_utils_section)
         self.side_layout.addWidget(self.sidebar_utils_section)
-
         self.build_sidebar_utilities()
-
         self.app.register_tooltip(
             self.sidebar_utils_section.toggle_btn,
-            "Side bar actions menus."
+            "Side bar actions menus.",
         )
 
         self.sidebar_output = QTextEdit()
         self.sidebar_output.setFixedHeight(120)
         self.sidebar_output.setStyleSheet(styles.text_edit_style("Consolas", 15))
-
         self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
 
-        row = QWidget()
-        row_layout = QHBoxLayout(row)
-        row_layout.setContentsMargins(4, 4, 4, 8)
-
-        parent.layout().addWidget(row)
-
-        left_col = QWidget()
-        left_col_layout = QVBoxLayout(left_col)
-        left_col_layout.setSpacing(6)
-
-        right_col = QWidget()
-        right_col_layout = QVBoxLayout(right_col)
-        right_col_layout.setSpacing(6)
-
-        row_layout.addWidget(left_col)
-        row_layout.addWidget(right_col)
-
-        self._add_windows_dropdown(left_col_layout, "System", self._system_utilities())
-        self._add_windows_dropdown(left_col_layout, "Hardware", self._hardware_utilities())
-
-        self._add_windows_dropdown(right_col_layout, "Network", self._network_utilities())
-        self._add_windows_dropdown(
-            right_col_layout,
-            "Startup & Power",
-            self._startup_power_utilities()
-        )
-
         self.display_space_section = CollapsibleSection(
-            title="Drive Space Display",
+            parent=self.side_frame,
+            title_text="Drive Space Display",
             section_id="drive_space_display",
             app=self.app,
             initial_open=self.app.saved_state
-                .get("right_section_states", {})
-                .get("drive_space_display", False)
+            .get("right_section_states", {})
+            .get("drive_space_display", False),
         )
-
         self.side_layout.addWidget(self.display_space_section)
-
+        self.app.collapsible_sections.append(self.display_space_section)
         self.app.register_tooltip(
             self.display_space_section.toggle_btn,
-            "Shows disk usage for all detected drives."
+            "Shows disk usage for all detected drives.",
+        )
+        self._build_drive_space_display()
+
+        self.bookmarks_exporter_section = CollapsibleSection(
+            parent=self.side_frame,
+            title_text="Universal Bookmarks Exporter",
+            section_id="bookmarks_exporter",
+            app=self.app,
+            initial_open=self.app.saved_state
+            .get("right_section_states", {})
+            .get("bookmarks_exporter", False),
+        )
+        self.side_layout.addWidget(self.bookmarks_exporter_section)
+        self.app.collapsible_sections.append(self.bookmarks_exporter_section)
+        self._build_bookmarks_exporter()
+
+    def _build_windows_utilities(self):
+        parent_layout = self.windows_utility_section.content_layout
+
+        quick_row = QWidget()
+        quick_row_layout = QHBoxLayout(quick_row)
+        quick_row_layout.setContentsMargins(0, 0, 0, 8)
+        quick_row_layout.setSpacing(8)
+        parent_layout.addWidget(quick_row)
+
+        left_col = QWidget()
+        left_col_layout = QVBoxLayout(left_col)
+        left_col_layout.setContentsMargins(0, 0, 0, 0)
+        left_col_layout.setSpacing(8)
+
+        right_col = QWidget()
+        right_col_layout = QVBoxLayout(right_col)
+        right_col_layout.setContentsMargins(0, 0, 0, 0)
+        right_col_layout.setSpacing(8)
+
+        quick_row_layout.addWidget(left_col)
+        quick_row_layout.addWidget(right_col)
+
+        self._add_action_button(
+            left_col_layout,
+            "System Settings",
+            lambda: subprocess.Popen(["cmd", "/c", "start", "ms-settings:"]),
+        )
+        self._add_action_button(
+            left_col_layout,
+            "Task Manager",
+            lambda: subprocess.Popen(["taskmgr"]),
+        )
+        self._add_action_button(
+            right_col_layout,
+            "Device Manager",
+            lambda: subprocess.Popen(["devmgmt.msc"]),
+        )
+        self._add_action_button(
+            right_col_layout,
+            "Router Login",
+            self.app.actions.open_router_page,
         )
 
-        self.app.collapsible_sections.append(self.display_space_section)
+        self.power_actions_row = QWidget()
+        power_layout = QHBoxLayout(self.power_actions_row)
+        power_layout.setContentsMargins(0, 0, 0, 8)
+        power_layout.setSpacing(8)
+        parent_layout.addWidget(self.power_actions_row)
+
+        self._add_action_button(
+            power_layout,
+            "Sleep",
+            lambda: subprocess.Popen(
+                ["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"]
+            ),
+        )
+        self._add_action_button(
+            power_layout,
+            "Lock PC",
+            lambda: ctypes.windll.user32.LockWorkStation(),
+        )
+        self._add_action_button(
+            power_layout,
+            "Restart",
+            lambda: subprocess.Popen(["shutdown", "/r", "/t", "0"]),
+        )
+        self._add_action_button(
+            power_layout,
+            "Shutdown",
+            lambda: subprocess.Popen(["shutdown", "/s", "/t", "0"]),
+        )
+        self.power_actions_row.setVisible(
+            bool(self.app.state.get("power_options_enabled", False))
+        )
+
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(8)
+        parent_layout.addWidget(row)
+
+        left_drop_col = QWidget()
+        left_drop_layout = QVBoxLayout(left_drop_col)
+        left_drop_layout.setContentsMargins(0, 0, 0, 0)
+        left_drop_layout.setSpacing(6)
+
+        right_drop_col = QWidget()
+        right_drop_layout = QVBoxLayout(right_drop_col)
+        right_drop_layout.setContentsMargins(0, 0, 0, 0)
+        right_drop_layout.setSpacing(6)
+
+        row_layout.addWidget(left_drop_col)
+        row_layout.addWidget(right_drop_col)
+
+        self._add_windows_dropdown(
+            left_drop_layout, "System", self._system_utilities()
+        )
+        self._add_windows_dropdown(
+            left_drop_layout, "Hardware", self._hardware_utilities()
+        )
+        self._add_windows_dropdown(
+            right_drop_layout, "Network", self._network_utilities()
+        )
+        self._add_windows_dropdown(
+            right_drop_layout, "Startup & Power", self._startup_power_utilities()
+        )
+
+    def _build_drive_space_display(self):
         drive_parent = self.display_space_section.content_layout
 
         btn_this_pc = QPushButton("Open This PC")
         styles.apply_default_button_size(btn_this_pc)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
-        btn_this_pc.clicked.connect(self.app.open_this_pc)
-        self.app.register_tooltip(btn_this_pc, "Takes you to Drives location.")
-
+        btn_this_pc.clicked.connect(self._open_this_pc)
+        self.app.register_tooltip(btn_this_pc, "Opens This PC in File Explorer.")
         drive_parent.addWidget(btn_this_pc)
 
-        self.drive_space_output = QTextEdit()
-        self.drive_space_output.setFixedHeight(100)
-        self.drive_space_output.setReadOnly(True)
-        self.drive_space_output.setStyleSheet(styles.text_edit_style("Rubik", 14))
-
-        drive_parent.addWidget(self.drive_space_output)
+        self.drive_space_list = QListWidget()
+        self.drive_space_list.setFixedHeight(120)
+        self.drive_space_list.setStyleSheet(
+            """
+            QListWidget {
+                background-color: %s;
+                color: %s;
+                border: 2px solid %s;
+                border-radius: 6px;
+                padding: 6px;
+            }
+            QListWidget::item {
+                padding: 4px 6px;
+            }
+            QListWidget::item:selected {
+                background-color: %s;
+                color: %s;
+            }
+            """
+            % (
+                styles.qcolor_css(styles.PANEL_BG),
+                styles.qcolor_css(styles.TEXT_LIGHT),
+                styles.qcolor_css(styles.PANEL_BORDER),
+                styles.qcolor_css(styles.PANEL_HOVER),
+                styles.qcolor_css(styles.TEXT_LIGHT),
+            )
+        )
+        drive_parent.addWidget(self.drive_space_list)
 
         def refresh_drive_display():
-            self.drive_space_output.clear()
-
+            self.drive_space_list.clear()
             for d in get_drive_info():
                 used_gb = (d["total"] - d["free"]) / (1024 ** 3)
                 total_gb = d["total"] / (1024 ** 3)
                 free_gb = d["free"] / (1024 ** 3)
-
-                line = (
-                    f"{d['drive']:<5} "
-                    f"Used: {used_gb:6.1f} GB   "
-                    f"Free: {free_gb:6.1f} GB   "
-                    f"Total: {total_gb:6.1f} GB"
+                self.drive_space_list.addItem(
+                    f"{d['drive']}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  Total: {total_gb:.1f} GB"
                 )
 
-                self.drive_space_output.append(line)
-
         refresh_drive_display()
-
         self.drive_refresh_timer = QTimer(self)
         self.drive_refresh_timer.timeout.connect(refresh_drive_display)
         self.drive_refresh_timer.start(10_000)
 
-        self.bookmarks_exporter_section = CollapsibleSection(
-            title="Universal Bookmarks Exporter",
-            section_id="bookmarks_exporter",
-            app=self.app,
-            initial_open=self.app.saved_state
-                .get("right_section_states", {})
-                .get("bookmarks_exporter", False)
-        )
-
-        self.side_layout.addWidget(self.bookmarks_exporter_section)
-        self.app.collapsible_sections.append(self.bookmarks_exporter_section)
-
+    def _build_bookmarks_exporter(self):
         self.btn_brave_export = QPushButton("Export Brave Bookmarks")
         styles.apply_default_button_size(self.btn_brave_export)
         self.btn_brave_export.setStyleSheet(styles.button_text_style(15))
         self._install_green_flash(self.btn_brave_export)
-        self.btn_brave_export.clicked.connect(self.app._run_brave_export)
-
+        self.btn_brave_export.clicked.connect(self._run_brave_export)
         self.app.register_tooltip(
             self.btn_brave_export,
-            "Exports brave bookmarks to a file path of your choice,\n"
-            "remembers last saved location."
+            "Exports Brave bookmarks and remembers the last saved path.",
         )
-
         self.bookmarks_exporter_section.content_layout.addWidget(self.btn_brave_export)
 
         self.brave_export_entry = QLineEdit()
         self.brave_export_entry.setReadOnly(True)
         self.brave_export_entry.setFixedWidth(420)
         self.brave_export_entry.setStyleSheet(styles.line_edit_style(15))
-
-        self.brave_export_entry.setText(
-            str(self.app.brave_export_path_var)
-        )
-
+        self.brave_export_entry.setText(self.app.state.get("brave_export_path", ""))
         self.bookmarks_exporter_section.content_layout.addWidget(self.brave_export_entry)
+
+    def _add_action_button(self, parent_layout, label, action):
+        button = QPushButton(label)
+        styles.apply_default_button_size(button)
+        button.setStyleSheet(styles.button_text_style(14))
+        self._install_green_flash(button)
+        button.clicked.connect(action)
+        parent_layout.addWidget(button)
+        return button
 
     def _install_green_flash(self, button: QPushButton):
         def flash_active():
@@ -278,23 +377,6 @@ class AdvancedToolsPanel(QDialog):
 
         button.clicked.connect(flash_active)
         return button
-
-
-    def _run_elevated(self, command: str):
-        ctypes.windll.shell32.ShellExecuteW(
-            None,
-            "runas",         
-            "cmd.exe",
-            f"/k {command}",  
-            None,
-            1
-        )
-
-    def _is_admin(self) -> bool:
-        try:
-            return ctypes.windll.shell32.IsUserAnAdmin()
-        except Exception:
-            return False
 
     def _system_utilities(self):
         return {
@@ -330,7 +412,6 @@ class AdvancedToolsPanel(QDialog):
 
     def _add_windows_dropdown(self, parent_layout, label, actions_map):
         placeholder = f" {label} "
-
         combo = QComboBox()
         combo.setFixedWidth(160)
         combo.addItem(placeholder)
@@ -341,16 +422,11 @@ class AdvancedToolsPanel(QDialog):
         def runner(text: str):
             if text == placeholder:
                 return
-
             action = actions_map.get(text)
-            if not action:
-                return
-
-            self.app.showMinimized()
-            self.showMinimized()
-
-            action()
-
+            if action:
+                self.app.showMinimized()
+                self.showMinimized()
+                action()
             combo.setCurrentText(placeholder)
 
         combo.currentTextChanged.connect(runner)
@@ -371,12 +447,40 @@ class AdvancedToolsPanel(QDialog):
             "Clear Clipboard": self.clear_clipboard,
         }
 
-
     def _sidebar_quick_open_actions(self):
         return {
             "Open Downloads Folder": self.open_downloads,
             "Open Startup Folder": self.open_startup_folder,
             "Clipboard History": self.open_clipboard_history,
+        }
+
+    def build_sidebar_utilities(self):
+        parent_layout = self.sidebar_utils_section.content_layout
+        self._add_sidebar_dropdown(
+            parent_layout,
+            "Network / System Quick Fix",
+            self._sidebar_network_actions(),
+        )
+        self._add_sidebar_dropdown(
+            parent_layout,
+            "Cleanup / Quick Actions",
+            self._sidebar_cleanup_actions(),
+        )
+        self._add_sidebar_dropdown(
+            parent_layout,
+            "Quick Open",
+            self._sidebar_quick_open_actions(),
+        )
+        self._add_sidebar_dropdown(
+            parent_layout,
+            "System Integrity & Disk Health",
+            self._sidebar_system_integrity_actions(),
+        )
+
+    def _sidebar_system_integrity_actions(self):
+        return {
+            "Run System File Checker (SFC)": self.run_sfc_scannow,
+            "Run Check Disk (CHKDSK)": self.run_chkdsk,
         }
 
     def _ensure_admin(self):
@@ -389,57 +493,15 @@ class AdvancedToolsPanel(QDialog):
         ctypes.windll.shell32.ShellExecuteW(
             None,
             "runas",
-            sys.executable,
-            " ".join(sys.argv),
+            os.sys.executable,
+            " ".join(os.sys.argv),
             None,
-            1
+            1,
         )
         return False
 
-    def build_sidebar_utilities(self):
-        parent_layout = self.sidebar_utils_section.content_layout
-
-        self._add_sidebar_dropdown(
-            parent_layout,
-            "Network / System Quick Fix",
-            self._sidebar_network_actions()
-        )
-
-        self._add_sidebar_dropdown(
-            parent_layout,
-            "Cleanup / Quick Actions",
-            self._sidebar_cleanup_actions()
-        )
-
-        self._add_sidebar_dropdown(
-            parent_layout,
-            "Quick Open",
-            self._sidebar_quick_open_actions()
-        )
-
-        self._add_sidebar_dropdown(
-            parent_layout,
-            "System Integrity & Disk Health",
-            self._sidebar_system_integrity_actions()
-        )
-
-    def _sidebar_system_integrity_actions(self):
-        return {
-            "Run System File Checker (SFC)": self.run_sfc_scannow,
-            "Run Check Disk (CHKDSK)": self.run_chkdsk,
-        }
-
-    def toggle_side_bar_utilities(self):
-        section = self.sidebar_utils_section
-
-        new_state = not section.is_open
-        section.set_open(new_state)
-
-        self.app.save_all_settings()
-        
     def _run_and_output(self, cmd, shell=True):
         self.sidebar_output.clear()
-
         try:
             result = subprocess.run(
                 cmd,
@@ -450,7 +512,6 @@ class AdvancedToolsPanel(QDialog):
             output = result.stdout or result.stderr or "[no output]"
         except Exception as e:
             output = str(e)
-
         self.sidebar_output.append(output)
 
     def flush_dns(self):
@@ -490,20 +551,17 @@ class AdvancedToolsPanel(QDialog):
         self.sidebar_output.append("Opened Clipboard History.")
 
     def run_sfc_scannow(self):
-        if not self._ensure_admin():
-            return
-        self._run_and_output("sfc /scannow")
+        if self._ensure_admin():
+            self._run_and_output("sfc /scannow")
 
     def run_chkdsk(self):
-        if not self._ensure_admin():
-            return
-        self._run_and_output("chkdsk")
+        if self._ensure_admin():
+            self._run_and_output("chkdsk")
 
     def _add_sidebar_dropdown(self, parent_layout, title, actions_map):
         placeholder = f" {title} "
-
         combo = QComboBox()
-        combo.setFixedWidth(160)
+        combo.setFixedWidth(260)
         combo.addItem(placeholder)
         combo.addItems(actions_map.keys())
         combo.setCurrentText(placeholder)
@@ -512,17 +570,36 @@ class AdvancedToolsPanel(QDialog):
         def runner(text: str):
             if text == placeholder:
                 return
-
             action = actions_map.get(text)
             if action:
                 action()
-
             combo.setCurrentText(placeholder)
 
         combo.currentTextChanged.connect(runner)
-
         parent_layout.addWidget(combo)
 
+    def _open_this_pc(self):
+        subprocess.Popen(["explorer", "shell:MyComputerFolder"])
+
+    def _run_brave_export(self):
+        default_path = self.app.state.get("brave_export_path", "")
+        start_dir = str(Path(default_path).parent) if default_path else str(Path.home())
+        out_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Brave Bookmarks",
+            str(Path(start_dir) / "Brave_Bookmarks.html"),
+            "HTML Files (*.html)",
+        )
+        if not out_path:
+            return False
+
+        if BraveBookmarksExporter().export_to_file(out_path):
+            self.app.state["brave_export_path"] = out_path
+            save_state(self.app.state)
+            self.brave_export_entry.setText(out_path)
+            return True
+
+        return False
 
     def toggle_all_right_sections(self):
         new_state = not self.app.master_toggle_right_state
@@ -533,90 +610,8 @@ class AdvancedToolsPanel(QDialog):
         )
 
         for section in self.app.collapsible_sections:
-            if not hasattr(section, "set_open"):
-                continue
-
-            # right-side only
-            if section.parent() is self.side_frame:
+            if hasattr(section, "set_open") and section.parent() is self.side_frame:
                 if section.is_open != new_state:
                     section.set_open(new_state)
 
         self.app.save_all_settings()
-
-    def show(self):
-        self.app._sync_windows("main")
-        self.showNormal()
-        self.setWindowFlag(
-            Qt.WindowType.WindowStaysOnTopHint,
-            bool(self._desired_topmost)
-        )
-        self.show()
-
-        self.raise_()
-        self.activateWindow()
-
-    def hide(self):
-        self.hide()
-
-        if hasattr(self.app, "expanded"):
-            self.app.expanded = False
-        if hasattr(self.app, "expand_btn"):
-            self.app.expand_btn.setText("▾")
-
-
-    def _position_next_to_main(self):
-        self.app.repaint()
-        self.app.updateGeometry()
-
-        main_pos = self.app.frameGeometry().topLeft()
-        x = main_pos.x() + self.app.width() + 8
-        y = main_pos.y()
-
-        self.move(QPoint(x, y))
-
-    def _on_close(self):
-        self.app.advanced_panel_open_state = False
-        self.hide()
-        self.app.save_all_settings()
-
-    def closeEvent(self, event):
-        self._on_close()
-        event.accept()
-
-    def resizeEvent(self, event):
-        self.app._sync_windows("side")
-        super().resizeEvent(event)
-
-    def mousePressEvent(self, event):
-        self.app._set_drag_owner("side")
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        self.app._clear_drag_owner()
-        super().mouseReleaseEvent(event)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-        
-    
-    
-
-    
