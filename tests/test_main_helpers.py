@@ -70,6 +70,12 @@ class MainHelperTests(unittest.TestCase):
 
     def test_save_section_states_collects_left_and_right_panels(self):
         app = self._build_app()
+        app.master_collapse_btn_left = Mock()
+        app.right_tools_panel = type(
+            "RightToolsPanel",
+            (),
+            {"master_collapse_btn_right": Mock()},
+        )()
         app.left_sections = [
             type("Section", (), {"section_id": "left-a", "content": type("Content", (), {"isVisible": lambda self: True})()})(),
             type("Section", (), {"section_id": "left-b", "content": type("Content", (), {"isVisible": lambda self: False})()})(),

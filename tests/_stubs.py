@@ -18,6 +18,7 @@ class _DummyWindowType:
 class _DummyScrollBarPolicy:
     ScrollBarAlwaysOff = 0
     ScrollBarAsNeeded = 1
+    ScrollBarAlwaysOn = 2
 
 
 class _DummyAlignmentFlag:
@@ -48,10 +49,17 @@ class _DummyQt:
     AlignmentFlag = _DummyAlignmentFlag
     CursorShape = _DummyCursorShape
     ArrowType = _DummyArrowType
+    class TextElideMode:
+        ElideNone = 0
     AlignCenter = 1
 
 
 class _DummyPoint:
+    def __init__(self, *_args, **_kwargs):
+        pass
+
+
+class _DummySize:
     def __init__(self, *_args, **_kwargs):
         pass
 
@@ -174,6 +182,7 @@ def install_dependency_stubs():
         qtcore.QTimer = _DummyQTimer
         qtcore.QObject = _BaseWidget
         qtcore.QPoint = _DummyPoint
+        qtcore.QSize = _DummySize
         qtcore.QEvent = _DummyEvent
 
         qtwidgets.QWidget = _BaseWidget
@@ -187,6 +196,7 @@ def install_dependency_stubs():
         qtwidgets.QHBoxLayout = _BaseWidget
         qtwidgets.QLineEdit = _BaseWidget
         qtwidgets.QTextEdit = _BaseWidget
+        qtwidgets.QListWidgetItem = _BaseWidget
         qtwidgets.QListWidget = _BaseWidget
         qtwidgets.QApplication = _BaseWidget
         qtwidgets.QFrame = _BaseWidget

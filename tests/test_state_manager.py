@@ -18,6 +18,7 @@ EXPECTED_PERSISTED_KEYS = {
     "usb_download_enabled",
     "usb_plug_enabled",
     "master_backup_output_path",
+    "advanced_panel_open",
     "master_toggle_left",
     "master_toggle_right",
     "left_section_states",

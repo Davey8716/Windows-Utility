@@ -1,0 +1,127 @@
+import unittest
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
+
+try:
+    from tests._stubs import install_dependency_stubs
+except ModuleNotFoundError:
+    from _stubs import install_dependency_stubs
+
+install_dependency_stubs()
+
+import right_utility_gui
+
+
+class RightUtilityGuiTests(unittest.TestCase):
+    def make_panel(self):
+        panel = right_utility_gui.AdvancedToolsPanel.__new__(
+            right_utility_gui.AdvancedToolsPanel
+        )
+        panel.app = SimpleNamespace(
+            showMinimized=Mock(),
+            actions=SimpleNamespace(open_router_page=Mock()),
+        )
+        panel.showMinimized = Mock()
+        return panel
+
+    def test_system_utilities_actions_use_expected_launchers(self):
+        panel = self.make_panel()
+        with patch.object(panel, "open_system_settings") as open_settings, \
+             patch.object(right_utility_gui.subprocess, "Popen") as popen:
+            actions = panel._system_utilities()
+
+            actions["Control Panel"]()
+            actions["System Settings"]()
+            actions["System Information"]()
+            actions["Task Manager"]()
+
+        open_settings.assert_called_once_with()
+        self.assertEqual(
+            popen.call_args_list,
+            [
+                unittest.mock.call(["control"]),
+                unittest.mock.call(["msinfo32"]),
+                unittest.mock.call(["taskmgr"]),
+            ],
+        )
+
+    def test_hardware_utilities_actions_use_shell_open_helpers(self):
+        panel = self.make_panel()
+        with patch.object(panel, "open_device_manager") as open_device_manager, \
+             patch.object(panel, "open_disk_management") as open_disk_management, \
+             patch.object(panel, "open_services") as open_services, \
+             patch.object(panel, "open_event_viewer") as open_event_viewer:
+            actions = panel._hardware_utilities()
+
+            actions["Device Manager"]()
+            actions["Disk Management"]()
+            actions["Services"]()
+            actions["Event Viewer"]()
+
+        open_device_manager.assert_called_once_with()
+        open_disk_management.assert_called_once_with()
+        open_services.assert_called_once_with()
+        open_event_viewer.assert_called_once_with()
+
+    def test_network_utilities_actions_use_expected_launchers(self):
+        panel = self.make_panel()
+        with patch.object(panel, "open_network_connections") as open_network_connections, \
+             patch.object(panel, "open_firewall") as open_firewall, \
+             patch.object(right_utility_gui.subprocess, "Popen") as popen:
+            actions = panel._network_utilities()
+
+            actions["Network Connections"]()
+            actions["Firewall"]()
+            actions["IP Configuration"]()
+            actions["Router Login"]()
+
+        open_network_connections.assert_called_once_with()
+        open_firewall.assert_called_once_with()
+        self.assertEqual(popen.call_args_list, [unittest.mock.call(["cmd", "/k", "ipconfig"])])
+        panel.app.actions.open_router_page.assert_called_once_with()
+
+    def test_startup_power_utilities_actions_use_expected_launchers(self):
+        panel = self.make_panel()
+        with patch.object(panel, "open_startup_apps") as open_startup_apps, \
+             patch.object(panel, "open_power_options") as open_power_options:
+            actions = panel._startup_power_utilities()
+
+            actions["Startup Apps"]()
+            actions["Power Options"]()
+
+        open_startup_apps.assert_called_once_with()
+        open_power_options.assert_called_once_with()
+
+    def test_shell_open_uses_shell_execute_without_parameters(self):
+        panel = self.make_panel()
+        with patch.object(
+            right_utility_gui.ctypes.windll.shell32, "ShellExecuteW"
+        ) as shell_execute:
+            panel._shell_open("wf.msc")
+
+        shell_execute.assert_called_once_with(None, "open", "wf.msc", None, None, 1)
+
+    def test_shell_execute_passes_parameters(self):
+        panel = self.make_panel()
+        with patch.object(
+            right_utility_gui.ctypes.windll.shell32, "ShellExecuteW"
+        ) as shell_execute:
+            panel._shell_execute("control.exe", "ncpa.cpl")
+
+        shell_execute.assert_called_once_with(
+            None, "open", "control.exe", "ncpa.cpl", None, 1
+        )
+
+    def test_minimize_and_run_minimizes_both_windows_before_action(self):
+        panel = self.make_panel()
+        action = Mock()
+
+        panel._minimize_and_run(action)
+
+        panel.app.showMinimized.assert_called_once_with()
+        panel.showMinimized.assert_called_once_with()
+        action.assert_called_once_with()
+
+
+if __name__ == "__main__":
+    unittest.main()
