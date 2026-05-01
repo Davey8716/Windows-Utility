@@ -191,50 +191,6 @@ class AdvancedToolsPanel(QWidget):
     def _build_windows_utilities(self):
         parent_layout = self.windows_utility_section.content_layout
 
-        quick_row = QWidget()
-        quick_row_layout = QHBoxLayout(quick_row)
-        quick_row_layout.setContentsMargins(0, 0, 0, 10)
-        quick_row_layout.setSpacing(10)
-        parent_layout.addWidget(quick_row)
-
-        left_col = QWidget()
-        left_col_layout = QVBoxLayout(left_col)
-        left_col_layout.setContentsMargins(0, 0, 0, 0)
-        left_col_layout.setSpacing(10)
-
-        right_col = QWidget()
-        right_col_layout = QVBoxLayout(right_col)
-        right_col_layout.setContentsMargins(0, 0, 0, 0)
-        right_col_layout.setSpacing(10)
-
-        quick_row_layout.addWidget(left_col)
-        quick_row_layout.addWidget(right_col)
-        quick_row_layout.setStretch(0, 1)
-        quick_row_layout.setStretch(1, 1)
-        quick_row_layout.setAlignment(left_col, Qt.AlignmentFlag.AlignTop)
-        quick_row_layout.setAlignment(right_col, Qt.AlignmentFlag.AlignTop)
-
-        self._add_action_button(
-            left_col_layout,
-            "System Settings",
-            self.open_system_settings,
-        )
-        self._add_action_button(
-            left_col_layout,
-            "Task Manager",
-            lambda: subprocess.Popen(["taskmgr"]),
-        )
-        self._add_action_button(
-            right_col_layout,
-            "Device Manager",
-            self.open_device_manager,
-        )
-        self._add_action_button(
-            right_col_layout,
-            "Router Login",
-            self.app.actions.open_router_page,
-        )
-
         self.power_actions_row = QWidget()
         power_layout = QHBoxLayout(self.power_actions_row)
         power_layout.setContentsMargins(0, 0, 0, 10)
@@ -420,19 +376,33 @@ class AdvancedToolsPanel(QWidget):
     def _hardware_utilities(self):
         return {
             "Device Manager": self.open_device_manager,
-            "Disk Management": lambda: subprocess.Popen(["diskmgmt.msc"]),
-            "Services": lambda: subprocess.Popen(["services.msc"]),
-            "Event Viewer": lambda: subprocess.Popen(["eventvwr.msc"]),
+            "Disk Management": self.open_disk_management,
+            "Services": self.open_services,
+            "Event Viewer": self.open_event_viewer,
         }
 
     def open_device_manager(self):
         self._shell_open("devmgmt.msc")
+
+    def open_disk_management(self):
+        self._shell_open("diskmgmt.msc")
+
+    def open_services(self):
+        self._shell_open("services.msc")
+
+    def open_event_viewer(self):
+        self._shell_open("eventvwr.msc")
 
     def open_system_settings(self):
         self._shell_open("ms-settings:")
 
     def _shell_open(self, target: str):
         ctypes.windll.shell32.ShellExecuteW(None, "open", target, None, None, 1)
+
+    def _minimize_and_run(self, action):
+        self.app.showMinimized()
+        self.showMinimized()
+        action()
 
     def _network_utilities(self):
         return {
@@ -464,9 +434,7 @@ class AdvancedToolsPanel(QWidget):
                 return
             action = actions_map.get(text)
             if action:
-                self.app.showMinimized()
-                self.showMinimized()
-                action()
+                self._minimize_and_run(action)
             combo.setCurrentText(placeholder)
 
         combo.currentTextChanged.connect(runner)
