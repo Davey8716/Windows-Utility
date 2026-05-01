@@ -287,7 +287,7 @@ class UtilityControlApp(QWidget):
             button.setChecked(checked)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             styles.apply_default_button_size(button)
-            button.setStyleSheet(styles.toggle_button_style())
+            button.setStyleSheet(styles.toggle_button_style(font_size=14))
             install_green_flash(button)
             return button
 
@@ -311,7 +311,7 @@ class UtilityControlApp(QWidget):
             button.setAutoExclusive(False)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             styles.apply_default_button_size(button)
-            button.setStyleSheet(styles.organizing_button_style())
+            button.setStyleSheet(styles.organizing_button_style(font_size=14))
             install_green_flash(button)
             return button
 
@@ -467,7 +467,7 @@ class UtilityControlApp(QWidget):
 
         title_bar_dock_btn.toggled.connect(on_title_bar_dock_changed)
 
-        mmb_btn = make_toggle_button("Middle Mouse to Move", state.get("mmb_activation_enabled", True))
+        mmb_btn = make_toggle_button("Middle Mouse Move", state.get("mmb_activation_enabled", True))
         screen_row_layout.addWidget(mmb_btn)
         self.register_tooltip(mmb_btn, "Lets you move a window by middle-clicking the tracked title-bar dock.")
         screen_row_layout.addStretch()
@@ -493,7 +493,7 @@ class UtilityControlApp(QWidget):
 
         idle_btn.toggled.connect(on_idle_changed)
 
-        download_btn = make_toggle_button("Download Done Reminder", state.get("usb_download_enabled", True))
+        download_btn = make_toggle_button("Download Done Remind", state.get("usb_download_enabled", True))
         usb_layout.addWidget(download_btn)
         self.register_tooltip(download_btn, "Controls the finished-download drive reminder.")
 
@@ -503,7 +503,7 @@ class UtilityControlApp(QWidget):
 
         download_btn.toggled.connect(on_download_changed)
 
-        plug_btn = make_toggle_button("Plug / Unplug Notification", state.get("usb_plug_enabled", True))
+        plug_btn = make_toggle_button("Plug / Unplug Notify", state.get("usb_plug_enabled", True))
         usb_layout.addWidget(plug_btn)
         self.register_tooltip(plug_btn, "Controls notifications for drive plug and unplug events.")
 
@@ -539,6 +539,7 @@ class UtilityControlApp(QWidget):
         folder_input.setPlaceholderText("Folder name")
         folder_input.setText(state.get("folder_to_desktop_name", ""))
         folder_input.setReadOnly(False)
+        folder_input.setStyleSheet(styles.line_edit_style(15))
         self.register_tooltip(folder_input, "Enter the name of the folder to create on the desktop.")
 
         folder_row_layout.addWidget(folder_btn)
@@ -597,6 +598,7 @@ class UtilityControlApp(QWidget):
         self.backup_path_input.setPlaceholderText("Backup output folder path")
         self.backup_path_input.setText(self._get_master_backup_dir())
         self.backup_path_input.setReadOnly(True)
+        self.backup_path_input.setStyleSheet(styles.line_edit_style(15))
         master_backup_row_layout.addWidget(self.backup_path_input)
         self.register_tooltip(self.backup_path_input, "Shows the current master backup folder path.")
 

@@ -123,8 +123,8 @@ def organizing_button_style(font_size: int | None = None) -> str:
         }}
     """
 
-def toggle_button_style() -> str:
-    return organizing_button_style()
+def toggle_button_style(font_size: int | None = None) -> str:
+    return organizing_button_style(font_size=font_size)
 
 def text_edit_style(font_family: str, font_size: int) -> str:
     return f"""
