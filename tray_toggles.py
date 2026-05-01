@@ -1,113 +1,64 @@
-import threading
-import pystray
-from PIL import Image, ImageDraw
+from PySide6.QtWidgets import QSystemTrayIcon, QMenu
+from PySide6.QtGui import QIcon, QAction
+from PySide6.QtCore import QObject
 from screen_mover import SCREEN_MOVER
 
-# ===================================================================
-#  Tray Icon Manager (Monolithic Class)
-# ===================================================================
 
-class TrayIconManager:
+class TrayIconManager(QObject):
     def __init__(self, app):
-        """
-        Holds tray icon state and callbacks.
-        `app` = your main UtilityControlApp instance.
-        """
+        super().__init__(app)
         self.app = app
-        self.tray_icon = None
-        self.tray_thread = None
-
-    # ===================================================================
-    #  Create Tray Icon
-    # ===================================================================
+        self.tray = None
 
     def create_tray_icon(self):
-        """Create and start the system tray icon in a background thread."""
+        self.tray = QSystemTrayIcon(self.app)
 
-        # Create a simple blue square icon (matches your CTk blue theme)
-        def make_icon_image(size=32):
-            img = Image.new("RGBA", (size, size), (26, 115, 232, 255))  # blue-ish
-            draw = ImageDraw.Draw(img)
+        icon = self.app.windowIcon()
+        if icon.isNull():
+            icon = QIcon.fromTheme("applications-system")
 
-            margin = size // 8
-            draw.rectangle(
-                [margin, margin, size - margin, size - margin],
-                fill=(0, 120, 255, 255)
-            )
+        self.tray.setIcon(icon)
+        self.tray.setToolTip("Utility Suite")
 
-            return img
+        menu = QMenu()
 
-        image = make_icon_image()
+        toggle_action = QAction("Toggle Window", self.app)
+        toggle_action.triggered.connect(self.toggle_window)
+        menu.addAction(toggle_action)
 
-        # Tray menu
-        menu = pystray.Menu(
-            pystray.MenuItem("Toggle Window", self.tray_menu_toggle, default=True),
-            pystray.MenuItem("Quit", self.tray_menu_quit)
-        )
+        menu.addSeparator()
 
-        self.tray_icon = pystray.Icon(
-            "WindowsUtility",
-            image,
-            "Utility Suite",
-            menu
-        )
+        quit_action = QAction("Quit", self.app)
+        quit_action.triggered.connect(self.quit_from_tray)
+        menu.addAction(quit_action)
 
-        # Threaded run loop
-        def run_tray():
-            self.tray_icon.run()
+        self.tray.setContextMenu(menu)
+        self.tray.activated.connect(self.on_tray_activated)
+        self.tray.show()
 
-        self.tray_thread = threading.Thread(target=run_tray, daemon=True)
-        self.tray_thread.start()
-
-    # ===================================================================
-    #  Tray Menu Callbacks (Run in Tray Thread)
-    # ===================================================================
-
-    def tray_menu_toggle(self, icon, item):
-        """Double-click → toggle window show/hide."""
-        self.app.after(0, self._toggle_window)
-
-    def tray_menu_quit(self, icon, item):
-        self.app.after(0, self._quit_from_tray)
-
-    # ===================================================================
-    #  Helpers (Executed on Tk thread)
-    # ===================================================================
-
-    def _toggle_window(self):
-        if self.app.state() == "withdrawn":
-            self.app._show_window()
+    def toggle_window(self):
+        if self.app.isVisible():
+            self.app.hide()
         else:
-            self.app.withdraw()
+            self.app.showNormal()
+            self.app.raise_()
+            self.app.activateWindow()
 
-    def _quit_from_tray(self):
-        print("[INFO] Quitting from tray…")
-
+    def quit_from_tray(self):
         try:
             SCREEN_MOVER.stop()
-        except:
+        except Exception:
             pass
 
-        if self.tray_icon:
-            try:
-                self.tray_icon.visible = False
-                self.tray_icon.stop()
-            except:
-                pass
+        if self.tray:
+            self.tray.hide()
 
-        self.app.destroy()
+        setattr(self.app, "_quit_requested", True)
+        self.app.close()
 
-    # ===================================================================
-    #  Hide-on-close behaviour
-    # ===================================================================
+    def on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self.toggle_window()
 
     def on_close_to_tray(self):
-        # close right panel first
-        if (
-            hasattr(self.app, "advanced_panel")
-            and self.app.advanced_panel
-            and self.app.advanced_panel.winfo_viewable()
-        ):
-            self.app.toggle_side_panel()
-
-        self.app.withdraw()
+        self.app.hide()

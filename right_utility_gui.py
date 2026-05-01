@@ -1,343 +1,436 @@
-import os
-import customtkinter as ctk
-import subprocess
 import ctypes
-import sys
-from tooltips import CtkTooltip
+import os
+import shutil
+import string
+import subprocess
+from pathlib import Path
+
+import styles
 from collapsible_section import CollapsibleSection
-from main_utility_gui import get_drive_info
+from state_manager import save_state
+from universal_bookmarks_export import BraveBookmarksExporter
+from PySide6.QtCore import QPoint, Qt, QTimer
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QPushButton,
+    QScrollArea,
+    QTextEdit,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 
-class AdvancedToolsPanel(ctk.CTkToplevel):
+def get_drive_info():
+    drives = []
+    for letter in string.ascii_uppercase:
+        path = f"{letter}:\\"
+        if not os.path.exists(path):
+            continue
+        try:
+            total, used, free = shutil.disk_usage(path)
+        except Exception:
+            continue
+        drives.append(
+            {
+                "drive": path,
+                "total": total,
+                "free": free,
+                "used": used,
+            }
+        )
+    return drives
+
+
+class AdvancedToolsPanel(QWidget):
     def __init__(self, app):
         super().__init__(app)
         self.app = app
 
-        # --------------------------------------------------
-        # Window config
-        # --------------------------------------------------
-        self.title("")
-        self.resizable(False, False)
-        self.withdraw()  # start hidden
-        
-        self._desired_topmost = app.right_always_on_top_var.get()
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Close button behaviour
-        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        root_layout.addWidget(self.scroll)
 
-        # --------------------------------------------------
-        # Scrollable content
-        # --------------------------------------------------
-        self.side_frame = ctk.CTkScrollableFrame(
-            self,
-            width=505,
-            height=1000,
-            fg_color="transparent"
-        )
-        self.side_frame.pack(fill="both", expand=True)
+        self.side_frame = QWidget()
+        self.scroll.setWidget(self.side_frame)
 
-        self.advanced_title = ctk.CTkLabel(
-            self.side_frame,
-            text="Advanced Tools",
-            font=("Rubik UI", 20, "bold")
+        self.side_layout = QVBoxLayout(self.side_frame)
+        self.side_layout.setContentsMargins(10, 5, 10, 5)
+        self.side_layout.setSpacing(6)
+
+        self.advanced_title = QLabel("Advanced Tools")
+        self.advanced_title.setStyleSheet(styles.label_style(font_size=20))
+        self.advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.side_layout.addWidget(self.advanced_title)
+
+        title_row = QWidget()
+        title_row_layout = QHBoxLayout(title_row)
+        title_row_layout.setContentsMargins(0, 0, 0, 0)
+        title_row_layout.addStretch()
+
+        self.master_collapse_btn_right = QToolButton()
+        self.master_collapse_btn_right.setFixedSize(
+            styles.ICON_BUTTON_WIDTH,
+            styles.ICON_BUTTON_HEIGHT,
         )
-        self.advanced_title.pack(padx = 25, pady = 5)
-        
-        self.bind("<Configure>", lambda e: self.app._sync_windows("side"))
-        self.bind("<ButtonPress-1>", lambda e: self.app._set_drag_owner("side"))
-        self.bind("<ButtonRelease-1>", lambda e: self.app._clear_drag_owner())
-        
-        title_row = ctk.CTkFrame(self.side_frame, fg_color="transparent")
-        title_row.pack(fill="x", padx=10, pady=10)
-        
-        arrow_colors = self.app._get_arrow_colors()
-        
-        self.master_collapse_btn_right = ctk.CTkButton(
-            title_row,
-            text="▾",
-            width=32,
-            height=28,
-            font=("Rubik UI", 18, "bold"),
-            fg_color="transparent",
-            text_color=arrow_colors["text"],
-            hover_color="#202020",
-            command=self.toggle_all_right_sections
+        self.app.master_toggle_right_state = bool(
+            self.app.saved_state.get("master_toggle_right", False)
         )
-        self.master_collapse_btn_right.pack(side="right")
-        
-        CtkTooltip(
+        self.master_collapse_btn_right.setArrowType(
+            Qt.ArrowType.DownArrow
+            if self.app.master_toggle_right_state
+            else Qt.ArrowType.UpArrow
+        )
+        self.master_collapse_btn_right.setStyleSheet(
+            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
+        )
+        self.master_collapse_btn_right.clicked.connect(
+            self.toggle_all_right_sections
+        )
+        self.app.register_tooltip(
             self.master_collapse_btn_right,
-            "Master collapse toggle for all of these regions.\n"
-            
+            "Master collapse toggle for all of these regions.",
         )
-        
-        # ==================================================
-        # Windows Utilities
-        # ==================================================
+        title_row_layout.addWidget(self.master_collapse_btn_right)
+        self.side_layout.addWidget(title_row)
 
         self.windows_utility_section = CollapsibleSection(
-            self.side_frame,
-            "Windows Utilities",
+            parent=self.side_frame,
+            title_text="Windows Utilities",
             section_id="windows_utilities",
             app=self.app,
-            initial_open=self.app.saved_state.get("right_section_states", {}).get("windows_utilities", False)
+            initial_open=self.app.saved_state
+            .get("right_section_states", {})
+            .get("windows_utilities", False),
         )
-        self.windows_utility_section.wrapper.pack(fill="x", padx=12, pady=(2, 3))
-
-        CtkTooltip(
+        self.side_layout.addWidget(self.windows_utility_section)
+        self.app.collapsible_sections.append(self.windows_utility_section)
+        self.app.register_tooltip(
             self.windows_utility_section.toggle_btn,
-            "Shows windows utilities here instead grouped by type \n"
-            "not having to have them all cluttering up your taskbar."
+            "Shows windows utilities grouped by type and quick actions.",
         )
-        app.collapsible_sections.append(self.windows_utility_section)
 
-        parent = self.windows_utility_section.content
-        
+        self._build_windows_utilities()
+
         self.sidebar_utils_section = CollapsibleSection(
-            self.side_frame,
-            "Side Bar Utilities",
+            parent=self.side_frame,
+            title_text="Side Bar Utilities",
             section_id="sidebar_utils_section",
             app=self.app,
-            initial_open=self.app.saved_state.get("right_section_states", {}).get("sidebar_utils_section", False)
+            initial_open=self.app.saved_state
+            .get("right_section_states", {})
+            .get("sidebar_utils_section", False),
         )
-    
-        # ✅ REGISTER IT as a right-section state
         self.app.collapsible_sections.append(self.sidebar_utils_section)
-        self.sidebar_utils_section.wrapper.pack(fill="x", padx=12, pady=(5, 5))
-        
-        # 🔴 THIS LINE WAS MISSING
+        self.side_layout.addWidget(self.sidebar_utils_section)
         self.build_sidebar_utilities()
-        
-        CtkTooltip(
+        self.app.register_tooltip(
             self.sidebar_utils_section.toggle_btn,
-            "Side bar actions menus."
+            "Side bar actions menus.",
         )
-                
-        self.sidebar_output = ctk.CTkTextbox(
-            self.sidebar_utils_section.content,
-            height=120,
-            font=("Consolas", 15, "bold"),
-        )
-        self.sidebar_output.pack(fill="x", padx=8, pady=(8, 6))
 
-
-        # container row
-        row = ctk.CTkFrame(parent, fg_color="transparent")
-        row.pack(anchor="w", padx=4, pady=(4, 8))
-
-        # left column (System / Hardware)
-        left_col = ctk.CTkFrame(row, fg_color="transparent")
-        left_col.pack(side="left", padx=(0, 12))
-
-        # right column (Network / Startup & Power)
-        right_col = ctk.CTkFrame(row, fg_color="transparent")
-        right_col.pack(side="left")
-
-        # add dropdowns
-        self._add_windows_dropdown(left_col, "System", self._system_utilities())
-        self._add_windows_dropdown(left_col, "Hardware", self._hardware_utilities())
-
-        self._add_windows_dropdown(right_col, "Network", self._network_utilities())
-        self._add_windows_dropdown(right_col, "Startup & Power", self._startup_power_utilities())
-
-        # ==================================================
-        # Drive Space Display
-        # ==================================================
+        self.sidebar_output = QTextEdit()
+        self.sidebar_output.setFixedHeight(120)
+        self.sidebar_output.setStyleSheet(styles.text_edit_style("Consolas", 15))
+        self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
 
         self.display_space_section = CollapsibleSection(
-            self.side_frame,
-            "Drive Space Display",
+            parent=self.side_frame,
+            title_text="Drive Space Display",
             section_id="drive_space_display",
             app=self.app,
-            initial_open=self.app.saved_state.get("right_section_states", {}).get("drive_space_display", False)
+            initial_open=self.app.saved_state
+            .get("right_section_states", {})
+            .get("drive_space_display", False),
         )
-        self.display_space_section.wrapper.pack(fill="x", padx=12, pady=(0, 6))
-
-        CtkTooltip(
+        self.side_layout.addWidget(self.display_space_section)
+        self.app.collapsible_sections.append(self.display_space_section)
+        self.app.register_tooltip(
             self.display_space_section.toggle_btn,
-            "Shows disk usage for all detected drives."
+            "Shows disk usage for all detected drives.",
         )
+        self._build_drive_space_display()
 
-        app.collapsible_sections.append(self.display_space_section)
-
-        drive_parent = self.display_space_section.content
-
-        btn_this_pc = ctk.CTkButton(
-            drive_parent,
-            text="Open This PC",
-            font=("Rubik UI", 14, "bold"),
-            height=28,
-            command=self.app.open_this_pc,
-        )
-
-        btn_this_pc.pack(anchor= "w",padx= 5, pady=(8, 6))
-        
-        CtkTooltip(btn_this_pc, "Takes you to Drives location.")
-
-        # OUTPUT CONSOLE (read-only)
-        self.drive_space_output = ctk.CTkTextbox(
-            drive_parent,
-            height=100,
-            font=("Rubik", 14, "bold"),
-            wrap="none",
-        )
-        self.drive_space_output.pack(fill="x", padx=5, pady=6)
-        self.drive_space_output.configure(state="disabled")
-
-        def refresh_drive_display():
-            self.drive_space_output.configure(state="normal")
-            self.drive_space_output.delete("1.0", "end")
-
-            for d in get_drive_info():
-                used_gb = (d["total"] - d["free"]) / (1024**3)
-                total_gb = d["total"] / (1024**3)
-                free_gb = d["free"] / (1024**3)
-
-                line = (
-                    f"{d['drive']:<5} "
-                    f"Used: {used_gb:6.1f} GB   "
-                    f"Free: {free_gb:6.1f} GB   "
-                    f"Total: {total_gb:6.1f} GB\n"
-                )
-
-                self.drive_space_output.insert("end", line)
-
-            self.drive_space_output.configure(state="disabled")
-
-        # initial render
-        refresh_drive_display()
-
-        def schedule_drive_refresh():
-            refresh_drive_display()
-            self.app.after(10_000, schedule_drive_refresh)
-
-        schedule_drive_refresh()
-
-        # ==================================================
-        # Universal Bookmarks Exporter
-        # ==================================================
-        
-        self.advanced_section_3 = CollapsibleSection(
-            self.side_frame,
-            "Universal Bookmarks Exporter",
+        self.bookmarks_exporter_section = CollapsibleSection(
+            parent=self.side_frame,
+            title_text="Universal Bookmarks Exporter",
             section_id="bookmarks_exporter",
             app=self.app,
-            initial_open=self.app.saved_state.get("right_section_states", {}).get("bookmarks_exporter", False)
+            initial_open=self.app.saved_state
+            .get("right_section_states", {})
+            .get("bookmarks_exporter", False),
         )
-        self.advanced_section_3.wrapper.pack(fill="x", padx=12, pady=(5, 6))
+        self.side_layout.addWidget(self.bookmarks_exporter_section)
+        self.app.collapsible_sections.append(self.bookmarks_exporter_section)
+        self._build_bookmarks_exporter()
 
-        app.collapsible_sections.append(self.advanced_section_3)
+    def _build_windows_utilities(self):
+        parent_layout = self.windows_utility_section.content_layout
 
-        self.btn_brave_export = ctk.CTkButton(
-            self.advanced_section_3.content,
-            text="Export Brave Bookmarks",
-            width=180,
-            font=("Rubik UI", 15, "bold"),
-            command=app._run_brave_export,
+        quick_row = QWidget()
+        quick_row_layout = QHBoxLayout(quick_row)
+        quick_row_layout.setContentsMargins(0, 0, 0, 8)
+        quick_row_layout.setSpacing(8)
+        parent_layout.addWidget(quick_row)
+
+        left_col = QWidget()
+        left_col_layout = QVBoxLayout(left_col)
+        left_col_layout.setContentsMargins(0, 0, 0, 0)
+        left_col_layout.setSpacing(8)
+
+        right_col = QWidget()
+        right_col_layout = QVBoxLayout(right_col)
+        right_col_layout.setContentsMargins(0, 0, 0, 0)
+        right_col_layout.setSpacing(8)
+
+        quick_row_layout.addWidget(left_col)
+        quick_row_layout.addWidget(right_col)
+
+        self._add_action_button(
+            left_col_layout,
+            "System Settings",
+            lambda: subprocess.Popen(["cmd", "/c", "start", "ms-settings:"]),
         )
-        self.btn_brave_export.pack(anchor="w", padx=5, pady=(6, 6))
+        self._add_action_button(
+            left_col_layout,
+            "Task Manager",
+            lambda: subprocess.Popen(["taskmgr"]),
+        )
+        self._add_action_button(
+            right_col_layout,
+            "Device Manager",
+            lambda: subprocess.Popen(["devmgmt.msc"]),
+        )
+        self._add_action_button(
+            right_col_layout,
+            "Router Login",
+            self.app.actions.open_router_page,
+        )
 
-        CtkTooltip(
+        self.power_actions_row = QWidget()
+        power_layout = QHBoxLayout(self.power_actions_row)
+        power_layout.setContentsMargins(0, 0, 0, 8)
+        power_layout.setSpacing(8)
+        parent_layout.addWidget(self.power_actions_row)
+
+        self._add_action_button(
+            power_layout,
+            "Sleep",
+            lambda: subprocess.Popen(
+                ["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"]
+            ),
+        )
+        self._add_action_button(
+            power_layout,
+            "Lock PC",
+            lambda: ctypes.windll.user32.LockWorkStation(),
+        )
+        self._add_action_button(
+            power_layout,
+            "Restart",
+            lambda: subprocess.Popen(["shutdown", "/r", "/t", "0"]),
+        )
+        self._add_action_button(
+            power_layout,
+            "Shutdown",
+            lambda: subprocess.Popen(["shutdown", "/s", "/t", "0"]),
+        )
+        self.power_actions_row.setVisible(
+            bool(self.app.state.get("power_options_enabled", False))
+        )
+
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(8)
+        parent_layout.addWidget(row)
+
+        left_drop_col = QWidget()
+        left_drop_layout = QVBoxLayout(left_drop_col)
+        left_drop_layout.setContentsMargins(0, 0, 0, 0)
+        left_drop_layout.setSpacing(6)
+
+        right_drop_col = QWidget()
+        right_drop_layout = QVBoxLayout(right_drop_col)
+        right_drop_layout.setContentsMargins(0, 0, 0, 0)
+        right_drop_layout.setSpacing(6)
+
+        row_layout.addWidget(left_drop_col)
+        row_layout.addWidget(right_drop_col)
+
+        self._add_windows_dropdown(
+            left_drop_layout, "System", self._system_utilities()
+        )
+        self._add_windows_dropdown(
+            left_drop_layout, "Hardware", self._hardware_utilities()
+        )
+        self._add_windows_dropdown(
+            right_drop_layout, "Network", self._network_utilities()
+        )
+        self._add_windows_dropdown(
+            right_drop_layout, "Startup & Power", self._startup_power_utilities()
+        )
+
+    def _build_drive_space_display(self):
+        drive_parent = self.display_space_section.content_layout
+
+        btn_this_pc = QPushButton("Open This PC")
+        styles.apply_default_button_size(btn_this_pc)
+        btn_this_pc.setStyleSheet(styles.button_text_style(14))
+        self._install_green_flash(btn_this_pc)
+        btn_this_pc.clicked.connect(self._open_this_pc)
+        self.app.register_tooltip(btn_this_pc, "Opens This PC in File Explorer.")
+        drive_parent.addWidget(btn_this_pc)
+
+        self.drive_space_list = QListWidget()
+        self.drive_space_list.setFixedHeight(120)
+        self.drive_space_list.setStyleSheet(
+            """
+            QListWidget {
+                background-color: %s;
+                color: %s;
+                border: 2px solid %s;
+                border-radius: 6px;
+                padding: 6px;
+            }
+            QListWidget::item {
+                padding: 4px 6px;
+            }
+            QListWidget::item:selected {
+                background-color: %s;
+                color: %s;
+            }
+            """
+            % (
+                styles.qcolor_css(styles.PANEL_BG),
+                styles.qcolor_css(styles.TEXT_LIGHT),
+                styles.qcolor_css(styles.PANEL_BORDER),
+                styles.qcolor_css(styles.PANEL_HOVER),
+                styles.qcolor_css(styles.TEXT_LIGHT),
+            )
+        )
+        drive_parent.addWidget(self.drive_space_list)
+
+        def refresh_drive_display():
+            self.drive_space_list.clear()
+            for d in get_drive_info():
+                used_gb = (d["total"] - d["free"]) / (1024 ** 3)
+                total_gb = d["total"] / (1024 ** 3)
+                free_gb = d["free"] / (1024 ** 3)
+                self.drive_space_list.addItem(
+                    f"{d['drive']}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  Total: {total_gb:.1f} GB"
+                )
+
+        refresh_drive_display()
+        self.drive_refresh_timer = QTimer(self)
+        self.drive_refresh_timer.timeout.connect(refresh_drive_display)
+        self.drive_refresh_timer.start(10_000)
+
+    def _build_bookmarks_exporter(self):
+        self.btn_brave_export = QPushButton("Export Brave Bookmarks")
+        styles.apply_default_button_size(self.btn_brave_export)
+        self.btn_brave_export.setStyleSheet(styles.button_text_style(15))
+        self._install_green_flash(self.btn_brave_export)
+        self.btn_brave_export.clicked.connect(self._run_brave_export)
+        self.app.register_tooltip(
             self.btn_brave_export,
-            "Exports brave bookmarks to a file path of your choice,\n"
-            "remembers last saved location.\n"
+            "Exports Brave bookmarks and remembers the last saved path.",
         )
+        self.bookmarks_exporter_section.content_layout.addWidget(self.btn_brave_export)
 
-        self.brave_export_entry = ctk.CTkEntry(
-            self.advanced_section_3.content,
-            textvariable=app.brave_export_path_var,
-            font=("Rubik UI", 15, "bold"),
-            width=420,
-            state="readonly"
-        )
-        self.brave_export_entry.pack(anchor="w", padx=5, pady=(5, 4))
-        
-    def _run_elevated(self, command):
-        ctypes.windll.shell32.ShellExecuteW(
-            None,
-            "runas",                 # ← triggers UAC
-            "cmd.exe",
-            f"/k {command}",         # /k keeps window open
-            None,
-            1
-        )
+        self.brave_export_entry = QLineEdit()
+        self.brave_export_entry.setReadOnly(True)
+        self.brave_export_entry.setFixedWidth(420)
+        self.brave_export_entry.setStyleSheet(styles.line_edit_style(15))
+        self.brave_export_entry.setText(self.app.state.get("brave_export_path", ""))
+        self.bookmarks_exporter_section.content_layout.addWidget(self.brave_export_entry)
 
-    def _is_admin(self):
-        try:
-            return ctypes.windll.shell32.IsUserAnAdmin()
-        except Exception:
-            return False
+    def _add_action_button(self, parent_layout, label, action):
+        button = QPushButton(label)
+        styles.apply_default_button_size(button)
+        button.setStyleSheet(styles.button_text_style(14))
+        self._install_green_flash(button)
+        button.clicked.connect(action)
+        parent_layout.addWidget(button)
+        return button
 
-    # ==================================================
-    # Windows Utilities
-    # ==================================================
-    
+    def _install_green_flash(self, button: QPushButton):
+        def flash_active():
+            button.setProperty("flashActive", True)
+            button.style().unpolish(button)
+            button.style().polish(button)
+            QTimer.singleShot(180, clear_flash)
+
+        def clear_flash():
+            button.setProperty("flashActive", False)
+            button.style().unpolish(button)
+            button.style().polish(button)
+
+        button.clicked.connect(flash_active)
+        return button
+
     def _system_utilities(self):
         return {
-            "Control Panel": lambda: os.system("control"),
-            "System Settings": lambda: os.system("start ms-settings:"),
-            "System Information": lambda: os.system("msinfo32"),
-            "Task Manager": lambda: os.system("taskmgr"),
+            "Control Panel": lambda: subprocess.Popen(["control"]),
+            "System Settings": lambda: subprocess.Popen(["cmd", "/c", "start", "ms-settings:"]),
+            "System Information": lambda: subprocess.Popen(["msinfo32"]),
+            "Task Manager": lambda: subprocess.Popen(["taskmgr"]),
         }
-        
+
     def _hardware_utilities(self):
         return {
-            "Device Manager": lambda: os.system("devmgmt.msc"),
-            "Disk Management": lambda: os.system("diskmgmt.msc"),
-            "Services": lambda: os.system("services.msc"),
-            "Event Viewer": lambda: os.system("eventvwr.msc"),
+            "Device Manager": lambda: subprocess.Popen(["devmgmt.msc"]),
+            "Disk Management": lambda: subprocess.Popen(["diskmgmt.msc"]),
+            "Services": lambda: subprocess.Popen(["services.msc"]),
+            "Event Viewer": lambda: subprocess.Popen(["eventvwr.msc"]),
         }
-        
+
     def _network_utilities(self):
         return {
-            "Network Connections": lambda: os.system("ncpa.cpl"),
-            "Firewall": lambda: os.system("wf.msc"),
-            "IP Configuration": lambda: os.system("cmd /k ipconfig"),
+            "Network Connections": lambda: subprocess.Popen(["ncpa.cpl"]),
+            "Firewall": lambda: subprocess.Popen(["wf.msc"]),
+            "IP Configuration": lambda: subprocess.Popen(["cmd", "/k", "ipconfig"]),
             "Router Login": self.app.actions.open_router_page,
         }
-        
+
     def _startup_power_utilities(self):
         return {
-            "Startup Apps": lambda: os.system("start ms-settings:startupapps"),
-            "Power Options": lambda: os.system("powercfg.cpl"),
+            "Startup Apps": lambda: subprocess.Popen(
+                ["cmd", "/c", "start", "ms-settings:startupapps"]
+            ),
+            "Power Options": lambda: subprocess.Popen(["powercfg.cpl"]),
         }
 
-    # ==================================================
-    # Drop down helper for windows utils
-    # ==================================================
-        
-    def _add_windows_dropdown(self, parent, label, actions_map):
+    def _add_windows_dropdown(self, parent_layout, label, actions_map):
         placeholder = f" {label} "
+        combo = QComboBox()
+        combo.setFixedWidth(160)
+        combo.addItem(placeholder)
+        combo.addItems(sorted(actions_map.keys()))
+        combo.setCurrentText(placeholder)
+        combo.setStyleSheet(styles.combo_style(15))
 
-        def runner(choice):
-            if choice == placeholder:
+        def runner(text: str):
+            if text == placeholder:
                 return
-
-            action = actions_map.get(choice)
+            action = actions_map.get(text)
             if action:
-                # minimize BOTH windows to taskbar
-                self.app.iconify()
-                self.iconify()
-
+                self.app.showMinimized()
+                self.showMinimized()
                 action()
+            combo.setCurrentText(placeholder)
 
-        values = [placeholder] + sorted(actions_map.keys())
-
-        dropdown = ctk.CTkOptionMenu(
-            parent,
-            values=values,
-            command=runner,
-            width=160,
-            font=("Rubik UI", 15, "bold"),
-            dropdown_font=("Rubik UI", 14),
-        )
-
-        dropdown.set(placeholder)
-        dropdown.pack(anchor="w", padx=5, pady=(6, 6))
-
-    # ==================================================
-    # Side Bar Utilities
-    # ==================================================
+        combo.currentTextChanged.connect(runner)
+        parent_layout.addWidget(combo)
 
     def _sidebar_network_actions(self):
         return {
@@ -360,73 +453,55 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             "Open Startup Folder": self.open_startup_folder,
             "Clipboard History": self.open_clipboard_history,
         }
-        
-    def _ensure_admin(self):
-        if ctypes.windll.shell32.IsUserAnAdmin():
-            return True
 
-        ctypes.windll.shell32.ShellExecuteW(
-            None,
-            "runas",
-            sys.executable,
-            " ".join(sys.argv),
-            None,
-            1
-        )
-        return False
-        
     def build_sidebar_utilities(self):
-        parent = self.sidebar_utils_section.content
-
+        parent_layout = self.sidebar_utils_section.content_layout
         self._add_sidebar_dropdown(
-            parent,
+            parent_layout,
             "Network / System Quick Fix",
-            self._sidebar_network_actions()
+            self._sidebar_network_actions(),
         )
-
         self._add_sidebar_dropdown(
-            parent,
+            parent_layout,
             "Cleanup / Quick Actions",
-            self._sidebar_cleanup_actions()
+            self._sidebar_cleanup_actions(),
+        )
+        self._add_sidebar_dropdown(
+            parent_layout,
+            "Quick Open",
+            self._sidebar_quick_open_actions(),
+        )
+        self._add_sidebar_dropdown(
+            parent_layout,
+            "System Integrity & Disk Health",
+            self._sidebar_system_integrity_actions(),
         )
 
-        self._add_sidebar_dropdown(
-            parent,
-            "Quick Open",
-            self._sidebar_quick_open_actions()
-        )
-        
-        # ✅ ADD THIS
-        self._add_sidebar_dropdown(
-            parent,
-            "System Integrity & Disk Health",
-            self._sidebar_system_integrity_actions()
-        )
-        
     def _sidebar_system_integrity_actions(self):
         return {
             "Run System File Checker (SFC)": self.run_sfc_scannow,
             "Run Check Disk (CHKDSK)": self.run_chkdsk,
         }
 
-    def toggle_side_bar_utilities(self):
+    def _ensure_admin(self):
+        try:
+            if ctypes.windll.shell32.IsUserAnAdmin():
+                return True
+        except Exception:
+            pass
 
-        section = self.app.sidebar_utils_section
+        ctypes.windll.shell32.ShellExecuteW(
+            None,
+            "runas",
+            os.sys.executable,
+            " ".join(os.sys.argv),
+            None,
+            1,
+        )
+        return False
 
-        new_state = not section.var.get()
-        section.var.set(new_state)   # ✅ THIS is the missing line
-
-        if new_state:
-            if not section.wrapper.winfo_ismapped():
-                section.wrapper.pack(fill="x", padx=5, pady=(6, 6))
-        else:
-            if section.wrapper.winfo_ismapped():
-                section.wrapper.pack_forget()
-
-        self.app.save_all_settings()
-        
     def _run_and_output(self, cmd, shell=True):
-        self.sidebar_output.delete("1.0", "end")
+        self.sidebar_output.clear()
         try:
             result = subprocess.run(
                 cmd,
@@ -437,13 +512,8 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
             output = result.stdout or result.stderr or "[no output]"
         except Exception as e:
             output = str(e)
+        self.sidebar_output.append(output)
 
-        self.sidebar_output.insert("end", output)
-
-    # ==================================== 
-    # Dropdown calls
-    # ==================================== 
-        
     def flush_dns(self):
         self._run_and_output("ipconfig /flushdns")
 
@@ -458,112 +528,90 @@ class AdvancedToolsPanel(ctk.CTkToplevel):
 
     def restart_bluetooth(self):
         self._run_and_output("powershell Restart-Service bthserv -Force")
-        
+
     def clear_temp(self):
         self._run_and_output("del /q /s %temp%\\*", shell=True)
 
     def clear_clipboard(self):
         self._run_and_output("cmd /c echo off | clip")
-        
+
     def open_downloads(self):
-        self.sidebar_output.delete("1.0", "end")
-        os.system("explorer shell:downloads")
-        self.sidebar_output.insert("end", "Opened Downloads folder.\n")
+        self.sidebar_output.clear()
+        subprocess.Popen(["explorer", "shell:downloads"])
+        self.sidebar_output.append("Opened Downloads folder.")
 
     def open_startup_folder(self):
-        self.sidebar_output.delete("1.0", "end")
-        os.system("explorer shell:startup")
-        self.sidebar_output.insert("end", "Opened Startup folder.\n")
+        self.sidebar_output.clear()
+        subprocess.Popen(["explorer", "shell:startup"])
+        self.sidebar_output.append("Opened Startup folder.")
 
     def open_clipboard_history(self):
-        self.sidebar_output.delete("1.0", "end")
-        os.system("start ms-settings:clipboard")
-        self.sidebar_output.insert("end", "Opened Clipboard History.\n")
-        
+        self.sidebar_output.clear()
+        subprocess.Popen(["cmd", "/c", "start", "ms-settings:clipboard"])
+        self.sidebar_output.append("Opened Clipboard History.")
+
     def run_sfc_scannow(self):
-        if not self._ensure_admin():
-            return
-        self._run_and_output("sfc /scannow")
+        if self._ensure_admin():
+            self._run_and_output("sfc /scannow")
 
     def run_chkdsk(self):
-        if not self._ensure_admin():
-            return
-        self._run_and_output("chkdsk")
+        if self._ensure_admin():
+            self._run_and_output("chkdsk")
 
-    def _add_sidebar_dropdown(self, parent, title, actions_map):
+    def _add_sidebar_dropdown(self, parent_layout, title, actions_map):
         placeholder = f" {title} "
+        combo = QComboBox()
+        combo.setFixedWidth(260)
+        combo.addItem(placeholder)
+        combo.addItems(actions_map.keys())
+        combo.setCurrentText(placeholder)
+        combo.setStyleSheet(styles.combo_style(14))
 
-        def runner(choice):
-            if choice == placeholder:
+        def runner(text: str):
+            if text == placeholder:
                 return
-            action = actions_map.get(choice)
+            action = actions_map.get(text)
             if action:
                 action()
-            dropdown.set(placeholder)  # reset after run
+            combo.setCurrentText(placeholder)
 
-        values = [placeholder] + list(actions_map.keys())
+        combo.currentTextChanged.connect(runner)
+        parent_layout.addWidget(combo)
 
-        dropdown = ctk.CTkOptionMenu(
-            parent,
-            values=values,
-            command=runner,
-            width=160,
-            font=("Rubik UI", 14, "bold"),
-            dropdown_font=("Rubik UI", 14),
+    def _open_this_pc(self):
+        subprocess.Popen(["explorer", "shell:MyComputerFolder"])
+
+    def _run_brave_export(self):
+        default_path = self.app.state.get("brave_export_path", "")
+        start_dir = str(Path(default_path).parent) if default_path else str(Path.home())
+        out_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Brave Bookmarks",
+            str(Path(start_dir) / "Brave_Bookmarks.html"),
+            "HTML Files (*.html)",
         )
+        if not out_path:
+            return False
 
-        dropdown.set(placeholder)
-        dropdown.pack(anchor ="w", padx=8, pady=4)
-        
-    # ==================================================
-    # Master Toggle Right
-    # ==================================================
+        if BraveBookmarksExporter().export_to_file(out_path):
+            self.app.state["brave_export_path"] = out_path
+            save_state(self.app.state)
+            self.brave_export_entry.setText(out_path)
+            return True
+
+        return False
 
     def toggle_all_right_sections(self):
-        new_state = not self.app.master_toggle_right_var.get()
-        self.app.master_toggle_right_var.set(new_state)
+        new_state = not self.app.master_toggle_right_state
+        self.app.master_toggle_right_state = new_state
+        self.app.state["master_toggle_right"] = new_state
+        self.master_collapse_btn_right.setArrowType(
+            Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
+        )
 
         for section in self.app.collapsible_sections:
-            if not isinstance(section, CollapsibleSection):
-                continue
+            if hasattr(section, "set_open") and section.parent() is self.side_frame:
+                if section.is_open != new_state:
+                    section.set_open(new_state)
 
-            if section.parent == self.side_frame:
-                if section.open != new_state:
-                    section.toggle()
-
-    # ==================================================
-    # Visibility helpers
-    # ==================================================
-
-    def show(self):
-        self.app._sync_windows("main")
-        self.deiconify()
-        
-        try:
-            self.attributes("-topmost", self._desired_topmost)
-        except Exception:
-            pass
-        
-        self.lift()
-
-    def hide(self):
-        self.withdraw()
-
-        if hasattr(self.app, "expanded"):
-            self.app.expanded = False
-        if hasattr(self.app, "expand_btn"):
-            self.app.expand_btn.configure(text="▾")
-
-    def _position_next_to_main(self):
-        self.app.update_idletasks()
-
-        x = self.app.winfo_rootx() + self.app.winfo_width() + 8
-        y = self.app.winfo_rooty()
-
-        self.geometry(f"+{x}+{y}")
-        
-    def _on_close(self):
-        # close via the same logic as the toggle
-        self.app.advanced_panel_open_var.set(False)
-        self.hide()
         self.app.save_all_settings()

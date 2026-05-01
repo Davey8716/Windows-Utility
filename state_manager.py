@@ -1,80 +1,89 @@
 import json
 import os
 from pathlib import Path
-CONFIG_PATH = "app_state.json"
+
+APP_DIR_NAME = "Windows Resurface"
+CONFIG_FILENAME = "app_state.json"
+LEGACY_CONFIG_PATH = Path("app_state.json")
+
+DEFAULTS = {
+    "theme_dark": True,
+    "main_always_on_top_enabled": True,
+    "tooltips_enabled": True,
+    "minimize_all_enabled": False,
+    "power_options_enabled": False,
+    "mmb_activation_enabled": True,
+    "title_bar_dock_enabled": True,
+    "master_backup_output_path": str(Path.home()),
+    "master_toggle_left": True,
+    "master_toggle_right": False,
+    "left_section_states": {
+        "user_interface": True,
+        "screen_mover": True,
+        "drive_reminder_options": True,
+        "organising_utilities": True,
+    },
+    "right_section_states": {
+        "windows_utilities": False,
+        "sidebar_utils_section": False,
+        "drive_space_display": False,
+        "bookmarks_exporter": False,
+    },
+}
+
+
+def get_config_path() -> Path:
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        return Path(local_app_data) / APP_DIR_NAME / CONFIG_FILENAME
+    return Path.home() / "AppData" / "Local" / APP_DIR_NAME / CONFIG_FILENAME
+
+
+def _build_persisted_state(state: dict) -> dict:
+    payload = dict(state)
+    persisted = {}
+
+    for key, default in DEFAULTS.items():
+        if isinstance(default, dict):
+            value = payload.get(key, {})
+            merged = default.copy()
+            if isinstance(value, dict):
+                for nested_key in default:
+                    if nested_key in value:
+                        merged[nested_key] = bool(value[nested_key])
+            persisted[key] = merged
+            continue
+
+        persisted[key] = payload.get(key, default)
+
+    return persisted
+
 
 def save_state(state: dict):
-    with open(CONFIG_PATH, "w") as f:
-        json.dump(state, f, indent=4)
+    payload = _build_persisted_state(state)
+    config_path = get_config_path()
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=4)
+
 
 def load_state() -> dict:
-    
-    # ================================================================
-    # DEFAULTS (used when file doesn't exist)
-    # ================================================================
-    
-    DEFAULTS = {
-        "theme_dark": True,
-        "main_always_on_top_enabled": True,
-        "right_always_on_top_enabled": True,
-        "show_power_buttons": False,
-        "tooltips_enabled": True,
-        "minimize_all_enabled": False,
-        "master_toggle_left": True,
-        
-        "mmb_activation_enabled": True,
-        "auto_align_enabled": False,
+    config_path = get_config_path()
+    source_path = config_path
+    if not source_path.exists() and LEGACY_CONFIG_PATH.exists():
+        source_path = LEGACY_CONFIG_PATH
 
-        "usb_idle_enabled": True,
-        "usb_download_enabled": True,
-        "usb_plug_enabled": True,
-        
-        "backup_folder_path": str(Path.home()),
-        "brave_export_path": "",
-        "advanced_panel_open" : True,
-
-
-        "left_section_states": {
-            "user_interface": True,
-            "screen_mover": True,
-            "drive_reminder_options": True,
-            "organising_utilties": True,
-            "desktop_backup_utilities": True,
-            "desktop_icon_organiser": True
-        },
-        "right_section_states": {
-            "master_toggle_right": False,
-            "sidebar_utils_section": False,
-            "windows_utilities": False,
-            "drive_space_display": False,
-            "bookmarks_exporter": False
-        },
-    }
-
-    # ================================================================
-    # Case 1: File missing → return defaults
-    # ================================================================
-    
-    if not os.path.exists(CONFIG_PATH):
+    if not source_path.exists():
         return DEFAULTS.copy()
 
-    # ================================================================
-    # Case 2: File exists → load it
-    # ================================================================
-    
     try:
-        with open(CONFIG_PATH, "r") as f:
+        with open(source_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+        data = _build_persisted_state(data)
 
-        # Ensure missing keys never break older configs
-        for key, value in DEFAULTS.items():
-            data.setdefault(key, value)
+        if source_path != config_path:
+            save_state(data)
 
         return data
-
-    # ================================================================
-    # Case 3: File unreadable / corrupted → return defaults
-    # ================================================================
-    
     except Exception:
         return DEFAULTS.copy()

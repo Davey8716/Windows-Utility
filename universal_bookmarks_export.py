@@ -1,11 +1,3 @@
-"""
-export_brave_bookmarks.py
------------------------------------------------------
-Exports all Brave bookmarks into a single HTML file.
-Opens a Save As dialog (default name includes date stamp).
-No pop-ups after saving.
-"""
-
 import os
 import json
 from html import escape
@@ -14,10 +6,6 @@ class BraveBookmarksExporter:
     def __init__(self, title="Brave Bookmarks Export"):
         self.title = title
 
-    # ─────────────────────────────────────────────
-    # HTML helpers
-    # ─────────────────────────────────────────────
-    
     def _netscape_header(self):
         return (
             "<!DOCTYPE NETSCAPE-Bookmark-file-1>\n"
@@ -71,10 +59,6 @@ class BraveBookmarksExporter:
             if not is_bar:
                 lines.append('    </DL><p>')
 
-    # ─────────────────────────────────────────────
-    # Brave profile discovery
-    # ─────────────────────────────────────────────
-    
     def _find_brave_profiles(self):
         local_app = os.environ.get("LOCALAPPDATA", "")
         base = os.path.join(
@@ -91,10 +75,6 @@ class BraveBookmarksExporter:
 
         return paths
 
-    # ─────────────────────────────────────────────
-    # Public API
-    # ─────────────────────────────────────────────
-    
     def export_to_file(self, out_path):
         profiles = self._find_brave_profiles()
         if not profiles:
@@ -117,8 +97,5 @@ class BraveBookmarksExporter:
 
         return True
 
-# ─────────────────────────────────────────────
-# Entry point
-# ─────────────────────────────────────────────
 if __name__ == "__main__":
     BraveBookmarksExporter().run_save_dialog()

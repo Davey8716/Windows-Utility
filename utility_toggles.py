@@ -4,74 +4,52 @@ import ctypes
 import win32gui
 import win32con
 import os
-import tkinter.filedialog as fd
 import shutil
-import customtkinter as ctk
-from tkinter import messagebox
+from PySide6.QtCore import Qt
+
 from screen_mover import SCREEN_MOVER
 from desktop_icon_layout import save_desktop_icon_layout
 from desktop_icon_layout import restore_desktop_icon_layout
 
 
-# ===================================================================
-#  Utility Actions Manager (Monolithic Class)
-# ===================================================================
-
 class UtilityActionsManager:
-    def __init__(self, app):
+    def __init__(self, app=None):
         """
-        This class houses all previously-inline logic methods:
-        - Power buttons toggling
-        - Router opener
-        - Minimize/Maximize All
-        - USB Reminder toggle
-        - Theme toggle
-        - Tooltips toggle
-        - Always-on-top
-        - Auto-align toggle
+        Qt-aligned utility actions manager.
+
+        NOTE:
+        - app is optional to keep compatibility while migrating.
+        - Do NOT call Tk/CTk widget methods here.
         """
         self.app = app
 
-    # ===================================================================
-    #  Power Buttons Toggle
-    # ===================================================================
-    def toggle_power_buttons(self):
-        enabled = self.app.power_toggle_var.get()
+    def toggle_power_buttons(self, enabled: bool | None = None):
+        """
+        Qt-aligned:
+        - If 'enabled' is provided, use it.
+        - Else (compat), attempt to read from self.app.power_toggle_var if present.
+        - Returns: enabled (bool)
 
-        widgets = [
-            self.app.btn_sleep,
-            self.app.btn_lock,
-            self.app.btn_restart,
-            self.app.btn_shutdown,
-        ]
+        UI layer is responsible for:
+        - show/hide right column
+        - button styling / visibility
+        - label text updates
+        """
+        if enabled is None:
+            enabled = bool(getattr(getattr(self.app, "power_toggle_var", None), "get", lambda: False)())
 
-        # ✅ show/hide the entire right column (this removes the “blank padding”)
-        if enabled:
-            if not self.app.power_right_col.winfo_ismapped():
-                self.app.power_right_col.pack(side="right", anchor="ne")
-        else:
-            if self.app.power_right_col.winfo_ismapped():
-                self.app.power_right_col.pack_forget()
+        if self.app and hasattr(self.app, "save_all_settings"):
+            self.app.save_all_settings()
 
-        # show/hide buttons
-        for w in widgets:
-            if enabled:
-                w.configure(fg_color="red", hover_color="#b00000")
-                w.pack(anchor="e", pady=(0, 4))
-            else:
-                w.pack_forget()
+        return enabled
 
-        self.app.power_toggle.configure(text="Power Options On" if enabled else "Power Options Off")
+    def open_router_page(self) -> str | None:
+        """
+        Auto-detect default gateway and open router page in browser.
 
-        self.app.save_all_settings()
-        self.app.update_idletasks()
-    
-    # ===================================================================
-    #  Router Auto-Detect & Open
-    # ===================================================================
-
-    def open_router_page(self):
-        """Auto-detect default gateway and open router page in browser."""
+        Returns:
+            gateway (str) if opened, else None
+        """
         try:
             result = subprocess.check_output("ipconfig", text=True, errors="ignore")
 
@@ -88,321 +66,272 @@ class UtilityActionsManager:
             if gateway:
                 webbrowser.open(f"http://{gateway}")
                 print(f"[ROUTER] Opening router at {gateway}")
-            else:
-                print("[ROUTER] No default gateway found")
+                return gateway
+
+            print("[ROUTER] No default gateway found")
+            return None
 
         except Exception as e:
             print("[ROUTER] Failed:", e)
+            return None
 
-    # ===================================================================
-    #  Minimize / Restore All Windows Except GUI
-    # ===================================================================
+    def minimize_all_toggle(self, enabled: bool | None = None):
+        if enabled is None:
+            enabled = bool(
+                getattr(
+                    getattr(self.app, "minimize_all_var", None),
+                    "get",
+                    lambda: False
+                )()
+            )
 
-    def minimize_all_toggle(self):
-        enabled = self.app.minimize_all_var.get()
         print(f"[INFO] Min/Max All toggled → {enabled}")
 
-        child_hwnd = self.app.winfo_id()
-        parent_hwnd = ctypes.windll.user32.GetParent(child_hwnd)
-        real_hwnd = parent_hwnd if parent_hwnd else child_hwnd
+        hwnd = None
+        if self.app and hasattr(self.app, "winId"):
+            # Qt window
+            hwnd = int(self.app.winId())
+        elif self.app and hasattr(self.app, "winfo_id"):
+            # Legacy Tk window (migration only)
+            child_hwnd = self.app.winfo_id()
+            parent_hwnd = ctypes.windll.user32.GetParent(child_hwnd)
+            hwnd = parent_hwnd if parent_hwnd else child_hwnd
 
-        if enabled:
-            minimize_all_except_gui(real_hwnd)
-        else:
-            restore_all_except_gui(real_hwnd)
-            
-        if enabled:
-            self.app.minimize_all_switch.configure(text="Maximize All Off")
-        else:
-            self.app.minimize_all_switch.configure(text="Maximize All On")
+        if hwnd:
+            if enabled:
+                minimize_all_except_gui(hwnd)
+            else:
+                restore_all_except_gui(hwnd)
 
-        self.app.save_all_settings()
+        if self.app and hasattr(self.app, "save_all_settings"):
+            self.app.save_all_settings()
 
-    # ===================================================================
-    #  USB Reminder Toggle
-    # ===================================================================
+        return enabled
 
-    def usb_reminder_toggle(self):
-        try:
-            enabled = self.app.usb_reminder_var.get()
-        except Exception:
-            enabled = False
+    def usb_reminder_toggle(self, enabled: bool | None = None):
+        if enabled is None:
+            enabled = bool(
+                getattr(
+                    getattr(self.app, "usb_reminder_var", None),
+                    "get",
+                    lambda: False
+                )()
+            )
 
-        toggle_usb_options(self.app, enabled)
-        self.app.save_all_settings()
+        if self.app:
+            setattr(self.app, "usb_reminder_enabled", enabled)
 
-    # ===================================================================
-    #  Theme Toggle (Dark/Light) +  Arrow Colour relative to state
-    # ===================================================================
-    
+        if self.app and hasattr(self.app, "save_all_settings"):
+            self.app.save_all_settings()
 
-    def theme_toggle(self):
-        enabled = self.app.theme_var.get()
-        switch_theme(enabled)
+        return enabled
 
-        # Update label
-        if enabled:
-            self.app.theme_switch.configure(text="Dark Mode On")
-        else:
-            self.app.theme_switch.configure(text="Light Mode On")
-            
-        # After switching theme, recolour collapse arrows
-        self.app.update_collapsible_arrow_colours()
+    def theme_toggle(self, dark_mode: bool | None = None):
+        if dark_mode is None:
+            dark_mode = bool(
+                getattr(
+                    getattr(self.app, "theme_var", None),
+                    "get",
+                    lambda: False
+                )()
+            )
 
-        self.app.save_all_settings()
+        if self.app:
+            setattr(self.app, "dark_mode_enabled", dark_mode)
 
-    # ===================================================================
-    #  Tooltips Toggle
-    # ===================================================================
+        if self.app and hasattr(self.app, "save_all_settings"):
+            self.app.save_all_settings()
 
-    def tooltips_toggle(self):
-        enabled = self.app.tooltips_enabled_var.get()
-        self.app.save_all_settings()
-        
-        # ✅ THIS is the missing part (keeps CtkTooltip.show() correct)
-        self.app.tooltips_enabled = enabled
-        
-        if enabled:
-            self.app.tooltip_switch.configure(text="Tooltips On")
-        else:
-            self.app.tooltip_switch.configure(text="Tooltips Off")
+        return dark_mode
 
-        self.app.save_all_settings()
-            
+    def tooltips_toggle(self, enabled: bool | None = None):
+        if enabled is None:
+            enabled = bool(
+                getattr(
+                    getattr(self.app, "tooltips_enabled_var", None),
+                    "get",
+                    lambda: False
+                )()
+            )
 
-    # ===================================================================
-    #  Always-On-Top Toggle
-    # ===================================================================
+        if self.app:
+            self.app.tooltips_enabled = enabled
 
-    def always_on_top_toggle(self):
-        enabled = self.app.always_on_top_var.get()
+        if self.app and hasattr(self.app, "save_all_settings"):
+            self.app.save_all_settings()
 
-        # Apply behavior
-        self.app.apply_always_on_top(enabled)
-        
-        # Apply to advanced panel if it exists
-        if hasattr(self.app, "advanced_panel"):
-            panel = self.app.advanced_panel
-            if panel and panel.winfo_exists():
-                panel._desired_topmost = enabled
-                panel.attributes("-topmost", enabled)
+        return enabled
 
-        # Update switch label
-        if enabled:
-            self.app.always_on_top_switch.configure(text="Always On Top On")
-        else:
-            self.app.always_on_top_switch.configure(text="Always On Top Off")
-            
-        # Persist
-        self.app.main_always_on_top_enabled = enabled
-        self.app.right_always_on_top_enabled = enabled
+    def always_on_top_toggle(self, enabled: bool | None = None):
+        if enabled is None:
+            enabled = bool(
+                getattr(
+                    getattr(self.app, "always_on_top_var", None),
+                    "get",
+                    lambda: False
+                )()
+            )
 
-        self.app.save_all_settings()
+        if self.app:
+            self.app.main_always_on_top_enabled = enabled
+            self.app.right_always_on_top_enabled = enabled
 
-        
-    # ===================================================================
-    #  Auto-Align (Screen Mover)
-    # ===================================================================
+            # Qt window handling (preferred)
+            if hasattr(self.app, "setWindowFlag"):
+                self.app.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
+                self.app.show()
 
-    def auto_align_toggle(self):
-        enabled = self.app.auto_align_var.get()
+        if self.app and hasattr(self.app, "save_all_settings"):
+            self.app.save_all_settings()
 
-        # Apply backend behaviour
-        SCREEN_MOVER.auto_align_enabled = enabled
+        return enabled
 
-        # Update switch label text (polish)
-        self.app._sync_toggle_label(
-            self.app.auto_align_switch,
-            "Windows In Move Zone",
-            self.app.auto_align_var
-        )
-
-        self.app.save_all_settings()
-
-
-    # ===================================================================
-    #  Organising Utilities - Backup Pinned Shortcuts (REAL LOGIC)
-    # ===================================================================
-
-    def backup_pinned_shortcuts(self):
-        """Backs up Windows taskbar pinned shortcuts into the chosen folder."""
-        
-
+    def backup_pinned_shortcuts(self, backup_folder: str | None = None) -> int:
         print("[BACKUP] Starting backup of pinned shortcuts…")
 
-        # 1. Get Windows pinned taskbar folder
         pinned_path = os.path.join(
-            os.environ["APPDATA"],
+            os.environ.get("APPDATA", ""),
             r"Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
         )
 
         if not os.path.isdir(pinned_path):
-            messagebox.showerror(
-                "Backup Error",
-                "Windows pinned shortcuts folder was not found.\n"
-                "This version of Windows may not be supported."
-            )
             print("[BACKUP] ERROR: Pinned folder not found:", pinned_path)
-            return
+            return 0
 
-        # 2. Get user's chosen backup folder
-        backup_folder = self.app.backup_path_var.get()
+        if backup_folder is None and self.app:
+            backup_folder = getattr(
+                self.app,
+                "get_default_taskbar_backup_dir",
+                lambda: None
+            )()
 
-        if not os.path.isdir(backup_folder):
-            try:
-                os.makedirs(backup_folder, exist_ok=True)
-            except Exception as e:
-                messagebox.showerror(
-                    "Backup Error",
-                    f"Could not create backup folder:\n{e}"
-                )
-                print("[BACKUP] ERROR: Cannot create backup folder:", backup_folder)
-                return
+        if not backup_folder:
+            print("[BACKUP] ERROR: No backup folder provided")
+            return 0
 
-        # 3. Copy .lnk files
+        try:
+            os.makedirs(backup_folder, exist_ok=True)
+        except Exception as e:
+            print("[BACKUP] ERROR: Cannot create backup folder:", e)
+            return 0
+
         count = 0
-        for file in os.listdir(pinned_path):
-            if file.lower().endswith(".lnk"):
-                src = os.path.join(pinned_path, file)
-                dst = os.path.join(backup_folder, file)
-
+        for name in os.listdir(pinned_path):
+            if name.lower().endswith(".lnk"):
+                src = os.path.join(pinned_path, name)
+                dst = os.path.join(backup_folder, name)
                 try:
                     shutil.copy2(src, dst)
-                    print(f"[BACKUP] Copied: {file}")
                     count += 1
                 except Exception as e:
-                    print(f"[BACKUP] Failed to copy {file}: {e}")
-                    
-                    
-            if count > 0:
-                self.app._set_backup_status_timed(f"Backup saved ({count})")
-            else:
-                self.app._set_backup_status_timed("No shortcuts found")
+                    print(f"[BACKUP] Failed to copy {name}: {e}")
 
         print(f"[BACKUP] Completed. {count} shortcuts copied.")
 
-    # ===================================================================
-    #  Organising Utilities - Open Backup Folder
-    # ===================================================================
+        if self.app and hasattr(self.app, "save_all_settings"):
+            self.app.save_all_settings()
 
-    def open_backup_folder(self):
-        """Opens the backup folder path stored in the GUI."""
-        try:
-            path = self.app.backup_path_var.get()
-            if os.path.isdir(path):
-                os.startfile(path)
-            else:
-                print("[DEBUG] open_backup_folder: path does not exist")
-        except Exception as e:
-            print(f"[ERROR] open_backup_folder: {e}")
+        return count
 
-    # ===================================================================
-    #  Organising Utilities - Change Backup Folder Path
-    # ===================================================================
+    def open_backup_folder(self, path: str | None = None) -> bool:
+        if path is None and self.app:
+            path = getattr(
+                self.app,
+                "get_default_taskbar_backup_dir",
+                lambda: None
+            )()
 
-    def change_backup_folder(self):
-        """Allows the user to select a folder and updates the JSON."""
-        
+        if not path:
+            print("[DEBUG] open_backup_folder: no path resolved")
+            return False
 
         try:
-            new_path = fd.askdirectory(title="Choose Backup Folder")
-            if new_path:
-                self.app.backup_path_var.set(new_path)
-                self.app.save_all_settings()
-                print(f"[DEBUG] Changed backup folder to: {new_path}")
+            os.makedirs(path, exist_ok=True)
+            os.startfile(path)
+            return True
         except Exception as e:
-            print(f"[ERROR] change_backup_folder: {e}")
-            
-            
-    def capture_desktop_layout(self):
-        
+            print(f"[DEBUG] open_backup_folder failed: {e}")
+            return False
 
-        out_path = fd.asksaveasfilename(
-            title="Save Desktop Icon Layout",
-            defaultextension=".json",
-            filetypes=[("Desktop Layout", "*.json")],
-            initialfile="desktop_layout.json",
-        )
+    def capture_desktop_layout(self, out_path: str | None = None) -> int:
+        if not out_path and self.app:
+            out_path = getattr(
+                self.app,
+                "get_default_desktop_layout_path",
+                lambda: None
+            )()
+
         if not out_path:
-            return
+            return 0
 
         try:
             count = save_desktop_icon_layout(out_path)
 
-            # inline feedback
-            if hasattr(self.app, "desktop_layout_status"):
-                self.app.desktop_layout_status.configure(text=f"Saved ({count})")
-                self.app.after(
-                    2500,
-                    lambda: self.app.desktop_layout_status.configure(text=" ")
-                )
+            if self.app:
+                if hasattr(self.app, "saved_state"):
+                    self.app.saved_state["desktop_layout_last_path"] = out_path
 
-            # persist last path
-            self.app.saved_state["desktop_layout_last_path"] = out_path
-            self.app.save_all_settings()
+                if hasattr(self.app, "save_all_settings"):
+                    self.app.save_all_settings()
+
+            return count
 
         except Exception as e:
             print("[DESKTOP ICONS] Capture failed:", e)
-            
-            
-    def restore_desktop_layout(self):
-        
+            return 0
 
-        path = fd.askopenfilename(
-            title="Restore Desktop Icon Layout",
-            filetypes=[("Desktop Layout", "*.json")]
-        )
+    def restore_desktop_layout(self, path: str | None = None) -> int:
+        if not path and self.app:
+            path = getattr(
+                self.app,
+                "get_default_desktop_layout_path",
+                lambda: None
+            )()
+
         if not path:
-            return
+            return 0
 
         try:
             count = restore_desktop_icon_layout(path)
 
-            if hasattr(self.app, "desktop_layout_status"):
-                self.app.desktop_layout_status.configure(text=f"Restored ({count})")
-                self.app.after(
-                    2500,
-                    lambda: self.app.desktop_layout_status.configure(text=" ")
-                )
+            if self.app and hasattr(self.app, "save_all_settings"):
+                self.app.save_all_settings()
+
+            return count
 
         except Exception as e:
             print("[DESKTOP ICONS] Restore failed:", e)
+            return 0
 
-
-
-# ===================================================================
-#  Minimize / Restore All Windows Except GUI
-# ===================================================================
-
-def _should_skip(hwnd, skip_hwnd):
+def _should_skip(hwnd: int, skip_hwnd: int) -> bool:
     if hwnd == skip_hwnd:
         return True
 
     if not win32gui.IsWindowVisible(hwnd):
         return True
 
-    # Skip shell windows without title
     title = win32gui.GetWindowText(hwnd)
     if not title.strip():
         return True
 
-    # Only handle top-level windows
     if win32gui.GetParent(hwnd) != 0:
+        return True
+
+    try:
+        class_name = win32gui.GetClassName(hwnd)
+    except Exception:
+        class_name = ""
+
+    normalized_title = title.strip().lower()
+    if class_name == "ApplicationFrameWindow" and normalized_title.startswith("settings"):
         return True
 
     return False
 
-# ------------------------------------------------------------
-#  Minimize All Except GUI
-# ------------------------------------------------------------
-
-def minimize_all_except_gui(skip_hwnd):
-    print("[MIN/MAX] Minimizing all windows except GUI…")
-
+def minimize_all_except_gui(skip_hwnd: int) -> None:
     def enum_handler(hwnd, _):
         if _should_skip(hwnd, skip_hwnd):
             return
-
         try:
             win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
         except Exception:
@@ -410,57 +339,29 @@ def minimize_all_except_gui(skip_hwnd):
 
     win32gui.EnumWindows(enum_handler, None)
 
-# ------------------------------------------------------------
-#  Restore All Except GUI
-# ------------------------------------------------------------
-
-def restore_all_except_gui(skip_hwnd):
-    print("[MIN/MAX] Restoring all minimized windows except GUI…")
-
+def restore_all_except_gui(skip_hwnd: int) -> None:
     def enum_handler(hwnd, _):
-
         if _should_skip(hwnd, skip_hwnd):
             return
 
-        # Check if minimized
-        placement = win32gui.GetWindowPlacement(hwnd)
-        show_cmd = placement[1]
-
-        if show_cmd == win32con.SW_SHOWMINIMIZED:
-            try:
+        try:
+            placement = win32gui.GetWindowPlacement(hwnd)
+            show_cmd = placement[1]
+            if show_cmd == win32con.SW_SHOWMINIMIZED:
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-            except Exception:
-                pass
+        except Exception:
+            pass
 
     win32gui.EnumWindows(enum_handler, None)
 
-# Dark = True, Light = False
-def switch_theme(dark_mode: bool):
-    if dark_mode:
-        ctk.set_appearance_mode("Dark")
-        print("[THEME] Switched to Dark Mode On")
-    else:
-        ctk.set_appearance_mode("Light")
-        print("[THEME] Switched to Light Mode Off")
+def theme_intent(dark_mode: bool) -> bool:
+    print(f"[THEME] Theme intent set → {'Dark' if dark_mode else 'Light'}")
+    return dark_mode
 
-# ===================================================================
-#  USB Reminder – UI Helpers (pure GUI logic, safe to import anywhere)
-# ===================================================================
+def usb_reminder_intent(enabled: bool) -> bool:
+    print(f"[INFO] USB Reminder intent → {enabled}")
+    return enabled
 
-def toggle_usb_options(self, enable: bool):
-    state = "normal" if enable else "disabled"
-    self.opt_idle.configure(state=state)
-    self.opt_download.configure(state=state)
-    self.opt_plug.configure(state=state)
-
-def on_usb_toggle(app, enabled: bool):
-    print(f"[INFO] USB Reminder toggled → {enabled}")
-    toggle_usb_options(app, enabled)
-
-def toggle_mover_options(app, enable: bool):
-    """
-    Enable/disable the Screen Mover sub-switches (MMB + auto-align).
-    """
-    state = "normal" if enable else "disabled"
-    app.mmb_switch.configure(state=state)
-    app.auto_align_switch.configure(state=state)   # NEW stays here
+def mover_options_intent(enabled: bool) -> bool:
+    print(f"[INFO] Screen Mover options intent → {enabled}")
+    return enabled

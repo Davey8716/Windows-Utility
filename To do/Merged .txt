@@ -1,0 +1,89 @@
+Icon hider
+
+call it windows resurface
+make it match windows themes as much as possible
+
+Most used but hidden Windows locations:
+
+1. Event Viewer
+2. System Information (msinfo32)
+3. Disk Management
+4. Network Reset / Network Diagnostics
+5. Credential Manager
+6. Local Users & Groups
+7. Temp Files (%temp%)
+8. Prefetch
+9. Cleanmgr (Disk Cleanup)
+10. Startup Folder (shell:startup)
+11. Common Startup Folder (shell:common startup)
+12. Clipboard History
+13. Windows Update Troubleshooter
+14. Storage Sense / Cleanup Recommendations
+15. Installed Programs (Control Panel version - appwiz.cpl)
+16. Advanced Display Settings
+17. Windows Defender / Virus & Threat Protection settings
+18. Hosts File Editor
+19. System Restore / Restore Points
+20. Reliability Monitor (perfmon /rel)
+21. Resource Monitor
+22. Services (services.msc)
+23. Windows Memory Diagnostic
+24.control /name Microsoft.AutoPlay
+
+
+[ Sidebar Utilities ]
+--------------------
+Flush DNS
+Renew IP
+Restart Explorer
+Restart Bluetooth
+--------------------
+Clear Temp
+Clear Clipboard
+--------------------
+Open Downloads
+Open Startup Folder
+Display Settings
+Sound Devices
+--------------------
+System Scan
+DISM Repair
+
+Windows Utilities Categories:
+
+1. System Diagnostics
+   - Event Viewer
+   - System Information (msinfo32)
+   - Reliability Monitor (perfmon /rel)
+   - Resource Monitor
+   - Windows Memory Diagnostic
+
+2. System Maintenance
+   - Disk Management
+   - Cleanmgr (Disk Cleanup)
+   - Storage Sense / Cleanup Recommendations
+   - System Restore / Restore Points
+   - Prefetch
+   - Temp Files (%temp%)
+
+3. Accounts & Credentials
+   - Credential Manager
+   - Local Users & Groups
+
+4. Network Tools
+   - Network Reset / Network Diagnostics
+   - Advanced Display Settings
+   - Windows Update Troubleshooter
+
+5. Startup & App Control
+   - Startup Folder (shell:startup)
+   - Common Startup Folder (shell:common startup)
+   - Installed Programs (Control Panel version - appwiz.cpl)
+
+6. Security & System Protection
+   - Windows Defender / Virus & Threat Protection settings
+   - Hosts File Editor
+
+7. Core System Tools
+   - Services (services.msc)
+   - Clipboard History
