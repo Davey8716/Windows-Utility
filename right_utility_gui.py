@@ -425,11 +425,15 @@ class AdvancedToolsPanel(QWidget):
 
     def _startup_power_utilities(self):
         return {
-            "Startup Apps": lambda: subprocess.Popen(
-                ["cmd", "/c", "start", "ms-settings:startupapps"]
-            ),
-            "Power Options": lambda: subprocess.Popen(["powercfg.cpl"]),
+            "Startup Apps": self.open_startup_apps,
+            "Power Options": self.open_power_options,
         }
+
+    def open_startup_apps(self):
+        self._shell_open("ms-settings:startupapps")
+
+    def open_power_options(self):
+        self._shell_execute("control.exe", "/name Microsoft.PowerOptions")
 
     def _add_windows_dropdown(self, parent_layout, label, actions_map):
         placeholder = f" {label} "
