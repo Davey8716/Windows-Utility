@@ -184,31 +184,32 @@ class AdvancedToolsPanel(QWidget):
         power_layout.setSpacing(10)
         parent_layout.addWidget(self.power_actions_row)
 
-        self._add_action_button(
+        self.sleep_action_btn = self._add_action_button(
             power_layout,
             "Sleep",
-            lambda: subprocess.Popen(
-                ["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"]
-            ),
+            self.run_sleep,
         )
-        self._add_action_button(
+        self.lock_pc_action_btn = self._add_action_button(
             power_layout,
             "Lock PC",
-            lambda: ctypes.windll.user32.LockWorkStation(),
+            self.run_lock_pc,
         )
-        self._add_action_button(
+        self.restart_action_btn = self._add_action_button(
             power_layout,
             "Restart",
-            lambda: subprocess.Popen(["shutdown", "/r", "/t", "0"]),
+            self.run_restart,
         )
-        self._add_action_button(
+        self.logout_action_btn = self._add_action_button(
+            power_layout,
+            "Log out",
+            self.run_logout,
+        )
+        self.shutdown_action_btn = self._add_action_button(
             power_layout,
             "Shutdown",
-            lambda: subprocess.Popen(["shutdown", "/s", "/t", "0"]),
+            self.run_shutdown,
         )
-        self.power_actions_row.setVisible(
-            bool(self.app.state.get("power_options_enabled", False))
-        )
+        self.refresh_power_actions_visibility()
 
         row = QWidget()
         row_layout = QHBoxLayout(row)
@@ -339,6 +340,41 @@ class AdvancedToolsPanel(QWidget):
 
         button.clicked.connect(flash_active)
         return button
+
+    def refresh_power_actions_visibility(self):
+        state = getattr(self.app, "state", {})
+        master_enabled = bool(state.get("power_options_enabled", False))
+
+        if hasattr(self, "power_actions_row"):
+            self.power_actions_row.setVisible(master_enabled)
+
+        button_states = {
+            "sleep_action_btn": bool(state.get("power_sleep_enabled", False)),
+            "lock_pc_action_btn": bool(state.get("power_lock_enabled", False)),
+            "restart_action_btn": bool(state.get("power_restart_enabled", False)),
+            "logout_action_btn": bool(state.get("power_logout_enabled", False)),
+            "shutdown_action_btn": bool(state.get("power_shutdown_enabled", False)),
+        }
+
+        for attr_name, is_visible in button_states.items():
+            button = getattr(self, attr_name, None)
+            if button:
+                button.setVisible(master_enabled and is_visible)
+
+    def run_sleep(self):
+        subprocess.Popen(["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"])
+
+    def run_lock_pc(self):
+        ctypes.windll.user32.LockWorkStation()
+
+    def run_restart(self):
+        subprocess.Popen(["shutdown", "/r", "/t", "0"])
+
+    def run_logout(self):
+        subprocess.Popen(["shutdown", "/l"])
+
+    def run_shutdown(self):
+        subprocess.Popen(["shutdown", "/s", "/t", "0"])
 
     def _system_utilities(self):
         return {

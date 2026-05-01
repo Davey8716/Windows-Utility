@@ -379,6 +379,14 @@ class UtilityControlApp(QWidget):
         power_layout.addWidget(sleep_btn)
         self.register_tooltip(sleep_btn, "Enables the sleep action shortcut.")
 
+        lock_btn = make_toggle_button("Lock PC", state.get("power_lock_enabled", False))
+        power_layout.addWidget(lock_btn)
+        self.register_tooltip(lock_btn, "Enables the lock PC action shortcut.")
+
+        restart_btn = make_toggle_button("Restart", state.get("power_restart_enabled", False))
+        power_layout.addWidget(restart_btn)
+        self.register_tooltip(restart_btn, "Enables the restart action shortcut.")
+
         logout_btn = make_toggle_button("Log out", state.get("power_logout_enabled", False))
         power_layout.addWidget(logout_btn)
         self.register_tooltip(logout_btn, "Enables the log out action shortcut.")
@@ -396,14 +404,32 @@ class UtilityControlApp(QWidget):
         def save_sleep(checked: bool):
             state["power_sleep_enabled"] = checked
             save_state(state)
+            if hasattr(self, "right_tools_panel"):
+                self.right_tools_panel.refresh_power_actions_visibility()
+
+        def save_lock(checked: bool):
+            state["power_lock_enabled"] = checked
+            save_state(state)
+            if hasattr(self, "right_tools_panel"):
+                self.right_tools_panel.refresh_power_actions_visibility()
+
+        def save_restart(checked: bool):
+            state["power_restart_enabled"] = checked
+            save_state(state)
+            if hasattr(self, "right_tools_panel"):
+                self.right_tools_panel.refresh_power_actions_visibility()
 
         def save_logout(checked: bool):
             state["power_logout_enabled"] = checked
             save_state(state)
+            if hasattr(self, "right_tools_panel"):
+                self.right_tools_panel.refresh_power_actions_visibility()
 
         def save_shutdown(checked: bool):
             state["power_shutdown_enabled"] = checked
             save_state(state)
+            if hasattr(self, "right_tools_panel"):
+                self.right_tools_panel.refresh_power_actions_visibility()
 
         def update_power_visibility():
             power_container.setVisible(power_btn.isChecked())
@@ -412,9 +438,13 @@ class UtilityControlApp(QWidget):
             state["power_options_enabled"] = checked
             save_state(state)
             update_power_visibility()
+            if hasattr(self, "right_tools_panel"):
+                self.right_tools_panel.refresh_power_actions_visibility()
 
         power_btn.toggled.connect(on_power_master_changed)
         sleep_btn.toggled.connect(save_sleep)
+        lock_btn.toggled.connect(save_lock)
+        restart_btn.toggled.connect(save_restart)
         logout_btn.toggled.connect(save_logout)
         shutdown_btn.toggled.connect(save_shutdown)
 
