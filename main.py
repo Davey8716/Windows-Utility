@@ -94,6 +94,7 @@ class UtilityControlApp(QWidget):
         self.saved_state = self.state
         self.tooltips_enabled = bool(self.state.get("tooltips_enabled", True))
         self._tooltip_managers = []
+        self._active_message_boxes = []
         self.advanced_settings_open = bool(self.state.get("advanced_panel_open", False))
         self.collapsible_sections = []
         self._quit_requested = False
@@ -731,6 +732,34 @@ class UtilityControlApp(QWidget):
     def get_default_screenshot_path(self) -> str:
         return self._build_master_output_path("desktop_screenshot.png")
 
+    def _show_timed_message(
+        self,
+        icon: QMessageBox.Icon,
+        title: str,
+        text: str,
+        timeout_ms: int = 10_000,
+    ) -> QMessageBox:
+        message_box = QMessageBox(self)
+        message_box.setIcon(icon)
+        message_box.setWindowTitle(title)
+        message_box.setText(f"{text}\n\nThis message will close in 10 seconds.")
+        message_box.setStandardButtons(QMessageBox.StandardButton.NoButton)
+        message_box.setModal(False)
+        self._active_message_boxes.append(message_box)
+        close_timer = QTimer(message_box)
+        close_timer.setSingleShot(True)
+
+        def cleanup_message_box():
+            if message_box in self._active_message_boxes:
+                self._active_message_boxes.remove(message_box)
+            message_box.deleteLater()
+
+        message_box.finished.connect(lambda _: cleanup_message_box())
+        close_timer.timeout.connect(message_box.accept)
+        message_box.show()
+        close_timer.start(timeout_ms)
+        return message_box
+
     def take_desktop_screenshot(self):
         try:
             img = ImageGrab.grab()
@@ -756,17 +785,17 @@ class UtilityControlApp(QWidget):
         count = self.actions.backup_pinned_shortcuts(backup_dir)
 
         if count > 0:
-            QMessageBox.information(
-                self,
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
                 "Backup Taskbar",
-                f"Backed up {count} taskbar shortcut(s) to:\n{backup_dir}"
+                f"Backed up {count} taskbar shortcut(s) to:\n{backup_dir}",
             )
             return
 
-        QMessageBox.warning(
-            self,
+        self._show_timed_message(
+            QMessageBox.Icon.Warning,
             "Backup Taskbar",
-            "No taskbar shortcuts were backed up."
+            "No taskbar shortcuts were backed up.",
         )
 
     def open_taskbar_backup_folder(self):
