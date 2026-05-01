@@ -761,6 +761,13 @@ class UtilityControlApp(QWidget):
         return message_box
 
     def take_desktop_screenshot(self):
+        self.showMinimized()
+        QTimer.singleShot(
+            250,
+            self._capture_desktop_screenshot,
+        )
+
+    def _capture_desktop_screenshot(self):
         try:
             img = ImageGrab.grab()
 
@@ -776,9 +783,6 @@ class UtilityControlApp(QWidget):
 
         except Exception as e:
             print("[SCREENSHOT] Error:", e)
-
-        finally:
-            pass
 
     def backup_taskbar_apps(self):
         backup_dir = self.get_default_taskbar_backup_dir()
