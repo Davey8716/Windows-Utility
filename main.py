@@ -20,6 +20,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QWidget,
     QGridLayout,
+    QComboBox,
     QLabel,
     QPushButton,
     QToolButton,
@@ -317,6 +318,26 @@ class UtilityControlApp(QWidget):
             install_green_flash(button)
             return button
 
+        def make_action_dropdown(placeholder: str, actions_map: dict[str, callable]):
+            combo = QComboBox()
+            combo.addItem(placeholder)
+            combo.addItems(actions_map.keys())
+            combo.setCurrentText(placeholder)
+            combo.setCursor(Qt.CursorShape.PointingHandCursor)
+            styles.apply_default_button_size(combo)
+            combo.setStyleSheet(styles.organizing_combo_style(14))
+
+            def run_action(text: str):
+                if text == placeholder:
+                    return
+                action = actions_map.get(text)
+                if action:
+                    action()
+                combo.setCurrentText(placeholder)
+
+            combo.currentTextChanged.connect(run_action)
+            return combo
+
         ui_section, ui_layout = make_section("User Interface", "user_interface")
         self.main_layout.addWidget(ui_section)
         self.left_sections.append(ui_section)
@@ -363,65 +384,27 @@ class UtilityControlApp(QWidget):
         ui_left_layout.addWidget(min_all_btn)
         self.register_tooltip(min_all_btn, "Controls whether the minimize-all utility is enabled.")
 
-        power_btn = make_toggle_button("Power Options", state.get("power_options_enabled", False))
-        ui_right_layout.addWidget(power_btn)
-        self.register_tooltip(power_btn, "Shows or hides the power action buttons.")
-
-        power_container = QWidget(ui_right_col)
-        power_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        power_layout = QVBoxLayout(power_container)
-        power_layout.setContentsMargins(0, 0, 0, 0)
-        power_layout.setSpacing(10)
-
-        ui_right_layout.addWidget(power_container)
-
-        sleep_btn = QPushButton("Sleep")
-        style_organizing_button(sleep_btn)
-        power_layout.addWidget(sleep_btn)
-        self.register_tooltip(sleep_btn, "Puts the PC to sleep.")
-
-        lock_btn = QPushButton("Lock PC")
-        style_organizing_button(lock_btn)
-        power_layout.addWidget(lock_btn)
-        self.register_tooltip(lock_btn, "Locks the PC immediately.")
-
-        restart_btn = QPushButton("Restart")
-        style_organizing_button(restart_btn)
-        power_layout.addWidget(restart_btn)
-        self.register_tooltip(restart_btn, "Restarts the PC immediately.")
-
-        logout_btn = QPushButton("Log out")
-        style_organizing_button(logout_btn)
-        power_layout.addWidget(logout_btn)
-        self.register_tooltip(logout_btn, "Logs out the current Windows user.")
-
-        shutdown_btn = QPushButton("Shutdown")
-        style_organizing_button(shutdown_btn)
-        power_layout.addWidget(shutdown_btn)
-        self.register_tooltip(shutdown_btn, "Shuts the PC down immediately.")
+        power_dropdown = make_action_dropdown(
+            " Power Options ",
+            {
+                "Sleep": self.right_tools_panel.run_sleep,
+                "Lock PC": self.right_tools_panel.run_lock_pc,
+                "Restart": self.right_tools_panel.run_restart,
+                "Log out": self.right_tools_panel.run_logout,
+                "Shutdown": self.right_tools_panel.run_shutdown,
+            },
+        )
+        ui_right_layout.addWidget(power_dropdown)
+        self.register_tooltip(
+            power_dropdown,
+            "Choose a power action such as sleep, lock, restart, log out, or shutdown.",
+        )
 
         def on_dark_mode_changed(checked: bool):
             state["theme_dark"] = checked
             save_state(state)
 
         dark_mode_btn.toggled.connect(on_dark_mode_changed)
-
-        def update_power_visibility():
-            power_container.setVisible(power_btn.isChecked())
-
-        def on_power_master_changed(checked: bool):
-            state["power_options_enabled"] = checked
-            save_state(state)
-            update_power_visibility()
-
-        power_btn.toggled.connect(on_power_master_changed)
-        sleep_btn.clicked.connect(self.right_tools_panel.run_sleep)
-        lock_btn.clicked.connect(self.right_tools_panel.run_lock_pc)
-        restart_btn.clicked.connect(self.right_tools_panel.run_restart)
-        logout_btn.clicked.connect(self.right_tools_panel.run_logout)
-        shutdown_btn.clicked.connect(self.right_tools_panel.run_shutdown)
-
-        update_power_visibility()
 
         def on_always_on_top_changed(checked):
             self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, checked)

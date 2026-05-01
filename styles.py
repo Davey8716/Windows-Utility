@@ -172,6 +172,29 @@ def combo_style(font_size: int) -> str:
         }}
     """
 
+def organizing_combo_style(font_size: int) -> str:
+    return f"""
+        QComboBox {{
+            {label_style(font_size=font_size, bold=True)}
+            background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
+            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+            border-radius: 3px;
+            padding: 4px 8px;
+        }}
+        QComboBox:hover {{
+            background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+        }}
+        QComboBox:on {{
+            background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
+        }}
+        QComboBox QAbstractItemView {{
+            background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
+            color: {qcolor_css(TEXT_LIGHT)};
+            selection-background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+        }}
+    """
+
 def apply_default_button_size(
     button,
     width: int = DEFAULT_BUTTON_WIDTH,
