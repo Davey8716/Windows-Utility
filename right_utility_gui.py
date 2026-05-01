@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidgetItem,
     QListWidget,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QTextEdit,
@@ -218,12 +219,21 @@ class AdvancedToolsPanel(QWidget):
         drive_parent = self.display_space_section.content_layout
 
         btn_this_pc = QPushButton("Open This PC")
+        self.btn_this_pc = btn_this_pc
         styles.apply_default_button_size(btn_this_pc)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
-        btn_this_pc.clicked.connect(lambda: self._minimize_and_run(self._open_this_pc))
-        self.app.register_tooltip(btn_this_pc, "Opens This PC in File Explorer.")
+        btn_this_pc.clicked.connect(self.toggle_this_pc)
+        self.app.register_tooltip(
+            btn_this_pc,
+            "Opens This PC in File Explorer, or closes it if already open.",
+        )
         drive_parent.addWidget(btn_this_pc)
+
+        self.this_pc_button_timer = QTimer(self)
+        self.this_pc_button_timer.timeout.connect(self._refresh_this_pc_button)
+        self.this_pc_button_timer.start(1000)
+        self._refresh_this_pc_button()
 
         self.drive_space_list = QListWidget()
         self.drive_space_list.setFixedHeight(120)
@@ -283,6 +293,28 @@ class AdvancedToolsPanel(QWidget):
         self.drive_refresh_timer = QTimer(self)
         self.drive_refresh_timer.timeout.connect(refresh_drive_display)
         self.drive_refresh_timer.start(10_000)
+
+    def _refresh_this_pc_button(self):
+        is_open = self.app.actions.is_this_pc_open()
+        if hasattr(self, "btn_this_pc"):
+            self.btn_this_pc.setText("Close This PC" if is_open else "Open This PC")
+
+    def toggle_this_pc(self):
+        if self.app.actions.is_this_pc_open():
+            closed = self.app.actions.close_this_pc()
+            self._refresh_this_pc_button()
+            if closed:
+                return
+            self.app._show_timed_message(
+                QMessageBox.Icon.Warning,
+                "This PC",
+                "Could not close This PC.",
+            )
+            return
+
+        self._minimize_and_run(self._open_this_pc)
+        self._refresh_this_pc_button()
+        QTimer.singleShot(500, self._refresh_this_pc_button)
 
     def _add_action_button(self, parent_layout, label, action):
         button = QPushButton(label)

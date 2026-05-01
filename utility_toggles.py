@@ -285,6 +285,21 @@ class UtilityActionsManager:
 
         return closed_any
 
+    def is_this_pc_open(self) -> bool:
+        return bool(find_explorer_windows_by_title("This PC"))
+
+    def close_this_pc(self) -> bool:
+        handles = find_explorer_windows_by_title("This PC")
+        closed_any = False
+        for hwnd in handles:
+            try:
+                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                closed_any = True
+            except Exception as e:
+                print(f"[DEBUG] close_this_pc failed for hwnd {hwnd}: {e}")
+
+        return closed_any
+
     def capture_desktop_layout(self, out_path: str | None = None) -> int:
         if not out_path and self.app:
             out_path = getattr(
@@ -450,15 +465,23 @@ def find_explorer_windows_for_folder(path: str) -> list[int]:
     if not folder_name:
         return []
 
+    return find_explorer_windows_by_title(folder_name)
+
+
+def find_explorer_windows_by_title(title: str) -> list[int]:
+    normalized_title = title.strip()
+    if not normalized_title:
+        return []
+
     handles: list[int] = []
 
     def enum_handler(hwnd, _):
-        if _is_explorer_folder_window(hwnd, folder_name):
+        if _is_explorer_folder_window(hwnd, normalized_title):
             handles.append(hwnd)
 
     try:
         win32gui.EnumWindows(enum_handler, None)
     except Exception as e:
-        print(f"[DEBUG] find_explorer_windows_for_folder failed: {e}")
+        print(f"[DEBUG] find_explorer_windows_by_title failed: {e}")
 
     return handles
