@@ -14,6 +14,9 @@ EXPECTED_PERSISTED_KEYS = {
     "power_options_enabled",
     "mmb_activation_enabled",
     "title_bar_dock_enabled",
+    "usb_idle_enabled",
+    "usb_download_enabled",
+    "usb_plug_enabled",
     "master_backup_output_path",
     "master_toggle_left",
     "master_toggle_right",
@@ -54,6 +57,9 @@ class StateManagerTests(unittest.TestCase):
         payload = {
             "feature": True,
             "theme_dark": False,
+            "usb_idle_enabled": False,
+            "usb_download_enabled": False,
+            "usb_plug_enabled": False,
             "master_backup_output_path": "C:\\Backups",
             "left_section_states": {"screen_mover": False},
         }
@@ -65,6 +71,9 @@ class StateManagerTests(unittest.TestCase):
 
         self.assertEqual(set(saved), EXPECTED_PERSISTED_KEYS)
         self.assertFalse(saved["theme_dark"])
+        self.assertFalse(saved["usb_idle_enabled"])
+        self.assertFalse(saved["usb_download_enabled"])
+        self.assertFalse(saved["usb_plug_enabled"])
         self.assertEqual(saved["master_backup_output_path"], "C:\\Backups")
         self.assertFalse(saved["left_section_states"]["screen_mover"])
         self.assertNotIn("feature", saved)
