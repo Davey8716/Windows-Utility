@@ -819,12 +819,19 @@ class UtilityControlApp(QWidget):
         out_path = self.get_default_desktop_layout_path()
         count = self.actions.capture_desktop_layout(out_path)
 
-        if count <= 0:
-            QMessageBox.warning(
-                self,
+        if count > 0:
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
                 "Desktop Layout",
-                f"Could not capture desktop layout to:\n{out_path}"
+                f"Captured desktop layout with {count} icon position(s) saved to:\n{out_path}",
             )
+            return
+
+        self._show_timed_message(
+            QMessageBox.Icon.Warning,
+            "Desktop Layout",
+            f"Could not capture desktop layout to:\n{out_path}",
+        )
 
     def restore_desktop_layout(self):
         layout_path = self.get_default_desktop_layout_path()
