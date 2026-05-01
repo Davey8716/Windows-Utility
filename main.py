@@ -549,31 +549,45 @@ class UtilityControlApp(QWidget):
         folder_btn.clicked.connect(on_create_folder_clicked)
         folder_input.textChanged.connect(on_folder_name_changed)
 
+        taskbar_row = QWidget()
+        taskbar_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        taskbar_row_layout = QHBoxLayout(taskbar_row)
+        taskbar_row_layout.setContentsMargins(0, 0, 0, 0)
+        taskbar_row_layout.setSpacing(8)
+        org_layout.addWidget(taskbar_row)
+
         backup_taskbar_btn = QPushButton("Backup Taskbar")
         style_organizing_button(backup_taskbar_btn)
-        org_layout.addWidget(backup_taskbar_btn)
+        taskbar_row_layout.addWidget(backup_taskbar_btn)
         backup_taskbar_btn.clicked.connect(self.backup_taskbar_apps)
         self.register_tooltip(backup_taskbar_btn, "Backs up pinned taskbar shortcuts into the TaskBarApps folder.")
 
         open_backup_btn = QPushButton("Open Backup Folder")
         style_organizing_button(open_backup_btn)
-        org_layout.addWidget(open_backup_btn)
+        taskbar_row_layout.addWidget(open_backup_btn)
         self.open_backup_btn = open_backup_btn
         open_backup_btn.clicked.connect(self.open_taskbar_backup_folder)
         self.register_tooltip(
             open_backup_btn,
             "Opens the TaskBarApps backup folder inside the master backup path, or closes it if already open.",
         )
-        
+
+        layout_row = QWidget()
+        layout_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        layout_row_layout = QHBoxLayout(layout_row)
+        layout_row_layout.setContentsMargins(0, 0, 0, 0)
+        layout_row_layout.setSpacing(8)
+        org_layout.addWidget(layout_row)
+
         capture_layout_btn = QPushButton("Capture Desktop Layout")
         style_organizing_button(capture_layout_btn)
-        org_layout.addWidget(capture_layout_btn)
+        layout_row_layout.addWidget(capture_layout_btn)
         capture_layout_btn.clicked.connect(self.capture_desktop_layout)
         self.register_tooltip(capture_layout_btn, "Saves the current desktop icon layout to the master backup location.")
 
         restore_layout_btn = QPushButton("Restore Desktop Layout")
         style_organizing_button(restore_layout_btn)
-        org_layout.addWidget(restore_layout_btn)
+        layout_row_layout.addWidget(restore_layout_btn)
         restore_layout_btn.clicked.connect(self.restore_desktop_layout)
         self.register_tooltip(restore_layout_btn, "Restores the saved desktop icon layout from the master backup location.")
 
