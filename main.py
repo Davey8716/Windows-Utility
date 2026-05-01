@@ -580,7 +580,7 @@ class UtilityControlApp(QWidget):
         brave_export_btn = QPushButton("Export Bookmarks")
         style_organizing_button(brave_export_btn)
         org_layout.addWidget(brave_export_btn)
-        brave_export_btn.clicked.connect(self.right_tools_panel._run_brave_export)
+        brave_export_btn.clicked.connect(self.export_bookmarks)
         self.register_tooltip(
             brave_export_btn,
             "Exports Brave bookmarks into the Bookmarks folder inside the master backup path.",
@@ -904,6 +904,23 @@ class UtilityControlApp(QWidget):
             f"Could not restore desktop layout from:\n{layout_path}",
         )
 
+    def export_bookmarks(self):
+        out_path = self.right_tools_panel._run_brave_export()
+        if isinstance(out_path, str) and out_path:
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
+                "Export Bookmarks",
+                f"Bookmarks exported to:\n{out_path}",
+            )
+            return
+
+        if out_path is False:
+            self._show_timed_message(
+                QMessageBox.Icon.Warning,
+                "Export Bookmarks",
+                "Could not export bookmarks.",
+            )
+
     def _create_desktop_folder(self, folder_input: QLineEdit):
         folder_name = folder_input.text().strip()
         if not folder_name:
@@ -914,10 +931,10 @@ class UtilityControlApp(QWidget):
 
         try:
             if new_path.exists():
-                QMessageBox.warning(
-                    self,
-                    "Error",
-                    "A folder with that name already exists on Desktop."
+                self._show_timed_message(
+                    QMessageBox.Icon.Warning,
+                    "Folder to Desktop",
+                    "A folder with that name already exists on Desktop.",
                 )
                 return
 
@@ -925,12 +942,17 @@ class UtilityControlApp(QWidget):
             folder_input.clear()
             self.state["folder_to_desktop_name"] = ""
             save_state(self.state)
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
+                "Folder to Desktop",
+                f"Created desktop folder:\n{new_path}",
+            )
 
         except Exception as e:
-            QMessageBox.warning(
-                self,
-                "Error",
-                f"Could not create folder:\n{e}"
+            self._show_timed_message(
+                QMessageBox.Icon.Warning,
+                "Folder to Desktop",
+                f"Could not create folder:\n{e}",
             )
 
     def _get_arrow_colors(self):

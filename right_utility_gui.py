@@ -588,11 +588,11 @@ class AdvancedToolsPanel(QWidget):
             "HTML Files (*.html)",
         )
         if not out_path:
-            return False
+            return None
 
         if BraveBookmarksExporter().export_to_file(out_path):
             save_state(self.app.state)
-            return True
+            return out_path
 
         return False
 
