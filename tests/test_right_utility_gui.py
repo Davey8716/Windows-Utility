@@ -24,58 +24,6 @@ class RightUtilityGuiTests(unittest.TestCase):
         panel.showMinimized = Mock()
         return panel
 
-    def test_refresh_power_actions_visibility_uses_saved_state_flags(self):
-        panel = self.make_panel()
-        panel.app.state = {
-            "power_options_enabled": True,
-            "power_sleep_enabled": True,
-            "power_lock_enabled": False,
-            "power_restart_enabled": True,
-            "power_logout_enabled": False,
-            "power_shutdown_enabled": True,
-        }
-        panel.power_actions_row = Mock()
-        panel.sleep_action_btn = Mock()
-        panel.lock_pc_action_btn = Mock()
-        panel.restart_action_btn = Mock()
-        panel.logout_action_btn = Mock()
-        panel.shutdown_action_btn = Mock()
-
-        panel.refresh_power_actions_visibility()
-
-        panel.power_actions_row.setVisible.assert_called_once_with(True)
-        panel.sleep_action_btn.setVisible.assert_called_once_with(True)
-        panel.lock_pc_action_btn.setVisible.assert_called_once_with(False)
-        panel.restart_action_btn.setVisible.assert_called_once_with(True)
-        panel.logout_action_btn.setVisible.assert_called_once_with(False)
-        panel.shutdown_action_btn.setVisible.assert_called_once_with(True)
-
-    def test_refresh_power_actions_visibility_hides_everything_when_master_disabled(self):
-        panel = self.make_panel()
-        panel.app.state = {
-            "power_options_enabled": False,
-            "power_sleep_enabled": True,
-            "power_lock_enabled": True,
-            "power_restart_enabled": True,
-            "power_logout_enabled": True,
-            "power_shutdown_enabled": True,
-        }
-        panel.power_actions_row = Mock()
-        panel.sleep_action_btn = Mock()
-        panel.lock_pc_action_btn = Mock()
-        panel.restart_action_btn = Mock()
-        panel.logout_action_btn = Mock()
-        panel.shutdown_action_btn = Mock()
-
-        panel.refresh_power_actions_visibility()
-
-        panel.power_actions_row.setVisible.assert_called_once_with(False)
-        panel.sleep_action_btn.setVisible.assert_called_once_with(False)
-        panel.lock_pc_action_btn.setVisible.assert_called_once_with(False)
-        panel.restart_action_btn.setVisible.assert_called_once_with(False)
-        panel.logout_action_btn.setVisible.assert_called_once_with(False)
-        panel.shutdown_action_btn.setVisible.assert_called_once_with(False)
-
     def test_system_utilities_actions_use_expected_launchers(self):
         panel = self.make_panel()
         with patch.object(panel, "open_system_settings") as open_settings, \
@@ -182,6 +130,20 @@ class RightUtilityGuiTests(unittest.TestCase):
         popen.assert_called_once_with(
             ["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"]
         )
+
+    def test_run_lock_pc_calls_lock_workstation(self):
+        panel = self.make_panel()
+        with patch.object(right_utility_gui.ctypes.windll.user32, "LockWorkStation") as lock_workstation:
+            panel.run_lock_pc()
+
+        lock_workstation.assert_called_once_with()
+
+    def test_run_restart_launches_expected_command(self):
+        panel = self.make_panel()
+        with patch.object(right_utility_gui.subprocess, "Popen") as popen:
+            panel.run_restart()
+
+        popen.assert_called_once_with(["shutdown", "/r", "/t", "0"])
 
     def test_run_logout_launches_expected_command(self):
         panel = self.make_panel()

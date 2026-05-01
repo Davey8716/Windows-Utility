@@ -309,7 +309,7 @@ class UtilityControlApp(QWidget):
             return button
 
         def style_organizing_button(button: QPushButton):
-            button.setCheckable(True)
+            button.setCheckable(False)
             button.setAutoExclusive(False)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             styles.apply_default_button_size(button)
@@ -375,61 +375,36 @@ class UtilityControlApp(QWidget):
 
         ui_right_layout.addWidget(power_container)
 
-        sleep_btn = make_toggle_button("Sleep", state.get("power_sleep_enabled", False))
+        sleep_btn = QPushButton("Sleep")
+        style_organizing_button(sleep_btn)
         power_layout.addWidget(sleep_btn)
-        self.register_tooltip(sleep_btn, "Enables the sleep action shortcut.")
+        self.register_tooltip(sleep_btn, "Puts the PC to sleep.")
 
-        lock_btn = make_toggle_button("Lock PC", state.get("power_lock_enabled", False))
+        lock_btn = QPushButton("Lock PC")
+        style_organizing_button(lock_btn)
         power_layout.addWidget(lock_btn)
-        self.register_tooltip(lock_btn, "Enables the lock PC action shortcut.")
+        self.register_tooltip(lock_btn, "Locks the PC immediately.")
 
-        restart_btn = make_toggle_button("Restart", state.get("power_restart_enabled", False))
+        restart_btn = QPushButton("Restart")
+        style_organizing_button(restart_btn)
         power_layout.addWidget(restart_btn)
-        self.register_tooltip(restart_btn, "Enables the restart action shortcut.")
+        self.register_tooltip(restart_btn, "Restarts the PC immediately.")
 
-        logout_btn = make_toggle_button("Log out", state.get("power_logout_enabled", False))
+        logout_btn = QPushButton("Log out")
+        style_organizing_button(logout_btn)
         power_layout.addWidget(logout_btn)
-        self.register_tooltip(logout_btn, "Enables the log out action shortcut.")
+        self.register_tooltip(logout_btn, "Logs out the current Windows user.")
 
-        shutdown_btn = make_toggle_button("Shutdown", state.get("power_shutdown_enabled", False))
+        shutdown_btn = QPushButton("Shutdown")
+        style_organizing_button(shutdown_btn)
         power_layout.addWidget(shutdown_btn)
-        self.register_tooltip(shutdown_btn, "Enables the shutdown action shortcut.")
+        self.register_tooltip(shutdown_btn, "Shuts the PC down immediately.")
 
         def on_dark_mode_changed(checked: bool):
             state["theme_dark"] = checked
             save_state(state)
 
         dark_mode_btn.toggled.connect(on_dark_mode_changed)
-
-        def save_sleep(checked: bool):
-            state["power_sleep_enabled"] = checked
-            save_state(state)
-            if hasattr(self, "right_tools_panel"):
-                self.right_tools_panel.refresh_power_actions_visibility()
-
-        def save_lock(checked: bool):
-            state["power_lock_enabled"] = checked
-            save_state(state)
-            if hasattr(self, "right_tools_panel"):
-                self.right_tools_panel.refresh_power_actions_visibility()
-
-        def save_restart(checked: bool):
-            state["power_restart_enabled"] = checked
-            save_state(state)
-            if hasattr(self, "right_tools_panel"):
-                self.right_tools_panel.refresh_power_actions_visibility()
-
-        def save_logout(checked: bool):
-            state["power_logout_enabled"] = checked
-            save_state(state)
-            if hasattr(self, "right_tools_panel"):
-                self.right_tools_panel.refresh_power_actions_visibility()
-
-        def save_shutdown(checked: bool):
-            state["power_shutdown_enabled"] = checked
-            save_state(state)
-            if hasattr(self, "right_tools_panel"):
-                self.right_tools_panel.refresh_power_actions_visibility()
 
         def update_power_visibility():
             power_container.setVisible(power_btn.isChecked())
@@ -438,15 +413,13 @@ class UtilityControlApp(QWidget):
             state["power_options_enabled"] = checked
             save_state(state)
             update_power_visibility()
-            if hasattr(self, "right_tools_panel"):
-                self.right_tools_panel.refresh_power_actions_visibility()
 
         power_btn.toggled.connect(on_power_master_changed)
-        sleep_btn.toggled.connect(save_sleep)
-        lock_btn.toggled.connect(save_lock)
-        restart_btn.toggled.connect(save_restart)
-        logout_btn.toggled.connect(save_logout)
-        shutdown_btn.toggled.connect(save_shutdown)
+        sleep_btn.clicked.connect(self.right_tools_panel.run_sleep)
+        lock_btn.clicked.connect(self.right_tools_panel.run_lock_pc)
+        restart_btn.clicked.connect(self.right_tools_panel.run_restart)
+        logout_btn.clicked.connect(self.right_tools_panel.run_logout)
+        shutdown_btn.clicked.connect(self.right_tools_panel.run_shutdown)
 
         update_power_visibility()
 
