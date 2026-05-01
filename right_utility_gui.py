@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 import styles
-from collapsible_section import CollapsibleSection
+from collapsible_section import CollapsibleSection, SECTION_FRAME_MAX_WIDTH
 from state_manager import save_state
 from universal_bookmarks_export import BraveBookmarksExporter
 from PySide6.QtCore import QPoint, Qt, QTimer
@@ -70,14 +70,21 @@ class AdvancedToolsPanel(QWidget):
         self.side_layout.setContentsMargins(10, 5, 10, 5)
         self.side_layout.setSpacing(6)
 
-        self.advanced_title = QLabel("Advanced Tools")
-        self.advanced_title.setStyleSheet(styles.label_style(font_size=20))
-        self.advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.side_layout.addWidget(self.advanced_title)
-
         title_row = QWidget()
+        title_row.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
         title_row_layout = QHBoxLayout(title_row)
         title_row_layout.setContentsMargins(0, 0, 0, 0)
+
+        title_spacer = QWidget(title_row)
+        title_spacer.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
+
+        self.advanced_title = QLabel("Advanced Tools", title_row)
+        self.advanced_title.setStyleSheet(styles.label_style(font_size=20))
+        self.advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        title_row_layout.addWidget(title_spacer)
+        title_row_layout.addStretch()
+        title_row_layout.addWidget(self.advanced_title)
         title_row_layout.addStretch()
 
         self.master_collapse_btn_right = QToolButton()

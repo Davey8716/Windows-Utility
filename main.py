@@ -8,6 +8,7 @@ from PIL import ImageGrab
 import win32gui
 import win32con
 
+from collapsible_section import SECTION_FRAME_MAX_WIDTH
 from right_utility_gui import AdvancedToolsPanel as RightAdvancedToolsPanel
 from screen_mover import SCREEN_MOVER
 from tray_toggles import TrayIconManager
@@ -177,6 +178,7 @@ class UtilityControlApp(QWidget):
         state = self.state
         
         header = QWidget(self.main_frame)
+        header.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
         header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 10, 10, 10)
