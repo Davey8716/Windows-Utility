@@ -122,6 +122,13 @@ class RightUtilityGuiTests(unittest.TestCase):
         panel.showMinimized.assert_called_once_with()
         action.assert_called_once_with()
 
+    def test_open_this_pc_launches_expected_explorer_target(self):
+        panel = self.make_panel()
+        with patch.object(right_utility_gui.subprocess, "Popen") as popen:
+            panel._open_this_pc()
+
+        popen.assert_called_once_with(["explorer", "shell:MyComputerFolder"])
+
     def test_run_sleep_launches_expected_command(self):
         panel = self.make_panel()
         with patch.object(right_utility_gui.subprocess, "Popen") as popen:

@@ -221,7 +221,7 @@ class AdvancedToolsPanel(QWidget):
         styles.apply_default_button_size(btn_this_pc)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
-        btn_this_pc.clicked.connect(self._open_this_pc)
+        btn_this_pc.clicked.connect(lambda: self._minimize_and_run(self._open_this_pc))
         self.app.register_tooltip(btn_this_pc, "Opens This PC in File Explorer.")
         drive_parent.addWidget(btn_this_pc)
 
