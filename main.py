@@ -28,7 +28,8 @@ from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QFileDialog,
-    QMessageBox
+    QMessageBox,
+    QSizePolicy
 )
 
 MUTEX_NAME = "Windows Resurface"
@@ -209,11 +210,16 @@ class UtilityControlApp(QWidget):
         state = self.state
         
         header = QWidget(self.main_frame)
+        header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 10, 10, 10)
 
         title = QLabel("Windows Resurface", header)
         title.setStyleSheet(styles.label_style(font_size=20))
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        header_spacer = QWidget(header)
+        header_spacer.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
 
         master_btn = QToolButton(header)
         master_btn.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
@@ -223,11 +229,13 @@ class UtilityControlApp(QWidget):
             styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
         )
 
+        header_layout.addWidget(header_spacer)
+        header_layout.addStretch()
         header_layout.addWidget(title)
         header_layout.addStretch()
         header_layout.addWidget(master_btn)
 
-        self.main_layout.addWidget(header,alignment= Qt.AlignCenter)
+        self.main_layout.addWidget(header)
         
         self.left_sections = []
         self.master_toggle_left_state = bool(state.get("master_toggle_left", True))
@@ -235,11 +243,13 @@ class UtilityControlApp(QWidget):
         def make_section(title_text, section_id: str):
             section = QWidget(self.main_frame)
             section.section_id = section_id
+            section.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             layout = QVBoxLayout(section)
             layout.setContentsMargins(10, 5, 10, 5)
             layout.setSpacing(4)
 
             sec_header = QWidget(section)
+            sec_header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             sec_header_layout = QHBoxLayout(sec_header)
             sec_header_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -261,6 +271,7 @@ class UtilityControlApp(QWidget):
             frame = QFrame(section)
             section.frame = frame
             frame.setObjectName("CollapsibleSectionFrame")
+            frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             frame.setStyleSheet(styles.collapsible_section_frame_style())
             frame_layout = QVBoxLayout(frame)
             frame_layout.setContentsMargins(2, 2, 2, 2)
@@ -268,6 +279,7 @@ class UtilityControlApp(QWidget):
 
             section.content = QWidget(frame)
             content = section.content
+            content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
             content.setVisible(initial_open)
             frame.setVisible(initial_open)
@@ -335,23 +347,28 @@ class UtilityControlApp(QWidget):
         self.left_sections.append(ui_section)
 
         ui_rows = QWidget(ui_section.content)
+        ui_rows.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         ui_rows_layout = QHBoxLayout(ui_rows)
         ui_rows_layout.setContentsMargins(0, 0, 0, 0)
         ui_rows_layout.setSpacing(10)
         ui_layout.addWidget(ui_rows)
 
         ui_left_col = QWidget(ui_rows)
+        ui_left_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         ui_left_layout = QVBoxLayout(ui_left_col)
         ui_left_layout.setContentsMargins(0, 0, 0, 0)
         ui_left_layout.setSpacing(10)
 
         ui_right_col = QWidget(ui_rows)
+        ui_right_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         ui_right_layout = QVBoxLayout(ui_right_col)
         ui_right_layout.setContentsMargins(0, 0, 0, 0)
         ui_right_layout.setSpacing(10)
 
         ui_rows_layout.addWidget(ui_left_col)
         ui_rows_layout.addWidget(ui_right_col)
+        ui_rows_layout.setStretch(0, 1)
+        ui_rows_layout.setStretch(1, 1)
         ui_rows_layout.setAlignment(ui_left_col, Qt.AlignmentFlag.AlignTop)
         ui_rows_layout.setAlignment(ui_right_col, Qt.AlignmentFlag.AlignTop)
 
@@ -376,6 +393,7 @@ class UtilityControlApp(QWidget):
         self.register_tooltip(power_btn, "Shows or hides the power action buttons.")
 
         power_container = QWidget(ui_right_col)
+        power_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         power_layout = QVBoxLayout(power_container)
         power_layout.setContentsMargins(0, 0, 0, 0)
         power_layout.setSpacing(10)
@@ -456,6 +474,7 @@ class UtilityControlApp(QWidget):
         screen_section, screen_layout = make_section("Screen Mover", "screen_mover")
 
         screen_row = QWidget(screen_section.content)
+        screen_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         screen_row_layout = QHBoxLayout(screen_row)
         screen_row_layout.setContentsMargins(0, 0, 0, 0)
         screen_row_layout.setSpacing(10)
@@ -478,6 +497,7 @@ class UtilityControlApp(QWidget):
         mmb_btn = make_toggle_button("Middle Mouse to Move", state.get("mmb_activation_enabled", True))
         screen_row_layout.addWidget(mmb_btn)
         self.register_tooltip(mmb_btn, "Lets you move a window by middle-clicking the tracked title-bar dock.")
+        screen_row_layout.addStretch()
 
         def on_mmb_changed(checked: bool):
             state["mmb_activation_enabled"] = checked
@@ -490,7 +510,7 @@ class UtilityControlApp(QWidget):
 
         usb_section, usb_layout = make_section("Drive Reminder Options", "drive_reminder_options")
 
-        idle_btn = make_toggle_button("Idle-plugged Reminder", state.get("usb_idle_enabled", True))
+        idle_btn = make_toggle_button("Idle Plugged Reminder", state.get("usb_idle_enabled", True))
         usb_layout.addWidget(idle_btn)
         self.register_tooltip(idle_btn, "Controls the idle plugged-in drive reminder.")
 
@@ -500,7 +520,7 @@ class UtilityControlApp(QWidget):
 
         idle_btn.toggled.connect(on_idle_changed)
 
-        download_btn = make_toggle_button("Download-finished Reminder", state.get("usb_download_enabled", True))
+        download_btn = make_toggle_button("Download Done Reminder", state.get("usb_download_enabled", True))
         usb_layout.addWidget(download_btn)
         self.register_tooltip(download_btn, "Controls the finished-download drive reminder.")
 
@@ -533,6 +553,7 @@ class UtilityControlApp(QWidget):
         self.register_tooltip(screenshot_btn, "Captures the desktop and saves it to the master backup folder.")
 
         folder_row = QWidget()
+        folder_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         folder_row_layout = QHBoxLayout(folder_row)
         folder_row_layout.setContentsMargins(0, 0, 0, 0)
         folder_row_layout.setSpacing(8)
@@ -589,6 +610,7 @@ class UtilityControlApp(QWidget):
         self.register_tooltip(restore_layout_btn, "Restores the saved desktop icon layout from the master backup location.")
 
         master_backup_row = QWidget()
+        master_backup_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         master_backup_row_layout = QHBoxLayout(master_backup_row)
         master_backup_row_layout.setContentsMargins(0, 0, 0, 0)
         master_backup_row_layout.setSpacing(8)

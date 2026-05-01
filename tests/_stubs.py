@@ -29,6 +29,12 @@ class _DummyCursorShape:
     PointingHandCursor = 0
 
 
+class _DummySizePolicy:
+    class Policy:
+        Expanding = 0
+        Fixed = 1
+
+
 class _DummyArrowType:
     RightArrow = 0
     LeftArrow = 1
@@ -177,6 +183,7 @@ def install_dependency_stubs():
         qtwidgets.QLineEdit = _BaseWidget
         qtwidgets.QApplication = _BaseWidget
         qtwidgets.QFrame = _BaseWidget
+        qtwidgets.QSizePolicy = _DummySizePolicy
         qtwidgets.QFileDialog = _DummyFileDialog
         qtwidgets.QMessageBox = _DummyMessageBox
         qtwidgets.QSystemTrayIcon = _DummySystemTrayIcon
