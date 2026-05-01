@@ -614,7 +614,12 @@ class AdvancedToolsPanel(QWidget):
         return False
 
     def toggle_all_right_sections(self):
-        new_state = not self.app.master_toggle_right_state
+        any_open = any(
+            section.is_open
+            for section in self.app.collapsible_sections
+            if getattr(section, "parent", lambda: None)() is self.side_frame
+        )
+        new_state = not any_open
         self.app.master_toggle_right_state = new_state
         self.app.state["master_toggle_right"] = new_state
         self.master_collapse_btn_right.setArrowType(

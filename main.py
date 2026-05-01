@@ -197,6 +197,7 @@ class UtilityControlApp(QWidget):
         master_btn.setStyleSheet(
             styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
         )
+        self.master_collapse_btn_left = master_btn
 
         header_layout.addWidget(header_spacer)
         header_layout.addStretch()
@@ -234,6 +235,7 @@ class UtilityControlApp(QWidget):
             toggle.setStyleSheet(
                 styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK, font_size=16)
             )
+            section.toggle_btn = toggle
 
             sec_header_layout.addWidget(sec_title)
             sec_header_layout.addStretch()
@@ -633,6 +635,10 @@ class UtilityControlApp(QWidget):
                 section.content.setVisible(new_state)
                 if hasattr(section, "frame"):
                     section.frame.setVisible(new_state)
+                if hasattr(section, "toggle_btn"):
+                    section.toggle_btn.setArrowType(
+                        Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
+                    )
 
             self.save_all_settings()
             
@@ -871,6 +877,7 @@ class UtilityControlApp(QWidget):
         if left_states:
             self.state["left_section_states"] = left_states
             self.state["master_toggle_left"] = all(left_states.values())
+            self.master_toggle_left_state = self.state["master_toggle_left"]
 
         right_states = {}
         for section in self.collapsible_sections:
@@ -882,6 +889,21 @@ class UtilityControlApp(QWidget):
         if right_states:
             self.state["right_section_states"] = right_states
             self.state["master_toggle_right"] = all(right_states.values())
+            self.master_toggle_right_state = self.state["master_toggle_right"]
+
+        self._refresh_master_toggle_buttons()
+
+    def _refresh_master_toggle_buttons(self):
+        if hasattr(self, "master_collapse_btn_left"):
+            self.master_collapse_btn_left.setArrowType(
+                Qt.ArrowType.DownArrow if self.state.get("master_toggle_left", True) else Qt.ArrowType.UpArrow
+            )
+
+        right_button = getattr(self, "right_tools_panel", None)
+        if right_button and hasattr(right_button, "master_collapse_btn_right"):
+            right_button.master_collapse_btn_right.setArrowType(
+                Qt.ArrowType.DownArrow if self.state.get("master_toggle_right", False) else Qt.ArrowType.UpArrow
+            )
 
     def save_all_settings(self):
         self.save_section_states()
