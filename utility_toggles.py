@@ -51,7 +51,15 @@ class UtilityActionsManager:
             gateway (str) if opened, else None
         """
         try:
-            result = subprocess.check_output("ipconfig", text=True, errors="ignore")
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0
+            result = subprocess.check_output(
+                "ipconfig",
+                text=True,
+                errors="ignore",
+                startupinfo=startupinfo,
+            )
 
             gateway = None
             for line in result.splitlines():

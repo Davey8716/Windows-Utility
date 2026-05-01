@@ -399,6 +399,11 @@ class AdvancedToolsPanel(QWidget):
     def _shell_open(self, target: str):
         ctypes.windll.shell32.ShellExecuteW(None, "open", target, None, None, 1)
 
+    def _shell_execute(self, target: str, parameters: str | None = None):
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "open", target, parameters, None, 1
+        )
+
     def _minimize_and_run(self, action):
         self.app.showMinimized()
         self.showMinimized()
@@ -406,11 +411,17 @@ class AdvancedToolsPanel(QWidget):
 
     def _network_utilities(self):
         return {
-            "Network Connections": lambda: subprocess.Popen(["ncpa.cpl"]),
-            "Firewall": lambda: subprocess.Popen(["wf.msc"]),
+            "Network Connections": self.open_network_connections,
+            "Firewall": self.open_firewall,
             "IP Configuration": lambda: subprocess.Popen(["cmd", "/k", "ipconfig"]),
             "Router Login": self.app.actions.open_router_page,
         }
+
+    def open_network_connections(self):
+        self._shell_execute("control.exe", "ncpa.cpl")
+
+    def open_firewall(self):
+        self._shell_open("wf.msc")
 
     def _startup_power_utilities(self):
         return {
