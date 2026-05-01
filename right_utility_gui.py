@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QWidget,
+    QSizePolicy,
 )
 
 
@@ -73,8 +74,9 @@ class AdvancedToolsPanel(QWidget):
 
         title_row = QWidget()
         title_row.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
+        title_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         title_row_layout = QHBoxLayout(title_row)
-        title_row_layout.setContentsMargins(0, 0, 0, 0)
+        title_row_layout.setContentsMargins(10, 10, 10, 10)
 
         title_spacer = QWidget(title_row)
         title_spacer.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
