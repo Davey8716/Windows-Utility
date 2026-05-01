@@ -13,6 +13,7 @@ class _DummyTrayActivationReason:
 
 class _DummyWindowType:
     WindowStaysOnTopHint = 1
+    WindowMaximizeButtonHint = 2
 
 
 class _DummyScrollBarPolicy:

@@ -89,6 +89,7 @@ class UtilityControlApp(QWidget):
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
         self.WINDOW_HEIGHT = 875
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
         
         self.state = load_state()
         self.saved_state = self.state
@@ -109,6 +110,7 @@ class UtilityControlApp(QWidget):
         
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.show()
+        self._apply_fixed_window_style()
 
         ctypes.windll.user32.SetWindowPos(
             int(self.winId()),
@@ -116,6 +118,42 @@ class UtilityControlApp(QWidget):
             0, 0, 0, 0,
             0x0003
         )
+
+    def _apply_fixed_window_style(self):
+        hwnd = int(self.winId())
+        if not hwnd:
+            return
+
+        user32 = ctypes.windll.user32
+        get_window_long = user32.GetWindowLongW
+        set_window_long = user32.SetWindowLongW
+        set_window_pos = user32.SetWindowPos
+
+        GWL_STYLE = -16
+        WS_MAXIMIZEBOX = 0x00010000
+        WS_THICKFRAME = 0x00040000
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_FRAMECHANGED = 0x0020
+
+        style = get_window_long(hwnd, GWL_STYLE)
+        style &= ~WS_MAXIMIZEBOX
+        style &= ~WS_THICKFRAME
+        set_window_long(hwnd, GWL_STYLE, style)
+        set_window_pos(
+            hwnd,
+            0,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+        )
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._apply_fixed_window_style()
 
     def _build_ui(self):
 
