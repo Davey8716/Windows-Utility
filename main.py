@@ -272,7 +272,7 @@ class UtilityControlApp(QWidget):
                 toggle.setArrowType(
                     Qt.ArrowType.DownArrow if not visible else Qt.ArrowType.UpArrow
                 )
-                self.save_section_states()
+                self.save_all_settings()
 
             toggle.clicked.connect(toggle_section)
             toggle.setArrowType(
