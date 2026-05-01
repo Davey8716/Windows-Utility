@@ -217,7 +217,7 @@ class AdvancedToolsPanel(QWidget):
         self._add_action_button(
             left_col_layout,
             "System Settings",
-            lambda: subprocess.Popen(["cmd", "/c", "start", "ms-settings:"]),
+            self.open_system_settings,
         )
         self._add_action_button(
             left_col_layout,
@@ -227,7 +227,7 @@ class AdvancedToolsPanel(QWidget):
         self._add_action_button(
             right_col_layout,
             "Device Manager",
-            lambda: subprocess.Popen(["devmgmt.msc"]),
+            self.open_device_manager,
         )
         self._add_action_button(
             right_col_layout,
@@ -412,18 +412,27 @@ class AdvancedToolsPanel(QWidget):
     def _system_utilities(self):
         return {
             "Control Panel": lambda: subprocess.Popen(["control"]),
-            "System Settings": lambda: subprocess.Popen(["cmd", "/c", "start", "ms-settings:"]),
+            "System Settings": self.open_system_settings,
             "System Information": lambda: subprocess.Popen(["msinfo32"]),
             "Task Manager": lambda: subprocess.Popen(["taskmgr"]),
         }
 
     def _hardware_utilities(self):
         return {
-            "Device Manager": lambda: subprocess.Popen(["devmgmt.msc"]),
+            "Device Manager": self.open_device_manager,
             "Disk Management": lambda: subprocess.Popen(["diskmgmt.msc"]),
             "Services": lambda: subprocess.Popen(["services.msc"]),
             "Event Viewer": lambda: subprocess.Popen(["eventvwr.msc"]),
         }
+
+    def open_device_manager(self):
+        self._shell_open("devmgmt.msc")
+
+    def open_system_settings(self):
+        self._shell_open("ms-settings:")
+
+    def _shell_open(self, target: str):
+        ctypes.windll.shell32.ShellExecuteW(None, "open", target, None, None, 1)
 
     def _network_utilities(self):
         return {
