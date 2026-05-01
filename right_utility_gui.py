@@ -175,19 +175,6 @@ class AdvancedToolsPanel(QWidget):
         )
         self._build_drive_space_display()
 
-        self.bookmarks_exporter_section = CollapsibleSection(
-            parent=self.side_frame,
-            title_text="Universal Bookmarks Exporter",
-            section_id="bookmarks_exporter",
-            app=self.app,
-            initial_open=self.app.saved_state
-            .get("right_section_states", {})
-            .get("bookmarks_exporter", False),
-        )
-        self.side_layout.addWidget(self.bookmarks_exporter_section)
-        self.app.collapsible_sections.append(self.bookmarks_exporter_section)
-        self._build_bookmarks_exporter()
-
     def _build_windows_utilities(self):
         parent_layout = self.windows_utility_section.content_layout
 
@@ -328,18 +315,6 @@ class AdvancedToolsPanel(QWidget):
         self.drive_refresh_timer = QTimer(self)
         self.drive_refresh_timer.timeout.connect(refresh_drive_display)
         self.drive_refresh_timer.start(10_000)
-
-    def _build_bookmarks_exporter(self):
-        self.btn_brave_export = QPushButton("Export Brave Bookmarks")
-        styles.apply_default_button_size(self.btn_brave_export, width=210)
-        self.btn_brave_export.setStyleSheet(styles.button_text_style(15))
-        self._install_green_flash(self.btn_brave_export)
-        self.btn_brave_export.clicked.connect(self._run_brave_export)
-        self.app.register_tooltip(
-            self.btn_brave_export,
-            "Exports Brave bookmarks into the Bookmarks folder inside the master backup path.",
-        )
-        self.bookmarks_exporter_section.content_layout.addWidget(self.btn_brave_export)
 
     def _add_action_button(self, parent_layout, label, action):
         button = QPushButton(label)
@@ -625,7 +600,7 @@ class AdvancedToolsPanel(QWidget):
         start_dir.mkdir(parents=True, exist_ok=True)
         out_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export Brave Bookmarks",
+            "Export Bookmarks",
             str(start_dir / "Brave_Bookmarks.html"),
             "HTML Files (*.html)",
         )

@@ -585,6 +585,15 @@ class UtilityControlApp(QWidget):
         restore_layout_btn.clicked.connect(self.restore_desktop_layout)
         self.register_tooltip(restore_layout_btn, "Restores the saved desktop icon layout from the master backup location.")
 
+        brave_export_btn = QPushButton("Export Bookmarks")
+        style_organizing_button(brave_export_btn)
+        org_layout.addWidget(brave_export_btn)
+        brave_export_btn.clicked.connect(self.right_tools_panel._run_brave_export)
+        self.register_tooltip(
+            brave_export_btn,
+            "Exports Brave bookmarks into the Bookmarks folder inside the master backup path.",
+        )
+
         master_backup_row = QWidget()
         master_backup_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         master_backup_row_layout = QHBoxLayout(master_backup_row)

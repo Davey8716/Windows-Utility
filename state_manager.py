@@ -31,7 +31,6 @@ DEFAULTS = {
         "windows_utilities": False,
         "sidebar_utils_section": False,
         "drive_space_display": False,
-        "bookmarks_exporter": False,
     },
 }
 
