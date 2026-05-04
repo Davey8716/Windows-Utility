@@ -8,7 +8,10 @@ from PIL import ImageGrab
 import win32gui
 import win32con
 
-from right_utility_gui import AdvancedToolsPanel as RightAdvancedToolsPanel
+from right_utility_gui import (
+    AdvancedToolsPanel as RightAdvancedToolsPanel,
+    get_drive_info,
+)
 from screen_mover import SCREEN_MOVER
 from tray_toggles import TrayIconManager
 from utility_toggles import  UtilityActionsManager 
@@ -112,6 +115,7 @@ class UtilityControlApp(QWidget):
         self.tooltips_enabled = bool(self.state.get("tooltips_enabled", True))
         self._tooltip_managers = []
         self._active_message_boxes = []
+        self._known_external_drives = set()
         self._taskbar_backup_folder_open = False
         self.advanced_settings_open = bool(self.state.get("advanced_panel_open", False))
         self.collapsible_sections = []
@@ -120,6 +124,10 @@ class UtilityControlApp(QWidget):
         self.tray_manager = TrayIconManager(self)
 
         self._build_ui()
+        self._known_external_drives = self._current_external_drives()
+        self._drive_change_timer = QTimer(self)
+        self._drive_change_timer.timeout.connect(self._check_external_drive_changes)
+        self._drive_change_timer.start(3000)
         self.tray_manager.create_tray_icon()
         SCREEN_MOVER.configure(app_hwnd=int(self.winId()))
         SCREEN_MOVER.start()
@@ -981,6 +989,42 @@ class UtilityControlApp(QWidget):
         message_box.show()
         close_timer.start(timeout_ms)
         return message_box
+
+    def _current_external_drives(self) -> set[str]:
+        drives = set()
+        for drive in get_drive_info():
+            if drive.get("ejectable"):
+                drives.add(str(drive["drive"]))
+        return drives
+
+    def _check_external_drive_changes(self):
+        current_drives = self._current_external_drives()
+
+        if self.state.get("usb_plug_notify_mode", "on") == "off":
+            self._known_external_drives = current_drives
+            return
+
+        added_drives = sorted(current_drives - self._known_external_drives)
+        removed_drives = sorted(self._known_external_drives - current_drives)
+        self._known_external_drives = current_drives
+
+        if added_drives:
+            drive_label = "drive" if len(added_drives) == 1 else "drives"
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
+                "Drive Connected",
+                f"External {drive_label} connected:\n" + "\n".join(added_drives),
+                timeout_ms=10_000,
+            )
+
+        if removed_drives:
+            drive_label = "drive" if len(removed_drives) == 1 else "drives"
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
+                "Drive Removed",
+                f"External {drive_label} removed:\n" + "\n".join(removed_drives),
+                timeout_ms=10_000,
+            )
 
     def take_desktop_screenshot(self):
         self.showMinimized()
