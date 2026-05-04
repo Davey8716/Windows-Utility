@@ -305,6 +305,7 @@ class AdvancedToolsPanel(QWidget):
         self.drive_space_list.setWordWrap(False)
         self.drive_space_list.setProperty("surfaceFieldStyle", True)
         self._apply_drive_space_list_style()
+        self.drive_space_list.itemDoubleClicked.connect(self._open_drive_from_item)
         drive_parent.addWidget(self.drive_space_list)
 
         def refresh_drive_display():
@@ -318,6 +319,8 @@ class AdvancedToolsPanel(QWidget):
                     f"Total: {total_gb:.1f} GB"
                 )
                 item = QListWidgetItem(text)
+                item.setData(Qt.ItemDataRole.UserRole, d["drive"])
+                item.setToolTip(f"Open {d['drive']} in File Explorer")
                 item.setSizeHint(QSize(0, 20))
                 self.drive_space_list.addItem(item)
 
@@ -330,6 +333,12 @@ class AdvancedToolsPanel(QWidget):
         self.drive_space_list.setStyleSheet(
             styles.surfaced_list_widget_style("Consolas", 15)
         )
+
+    def _open_drive_from_item(self, item: QListWidgetItem):
+        drive_path = item.data(Qt.ItemDataRole.UserRole)
+        if not drive_path:
+            return
+        self._minimize_and_run(lambda: os.startfile(drive_path))
 
     def _refresh_this_pc_button(self):
         is_open = self.app.actions.is_this_pc_open()
