@@ -188,6 +188,12 @@ class AdvancedToolsPanel(QWidget):
         self.sidebar_output = QTextEdit()
         self.sidebar_output.setFixedHeight(285)
         self.sidebar_output.setReadOnly(True)
+        self.sidebar_output.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.sidebar_output.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         self.sidebar_output.setProperty("surfaceFieldStyle", True)
         self.sidebar_output.setStyleSheet(styles.surfaced_text_edit_style("Consolas", 15))
         self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
@@ -278,6 +284,9 @@ class AdvancedToolsPanel(QWidget):
         self.drive_space_list.setSpacing(0)
         self.drive_space_list.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.drive_space_list.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
         self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.drive_space_list.setWordWrap(False)
