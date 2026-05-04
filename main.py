@@ -508,6 +508,7 @@ class UtilityControlApp(QWidget):
         screen_layout.addWidget(screen_row)
 
         title_bar_dock_btn = make_toggle_button("Title Bar Dock", state.get("title_bar_dock_enabled", True))
+        bind_toggle_text(title_bar_dock_btn, "Title Bar Dock Off", "Title Bar Dock On")
         screen_row_layout.addWidget(title_bar_dock_btn)
         self.register_tooltip(
             title_bar_dock_btn,
@@ -522,6 +523,7 @@ class UtilityControlApp(QWidget):
         title_bar_dock_btn.toggled.connect(on_title_bar_dock_changed)
 
         mmb_btn = make_toggle_button("Middle Mouse Move", state.get("mmb_activation_enabled", True))
+        bind_toggle_text(mmb_btn, "Middle Mouse Move Off", "Middle Mouse Move On")
         screen_row_layout.addWidget(mmb_btn)
         self.register_tooltip(mmb_btn, "Lets you move a window by middle-clicking the tracked title-bar dock.")
         screen_row_layout.addStretch()
