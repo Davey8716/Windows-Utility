@@ -15,7 +15,7 @@ from state_manager import load_state
 
 TITLE_BAR_SIDE_MARGIN = 80
 TITLE_BAR_BUTTON_GAP = 140
-DOCK_WIDTH = 92
+DOCK_WIDTH = 168
 DOCK_HEIGHT = 28
 DOCK_TOP_OFFSET = 14
 LOOP_SLEEP = 0.03
@@ -24,6 +24,7 @@ DOCK_BG_COLOR = win32api.RGB(27, 34, 44)
 DOCK_EDGE_COLOR = win32api.RGB(64, 120, 78)
 DOCK_ARROW_COLOR = win32api.RGB(130, 255, 165)
 DOCK_ARROW_GLOW_COLOR = win32api.RGB(58, 168, 92)
+DOCK_LABELS = ("<<", "<", ">", ">>")
 LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 WNDPROC_TYPE = ctypes.WINFUNCTYPE(
     LRESULT,
@@ -130,25 +131,36 @@ class DockOverlayButton:
             old_font = win32gui.SelectObject(hdc, font)
 
             glow_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            for dx, dy in glow_offsets:
-                glow_rect = (left + dx, top + dy, right + dx, bottom + dy)
-                win32gui.SetTextColor(hdc, DOCK_ARROW_GLOW_COLOR)
+            segment_width = (right - left) / len(DOCK_LABELS)
+            for index, label in enumerate(DOCK_LABELS):
+                seg_left = int(left + (index * segment_width))
+                seg_right = int(left + ((index + 1) * segment_width))
+                text_rect = (seg_left, top, seg_right, bottom)
+
+                for dx, dy in glow_offsets:
+                    glow_rect = (
+                        text_rect[0] + dx,
+                        text_rect[1] + dy,
+                        text_rect[2] + dx,
+                        text_rect[3] + dy,
+                    )
+                    win32gui.SetTextColor(hdc, DOCK_ARROW_GLOW_COLOR)
+                    win32gui.DrawText(
+                        hdc,
+                        label,
+                        -1,
+                        glow_rect,
+                        win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE,
+                    )
+
+                win32gui.SetTextColor(hdc, DOCK_ARROW_COLOR)
                 win32gui.DrawText(
                     hdc,
-                    "<   >",
+                    label,
                     -1,
-                    glow_rect,
+                    text_rect,
                     win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE,
                 )
-
-            win32gui.SetTextColor(hdc, DOCK_ARROW_COLOR)
-            win32gui.DrawText(
-                hdc,
-                "<   >",
-                -1,
-                rect,
-                win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE,
-            )
 
             win32gui.SelectObject(hdc, old_font)
             win32gui.SelectObject(hdc, old_pen)
@@ -187,7 +199,9 @@ class DockOverlayButton:
         if not (left <= x < right and top <= y < bottom):
             return None
 
-        return "LEFT" if x < (left + DOCK_WIDTH // 2) else "RIGHT"
+        segment_width = DOCK_WIDTH / len(DOCK_LABELS)
+        index = min(int((x - left) // segment_width), len(DOCK_LABELS) - 1)
+        return ("FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT")[index]
 
     def hide(self):
         self.target_hwnd = None
@@ -369,6 +383,17 @@ class ScreenMoverWorker:
 
         self.dock_overlay.show_for_target(hwnd, rect)
 
+    def _resolve_target_monitor_index(self, current_idx, monitor_count, direction):
+        if direction == "LEFT":
+            return (current_idx - 1) % monitor_count
+        if direction == "RIGHT":
+            return (current_idx + 1) % monitor_count
+        if direction == "FAR_LEFT":
+            return 0
+        if direction == "FAR_RIGHT":
+            return monitor_count - 1
+        return current_idx
+
     def move_window_to_monitor(self, hwnd, direction):
         try:
             if not self._can_move_window(hwnd):
@@ -387,7 +412,13 @@ class ScreenMoverWorker:
                 print("[MOVE] Could not resolve current monitor.")
                 return
 
-            target_idx = (current_idx + 1) % len(monitors) if direction == "RIGHT" else (current_idx - 1) % len(monitors)
+            target_idx = self._resolve_target_monitor_index(
+                current_idx,
+                len(monitors),
+                direction,
+            )
+            if target_idx == current_idx:
+                return
 
             source_info = win32api.GetMonitorInfo(monitor_handles[current_idx])
             target_info = win32api.GetMonitorInfo(monitor_handles[target_idx])
