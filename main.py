@@ -96,6 +96,9 @@ class UtilityControlApp(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.state = load_state()
+        self.saved_state = self.state
+        styles.set_theme(bool(self.state.get("theme_dark", True)))
         self.setWindowTitle("Windows Resurface")
         self.setStyleSheet(styles.window_style())
         self.COLLAPSED_WIDTH = 470
@@ -106,8 +109,6 @@ class UtilityControlApp(QWidget):
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
         
-        self.state = load_state()
-        self.saved_state = self.state
         self.tooltips_enabled = bool(self.state.get("tooltips_enabled", True))
         self._tooltip_managers = []
         self._active_message_boxes = []
@@ -203,7 +204,7 @@ class UtilityControlApp(QWidget):
         self.advanced_settings_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
         self.advanced_settings_toggle.setArrowType(Qt.ArrowType.RightArrow)
         self.advanced_settings_toggle.setStyleSheet(
-            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
+            styles.arrow_button_style(styles.theme_text_color(), styles.SURFACE_DARK)
         )
         self.advanced_settings_toggle.clicked.connect(
             self.toggle_advanced_settings_panel
@@ -250,7 +251,7 @@ class UtilityControlApp(QWidget):
         master_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         master_btn.setArrowType(Qt.ArrowType.DownArrow)
         master_btn.setStyleSheet(
-            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
+            styles.arrow_button_style(styles.theme_text_color(), styles.SURFACE_DARK)
         )
         self.master_collapse_btn_left = master_btn
 
@@ -302,7 +303,11 @@ class UtilityControlApp(QWidget):
             toggle.setCursor(Qt.CursorShape.PointingHandCursor)
             toggle.setArrowType(Qt.ArrowType.DownArrow)
             toggle.setStyleSheet(
-                styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK, font_size=16)
+                styles.arrow_button_style(
+                    styles.theme_text_color(),
+                    styles.SURFACE_DARK,
+                    font_size=16,
+                )
             )
             section.toggle_btn = toggle
 
@@ -366,6 +371,7 @@ class UtilityControlApp(QWidget):
             button.setChecked(checked)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             styles.apply_default_button_size(button)
+            button.setProperty("styleFontSize", 14)
             button.setStyleSheet(styles.toggle_button_style(font_size=14))
             install_green_flash(button)
             return button
@@ -401,6 +407,7 @@ class UtilityControlApp(QWidget):
             button.setAutoExclusive(False)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             styles.apply_default_button_size(button)
+            button.setProperty("styleFontSize", 14)
             button.setStyleSheet(styles.organizing_button_style(font_size=14))
             install_green_flash(button)
             return button
@@ -412,6 +419,7 @@ class UtilityControlApp(QWidget):
             combo.setCurrentText(placeholder)
             combo.setCursor(Qt.CursorShape.PointingHandCursor)
             styles.apply_default_button_size(combo)
+            combo.setProperty("styleFontSize", 14)
             combo.setStyleSheet(styles.organizing_combo_style(14))
 
             def run_action(text: str):
@@ -494,6 +502,7 @@ class UtilityControlApp(QWidget):
 
         def on_dark_mode_changed(checked: bool):
             state["theme_dark"] = checked
+            self.apply_theme(checked)
             save_state(state)
 
         dark_mode_btn.toggled.connect(on_dark_mode_changed)
@@ -1104,28 +1113,58 @@ class UtilityControlApp(QWidget):
             )
 
     def _get_arrow_colors(self):
-        palette = self.palette()
-        bg = palette.color(self.backgroundRole())
+        return {
+            "text": styles.theme_text_color(),
+            "hover": styles.SURFACE_HOVER_DARK,
+        }
 
-        is_dark = (bg.red() + bg.green() + bg.blue()) / 3 < 128
+    def apply_theme(self, is_dark: bool):
+        styles.set_theme(is_dark)
+        self.setStyleSheet(styles.window_style())
 
-        if is_dark:
-            return {
-                "text": styles.TEXT_LIGHT,
-                "hover": styles.SURFACE_HOVER_DARK,
-            }
-        else:
-            return {
-                "text": styles.TEXT_DARK,
-                "hover": styles.SURFACE_HOVER_LIGHT,
-            }
-        
+        for frame in self.findChildren(QFrame, "CollapsibleSectionFrame"):
+            frame.setStyleSheet(styles.collapsible_section_frame_style())
+
+        for line_edit in self.findChildren(QLineEdit):
+            line_edit.setStyleSheet(styles.line_edit_style(15))
+
+        for button in self.findChildren(QPushButton):
+            font_size = int(button.property("styleFontSize") or 14)
+            button.setStyleSheet(styles.organizing_button_style(font_size=font_size))
+
+        for combo in self.findChildren(QComboBox):
+            font_size = int(combo.property("styleFontSize") or 14)
+            combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
+
+        if hasattr(self, "right_tools_panel"):
+            if hasattr(self.right_tools_panel, "sidebar_output"):
+                self.right_tools_panel.sidebar_output.setStyleSheet(
+                    styles.text_edit_style("Consolas", 15)
+                )
+            if hasattr(self.right_tools_panel, "drive_space_list"):
+                self.right_tools_panel._apply_drive_space_list_style()
+
+        self.update_collapsible_arrow_colours()
+
     def update_collapsible_arrow_colours(self):
         colors = self._get_arrow_colors()
-        style = styles.arrow_button_style(colors["text"], colors["hover"], font_size=18)
+        tool_button_styles = {
+            (styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT): styles.arrow_button_style(
+                colors["text"], colors["hover"], font_size=18
+            ),
+            (styles.SECTION_TOGGLE_WIDTH, styles.SECTION_TOGGLE_HEIGHT): styles.arrow_button_style(
+                colors["text"], colors["hover"], font_size=16
+            ),
+        }
 
-        for btn in getattr(self, "arrow_buttons", []):
-            btn.setStyleSheet(style)
+        for btn in self.findChildren(QToolButton):
+            size_key = (btn.width(), btn.height())
+            btn.setStyleSheet(
+                tool_button_styles.get(
+                    size_key,
+                    styles.arrow_button_style(colors["text"], colors["hover"], font_size=18),
+                )
+            )
 
     def register_tooltip(self, widget: QWidget, text: str, delay: int = 10):
         manager = QtTooltipManager(widget, text, delay=delay)

@@ -123,7 +123,7 @@ class AdvancedToolsPanel(QWidget):
             else Qt.ArrowType.UpArrow
         )
         self.master_collapse_btn_right.setStyleSheet(
-            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK)
+            styles.arrow_button_style(styles.theme_text_color(), styles.SURFACE_DARK)
         )
         self.master_collapse_btn_right.clicked.connect(
             self.toggle_all_right_sections
@@ -257,6 +257,7 @@ class AdvancedToolsPanel(QWidget):
         btn_this_pc = QPushButton("Open This PC")
         self.btn_this_pc = btn_this_pc
         styles.apply_default_button_size(btn_this_pc)
+        btn_this_pc.setProperty("styleFontSize", 14)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
         btn_this_pc.clicked.connect(self.toggle_this_pc)
@@ -279,6 +280,29 @@ class AdvancedToolsPanel(QWidget):
         )
         self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.drive_space_list.setWordWrap(False)
+        self._apply_drive_space_list_style()
+        drive_parent.addWidget(self.drive_space_list)
+
+        def refresh_drive_display():
+            self.drive_space_list.clear()
+            for d in get_drive_info():
+                used_gb = (d["total"] - d["free"]) / (1024 ** 3)
+                total_gb = d["total"] / (1024 ** 3)
+                free_gb = d["free"] / (1024 ** 3)
+                text = (
+                    f"{d['drive']}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  "
+                    f"Total: {total_gb:.1f} GB"
+                )
+                item = QListWidgetItem(text)
+                item.setSizeHint(QSize(0, 20))
+                self.drive_space_list.addItem(item)
+
+        refresh_drive_display()
+        self.drive_refresh_timer = QTimer(self)
+        self.drive_refresh_timer.timeout.connect(refresh_drive_display)
+        self.drive_refresh_timer.start(10_000)
+
+    def _apply_drive_space_list_style(self):
         self.drive_space_list.setStyleSheet(
             """
             QListWidget {
@@ -307,26 +331,6 @@ class AdvancedToolsPanel(QWidget):
                 styles.qcolor_css(styles.TEXT_LIGHT),
             )
         )
-        drive_parent.addWidget(self.drive_space_list)
-
-        def refresh_drive_display():
-            self.drive_space_list.clear()
-            for d in get_drive_info():
-                used_gb = (d["total"] - d["free"]) / (1024 ** 3)
-                total_gb = d["total"] / (1024 ** 3)
-                free_gb = d["free"] / (1024 ** 3)
-                text = (
-                    f"{d['drive']}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  "
-                    f"Total: {total_gb:.1f} GB"
-                )
-                item = QListWidgetItem(text)
-                item.setSizeHint(QSize(0, 20))
-                self.drive_space_list.addItem(item)
-
-        refresh_drive_display()
-        self.drive_refresh_timer = QTimer(self)
-        self.drive_refresh_timer.timeout.connect(refresh_drive_display)
-        self.drive_refresh_timer.start(10_000)
 
     def _refresh_this_pc_button(self):
         is_open = self.app.actions.is_this_pc_open()
@@ -353,6 +357,7 @@ class AdvancedToolsPanel(QWidget):
     def _add_action_button(self, parent_layout, label, action):
         button = QPushButton(label)
         styles.apply_default_button_size(button)
+        button.setProperty("styleFontSize", 14)
         button.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(button)
         button.clicked.connect(action)
@@ -466,6 +471,7 @@ class AdvancedToolsPanel(QWidget):
         combo.addItem(placeholder)
         combo.addItems(sorted(actions_map.keys()))
         combo.setCurrentText(placeholder)
+        combo.setProperty("styleFontSize", 15)
         combo.setStyleSheet(styles.organizing_combo_style(15))
 
         def runner(text: str):
@@ -780,6 +786,7 @@ class AdvancedToolsPanel(QWidget):
         combo.addItem(placeholder)
         combo.addItems(actions_map.keys())
         combo.setCurrentText(placeholder)
+        combo.setProperty("styleFontSize", 14)
         combo.setStyleSheet(styles.organizing_combo_style(14))
 
         def runner(text: str):

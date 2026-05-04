@@ -1,15 +1,20 @@
 from PySide6.QtGui import QColor
 
+TEXT_LIGHT = QColor(255, 255, 255)
+TEXT_DARK = QColor(0, 0, 0)
+
 WINDOW_BG = QColor(40, 40, 50)
+SURFACE_BG = QColor(58, 72, 96)
+SURFACE_HOVER = QColor(74, 111, 168)
 PANEL_BG = QColor(58, 72, 96)
 PANEL_HOVER = QColor(74, 111, 168)
 PANEL_BORDER = QColor(255, 255, 255)
-TEXT_LIGHT = QColor(255, 255, 255)
-TEXT_DARK = QColor(255, 255, 255)
-SURFACE_DARK = PANEL_BG
-SURFACE_HOVER_DARK = PANEL_HOVER
-SURFACE_HOVER_LIGHT = PANEL_HOVER
-BUTTON_BORDER = PANEL_BORDER
+SURFACE_BORDER = QColor(255, 255, 255)
+SURFACE_DARK = SURFACE_BG
+SURFACE_HOVER_DARK = SURFACE_HOVER
+SURFACE_HOVER_LIGHT = SURFACE_HOVER
+CURRENT_TEXT = TEXT_LIGHT
+BUTTON_BORDER = SURFACE_BORDER
 BUTTON_ACTIVE_BG = QColor(47, 93, 58)
 BUTTON_ACTIVE_BORDER = QColor(93, 162, 113)
 STATUS_ACCENT = QColor(45, 125, 210)
@@ -27,6 +32,40 @@ SECTION_TOGGLE_HEIGHT = 20
 LEFT_SECTION_MAX_WIDTH = 420
 RIGHT_SECTION_MAX_WIDTH = 520
 
+
+def set_theme(is_dark: bool) -> None:
+    global WINDOW_BG, SURFACE_BG, SURFACE_HOVER, PANEL_BG, PANEL_HOVER
+    global SURFACE_BORDER, SURFACE_DARK, SURFACE_HOVER_DARK, SURFACE_HOVER_LIGHT
+    global CURRENT_TEXT, BUTTON_BORDER, LEFT_PANEL_FRAME_STYLE, RIGHT_PANEL_FRAME_STYLE
+
+    # Blue data-entry and output surfaces stay unchanged in both themes.
+    PANEL_BG = QColor(58, 72, 96)
+    PANEL_HOVER = QColor(74, 111, 168)
+
+    if is_dark:
+        WINDOW_BG = QColor(40, 40, 50)
+        SURFACE_BG = QColor(58, 72, 96)
+        SURFACE_HOVER = QColor(74, 111, 168)
+        SURFACE_BORDER = QColor(255, 255, 255)
+        CURRENT_TEXT = TEXT_LIGHT
+    else:
+        WINDOW_BG = QColor(255, 255, 255)
+        SURFACE_BG = QColor(255, 255, 255)
+        SURFACE_HOVER = QColor(230, 236, 244)
+        SURFACE_BORDER = QColor(0, 0, 0)
+        CURRENT_TEXT = TEXT_DARK
+
+    SURFACE_DARK = SURFACE_BG
+    SURFACE_HOVER_DARK = SURFACE_HOVER
+    SURFACE_HOVER_LIGHT = SURFACE_HOVER
+    BUTTON_BORDER = SURFACE_BORDER
+    LEFT_PANEL_FRAME_STYLE = collapsible_section_frame_style()
+    RIGHT_PANEL_FRAME_STYLE = collapsible_section_frame_style()
+
+
+def theme_text_color() -> QColor:
+    return CURRENT_TEXT
+
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
 
@@ -38,7 +77,8 @@ def label_style(font_size: int | None = None, bold: bool = True, color: QColor |
         parts.append(f"font-size: {font_size}px;")
     if bold:
         parts.append("font-weight: bold;")
-    parts.append(f"color: {qcolor_css(color or TEXT_LIGHT)};")
+    if color is not None:
+        parts.append(f"color: {qcolor_css(color)};")
     return " ".join(parts)
 
 def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
@@ -54,12 +94,12 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
     """
 
 def collapsible_section_frame_style(border_color: QColor | None = None, radius: int = 10) -> str:
-    border = border_color or PANEL_BORDER
+    border = border_color or SURFACE_BORDER
     return f"""
         QFrame#CollapsibleSectionFrame {{
             border: 2px solid {qcolor_css(border)};
             border-radius: {radius}px;
-            background-color: {qcolor_css(PANEL_BG)};
+            background-color: {qcolor_css(SURFACE_BG)};
         }}
     """
 
@@ -68,19 +108,19 @@ def window_style() -> str:
     return f"""
         QWidget {{
             background-color: {qcolor_css(WINDOW_BG)};
-            color: {qcolor_css(TEXT_LIGHT)};
+            color: {qcolor_css(CURRENT_TEXT)};
         }}
         QScrollBar:vertical {{
-            background-color: {qcolor_css(PANEL_BG)};
+            background-color: {qcolor_css(SURFACE_BG)};
             width: 12px;
             margin: 2px 2px 2px 2px;
-            border: 1px solid {qcolor_css(PANEL_BORDER)};
+            border: 1px solid {qcolor_css(SURFACE_BORDER)};
             border-radius: 6px;
         }}
         QScrollBar::handle:vertical {{
-            background-color: {qcolor_css(PANEL_HOVER)};
+            background-color: {qcolor_css(SURFACE_HOVER)};
             min-height: 28px;
-            border: 1px solid {qcolor_css(PANEL_BORDER)};
+            border: 1px solid {qcolor_css(SURFACE_BORDER)};
             border-radius: 6px;
         }}
         QScrollBar::handle:vertical:hover {{
@@ -104,7 +144,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             padding: 4px 8px;
             {font_rule}
             font-weight: bold;
-            color: {qcolor_css(TEXT_LIGHT)};
+            color: {qcolor_css(theme_text_color())};
             border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
             border-radius: 3px;
             background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
@@ -119,7 +159,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
         }}
         QPushButton:disabled {{
-            color: {qcolor_css(TEXT_LIGHT)};
+            color: {qcolor_css(theme_text_color())};
             border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
             background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
         }}
@@ -131,7 +171,12 @@ def toggle_button_style(font_size: int | None = None) -> str:
 def text_edit_style(font_family: str, font_size: int) -> str:
     return f"""
         QTextEdit {{
-            {label_style(font_size=font_size, bold=True, font_family=font_family)}
+            {label_style(
+                font_size=font_size,
+                bold=True,
+                color=TEXT_LIGHT,
+                font_family=font_family,
+            )}
             background-color: {qcolor_css(PANEL_BG)};
             border: 2px solid {qcolor_css(PANEL_BORDER)};
             border-radius: 6px;
@@ -145,7 +190,7 @@ def button_text_style(font_size: int) -> str:
 def line_edit_style(font_size: int) -> str:
     return f"""
         QLineEdit {{
-            {label_style(font_size=font_size, bold=True)}
+            {label_style(font_size=font_size, bold=True, color=TEXT_LIGHT)}
             background-color: {qcolor_css(PANEL_BG)};
             border: 2px solid {qcolor_css(PANEL_BORDER)};
             border-radius: 6px;
@@ -157,7 +202,7 @@ def line_edit_style(font_size: int) -> str:
 def combo_style(font_size: int) -> str:
     return f"""
         QComboBox {{
-            {label_style(font_size=font_size, bold=True)}
+            {label_style(font_size=font_size, bold=True, color=TEXT_LIGHT)}
             background-color: {qcolor_css(PANEL_BG)};
             border: 2px solid {qcolor_css(PANEL_BORDER)};
             border-radius: 6px;
@@ -181,7 +226,7 @@ RIGHT_PANEL_FRAME_STYLE = collapsible_section_frame_style()
 def organizing_combo_style(font_size: int) -> str:
     return f"""
         QComboBox {{
-            {label_style(font_size=font_size, bold=True)}
+            {label_style(font_size=font_size, bold=True, color=theme_text_color())}
             background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
             border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
             border-radius: 3px;
@@ -198,7 +243,7 @@ def organizing_combo_style(font_size: int) -> str:
         }}
         QComboBox QAbstractItemView {{
             background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
-            color: {qcolor_css(TEXT_LIGHT)};
+            color: {qcolor_css(theme_text_color())};
             selection-background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
             border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
         }}

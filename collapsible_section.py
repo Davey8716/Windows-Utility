@@ -57,7 +57,11 @@ class CollapsibleSection(QWidget):
             Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
         )
         self.toggle_btn.setStyleSheet(
-            styles.arrow_button_style(styles.TEXT_LIGHT, styles.SURFACE_DARK, font_size=16)
+            styles.arrow_button_style(
+                styles.theme_text_color(),
+                styles.SURFACE_DARK,
+                font_size=16,
+            )
         )
         self.toggle_btn.clicked.connect(self.toggle)
 
