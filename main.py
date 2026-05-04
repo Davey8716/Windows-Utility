@@ -594,35 +594,88 @@ class UtilityControlApp(QWidget):
 
         usb_section, usb_layout = make_section("Drive Reminder Options", "drive_reminder_options")
 
-        idle_btn = make_toggle_button("Idle Plugged Reminder", state.get("usb_idle_enabled", True))
-        usb_layout.addWidget(idle_btn)
-        self.register_tooltip(idle_btn, tooltip_text("idle_plugged_reminder"))
+        def create_drive_reminder_combo(
+            tooltip_key: str,
+            state_key: str,
+            legacy_enabled_key: str,
+            items: list[tuple[str, str]],
+        ) -> QComboBox:
+            combo = QComboBox()
+            for text, value in items:
+                combo.addItem(text, value)
+            combo.setCursor(Qt.CursorShape.ArrowCursor)
+            combo.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+            combo.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
+            combo.setStyleSheet(styles.organizing_combo_style(14))
 
-        def on_idle_changed(checked: bool):
-            state["usb_idle_enabled"] = checked
-            save_state(state)
+            def update_combo_state() -> None:
+                combo.setProperty("persistPressed", combo.currentData() != "off")
+                combo.style().unpolish(combo)
+                combo.style().polish(combo)
 
-        idle_btn.toggled.connect(on_idle_changed)
+            stored_value = str(state.get(state_key, "")).strip().lower()
+            valid_values = {value for _, value in items}
+            if stored_value not in valid_values:
+                stored_value = items[1][1] if state.get(legacy_enabled_key, True) else "off"
 
-        download_btn = make_toggle_button("Download Done Remind", state.get("usb_download_enabled", True))
-        usb_layout.addWidget(download_btn)
-        self.register_tooltip(download_btn, tooltip_text("download_done_reminder"))
+            combo_index = combo.findData(stored_value)
+            if combo_index >= 0:
+                combo.setCurrentIndex(combo_index)
+            update_combo_state()
 
-        def on_download_changed(checked: bool):
-            state["usb_download_enabled"] = checked
-            save_state(state)
+            def on_combo_changed(_text: str):
+                selected_value = combo.currentData()
+                state[state_key] = selected_value
+                state[legacy_enabled_key] = selected_value != "off"
+                save_state(state)
+                update_combo_state()
 
-        download_btn.toggled.connect(on_download_changed)
+            combo.currentTextChanged.connect(on_combo_changed)
+            self.register_tooltip(combo, tooltip_text(tooltip_key))
+            return combo
 
-        plug_btn = make_toggle_button("Plug / Unplug Notify", state.get("usb_plug_enabled", True))
-        usb_layout.addWidget(plug_btn)
-        self.register_tooltip(plug_btn, tooltip_text("plug_unplug_notify"))
+        idle_combo = create_drive_reminder_combo(
+            "idle_plugged_reminder",
+            "usb_idle_reminder_interval",
+            "usb_idle_enabled",
+            [
+                ("Idle Plugged Reminder: Off", "off"),
+                ("Remind after 20 minutes idle", "20m"),
+                ("Remind after 30 minutes idle", "30m"),
+                ("Remind after 45 minutes idle", "45m"),
+                ("Remind after 1 hour idle", "1h"),
+                ("Remind after 2 hours idle", "2h"),
+            ],
+        )
+        usb_layout.addWidget(idle_combo)
 
-        def on_plug_changed(checked: bool):
-            state["usb_plug_enabled"] = checked
-            save_state(state)
+        download_combo = create_drive_reminder_combo(
+            "download_done_reminder",
+            "usb_download_reminder_interval",
+            "usb_download_enabled",
+            [
+                ("Download Done Reminder: Off", "off"),
+                ("Remind 10 minutes after download completes", "10m"),
+                ("Remind 20 minutes after download completes", "20m"),
+                ("Remind 30 minutes after download completes", "30m"),
+                ("Remind 1 hour after download completes", "1h"),
+            ],
+        )
+        usb_layout.addWidget(download_combo)
 
-        plug_btn.toggled.connect(on_plug_changed)
+        plug_combo = create_drive_reminder_combo(
+            "plug_unplug_notify",
+            "usb_plug_notify_mode",
+            "usb_plug_enabled",
+            [
+                ("Plug / Unplug Notify: Off", "off"),
+                ("Show plug and unplug notifications", "on"),
+            ],
+        )
+        usb_layout.addWidget(plug_combo)
 
         self.main_layout.addWidget(usb_section)
         self.left_sections.append(usb_section)
