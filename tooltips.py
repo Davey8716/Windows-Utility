@@ -22,7 +22,7 @@ TOOLTIP_TEXT = {
     "capture_desktop_layout": "Saves the current desktop icon layout to the master backup location.",
     "restore_desktop_layout": "Restores the saved desktop icon layout from the master backup location.",
     "export_bookmarks": "Exports Brave bookmarks into the Bookmarks folder inside the master backup path.",
-    "desktop_zen_mode": "Hides desktop icons in Zen Mode and shows them again when toggled back.",
+    "desktop_zen_mode": "Hides desktop icons and sends the app to the system tray in Zen Mode, then shows icons again when toggled back.",
     "master_backup_path": "Chooses the base folder used by backup and layout utilities.",
     "backup_path_input": "Shows the current master backup folder path.",
     "master_collapse_right": "Master collapse toggle for all of these regions.",
