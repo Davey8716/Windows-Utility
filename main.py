@@ -18,7 +18,6 @@ from PySide6.QtCore import Qt, QTimer
 
 from PySide6.QtWidgets import (
     QWidget,
-    QGridLayout,
     QComboBox,
     QLabel,
     QPushButton,
@@ -81,6 +80,10 @@ def ensure_single_instance():
     return mutex
 
 class UtilityControlApp(QWidget):
+    MAIN_PANEL_WIDTH = 450
+    MAIN_SECTION_FRAME_WIDTH = 385
+    MAIN_SECTION_OUTER_WIDTH = MAIN_SECTION_FRAME_WIDTH + 20
+
     def __init__(self):
         super().__init__()
 
@@ -163,23 +166,13 @@ class UtilityControlApp(QWidget):
         self.root_container = QWidget(self)
         self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
 
-        self.root_layout = QGridLayout(self.root_container)
-        self.root_layout.setContentsMargins(0, 0, 0, 0)
-        self.root_layout.setSpacing(0)
-
-        self.root_layout.setColumnMinimumWidth(0, 425)
-        self.root_layout.setColumnStretch(0, 0)
-        self.root_layout.setColumnStretch(1, 0)
-        self.root_layout.setRowStretch(0, 1)
-
         self.main_scroll = QScrollArea(self.root_container)
         self.main_scroll.setWidgetResizable(True)
         self.main_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.main_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.main_scroll.setFixedWidth(450)
-        self.main_scroll.setViewportMargins(0, 0, 12, 0)
-
-        self.root_layout.addWidget(self.main_scroll, 0, 0)
+        self.main_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.main_scroll.setFixedWidth(self.MAIN_PANEL_WIDTH)
+        self.main_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.main_scroll.setViewportMargins(0, 0, 0, 0)
 
         self.advanced_settings_panel = QFrame(self.root_container)
         self.advanced_settings_panel.setFixedWidth(self.ADVANCED_PANEL_WIDTH)
@@ -191,8 +184,6 @@ class UtilityControlApp(QWidget):
 
         self.right_tools_panel = RightAdvancedToolsPanel(self)
         self.advanced_settings_layout.addWidget(self.right_tools_panel)
-
-        self.root_layout.addWidget(self.advanced_settings_panel, 0, 1)
         self.advanced_settings_panel.hide()
 
         self.advanced_settings_toggle = QToolButton(self.root_container)
@@ -211,19 +202,22 @@ class UtilityControlApp(QWidget):
         self.advanced_settings_toggle.raise_()
 
         self.main_frame = QWidget()
+        self.main_frame.setFixedWidth(self.MAIN_PANEL_WIDTH)
+        self.main_frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.main_scroll.setWidget(self.main_frame)
 
         self.main_layout = QVBoxLayout(self.main_frame)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(10)
-        
-        self.main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.main_layout.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )
         
         state = self.state
         
         header = QWidget(self.main_frame)
-        header.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
-        header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header.setFixedWidth(self.MAIN_SECTION_OUTER_WIDTH)
+        header.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 10, 10, 10)
 
@@ -249,7 +243,7 @@ class UtilityControlApp(QWidget):
         header_layout.addStretch()
         header_layout.addWidget(master_btn)
 
-        self.main_layout.addWidget(header)
+        self.main_layout.addWidget(header, 0, Qt.AlignmentFlag.AlignLeft)
         
         self.left_sections = []
         self.master_toggle_left_state = bool(state.get("master_toggle_left", True))
@@ -257,15 +251,15 @@ class UtilityControlApp(QWidget):
         def make_section(title_text, section_id: str):
             section = QWidget(self.main_frame)
             section.section_id = section_id
-            section.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            section.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
+            section.setFixedWidth(self.MAIN_SECTION_OUTER_WIDTH)
+            section.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             layout = QVBoxLayout(section)
             layout.setContentsMargins(10, 5, 10, 5)
             layout.setSpacing(4)
 
             sec_header = QWidget(section)
-            sec_header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            sec_header.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
+            sec_header.setFixedWidth(self.MAIN_SECTION_FRAME_WIDTH)
+            sec_header.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             sec_header_layout = QHBoxLayout(sec_header)
             sec_header_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -288,8 +282,8 @@ class UtilityControlApp(QWidget):
             frame = QFrame(section)
             section.frame = frame
             frame.setObjectName("CollapsibleSectionFrame")
-            frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            frame.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
+            frame.setFixedWidth(self.MAIN_SECTION_FRAME_WIDTH)
+            frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             frame.setStyleSheet(styles.LEFT_PANEL_FRAME_STYLE)
             frame_layout = QVBoxLayout(frame)
             frame_layout.setContentsMargins(2, 2, 2, 2)
@@ -297,8 +291,8 @@ class UtilityControlApp(QWidget):
 
             section.content = QWidget(frame)
             content = section.content
-            content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            content.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
+            content.setFixedWidth(self.MAIN_SECTION_FRAME_WIDTH - 4)
+            content.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
             content.setVisible(initial_open)
             frame.setVisible(initial_open)
@@ -714,10 +708,10 @@ class UtilityControlApp(QWidget):
         if self.advanced_settings_open:
             self.WINDOW_WIDTH = self.EXPANDED_WIDTH
             self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
-            self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
             self.advanced_settings_panel.show()
             self.advanced_settings_toggle.setArrowType(Qt.ArrowType.LeftArrow)
 
+        self._update_panel_geometries()
         self._position_advanced_settings_toggle()
 
     def _get_master_backup_dir(self) -> str:
@@ -753,17 +747,27 @@ class UtilityControlApp(QWidget):
             self.advanced_settings_toggle.setArrowType(Qt.ArrowType.RightArrow)
 
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
-        self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+        self._update_panel_geometries()
         self._position_advanced_settings_toggle()
         save_state(self.state)
 
+    def _update_panel_geometries(self):
+        self.root_container.setGeometry(0, 0, self.width(), self.height())
+        self.main_scroll.setGeometry(0, 0, self.MAIN_PANEL_WIDTH, self.height())
+        self.advanced_settings_panel.setGeometry(
+            self.MAIN_PANEL_WIDTH,
+            0,
+            self.ADVANCED_PANEL_WIDTH,
+            self.height(),
+        )
+
     def _position_advanced_settings_toggle(self):
-        x = self.width() - self.advanced_settings_toggle.width() - 6
+        x = self.MAIN_PANEL_WIDTH - self.advanced_settings_toggle.width() + 14
         y = (self.height() - self.advanced_settings_toggle.height()) // 2
         self.advanced_settings_toggle.move(x, y)
 
     def resizeEvent(self, event):
-        self.root_container.setGeometry(0, 0, self.width(), self.height())
+        self._update_panel_geometries()
         self._position_advanced_settings_toggle()
         super().resizeEvent(event)
 

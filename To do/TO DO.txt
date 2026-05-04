@@ -1,4 +1,4 @@
-Fix spacing inside organising utilities
+
 
 FIX When app is running in tray and clicked again gui comes up as white/broken. Instance mutex problem?
 
