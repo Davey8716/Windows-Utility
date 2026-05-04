@@ -1,11 +1,14 @@
+import sys
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-try:
-    from tests._stubs import install_dependency_stubs
-except ModuleNotFoundError:
-    from _stubs import install_dependency_stubs
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
+
+from _stubs import install_dependency_stubs
 
 install_dependency_stubs()
 
