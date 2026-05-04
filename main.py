@@ -291,6 +291,12 @@ class UtilityControlApp(QWidget):
             sec_title = QLabel(title_text, sec_header)
             sec_title.setStyleSheet(styles.label_style(font_size=15))
 
+            title_spacer = QWidget(sec_header)
+            title_spacer.setFixedSize(
+                styles.SECTION_TOGGLE_WIDTH,
+                styles.SECTION_TOGGLE_HEIGHT,
+            )
+
             toggle = QToolButton(sec_header)
             toggle.setFixedSize(styles.SECTION_TOGGLE_WIDTH, styles.SECTION_TOGGLE_HEIGHT)
             toggle.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -300,6 +306,8 @@ class UtilityControlApp(QWidget):
             )
             section.toggle_btn = toggle
 
+            sec_header_layout.addWidget(title_spacer)
+            sec_header_layout.addStretch()
             sec_header_layout.addWidget(sec_title)
             sec_header_layout.addStretch()
             sec_header_layout.addWidget(toggle)

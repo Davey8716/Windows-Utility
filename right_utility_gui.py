@@ -151,10 +151,10 @@ class AdvancedToolsPanel(QWidget):
             "Shows windows utilities grouped by type and quick actions.",
         )
         self.windows_utility_section.main_layout.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
         )
         self.windows_utility_section.setFixedWidth(
-            self.WINDOWS_UTILITIES_SECTION_WIDTH
+            styles.RIGHT_SECTION_MAX_WIDTH
         )
         self.windows_utility_section.header.setFixedWidth(
             self.WINDOWS_UTILITIES_FRAME_WIDTH

@@ -34,6 +34,15 @@ class CollapsibleSection(QWidget):
 
         self.label = QLabel(title_text, self.header)
         self.label.setStyleSheet(styles.label_style(font_size=15))
+
+        title_spacer = QWidget(self.header)
+        title_spacer.setFixedSize(
+            styles.SECTION_TOGGLE_WIDTH,
+            styles.SECTION_TOGGLE_HEIGHT,
+        )
+
+        self.header_layout.addWidget(title_spacer)
+        self.header_layout.addStretch()
         self.header_layout.addWidget(self.label)
 
         self.header_layout.addStretch()
