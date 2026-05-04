@@ -6,8 +6,6 @@ from PySide6.QtCore import Qt
 
 import styles
 
-SECTION_FRAME_MAX_WIDTH = 400
-
 class CollapsibleSection(QWidget):
     def __init__(self, parent, title_text, section_id, app, initial_open=True):
         super().__init__(parent)
@@ -22,14 +20,14 @@ class CollapsibleSection(QWidget):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 10, 0, 0)
         self.main_layout.setSpacing(4)
-        self.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
+        self.setMaximumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         # ===============================
         # Header row
         # ===============================
         self.header = QFrame(self)
-        self.header.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
+        self.header.setMaximumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
         self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.header_layout = QHBoxLayout(self.header)
         self.header_layout.setContentsMargins(0, 0, 0, 0)
@@ -59,8 +57,8 @@ class CollapsibleSection(QWidget):
 
         self.container = QFrame(self)
         self.container.setObjectName("CollapsibleSectionFrame")
-        self.container.setStyleSheet(styles.collapsible_section_frame_style())
-        self.container.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
+        self.container.setStyleSheet(styles.RIGHT_PANEL_FRAME_STYLE)
+        self.container.setMaximumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
         self.container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.main_layout.addWidget(self.container)
 
@@ -72,7 +70,7 @@ class CollapsibleSection(QWidget):
         # Content frame
         # ===============================
         self.content = QFrame(self.container)
-        self.content.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
+        self.content.setMaximumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
         self.content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(10, 10, 10, 10)

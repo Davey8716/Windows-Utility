@@ -1,0 +1,32 @@
+Fix spacing inside organising utilities
+
+FIX When app is running in tray and clicked again gui comes up as white/broken. Instance mutex problem?
+
+Width of drive space display so all the wording fits without having to scroll
+
+Width of Side Bar Utilities
+
+Width of Screen mover frame
+
+Button Sizes in general, colours relative to state
+
+Button Icons etc
+
+Frame removal?
+
+General Colour changes?
+
+Tray Icon to match exe icon etc
+
+Fix location of the mmb clicker, give it extra arrows to jump further across screens + animate it ?
+
+Do code Review
+
+Think about refactoring
+
+Dark/Light Mode
+
+A hook for workspace builder ?
+
+A Hook for Folder creator ?
+

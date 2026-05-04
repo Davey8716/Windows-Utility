@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 
 import styles
-from collapsible_section import CollapsibleSection, SECTION_FRAME_MAX_WIDTH
+from collapsible_section import CollapsibleSection
 from state_manager import save_state
 from universal_bookmarks_export import BraveBookmarksExporter
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
@@ -81,7 +81,7 @@ class AdvancedToolsPanel(QWidget):
         self.side_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title_row = QWidget()
-        title_row.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
+        title_row.setMaximumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
         title_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         title_row_layout = QHBoxLayout(title_row)
         title_row_layout.setContentsMargins(10, 10, 10, 10)

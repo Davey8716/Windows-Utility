@@ -8,7 +8,6 @@ from PIL import ImageGrab
 import win32gui
 import win32con
 
-from collapsible_section import SECTION_FRAME_MAX_WIDTH
 from right_utility_gui import AdvancedToolsPanel as RightAdvancedToolsPanel
 from screen_mover import SCREEN_MOVER
 from tray_toggles import TrayIconManager
@@ -42,7 +41,10 @@ def bring_existing_instance_to_front():
 
     def enum_handler(hwnd, _):
         nonlocal target_hwnd
-        title = win32gui.GetWindowText(hwnd)
+        try:
+            title = win32gui.GetWindowText(hwnd)
+        except Exception:
+            return True
 
         if "Windows Resurface" in title and hwnd != 0:
             target_hwnd = hwnd
@@ -50,6 +52,7 @@ def bring_existing_instance_to_front():
         return True
 
     try:
+        ctypes.windll.kernel32.SetLastError(0)
         win32gui.EnumWindows(enum_handler, None)
     except Exception as e:
         print("[RESTORE] enumeration failed:", e)
@@ -84,7 +87,7 @@ class UtilityControlApp(QWidget):
         self.setWindowTitle("Windows Resurface")
         self.setStyleSheet(styles.window_style())
         self.COLLAPSED_WIDTH = 485
-        self.EXPANDED_WIDTH = 935
+        self.EXPANDED_WIDTH = 950
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
         self.WINDOW_HEIGHT = 875
@@ -219,7 +222,7 @@ class UtilityControlApp(QWidget):
         state = self.state
         
         header = QWidget(self.main_frame)
-        header.setMaximumWidth(SECTION_FRAME_MAX_WIDTH)
+        header.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
         header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 10, 10, 10)
@@ -255,14 +258,14 @@ class UtilityControlApp(QWidget):
             section = QWidget(self.main_frame)
             section.section_id = section_id
             section.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            section.setMaximumWidth(405)
+            section.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
             layout = QVBoxLayout(section)
             layout.setContentsMargins(10, 5, 10, 5)
             layout.setSpacing(4)
 
             sec_header = QWidget(section)
             sec_header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            sec_header.setMaximumWidth(405)
+            sec_header.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
             sec_header_layout = QHBoxLayout(sec_header)
             sec_header_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -286,8 +289,8 @@ class UtilityControlApp(QWidget):
             section.frame = frame
             frame.setObjectName("CollapsibleSectionFrame")
             frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            frame.setMaximumWidth(405)
-            frame.setStyleSheet(styles.collapsible_section_frame_style())
+            frame.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
+            frame.setStyleSheet(styles.LEFT_PANEL_FRAME_STYLE)
             frame_layout = QVBoxLayout(frame)
             frame_layout.setContentsMargins(2, 2, 2, 2)
             frame_layout.setSpacing(0)
@@ -295,7 +298,7 @@ class UtilityControlApp(QWidget):
             section.content = QWidget(frame)
             content = section.content
             content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            content.setMaximumWidth(405)
+            content.setMaximumWidth(styles.LEFT_SECTION_MAX_WIDTH)
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
             content.setVisible(initial_open)
             frame.setVisible(initial_open)

@@ -24,6 +24,8 @@ ICON_BUTTON_WIDTH = 32
 ICON_BUTTON_HEIGHT = 28
 SECTION_TOGGLE_WIDTH = 28
 SECTION_TOGGLE_HEIGHT = 20
+LEFT_SECTION_MAX_WIDTH = 420
+RIGHT_SECTION_MAX_WIDTH = 450
 
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
@@ -171,6 +173,10 @@ def combo_style(font_size: int) -> str:
             border: 2px solid {qcolor_css(PANEL_BORDER)};
         }}
     """
+
+
+LEFT_PANEL_FRAME_STYLE = collapsible_section_frame_style()
+RIGHT_PANEL_FRAME_STYLE = collapsible_section_frame_style()
 
 def organizing_combo_style(font_size: int) -> str:
     return f"""
