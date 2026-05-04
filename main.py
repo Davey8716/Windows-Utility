@@ -83,6 +83,10 @@ class UtilityControlApp(QWidget):
     MAIN_PANEL_WIDTH = 450
     RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 70
     MAIN_SECTION_SIDE_PADDING = 14
+    LEFT_SECTION_TOP_MARGIN = 5
+    LEFT_SECTION_BOTTOM_MARGIN = 12
+    USER_INTERFACE_TOP_SPACER = 6
+    ORGANISING_SECTION_TOP_SPACER = 18
     MAIN_SECTION_FRAME_WIDTH = 385
     MAIN_SECTION_OUTER_WIDTH = (
         MAIN_SECTION_FRAME_WIDTH + (MAIN_SECTION_SIDE_PADDING * 2)
@@ -265,9 +269,9 @@ class UtilityControlApp(QWidget):
             layout = QVBoxLayout(section)
             layout.setContentsMargins(
                 self.MAIN_SECTION_SIDE_PADDING,
-                5,
+                self.LEFT_SECTION_TOP_MARGIN,
                 self.MAIN_SECTION_SIDE_PADDING,
-                5,
+                self.LEFT_SECTION_BOTTOM_MARGIN,
             )
             layout.setSpacing(4)
 
@@ -401,6 +405,7 @@ class UtilityControlApp(QWidget):
             return combo
 
         ui_section, ui_layout = make_section("User Interface", "user_interface")
+        self.main_layout.addSpacing(self.USER_INTERFACE_TOP_SPACER)
         self.main_layout.addWidget(ui_section)
         self.left_sections.append(ui_section)
 
@@ -730,6 +735,7 @@ class UtilityControlApp(QWidget):
         self._taskbar_backup_folder_timer.start(1000)
         self._refresh_taskbar_backup_folder_button()
 
+        self.main_layout.addSpacing(self.ORGANISING_SECTION_TOP_SPACER)
         self.main_layout.addWidget(org_section)
         self.left_sections.append(org_section)
 
