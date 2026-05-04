@@ -466,7 +466,7 @@ class AdvancedToolsPanel(QWidget):
         combo.addItem(placeholder)
         combo.addItems(sorted(actions_map.keys()))
         combo.setCurrentText(placeholder)
-        combo.setStyleSheet(styles.combo_style(15))
+        combo.setStyleSheet(styles.organizing_combo_style(15))
 
         def runner(text: str):
             if text == placeholder:
@@ -780,7 +780,7 @@ class AdvancedToolsPanel(QWidget):
         combo.addItem(placeholder)
         combo.addItems(actions_map.keys())
         combo.setCurrentText(placeholder)
-        combo.setStyleSheet(styles.combo_style(14))
+        combo.setStyleSheet(styles.organizing_combo_style(14))
 
         def runner(text: str):
             if text == placeholder:
