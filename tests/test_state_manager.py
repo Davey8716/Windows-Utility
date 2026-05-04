@@ -16,7 +16,6 @@ EXPECTED_PERSISTED_KEYS = {
     "screen_mover_activation_button",
     "title_bar_dock_enabled",
     "usb_idle_enabled",
-    "usb_idle_reminder_interval",
     "usb_download_enabled",
     "usb_download_reminder_interval",
     "usb_plug_enabled",
@@ -63,7 +62,6 @@ class StateManagerTests(unittest.TestCase):
             "feature": True,
             "theme_dark": False,
             "usb_idle_enabled": False,
-            "usb_idle_reminder_interval": "off",
             "usb_download_enabled": False,
             "usb_download_reminder_interval": "off",
             "usb_plug_enabled": False,
@@ -80,7 +78,6 @@ class StateManagerTests(unittest.TestCase):
         self.assertEqual(set(saved), EXPECTED_PERSISTED_KEYS)
         self.assertFalse(saved["theme_dark"])
         self.assertFalse(saved["usb_idle_enabled"])
-        self.assertEqual(saved["usb_idle_reminder_interval"], "off")
         self.assertFalse(saved["usb_download_enabled"])
         self.assertEqual(saved["usb_download_reminder_interval"], "off")
         self.assertFalse(saved["usb_plug_enabled"])

@@ -16,7 +16,6 @@ DEFAULTS = {
     "screen_mover_activation_button": "middle",
     "title_bar_dock_enabled": True,
     "usb_idle_enabled": True,
-    "usb_idle_reminder_interval": "30m",
     "usb_download_enabled": True,
     "usb_download_reminder_interval": "20m",
     "usb_plug_enabled": True,

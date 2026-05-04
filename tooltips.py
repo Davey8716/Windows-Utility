@@ -11,7 +11,7 @@ TOOLTIP_TEXT = {
     "power_options": "Choose a power action such as sleep, lock, restart, log out, or shutdown.",
     "title_bar_dock": "Shows a small left/right mover dock when you hover an app window's title bar.",
     "screen_move_button": "Chooses which mouse button activates moving a window from the tracked title-bar dock.",
-    "idle_plugged_reminder": "Controls the idle plugged-in drive reminder.",
+    "idle_plugged_reminder": "Controls warnings when you lock, log out, restart, shut down, or use this app's power actions with an external drive still connected.",
     "download_done_reminder": "Controls the finished-download drive reminder.",
     "plug_unplug_notify": "Controls notifications for drive plug and unplug events.",
     "desktop_screenshot": "Captures the desktop and saves it to the master backup folder.",

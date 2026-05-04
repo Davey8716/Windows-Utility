@@ -1,6 +1,7 @@
 
 import sys
 import ctypes
+from ctypes import wintypes
 from pathlib import Path
 from datetime import datetime
 import styles
@@ -37,6 +38,11 @@ from PySide6.QtWidgets import (
 )
 
 MUTEX_NAME = "Windows Resurface"
+WM_QUERYENDSESSION = 0x0011
+ENDSESSION_LOGOFF = 0x80000000
+WM_WTSSESSION_CHANGE = 0x02B1
+WTS_SESSION_LOCK = 0x7
+NOTIFY_FOR_THIS_SESSION = 0
 
 def bring_existing_instance_to_front():
     target_hwnd = None
@@ -116,6 +122,8 @@ class UtilityControlApp(QWidget):
         self._tooltip_managers = []
         self._active_message_boxes = []
         self._known_external_drives = set()
+        self._session_notification_registered = False
+        self._pending_end_session_warning = False
         self._taskbar_backup_folder_open = False
         self.advanced_settings_open = bool(self.state.get("advanced_panel_open", False))
         self.collapsible_sections = []
@@ -135,6 +143,7 @@ class UtilityControlApp(QWidget):
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.show()
         self._apply_fixed_window_style()
+        self._register_session_notifications()
 
         ctypes.windll.user32.SetWindowPos(
             int(self.winId()),
@@ -178,6 +187,63 @@ class UtilityControlApp(QWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self._apply_fixed_window_style()
+        self._register_session_notifications()
+
+    def nativeEvent(self, eventType, message):
+        try:
+            event_name = bytes(eventType).decode(errors="ignore")
+        except Exception:
+            event_name = str(eventType)
+
+        if event_name == "windows_generic_MSG":
+            msg = wintypes.MSG.from_address(int(message))
+            if msg.message == WM_WTSSESSION_CHANGE and msg.wParam == WTS_SESSION_LOCK:
+                QTimer.singleShot(0, self._handle_session_lock_reminder)
+            elif msg.message == WM_QUERYENDSESSION:
+                end_session_reason = (
+                    "Log Out" if (msg.lParam & ENDSESSION_LOGOFF) else "Shutdown or Restart"
+                )
+                if self._block_end_session_for_connected_drives(end_session_reason):
+                    return True, 0
+
+        return False, 0
+
+    def _register_session_notifications(self):
+        if self._session_notification_registered:
+            return
+
+        hwnd = int(self.winId())
+        if not hwnd:
+            return
+
+        try:
+            registered = bool(
+                ctypes.windll.wtsapi32.WTSRegisterSessionNotification(
+                    hwnd,
+                    NOTIFY_FOR_THIS_SESSION,
+                )
+            )
+        except Exception as exc:
+            print(f"[SESSION] Failed to register session notifications: {exc}")
+            return
+
+        if registered:
+            self._session_notification_registered = True
+
+    def _unregister_session_notifications(self):
+        if not self._session_notification_registered:
+            return
+
+        hwnd = int(self.winId())
+        if not hwnd:
+            return
+
+        try:
+            ctypes.windll.wtsapi32.WTSUnRegisterSessionNotification(hwnd)
+        except Exception as exc:
+            print(f"[SESSION] Failed to unregister session notifications: {exc}")
+        finally:
+            self._session_notification_registered = False
 
     def _build_ui(self):
 
@@ -495,11 +561,11 @@ class UtilityControlApp(QWidget):
         power_dropdown = make_action_dropdown(
             " Power Options ",
             {
-                "Sleep": self.right_tools_panel.run_sleep,
-                "Lock PC": self.right_tools_panel.run_lock_pc,
-                "Restart": self.right_tools_panel.run_restart,
-                "Log out": self.right_tools_panel.run_logout,
-                "Shutdown": self.right_tools_panel.run_shutdown,
+                "Sleep": lambda: self._confirm_power_action("Sleep", self.right_tools_panel.run_sleep),
+                "Lock PC": lambda: self._confirm_power_action("Lock PC", self.right_tools_panel.run_lock_pc),
+                "Restart": lambda: self._confirm_power_action("Restart", self.right_tools_panel.run_restart),
+                "Log out": lambda: self._confirm_power_action("Log out", self.right_tools_panel.run_logout),
+                "Shutdown": lambda: self._confirm_power_action("Shutdown", self.right_tools_panel.run_shutdown),
             },
         )
         ui_right_layout.addWidget(power_dropdown)
@@ -645,20 +711,27 @@ class UtilityControlApp(QWidget):
             self.register_tooltip(combo, tooltip_text(tooltip_key))
             return combo
 
-        idle_combo = create_drive_reminder_combo(
-            "idle_plugged_reminder",
-            "usb_idle_reminder_interval",
-            "usb_idle_enabled",
-            [
-                ("Idle Plugged Reminder: Off", "off"),
-                ("Remind after 20 minutes idle", "20m"),
-                ("Remind after 30 minutes idle", "30m"),
-                ("Remind after 45 minutes idle", "45m"),
-                ("Remind after 1 hour idle", "1h"),
-                ("Remind after 2 hours idle", "2h"),
-            ],
+        leave_reminder_btn = make_toggle_button(
+            "External Drive Leave Reminder Off",
+            state.get("usb_idle_enabled", True),
         )
-        usb_layout.addWidget(idle_combo)
+        bind_toggle_text(
+            leave_reminder_btn,
+            "External Drive Leave Reminder On",
+            "External Drive Leave Reminder Off",
+        )
+        leave_reminder_btn.setFixedSize(
+            270,
+            styles.DEFAULT_BUTTON_HEIGHT,
+        )
+        usb_layout.addWidget(leave_reminder_btn)
+        self.register_tooltip(leave_reminder_btn, tooltip_text("idle_plugged_reminder"))
+
+        def on_leave_reminder_changed(checked: bool):
+            state["usb_idle_enabled"] = checked
+            save_state(state)
+
+        leave_reminder_btn.toggled.connect(on_leave_reminder_changed)
 
         download_combo = create_drive_reminder_combo(
             "download_done_reminder",
@@ -990,12 +1063,145 @@ class UtilityControlApp(QWidget):
         close_timer.start(timeout_ms)
         return message_box
 
+    def _show_acknowledged_message(
+        self,
+        icon: QMessageBox.Icon,
+        title: str,
+        text: str,
+        on_close=None,
+    ) -> QMessageBox:
+        message_box = QMessageBox(self)
+        message_box.setIcon(icon)
+        message_box.setWindowTitle(title)
+        message_box.setText(text)
+        message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        message_box.setWindowModality(Qt.WindowModality.NonModal)
+        message_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        message_box.setWindowFlag(Qt.WindowType.Tool, True)
+        message_box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        message_box.setModal(False)
+        self._active_message_boxes.append(message_box)
+
+        def cleanup_message_box():
+            if message_box in self._active_message_boxes:
+                self._active_message_boxes.remove(message_box)
+            if on_close:
+                on_close()
+            message_box.deleteLater()
+
+        message_box.finished.connect(lambda _: cleanup_message_box())
+        message_box.show()
+        message_box.raise_()
+        message_box.activateWindow()
+        return message_box
+
     def _current_external_drives(self) -> set[str]:
         drives = set()
         for drive in get_drive_info():
             if drive.get("ejectable"):
                 drives.add(str(drive["drive"]))
         return drives
+
+    def _leave_drive_reminder_enabled(self) -> bool:
+        return bool(self.state.get("usb_idle_enabled", True))
+
+    def _connected_external_drive_signature(self) -> tuple[str, ...]:
+        return tuple(sorted(self._current_external_drives()))
+
+    def _format_external_drive_message(self, drives: tuple[str, ...]) -> tuple[str, str]:
+        drive_label = "drive is" if len(drives) == 1 else "drives are"
+        drive_lines = "\n".join(drives)
+        return drive_label, drive_lines
+
+    def _show_connected_drive_warning(self, title: str, body: str, on_close=None):
+        return self._show_acknowledged_message(
+            QMessageBox.Icon.Warning,
+            title,
+            body,
+            on_close=on_close,
+        )
+
+    def _handle_session_lock_reminder(self):
+        if not self._leave_drive_reminder_enabled():
+            return
+
+        current_signature = self._connected_external_drive_signature()
+        if not current_signature:
+            return
+
+        drive_label, drive_lines = self._format_external_drive_message(current_signature)
+        self._show_connected_drive_warning(
+            "Session Locked With External Drive Connected",
+            (
+                f"The following external {drive_label} still connected:\n"
+                f"{drive_lines}\n\n"
+                "If you are stepping away, remove the drive first."
+            ),
+        )
+
+    def _block_end_session_for_connected_drives(self, action_name: str) -> bool:
+        if not self._leave_drive_reminder_enabled():
+            self._pending_end_session_warning = False
+            return False
+
+        current_signature = self._connected_external_drive_signature()
+        if not current_signature:
+            self._pending_end_session_warning = False
+            return False
+
+        if self._pending_end_session_warning:
+            return True
+
+        self._pending_end_session_warning = True
+        drive_label, drive_lines = self._format_external_drive_message(current_signature)
+
+        def clear_warning_state():
+            self._pending_end_session_warning = False
+
+        QTimer.singleShot(
+            0,
+            lambda: self._show_connected_drive_warning(
+                f"{action_name} Blocked",
+                (
+                    f"{action_name} was blocked because the following external {drive_label} still connected:\n"
+                    f"{drive_lines}\n\n"
+                    "Remove the drive first, then try again if you still want to continue."
+                ),
+                on_close=clear_warning_state,
+            ),
+        )
+        return True
+
+    def _confirm_power_action(self, action_name: str, action_callback):
+        if not self._leave_drive_reminder_enabled():
+            action_callback()
+            return
+
+        current_signature = self._connected_external_drive_signature()
+        if not current_signature:
+            action_callback()
+            return
+
+        drive_label, drive_lines = self._format_external_drive_message(current_signature)
+        confirm_box = QMessageBox(self)
+        confirm_box.setIcon(QMessageBox.Icon.Warning)
+        confirm_box.setWindowTitle(f"{action_name} With External Drive Connected")
+        confirm_box.setText(
+            (
+                f"The following external {drive_label} still connected:\n"
+                f"{drive_lines}\n\n"
+                f"Do you want to continue with {action_name.lower()} anyway?"
+            )
+        )
+        confirm_box.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
+        )
+        confirm_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        confirm_box.setWindowModality(Qt.WindowModality.ApplicationModal)
+        confirm_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+
+        if confirm_box.exec() == QMessageBox.StandardButton.Yes:
+            action_callback()
 
     def _check_external_drive_changes(self):
         current_drives = self._current_external_drives()
@@ -1312,6 +1518,7 @@ class UtilityControlApp(QWidget):
     def closeEvent(self, event):
         self.save_all_settings()
         if self._quit_requested:
+            self._unregister_session_notifications()
             event.accept()
             return
 
