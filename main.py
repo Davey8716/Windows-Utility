@@ -18,7 +18,8 @@ from tray_toggles import TrayIconManager
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from tooltips import QtTooltipManager, tooltip_text
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QRectF
+from PySide6.QtGui import QPainterPath, QRegion
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -1074,6 +1075,34 @@ class UtilityControlApp(QWidget):
                 "Close Backup Folder" if is_open else "Open Backup Folder"
             )
 
+    def _set_borderless_message_box(
+        self,
+        message_box: QMessageBox,
+        *,
+        stays_on_top: bool = False,
+        tool_window: bool = False,
+    ) -> QMessageBox:
+        message_box.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        message_box.setWindowFlag(Qt.WindowType.CustomizeWindowHint, True)
+        message_box.setWindowFlag(Qt.WindowType.WindowTitleHint, False)
+        message_box.setWindowFlag(Qt.WindowType.WindowSystemMenuHint, False)
+        message_box.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
+        message_box.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, False)
+        message_box.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
+        message_box.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
+        message_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, stays_on_top)
+        message_box.setWindowFlag(Qt.WindowType.Tool, tool_window)
+        message_box.setStyleSheet(styles.message_box_style())
+        return message_box
+
+    def _apply_rounded_window_mask(self, widget: QWidget, radius: int = 10) -> None:
+        rect = QRectF(widget.rect())
+        if rect.isEmpty():
+            return
+        path = QPainterPath()
+        path.addRoundedRect(rect, radius, radius)
+        widget.setMask(QRegion(path.toFillPolygon().toPolygon()))
+
     def _show_timed_message(
         self,
         icon: QMessageBox.Icon,
@@ -1090,6 +1119,7 @@ class UtilityControlApp(QWidget):
         )
         message_box.setStandardButtons(QMessageBox.StandardButton.NoButton)
         message_box.setModal(False)
+        self._set_borderless_message_box(message_box, stays_on_top=True, tool_window=True)
         self._active_message_boxes.append(message_box)
         close_timer = QTimer(message_box)
         close_timer.setSingleShot(True)
@@ -1102,6 +1132,7 @@ class UtilityControlApp(QWidget):
         message_box.finished.connect(lambda _: cleanup_message_box())
         close_timer.timeout.connect(message_box.accept)
         message_box.show()
+        self._apply_rounded_window_mask(message_box)
         close_timer.start(timeout_ms)
         return message_box
 
@@ -1118,8 +1149,7 @@ class UtilityControlApp(QWidget):
         message_box.setText(text)
         message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
         message_box.setWindowModality(Qt.WindowModality.NonModal)
-        message_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
-        message_box.setWindowFlag(Qt.WindowType.Tool, True)
+        self._set_borderless_message_box(message_box, stays_on_top=True, tool_window=True)
         message_box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         message_box.setModal(False)
         self._active_message_boxes.append(message_box)
@@ -1133,6 +1163,7 @@ class UtilityControlApp(QWidget):
 
         message_box.finished.connect(lambda _: cleanup_message_box())
         message_box.show()
+        self._apply_rounded_window_mask(message_box)
         message_box.raise_()
         message_box.activateWindow()
         return message_box
@@ -1240,7 +1271,8 @@ class UtilityControlApp(QWidget):
         )
         confirm_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
         confirm_box.setWindowModality(Qt.WindowModality.ApplicationModal)
-        confirm_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        self._set_borderless_message_box(confirm_box, stays_on_top=True, tool_window=True)
+        QTimer.singleShot(0, lambda: self._apply_rounded_window_mask(confirm_box))
 
         if confirm_box.exec() == QMessageBox.StandardButton.Yes:
             action_callback()

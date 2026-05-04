@@ -134,6 +134,42 @@ def collapsible_section_frame_style(border_color: QColor | None = None, radius: 
     """
 
 
+def message_box_style(radius: int = 10) -> str:
+    border = qcolor_css(SURFACE_BORDER)
+    background = qcolor_css(SURFACE_BG)
+    hover = qcolor_css(SURFACE_HOVER)
+    text = qcolor_css(CURRENT_TEXT)
+    return f"""
+        QMessageBox {{
+            background-color: {background};
+            color: {text};
+            border: 2px solid {border};
+            border-radius: {radius}px;
+        }}
+        QMessageBox QLabel {{
+            background: transparent;
+            color: {text};
+            border: none;
+            font-weight: bold;
+        }}
+        QMessageBox QPushButton {{
+            background-color: {background};
+            color: {text};
+            border: 2px solid {border};
+            border-radius: 6px;
+            padding: 5px 12px;
+            min-width: 72px;
+            font-weight: bold;
+        }}
+        QMessageBox QPushButton:hover {{
+            background-color: {hover};
+        }}
+        QMessageBox QPushButton:pressed {{
+            background-color: {hover};
+        }}
+    """
+
+
 def window_style() -> str:
     return f"""
         QWidget {{
