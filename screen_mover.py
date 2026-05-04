@@ -43,6 +43,7 @@ class DockOverlayButton:
         self.hwnd = None
         self.target_hwnd = None
         self.rect = None
+        self.visible = False
         self._class_name = "WindowsResurfaceDockOverlay"
         self._wnd_proc = None
 
@@ -177,7 +178,6 @@ class DockOverlayButton:
 
     def show_for_target(self, target_hwnd, rect):
         self._ensure_window()
-        self.target_hwnd = target_hwnd
         left, top, right, _ = rect
         x = left + max(TITLE_BAR_SIDE_MARGIN, ((right - left) - DOCK_WIDTH) // 2)
         y = top + DOCK_TOP_OFFSET
@@ -188,7 +188,18 @@ class DockOverlayButton:
                 y = top + DOCK_RESTORED_TOP_OFFSET
         except Exception:
             pass
-        self.rect = (x, y, x + DOCK_WIDTH, y + DOCK_HEIGHT)
+        new_rect = (x, y, x + DOCK_WIDTH, y + DOCK_HEIGHT)
+        should_update = (
+            target_hwnd != self.target_hwnd
+            or new_rect != self.rect
+            or not self.visible
+        )
+
+        self.target_hwnd = target_hwnd
+        self.rect = new_rect
+        if not should_update:
+            return
+
         win32gui.SetWindowPos(
             self.hwnd,
             win32con.HWND_TOPMOST,
@@ -198,6 +209,7 @@ class DockOverlayButton:
             DOCK_HEIGHT,
             win32con.SWP_SHOWWINDOW,
         )
+        self.visible = True
         win32gui.InvalidateRect(self.hwnd, None, True)
 
     def hit_test(self, x, y):
@@ -217,10 +229,12 @@ class DockOverlayButton:
         self.rect = None
         if self.hwnd and win32gui.IsWindow(self.hwnd):
             win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
+        self.visible = False
 
     def destroy(self):
         self.target_hwnd = None
         self.rect = None
+        self.visible = False
         if self.hwnd and win32gui.IsWindow(self.hwnd):
             try:
                 win32gui.DestroyWindow(self.hwnd)
