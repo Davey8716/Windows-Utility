@@ -18,6 +18,7 @@ TITLE_BAR_BUTTON_GAP = 140
 DOCK_WIDTH = 168
 DOCK_HEIGHT = 28
 DOCK_TOP_OFFSET = 14
+DOCK_RESTORED_TOP_OFFSET = 2
 LOOP_SLEEP = 0.03
 DOCK_CORNER_RADIUS = 12
 DOCK_BG_COLOR = win32api.RGB(27, 34, 44)
@@ -179,6 +180,13 @@ class DockOverlayButton:
         left, top, right, _ = rect
         x = left + max(TITLE_BAR_SIDE_MARGIN, ((right - left) - DOCK_WIDTH) // 2)
         y = top + DOCK_TOP_OFFSET
+        try:
+            placement = win32gui.GetWindowPlacement(target_hwnd)
+            show_cmd = placement[1]
+            if show_cmd != win32con.SW_SHOWMAXIMIZED:
+                y = top + DOCK_RESTORED_TOP_OFFSET
+        except Exception:
+            pass
         self.rect = (x, y, x + DOCK_WIDTH, y + DOCK_HEIGHT)
         win32gui.SetWindowPos(
             self.hwnd,
