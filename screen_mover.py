@@ -427,9 +427,9 @@ class ScreenMoverWorker:
 
     def _resolve_target_monitor_index(self, current_idx, monitor_count, direction):
         if direction == "LEFT":
-            return (current_idx - 1) % monitor_count
+            return max(0, current_idx - 1)
         if direction == "RIGHT":
-            return (current_idx + 1) % monitor_count
+            return min(monitor_count - 1, current_idx + 1)
         if direction == "FAR_LEFT":
             return 0
         if direction == "FAR_RIGHT":
