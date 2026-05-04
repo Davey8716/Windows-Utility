@@ -144,7 +144,7 @@ class AdvancedToolsPanel(QWidget):
 
         self.sidebar_utils_section = CollapsibleSection(
             parent=self.side_frame,
-            title_text="Side Bar Utilities",
+            title_text="Maintenance & Quick Actions",
             section_id="sidebar_utils_section",
             app=self.app,
             initial_open=self.app.saved_state
@@ -156,7 +156,7 @@ class AdvancedToolsPanel(QWidget):
         self.build_sidebar_utilities()
         self.app.register_tooltip(
             self.sidebar_utils_section.toggle_btn,
-            "Side bar actions menus.",
+            "Shows maintenance, cleanup, repair, and quick-access action menus.",
         )
 
         self.sidebar_output = QTextEdit()

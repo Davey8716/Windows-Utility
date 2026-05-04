@@ -2,8 +2,6 @@
 
 FIX When app is running in tray and clicked again gui comes up as white/broken. Instance mutex problem?
 
-Width of drive space display so all the wording fits without having to scroll
-
 Width of Side Bar Utilities
 
 Width of Screen mover frame
