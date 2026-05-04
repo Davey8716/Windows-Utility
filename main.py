@@ -201,7 +201,7 @@ class UtilityControlApp(QWidget):
             styles.ICON_BUTTON_WIDTH,
             styles.ICON_BUTTON_HEIGHT
         )
-        self.advanced_settings_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.advanced_settings_toggle.setCursor(Qt.CursorShape.ArrowCursor)
         self.advanced_settings_toggle.setArrowType(Qt.ArrowType.RightArrow)
         self.advanced_settings_toggle.setStyleSheet(
             styles.arrow_button_style(styles.theme_text_color(), styles.SURFACE_DARK)
@@ -248,7 +248,7 @@ class UtilityControlApp(QWidget):
 
         master_btn = QToolButton(header)
         master_btn.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
-        master_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        master_btn.setCursor(Qt.CursorShape.ArrowCursor)
         master_btn.setArrowType(Qt.ArrowType.DownArrow)
         master_btn.setStyleSheet(
             styles.arrow_button_style(styles.theme_text_color(), styles.SURFACE_DARK)
@@ -300,7 +300,7 @@ class UtilityControlApp(QWidget):
 
             toggle = QToolButton(sec_header)
             toggle.setFixedSize(styles.SECTION_TOGGLE_WIDTH, styles.SECTION_TOGGLE_HEIGHT)
-            toggle.setCursor(Qt.CursorShape.PointingHandCursor)
+            toggle.setCursor(Qt.CursorShape.ArrowCursor)
             toggle.setArrowType(Qt.ArrowType.DownArrow)
             toggle.setStyleSheet(
                 styles.arrow_button_style(
@@ -369,7 +369,7 @@ class UtilityControlApp(QWidget):
             button = QPushButton(text)
             button.setCheckable(True)
             button.setChecked(checked)
-            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setCursor(Qt.CursorShape.ArrowCursor)
             styles.apply_default_button_size(button)
             button.setProperty("styleFontSize", 14)
             button.setStyleSheet(styles.toggle_button_style(font_size=14))
@@ -405,7 +405,7 @@ class UtilityControlApp(QWidget):
         def style_organizing_button(button: QPushButton):
             button.setCheckable(False)
             button.setAutoExclusive(False)
-            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setCursor(Qt.CursorShape.ArrowCursor)
             styles.apply_default_button_size(button)
             button.setProperty("styleFontSize", 14)
             button.setStyleSheet(styles.organizing_button_style(font_size=14))
@@ -417,7 +417,7 @@ class UtilityControlApp(QWidget):
             combo.addItem(placeholder)
             combo.addItems(actions_map.keys())
             combo.setCurrentText(placeholder)
-            combo.setCursor(Qt.CursorShape.PointingHandCursor)
+            combo.setCursor(Qt.CursorShape.ArrowCursor)
             styles.apply_default_button_size(combo)
             combo.setProperty("styleFontSize", 14)
             combo.setStyleSheet(styles.organizing_combo_style(14))
@@ -556,7 +556,7 @@ class UtilityControlApp(QWidget):
         screen_move_button_combo.addItem("Left Mouse Button", "left")
         screen_move_button_combo.addItem("Middle Mouse Button", "middle")
         screen_move_button_combo.addItem("Right Mouse Button", "right")
-        screen_move_button_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        screen_move_button_combo.setCursor(Qt.CursorShape.ArrowCursor)
         styles.apply_default_button_size(screen_move_button_combo)
         screen_move_button_combo.setStyleSheet(styles.organizing_combo_style(14))
 
