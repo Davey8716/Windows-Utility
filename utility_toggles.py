@@ -11,6 +11,8 @@ from PySide6.QtCore import Qt
 from screen_mover import SCREEN_MOVER
 from desktop_icon_layout import save_desktop_icon_layout
 from desktop_icon_layout import restore_desktop_icon_layout
+from desktop_icon_layout import desktop_icons_visible
+from desktop_icon_layout import set_desktop_icons_visible
 
 
 class UtilityActionsManager:
@@ -349,6 +351,41 @@ class UtilityActionsManager:
         except Exception as e:
             print("[DESKTOP ICONS] Restore failed:", e)
             return 0
+
+    def desktop_zen_mode_toggle(self, enabled: bool | None = None) -> bool | None:
+        if enabled is None:
+            enabled = bool(
+                getattr(
+                    getattr(self.app, "desktop_zen_mode_var", None),
+                    "get",
+                    lambda: False
+                )()
+            )
+
+        try:
+            changed = set_desktop_icons_visible(not enabled)
+        except Exception as e:
+            print("[DESKTOP ICONS] Visibility change failed:", e)
+            return None
+
+        if not changed:
+            print("[DESKTOP ICONS] Desktop list view not found")
+            return None
+
+        if self.app:
+            self.app.desktop_zen_mode_enabled = enabled
+
+        if self.app and hasattr(self.app, "save_all_settings"):
+            self.app.save_all_settings()
+
+        return enabled
+
+    def desktop_icons_visible(self) -> bool | None:
+        try:
+            return desktop_icons_visible()
+        except Exception as e:
+            print("[DESKTOP ICONS] Visibility read failed:", e)
+            return None
 
 def _should_skip(hwnd: int, skip_hwnd: int) -> bool:
     if hwnd == skip_hwnd:

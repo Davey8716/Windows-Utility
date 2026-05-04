@@ -67,6 +67,23 @@ def _find_desktop_listview_hwnd() -> int | None:
     win32gui.EnumWindows(enum_windows_cb, found)
     return found[0] if found else None
 
+
+def desktop_icons_visible() -> bool | None:
+    lv_hwnd = _find_desktop_listview_hwnd()
+    if not lv_hwnd:
+        return None
+    return bool(win32gui.IsWindowVisible(lv_hwnd))
+
+
+def set_desktop_icons_visible(visible: bool) -> bool:
+    lv_hwnd = _find_desktop_listview_hwnd()
+    if not lv_hwnd:
+        return False
+
+    win32gui.ShowWindow(lv_hwnd, win32con.SW_SHOW if visible else win32con.SW_HIDE)
+    win32gui.InvalidateRect(lv_hwnd, None, True)
+    return True
+
 def capture_desktop_icon_layout() -> list[dict]:
     """
     Returns: [{"name": "...", "x": 123, "y": 456}, ...]

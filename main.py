@@ -845,11 +845,50 @@ class UtilityControlApp(QWidget):
         restore_layout_btn.clicked.connect(self.restore_desktop_layout)
         self.register_tooltip(restore_layout_btn, tooltip_text("restore_desktop_layout"))
 
+        bookmarks_row = QWidget()
+        bookmarks_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        bookmarks_row_layout = QHBoxLayout(bookmarks_row)
+        bookmarks_row_layout.setContentsMargins(0, 0, 0, 0)
+        bookmarks_row_layout.setSpacing(10)
+        org_layout.addWidget(bookmarks_row)
+
         brave_export_btn = QPushButton("Export Bookmarks")
         style_organizing_button(brave_export_btn)
-        org_layout.addWidget(brave_export_btn)
+        bookmarks_row_layout.addWidget(brave_export_btn)
         brave_export_btn.clicked.connect(self.export_bookmarks)
         self.register_tooltip(brave_export_btn, tooltip_text("export_bookmarks"))
+
+        desktop_zen_mode_enabled = bool(state.get("desktop_zen_mode_enabled", False))
+        current_icons_visible = self.actions.desktop_icons_visible()
+        if current_icons_visible is not None:
+            desktop_zen_mode_enabled = not current_icons_visible
+            state["desktop_zen_mode_enabled"] = desktop_zen_mode_enabled
+            save_state(state)
+
+        desktop_zen_btn = make_toggle_button("Zen Mode", desktop_zen_mode_enabled)
+        bind_toggle_text(desktop_zen_btn, "Show Icons", "Zen Mode")
+        bookmarks_row_layout.addWidget(desktop_zen_btn)
+        self.register_tooltip(desktop_zen_btn, tooltip_text("desktop_zen_mode"))
+
+        def on_desktop_zen_mode_changed(checked: bool):
+            state["desktop_zen_mode_enabled"] = checked
+
+            if self.actions.desktop_zen_mode_toggle(checked) is not None:
+                save_state(state)
+                return
+
+            desktop_zen_btn.blockSignals(True)
+            desktop_zen_btn.setChecked(not checked)
+            desktop_zen_btn.blockSignals(False)
+            state["desktop_zen_mode_enabled"] = not checked
+            save_state(state)
+            self._show_timed_message(
+                QMessageBox.Icon.Warning,
+                "Desktop Icons",
+                "Could not change desktop icon visibility.",
+            )
+
+        desktop_zen_btn.toggled.connect(on_desktop_zen_mode_changed)
 
         master_backup_row = QWidget()
         master_backup_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
