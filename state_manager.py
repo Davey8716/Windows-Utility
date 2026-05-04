@@ -13,6 +13,7 @@ DEFAULTS = {
     "minimize_all_enabled": False,
     "power_options_enabled": False,
     "mmb_activation_enabled": True,
+    "screen_mover_activation_button": "middle",
     "title_bar_dock_enabled": True,
     "usb_idle_enabled": True,
     "usb_download_enabled": True,
