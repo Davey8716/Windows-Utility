@@ -2,9 +2,21 @@
 
 FIX When app is running in tray and clicked again gui comes up as white/broken. Instance mutex problem?
 
+Threading/lag
+
 Button Sizes in general, colours relative to state
 
-Button Icons etc
+Button Icons etc especially for USB reminder Dialogue etc
+
+Maybe move some of the organising utilties options into dropdowns?
+
+Spacing on left hand panel dosnt match right
+
+Outer spacing for both panels dosnt match
+
+Make sure the green clicked not clicked states logically match for behaviour
+
+Give tray icon behaviour like for zen mode etc
 
 Frame removal?
 
