@@ -548,11 +548,6 @@ class UtilityControlApp(QWidget):
         ui_left_layout.addWidget(always_on_top_btn)
         self.register_tooltip(always_on_top_btn, tooltip_text("always_on_top"))
 
-        tooltips_btn = make_toggle_button("Enable Tooltips", state.get("tooltips_enabled", True))
-        bind_toggle_text(tooltips_btn, "Disable Tooltips", "Enable Tooltips")
-        ui_left_layout.addWidget(tooltips_btn)
-        self.register_tooltip(tooltips_btn, tooltip_text("enable_tooltips"))
-
         min_all_btn = make_toggle_button("Maximize All On", state.get("minimize_all_enabled", False))
         bind_toggle_text(min_all_btn, "Maximize All Off", "Maximize All On")
         ui_left_layout.addWidget(min_all_btn)
@@ -570,6 +565,11 @@ class UtilityControlApp(QWidget):
         )
         ui_right_layout.addWidget(power_dropdown)
         self.register_tooltip(power_dropdown, tooltip_text("power_options"))
+
+        tooltips_btn = make_toggle_button("Enable Tooltips", state.get("tooltips_enabled", True))
+        bind_toggle_text(tooltips_btn, "Disable Tooltips", "Enable Tooltips")
+        ui_right_layout.addWidget(tooltips_btn)
+        self.register_tooltip(tooltips_btn, tooltip_text("enable_tooltips"))
 
         def on_dark_mode_changed(checked: bool):
             state["theme_dark"] = checked
