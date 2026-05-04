@@ -18,13 +18,21 @@ Make sure the green clicked not clicked states logically match for behaviour
 
 Give tray icon behaviour like for zen mode etc
 
+Give a reminder of what drives are currently connected in drive reminder options
+
 Frame removal?
+
+Remove text frame of drive space display drives
 
 General Colour changes?
 
 Tray Icon to match exe icon etc
 
-Fix location of the mmb clicker
+Fix mover arrows so if any app is at the far ends and cant go farther then the arrows in that direction dissapear + animate these
+
+Fix location of the mmb clicker relative to tabs etc
+
+Fix all maintenance and quick actions 
 
 Think about refactoring
 
@@ -32,3 +40,53 @@ A hook for workspace builder ?
 
 A Hook for Folder creator ?
 
+You’re already in the “practical Windows utility bundle” space. A recycle bin feature fits, but only if it matches that pattern: simple, targeted, low-risk.
+
+Fit with your current features
+
+Your app focuses on:
+
+state capture (desktop layout, taskbar, bookmarks)
+quick system actions (screen move, maximize, always-on-top)
+convenience shortcuts (paths, navigation)
+light automation (shutdown block)
+
+A timed recycle bin cleaner fits only as a passive hygiene tool, not as a core feature.
+
+What would feel consistent
+
+Keep it aligned with your existing design philosophy:
+
+Non-intrusive
+No aggressive timers firing in the background constantly
+Deterministic
+Clear rule → predictable outcome
+User-controlled
+Same style as your shutdown blocker toggle
+Correct implementation direction
+
+Don’t do a blind “every X minutes clear bin.” That’s weak and risky.
+
+Use one of these instead:
+
+On system events:
+app start
+system shutdown (fits your existing shutdown logic)
+Age-based:
+“delete items older than X days”
+Manual + optional automation:
+button: “Empty Recycle Bin”
+checkbox: “auto-clean using rule”
+Where it sits in your app
+
+This is not a primary feature. It belongs in:
+
+a small “Cleanup / Housekeeping” section
+or grouped with storage-related info (if you add more later)
+What to avoid
+No complex scheduling UI → that turns into a worse version of Windows Task Scheduler
+No silent aggressive deletion → breaks trust
+No over-config → your app is about speed, not configuration depth
+Bottom line
+Yes, it fits your app
+But only as a simple, rule-based cleanup toggle, not a full scheduler replacement
