@@ -345,6 +345,17 @@ class UtilityControlApp(QWidget):
             install_green_flash(button)
             return button
 
+        def bind_toggle_text(
+            button: QPushButton,
+            checked_text: str,
+            unchecked_text: str,
+        ) -> None:
+            def update_text(checked: bool) -> None:
+                button.setText(checked_text if checked else unchecked_text)
+
+            update_text(button.isChecked())
+            button.toggled.connect(update_text)
+
         def install_green_flash(button: QPushButton):
             def flash_active():
                 button.setProperty("flashActive", True)
@@ -420,18 +431,22 @@ class UtilityControlApp(QWidget):
         ui_rows_layout.setAlignment(ui_right_col, Qt.AlignmentFlag.AlignTop)
 
         dark_mode_btn = make_toggle_button("Dark Mode", state.get("theme_dark", True))
+        bind_toggle_text(dark_mode_btn, "Light Mode", "Dark Mode")
         ui_left_layout.addWidget(dark_mode_btn)
         self.register_tooltip(dark_mode_btn, "Switches the app between dark and light appearance.")
 
         always_on_top_btn = make_toggle_button("Always on Top", state.get("main_always_on_top_enabled", True))
+        bind_toggle_text(always_on_top_btn, "Always on Top Off", "Always on Top On")
         ui_left_layout.addWidget(always_on_top_btn)
         self.register_tooltip(always_on_top_btn, "Keeps the main window above other windows.")
 
         tooltips_btn = make_toggle_button("Enable Tooltips", state.get("tooltips_enabled", True))
+        bind_toggle_text(tooltips_btn, "Disable Tooltips", "Enable Tooltips")
         ui_left_layout.addWidget(tooltips_btn)
         self.register_tooltip(tooltips_btn, "Enables or disables delayed hover tooltips across the app.")
 
         min_all_btn = make_toggle_button("Minimize All On", state.get("minimize_all_enabled", False))
+        bind_toggle_text(min_all_btn, "Minimize All Off", "Minimize All On")
         ui_left_layout.addWidget(min_all_btn)
         self.register_tooltip(min_all_btn, "Controls whether the minimize-all utility is enabled.")
 
