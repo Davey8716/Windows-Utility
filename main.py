@@ -13,7 +13,7 @@ from screen_mover import SCREEN_MOVER
 from tray_toggles import TrayIconManager
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
-from tooltips import QtTooltipManager
+from tooltips import QtTooltipManager, tooltip_text
 from PySide6.QtCore import Qt, QTimer
 
 from PySide6.QtWidgets import (
@@ -467,22 +467,22 @@ class UtilityControlApp(QWidget):
         dark_mode_btn = make_toggle_button("Dark Mode", state.get("theme_dark", True))
         bind_toggle_text(dark_mode_btn, "Light Mode", "Dark Mode")
         ui_left_layout.addWidget(dark_mode_btn)
-        self.register_tooltip(dark_mode_btn, "Switches the app between dark and light appearance.")
+        self.register_tooltip(dark_mode_btn, tooltip_text("dark_mode"))
 
         always_on_top_btn = make_toggle_button("Always on Top", state.get("main_always_on_top_enabled", True))
         bind_toggle_text(always_on_top_btn, "Always on Top Off", "Always on Top On")
         ui_left_layout.addWidget(always_on_top_btn)
-        self.register_tooltip(always_on_top_btn, "Keeps the main window above other windows.")
+        self.register_tooltip(always_on_top_btn, tooltip_text("always_on_top"))
 
         tooltips_btn = make_toggle_button("Enable Tooltips", state.get("tooltips_enabled", True))
         bind_toggle_text(tooltips_btn, "Disable Tooltips", "Enable Tooltips")
         ui_left_layout.addWidget(tooltips_btn)
-        self.register_tooltip(tooltips_btn, "Enables or disables delayed hover tooltips across the app.")
+        self.register_tooltip(tooltips_btn, tooltip_text("enable_tooltips"))
 
         min_all_btn = make_toggle_button("Maximize All On", state.get("minimize_all_enabled", False))
         bind_toggle_text(min_all_btn, "Maximize All Off", "Maximize All On")
         ui_left_layout.addWidget(min_all_btn)
-        self.register_tooltip(min_all_btn, "Controls whether the minimize-all utility is enabled.")
+        self.register_tooltip(min_all_btn, tooltip_text("maximize_all"))
 
         power_dropdown = make_action_dropdown(
             " Power Options ",
@@ -495,10 +495,7 @@ class UtilityControlApp(QWidget):
             },
         )
         ui_right_layout.addWidget(power_dropdown)
-        self.register_tooltip(
-            power_dropdown,
-            "Choose a power action such as sleep, lock, restart, log out, or shutdown.",
-        )
+        self.register_tooltip(power_dropdown, tooltip_text("power_options"))
 
         def on_dark_mode_changed(checked: bool):
             state["theme_dark"] = checked
@@ -545,10 +542,7 @@ class UtilityControlApp(QWidget):
         title_bar_dock_btn = make_toggle_button("Title Bar Dock", state.get("title_bar_dock_enabled", True))
         bind_toggle_text(title_bar_dock_btn, "Title Bar Dock Off", "Title Bar Dock On")
         screen_row_layout.addWidget(title_bar_dock_btn)
-        self.register_tooltip(
-            title_bar_dock_btn,
-            "Shows a small left/right mover dock when you hover an app window's title bar.",
-        )
+        self.register_tooltip(title_bar_dock_btn, tooltip_text("title_bar_dock"))
 
         def on_title_bar_dock_changed(checked: bool):
             state["title_bar_dock_enabled"] = checked
@@ -583,10 +577,7 @@ class UtilityControlApp(QWidget):
         update_screen_move_combo_state()
 
         screen_row_layout.addWidget(screen_move_button_combo)
-        self.register_tooltip(
-            screen_move_button_combo,
-            "Chooses which mouse button activates moving a window from the tracked title-bar dock.",
-        )
+        self.register_tooltip(screen_move_button_combo, tooltip_text("screen_move_button"))
         screen_row_layout.addStretch()
 
         def on_screen_move_button_changed(_text: str):
@@ -605,7 +596,7 @@ class UtilityControlApp(QWidget):
 
         idle_btn = make_toggle_button("Idle Plugged Reminder", state.get("usb_idle_enabled", True))
         usb_layout.addWidget(idle_btn)
-        self.register_tooltip(idle_btn, "Controls the idle plugged-in drive reminder.")
+        self.register_tooltip(idle_btn, tooltip_text("idle_plugged_reminder"))
 
         def on_idle_changed(checked: bool):
             state["usb_idle_enabled"] = checked
@@ -615,7 +606,7 @@ class UtilityControlApp(QWidget):
 
         download_btn = make_toggle_button("Download Done Remind", state.get("usb_download_enabled", True))
         usb_layout.addWidget(download_btn)
-        self.register_tooltip(download_btn, "Controls the finished-download drive reminder.")
+        self.register_tooltip(download_btn, tooltip_text("download_done_reminder"))
 
         def on_download_changed(checked: bool):
             state["usb_download_enabled"] = checked
@@ -625,7 +616,7 @@ class UtilityControlApp(QWidget):
 
         plug_btn = make_toggle_button("Plug / Unplug Notify", state.get("usb_plug_enabled", True))
         usb_layout.addWidget(plug_btn)
-        self.register_tooltip(plug_btn, "Controls notifications for drive plug and unplug events.")
+        self.register_tooltip(plug_btn, tooltip_text("plug_unplug_notify"))
 
         def on_plug_changed(checked: bool):
             state["usb_plug_enabled"] = checked
@@ -643,7 +634,7 @@ class UtilityControlApp(QWidget):
         style_organizing_button(screenshot_btn)
         org_layout.addWidget(screenshot_btn)
         screenshot_btn.clicked.connect(self.take_desktop_screenshot)
-        self.register_tooltip(screenshot_btn, "Captures the desktop and saves it to the master backup folder.")
+        self.register_tooltip(screenshot_btn, tooltip_text("desktop_screenshot"))
 
         folder_row = QWidget()
         folder_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -653,7 +644,7 @@ class UtilityControlApp(QWidget):
 
         folder_btn = QPushButton("Folder → Desktop")
         style_organizing_button(folder_btn)
-        self.register_tooltip(folder_btn, "Creates a desktop folder using the name entered beside it.")
+        self.register_tooltip(folder_btn, tooltip_text("folder_to_desktop"))
 
         folder_input = QLineEdit()
         folder_input.setPlaceholderText("Folder name")
@@ -662,7 +653,7 @@ class UtilityControlApp(QWidget):
         folder_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
         folder_input.setProperty("surfaceFieldStyle", True)
         folder_input.setStyleSheet(styles.surfaced_line_edit_style(15))
-        self.register_tooltip(folder_input, "Enter the name of the folder to create on the desktop.")
+        self.register_tooltip(folder_input, tooltip_text("folder_name_input"))
 
         folder_row_layout.addWidget(folder_btn)
         folder_row_layout.addWidget(folder_input)
@@ -692,17 +683,14 @@ class UtilityControlApp(QWidget):
         style_organizing_button(backup_taskbar_btn)
         taskbar_row_layout.addWidget(backup_taskbar_btn)
         backup_taskbar_btn.clicked.connect(self.backup_taskbar_apps)
-        self.register_tooltip(backup_taskbar_btn, "Backs up pinned taskbar shortcuts into the TaskBarApps folder.")
+        self.register_tooltip(backup_taskbar_btn, tooltip_text("backup_taskbar"))
 
         open_backup_btn = QPushButton("Open Backup Folder")
         style_organizing_button(open_backup_btn)
         taskbar_row_layout.addWidget(open_backup_btn)
         self.open_backup_btn = open_backup_btn
         open_backup_btn.clicked.connect(self.open_taskbar_backup_folder)
-        self.register_tooltip(
-            open_backup_btn,
-            "Opens the TaskBarApps backup folder inside the master backup path, or closes it if already open.",
-        )
+        self.register_tooltip(open_backup_btn, tooltip_text("open_backup_folder"))
 
         layout_row = QWidget()
         layout_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -715,22 +703,19 @@ class UtilityControlApp(QWidget):
         style_organizing_button(capture_layout_btn)
         layout_row_layout.addWidget(capture_layout_btn)
         capture_layout_btn.clicked.connect(self.capture_desktop_layout)
-        self.register_tooltip(capture_layout_btn, "Saves the current desktop icon layout to the master backup location.")
+        self.register_tooltip(capture_layout_btn, tooltip_text("capture_desktop_layout"))
 
         restore_layout_btn = QPushButton("Restore Desktop Layout")
         style_organizing_button(restore_layout_btn)
         layout_row_layout.addWidget(restore_layout_btn)
         restore_layout_btn.clicked.connect(self.restore_desktop_layout)
-        self.register_tooltip(restore_layout_btn, "Restores the saved desktop icon layout from the master backup location.")
+        self.register_tooltip(restore_layout_btn, tooltip_text("restore_desktop_layout"))
 
         brave_export_btn = QPushButton("Export Bookmarks")
         style_organizing_button(brave_export_btn)
         org_layout.addWidget(brave_export_btn)
         brave_export_btn.clicked.connect(self.export_bookmarks)
-        self.register_tooltip(
-            brave_export_btn,
-            "Exports Brave bookmarks into the Bookmarks folder inside the master backup path.",
-        )
+        self.register_tooltip(brave_export_btn, tooltip_text("export_bookmarks"))
 
         master_backup_row = QWidget()
         master_backup_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -741,7 +726,7 @@ class UtilityControlApp(QWidget):
         master_backup_btn = QPushButton("Master Backup Path")
         style_organizing_button(master_backup_btn)
         master_backup_row_layout.addWidget(master_backup_btn)
-        self.register_tooltip(master_backup_btn, "Chooses the base folder used by backup and layout utilities.")
+        self.register_tooltip(master_backup_btn, tooltip_text("master_backup_path"))
 
         self.backup_path_input = QLineEdit()
         self.backup_path_input.setPlaceholderText("Backup output folder path")
@@ -751,7 +736,7 @@ class UtilityControlApp(QWidget):
         self.backup_path_input.setProperty("surfaceFieldStyle", True)
         self.backup_path_input.setStyleSheet(styles.surfaced_line_edit_style(15))
         master_backup_row_layout.addWidget(self.backup_path_input)
-        self.register_tooltip(self.backup_path_input, "Shows the current master backup folder path.")
+        self.register_tooltip(self.backup_path_input, tooltip_text("backup_path_input"))
 
         org_layout.addWidget(master_backup_row)
 

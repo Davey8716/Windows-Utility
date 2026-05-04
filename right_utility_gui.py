@@ -10,6 +10,7 @@ from pathlib import Path
 import styles
 from collapsible_section import CollapsibleSection
 from state_manager import save_state
+from tooltips import tooltip_text
 from universal_bookmarks_export import BraveBookmarksExporter
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
 from PySide6.QtWidgets import (
@@ -60,6 +61,18 @@ class AdvancedToolsPanel(QWidget):
     WINDOWS_UTILITIES_COLUMN_WIDTH = (
         WINDOWS_UTILITIES_ROW_WIDTH - 10
     ) // 2
+    WINDOWS_DROPDOWN_TOOLTIP_KEYS = {
+        "System": "windows_dropdown_system",
+        "Hardware": "windows_dropdown_hardware",
+        "Network": "windows_dropdown_network",
+        "Startup & Power": "windows_dropdown_startup_power",
+    }
+    SIDEBAR_DROPDOWN_TOOLTIP_KEYS = {
+        "Network / Sys Quick Fix": "sidebar_dropdown_network_fix",
+        "Cleanup / Quick Actions": "sidebar_dropdown_cleanup",
+        "Quick Open": "sidebar_dropdown_quick_open",
+        "Sys Integrity & Disk Health": "sidebar_dropdown_integrity",
+    }
 
     def __init__(self, app):
         super().__init__(app)
@@ -130,7 +143,7 @@ class AdvancedToolsPanel(QWidget):
         )
         self.app.register_tooltip(
             self.master_collapse_btn_right,
-            "Master collapse toggle for all of these regions.",
+            tooltip_text("master_collapse_right"),
         )
         title_row_layout.addWidget(self.master_collapse_btn_right)
         self.side_layout.addWidget(title_row)
@@ -148,7 +161,7 @@ class AdvancedToolsPanel(QWidget):
         self.app.collapsible_sections.append(self.windows_utility_section)
         self.app.register_tooltip(
             self.windows_utility_section.toggle_btn,
-            "Shows windows utilities grouped by type and quick actions.",
+            tooltip_text("windows_utilities_toggle"),
         )
         self.windows_utility_section.main_layout.setAlignment(
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
@@ -182,7 +195,7 @@ class AdvancedToolsPanel(QWidget):
         self.build_sidebar_utilities()
         self.app.register_tooltip(
             self.sidebar_utils_section.toggle_btn,
-            "Shows maintenance, cleanup, repair, and quick-access action menus.",
+            tooltip_text("maintenance_quick_actions_toggle"),
         )
 
         self.sidebar_output = QTextEdit()
@@ -211,7 +224,7 @@ class AdvancedToolsPanel(QWidget):
         self.app.collapsible_sections.append(self.display_space_section)
         self.app.register_tooltip(
             self.display_space_section.toggle_btn,
-            "Shows disk usage for all detected drives.",
+            tooltip_text("drive_space_display_toggle"),
         )
         self._build_drive_space_display()
 
@@ -270,7 +283,7 @@ class AdvancedToolsPanel(QWidget):
         btn_this_pc.clicked.connect(self.toggle_this_pc)
         self.app.register_tooltip(
             btn_this_pc,
-            "Opens This PC in File Explorer, or closes it if already open.",
+            tooltip_text("open_this_pc"),
         )
         drive_parent.addWidget(btn_this_pc)
 
@@ -459,6 +472,9 @@ class AdvancedToolsPanel(QWidget):
         combo.setCurrentText(placeholder)
         combo.setProperty("styleFontSize", 15)
         combo.setStyleSheet(styles.organizing_combo_style(15))
+        tooltip_key = self.WINDOWS_DROPDOWN_TOOLTIP_KEYS.get(label)
+        if tooltip_key:
+            self.app.register_tooltip(combo, tooltip_text(tooltip_key))
 
         def runner(text: str):
             if text == placeholder:
@@ -506,7 +522,7 @@ class AdvancedToolsPanel(QWidget):
             grid_layout,
             0,
             0,
-            "Network / System Quick Fix",
+            "Network / Sys Quick Fix",
             self._sidebar_network_actions(),
         )
         self._add_sidebar_dropdown(
@@ -527,7 +543,7 @@ class AdvancedToolsPanel(QWidget):
             grid_layout,
             1,
             1,
-            "System Integrity & Disk Health",
+            "Sys Integrity & Disk Health",
             self._sidebar_system_integrity_actions(),
         )
 
@@ -774,6 +790,9 @@ class AdvancedToolsPanel(QWidget):
         combo.setCurrentText(placeholder)
         combo.setProperty("styleFontSize", 14)
         combo.setStyleSheet(styles.organizing_combo_style(14))
+        tooltip_key = self.SIDEBAR_DROPDOWN_TOOLTIP_KEYS.get(title)
+        if tooltip_key:
+            self.app.register_tooltip(combo, tooltip_text(tooltip_key))
 
         def runner(text: str):
             if text == placeholder:
