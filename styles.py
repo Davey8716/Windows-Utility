@@ -23,6 +23,7 @@ STATUS_ACCENT = QColor(45, 125, 210)
 ORGANIZE_BUTTON_BG = QColor(72, 152, 91)
 ORGANIZE_BUTTON_HOVER = QColor(84, 168, 104)
 ORGANIZE_BUTTON_PRESSED = QColor(38, 92, 52)
+ORGANIZE_BUTTON_PRESSED_HOVER = QColor(50, 112, 65)
 ORGANIZE_BUTTON_BORDER = QColor(102, 182, 120)
 
 DEFAULT_BUTTON_WIDTH = 180
@@ -167,6 +168,9 @@ def organizing_button_style(font_size: int | None = None) -> str:
         }}
         QPushButton:hover {{
             background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+        }}
+        QPushButton:checked:hover {{
+            background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED_HOVER)};
         }}
         QPushButton:pressed,
         QPushButton[flashActive="true"],
