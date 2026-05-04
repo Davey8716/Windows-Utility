@@ -83,6 +83,19 @@ def themed_surface_field_text() -> QColor:
 def themed_surface_field_border() -> QColor:
     return PANEL_BORDER if THEME_IS_DARK else SURFACE_BORDER
 
+
+def tooltip_bg() -> QColor:
+    return SURFACE_BG if THEME_IS_DARK else OFF_WHITE_FIELD_BG
+
+
+def tooltip_text_color() -> QColor:
+    return CURRENT_TEXT
+
+
+def tooltip_border() -> QColor:
+    return SURFACE_BORDER if THEME_IS_DARK else QColor(120, 120, 120)
+
+
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
 
@@ -150,6 +163,18 @@ def window_style() -> str:
             background: transparent;
             border: none;
             height: 0px;
+        }}
+    """
+
+
+def tooltip_style(font_size: int = 13) -> str:
+    return f"""
+        QToolTip {{
+            background-color: {qcolor_css(tooltip_bg())};
+            color: {qcolor_css(tooltip_text_color())};
+            border: 1px solid {qcolor_css(tooltip_border())};
+            padding: 4px 6px;
+            font-size: {font_size}px;
         }}
     """
 

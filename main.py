@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QFileDialog,
     QMessageBox,
-    QSizePolicy
+    QSizePolicy,
 )
 
 MUTEX_NAME = "Windows Resurface"
@@ -100,7 +100,7 @@ class UtilityControlApp(QWidget):
         self.saved_state = self.state
         styles.set_theme(bool(self.state.get("theme_dark", True)))
         self.setWindowTitle("Windows Resurface")
-        self.setStyleSheet(styles.window_style())
+        self.setStyleSheet(styles.window_style() + styles.tooltip_style())
         self.COLLAPSED_WIDTH = 470
         self.EXPANDED_WIDTH = self.COLLAPSED_WIDTH + self.RIGHT_PANEL_WIDTH
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
@@ -1107,7 +1107,7 @@ class UtilityControlApp(QWidget):
 
     def apply_theme(self, is_dark: bool):
         styles.set_theme(is_dark)
-        self.setStyleSheet(styles.window_style())
+        self.setStyleSheet(styles.window_style() + styles.tooltip_style())
 
         for frame in self.findChildren(QFrame, "CollapsibleSectionFrame"):
             frame.setStyleSheet(styles.collapsible_section_frame_style())
