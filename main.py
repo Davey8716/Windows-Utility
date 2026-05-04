@@ -479,8 +479,8 @@ class UtilityControlApp(QWidget):
         ui_left_layout.addWidget(tooltips_btn)
         self.register_tooltip(tooltips_btn, "Enables or disables delayed hover tooltips across the app.")
 
-        min_all_btn = make_toggle_button("Minimize All On", state.get("minimize_all_enabled", False))
-        bind_toggle_text(min_all_btn, "Minimize All Off", "Minimize All On")
+        min_all_btn = make_toggle_button("Maximize All On", state.get("minimize_all_enabled", False))
+        bind_toggle_text(min_all_btn, "Maximize All Off", "Maximize All On")
         ui_left_layout.addWidget(min_all_btn)
         self.register_tooltip(min_all_btn, "Controls whether the minimize-all utility is enabled.")
 
