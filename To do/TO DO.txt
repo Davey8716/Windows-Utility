@@ -2,8 +2,6 @@
 
 FIX When app is running in tray and clicked again gui comes up as white/broken. Instance mutex problem?
 
-Width of Screen mover frame
-
 Button Sizes in general, colours relative to state
 
 Button Icons etc
@@ -14,9 +12,7 @@ General Colour changes?
 
 Tray Icon to match exe icon etc
 
-Fix location of the mmb clicker, give it extra arrows to jump further across screens + animate it ?
-
-Do code Review
+Fix location of the mmb clicker
 
 Think about refactoring
 

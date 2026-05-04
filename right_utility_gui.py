@@ -87,7 +87,7 @@ class AdvancedToolsPanel(QWidget):
         self.scroll.setWidget(self.side_frame)
 
         self.side_layout = QVBoxLayout(self.side_frame)
-        self.side_layout.setContentsMargins(10, 5, 10, 5)
+        self.side_layout.setContentsMargins(10, 0, 10, 5)
         self.side_layout.setSpacing(6)
         self.side_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
