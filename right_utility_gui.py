@@ -53,6 +53,14 @@ def get_drive_info():
 
 
 class AdvancedToolsPanel(QWidget):
+    WINDOWS_UTILITIES_FRAME_WIDTH = 370
+    WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 4
+    WINDOWS_UTILITIES_CONTENT_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH - 4
+    WINDOWS_UTILITIES_ROW_WIDTH = WINDOWS_UTILITIES_CONTENT_WIDTH - 20
+    WINDOWS_UTILITIES_COLUMN_WIDTH = (
+        WINDOWS_UTILITIES_ROW_WIDTH - 10
+    ) // 2
+
     def __init__(self, app):
         super().__init__(app)
         self.app = app
@@ -68,11 +76,14 @@ class AdvancedToolsPanel(QWidget):
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.scroll.setViewportMargins(0, 0, 12, 0)
         root_layout.addWidget(self.scroll)
 
         self.side_frame = QWidget()
-        self.side_frame.setFixedWidth(self.app.RIGHT_PANEL_WIDTH)
+        self.side_frame.setMinimumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
+        self.side_frame.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         self.scroll.setWidget(self.side_frame)
 
         self.side_layout = QVBoxLayout(self.side_frame)
@@ -139,6 +150,18 @@ class AdvancedToolsPanel(QWidget):
             self.windows_utility_section.toggle_btn,
             "Shows windows utilities grouped by type and quick actions.",
         )
+        self.windows_utility_section.setFixedWidth(
+            self.WINDOWS_UTILITIES_SECTION_WIDTH
+        )
+        self.windows_utility_section.header.setFixedWidth(
+            self.WINDOWS_UTILITIES_FRAME_WIDTH
+        )
+        self.windows_utility_section.container.setFixedWidth(
+            self.WINDOWS_UTILITIES_FRAME_WIDTH
+        )
+        self.windows_utility_section.content.setFixedWidth(
+            self.WINDOWS_UTILITIES_CONTENT_WIDTH
+        )
 
         self._build_windows_utilities()
 
@@ -186,17 +209,21 @@ class AdvancedToolsPanel(QWidget):
         parent_layout = self.windows_utility_section.content_layout
 
         row = QWidget()
+        row.setFixedWidth(self.WINDOWS_UTILITIES_ROW_WIDTH)
+        row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(10)
         parent_layout.addWidget(row)
 
         left_drop_col = QWidget()
+        left_drop_col.setFixedWidth(self.WINDOWS_UTILITIES_COLUMN_WIDTH)
         left_drop_layout = QVBoxLayout(left_drop_col)
         left_drop_layout.setContentsMargins(0, 0, 0, 0)
         left_drop_layout.setSpacing(10)
 
         right_drop_col = QWidget()
+        right_drop_col.setFixedWidth(self.WINDOWS_UTILITIES_COLUMN_WIDTH)
         right_drop_layout = QVBoxLayout(right_drop_col)
         right_drop_layout.setContentsMargins(0, 0, 0, 0)
         right_drop_layout.setSpacing(10)

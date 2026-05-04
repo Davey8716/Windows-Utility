@@ -88,6 +88,7 @@ class UtilityControlApp(QWidget):
     USER_INTERFACE_TOP_SPACER = 6
     ORGANISING_SECTION_TOP_SPACER = 18
     MAIN_SECTION_FRAME_WIDTH = 385
+    LEFT_SECTION_VISIBLE_FRAME_WIDTH = MAIN_SECTION_FRAME_WIDTH - 4
     MAIN_SECTION_OUTER_WIDTH = (
         MAIN_SECTION_FRAME_WIDTH + (MAIN_SECTION_SIDE_PADDING * 2)
     )
@@ -210,8 +211,11 @@ class UtilityControlApp(QWidget):
         self.advanced_settings_toggle.raise_()
 
         self.main_frame = QWidget()
-        self.main_frame.setFixedWidth(self.MAIN_PANEL_WIDTH)
-        self.main_frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.main_frame.setMinimumWidth(self.MAIN_SECTION_OUTER_WIDTH)
+        self.main_frame.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         self.main_scroll.setWidget(self.main_frame)
 
         self.main_layout = QVBoxLayout(self.main_frame)
@@ -276,8 +280,11 @@ class UtilityControlApp(QWidget):
             layout.setSpacing(4)
 
             sec_header = QWidget(section)
-            sec_header.setFixedWidth(self.MAIN_SECTION_FRAME_WIDTH)
-            sec_header.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            sec_header.setMaximumWidth(self.LEFT_SECTION_VISIBLE_FRAME_WIDTH)
+            sec_header.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
             sec_header_layout = QHBoxLayout(sec_header)
             sec_header_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -300,8 +307,11 @@ class UtilityControlApp(QWidget):
             frame = QFrame(section)
             section.frame = frame
             frame.setObjectName("CollapsibleSectionFrame")
-            frame.setFixedWidth(self.MAIN_SECTION_FRAME_WIDTH)
-            frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            frame.setMaximumWidth(self.LEFT_SECTION_VISIBLE_FRAME_WIDTH)
+            frame.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
             frame.setStyleSheet(styles.LEFT_PANEL_FRAME_STYLE)
             frame_layout = QVBoxLayout(frame)
             frame_layout.setContentsMargins(2, 2, 2, 2)
@@ -309,8 +319,11 @@ class UtilityControlApp(QWidget):
 
             section.content = QWidget(frame)
             content = section.content
-            content.setFixedWidth(self.MAIN_SECTION_FRAME_WIDTH - 4)
-            content.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            content.setMaximumWidth(self.LEFT_SECTION_VISIBLE_FRAME_WIDTH - 4)
+            content.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
             content.setVisible(initial_open)
             frame.setVisible(initial_open)
