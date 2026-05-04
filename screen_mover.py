@@ -19,6 +19,11 @@ DOCK_WIDTH = 92
 DOCK_HEIGHT = 28
 DOCK_TOP_OFFSET = 14
 LOOP_SLEEP = 0.03
+DOCK_CORNER_RADIUS = 12
+DOCK_BG_COLOR = win32api.RGB(27, 34, 44)
+DOCK_EDGE_COLOR = win32api.RGB(64, 120, 78)
+DOCK_ARROW_COLOR = win32api.RGB(130, 255, 165)
+DOCK_ARROW_GLOW_COLOR = win32api.RGB(58, 168, 92)
 LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 WNDPROC_TYPE = ctypes.WINFUNCTYPE(
     LRESULT,
@@ -72,6 +77,15 @@ class DockOverlayButton:
             hinstance,
             None,
         )
+        region = win32gui.CreateRoundRectRgn(
+            0,
+            0,
+            DOCK_WIDTH + 1,
+            DOCK_HEIGHT + 1,
+            DOCK_CORNER_RADIUS,
+            DOCK_CORNER_RADIUS,
+        )
+        win32gui.SetWindowRgn(self.hwnd, region, True)
         win32gui.SetLayeredWindowAttributes(self.hwnd, 0, 240, win32con.LWA_ALPHA)
 
     def _window_proc(self, hwnd, msg, wparam, lparam):
@@ -92,12 +106,21 @@ class DockOverlayButton:
 
         try:
             rect = win32gui.GetClientRect(hwnd)
-            bg = win32gui.CreateSolidBrush(win32api.RGB(27, 34, 44))
-            edge = win32gui.CreateSolidBrush(win32api.RGB(42, 52, 64))
-            win32gui.FillRect(hdc, rect, bg)
-            win32gui.FrameRect(hdc, rect, edge)
+            left, top, right, bottom = rect
+            bg = win32gui.CreateSolidBrush(DOCK_BG_COLOR)
+            edge_pen = win32gui.CreatePen(win32con.PS_SOLID, 1, DOCK_EDGE_COLOR)
+            old_brush = win32gui.SelectObject(hdc, bg)
+            old_pen = win32gui.SelectObject(hdc, edge_pen)
+            win32gui.RoundRect(
+                hdc,
+                left,
+                top,
+                right,
+                bottom,
+                DOCK_CORNER_RADIUS,
+                DOCK_CORNER_RADIUS,
+            )
             win32gui.SetBkMode(hdc, win32con.TRANSPARENT)
-            win32gui.SetTextColor(hdc, win32api.RGB(90, 200, 255))
 
             logfont = win32gui.LOGFONT()
             logfont.lfHeight = -18
@@ -106,6 +129,19 @@ class DockOverlayButton:
             font = win32gui.CreateFontIndirect(logfont)
             old_font = win32gui.SelectObject(hdc, font)
 
+            glow_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            for dx, dy in glow_offsets:
+                glow_rect = (left + dx, top + dy, right + dx, bottom + dy)
+                win32gui.SetTextColor(hdc, DOCK_ARROW_GLOW_COLOR)
+                win32gui.DrawText(
+                    hdc,
+                    "<   >",
+                    -1,
+                    glow_rect,
+                    win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE,
+                )
+
+            win32gui.SetTextColor(hdc, DOCK_ARROW_COLOR)
             win32gui.DrawText(
                 hdc,
                 "<   >",
@@ -115,9 +151,11 @@ class DockOverlayButton:
             )
 
             win32gui.SelectObject(hdc, old_font)
+            win32gui.SelectObject(hdc, old_pen)
+            win32gui.SelectObject(hdc, old_brush)
             win32gui.DeleteObject(font)
+            win32gui.DeleteObject(edge_pen)
             win32gui.DeleteObject(bg)
-            win32gui.DeleteObject(edge)
         finally:
             win32gui.EndPaint(hwnd, paint_struct)
 

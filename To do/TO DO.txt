@@ -20,8 +20,6 @@ Do code Review
 
 Think about refactoring
 
-Dark/Light Mode
-
 A hook for workspace builder ?
 
 A Hook for Folder creator ?
