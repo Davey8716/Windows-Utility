@@ -13,13 +13,14 @@ import win32process
 
 from state_manager import load_state
 
-TITLE_BAR_SIDE_MARGIN = 80
+TITLE_BAR_SIDE_MARGIN = 60
 TITLE_BAR_BUTTON_GAP = 140
-DOCK_WIDTH = 168
-DOCK_HEIGHT = 28
+DOCK_WIDTH = 140
+DOCK_HEIGHT = 30
 DOCK_TOP_OFFSET = 14
 DOCK_RESTORED_TOP_OFFSET = 2
 LOOP_SLEEP = 0.03
+WINDOW_MOVE_SETTLE_SECONDS = 0.2
 DOCK_CORNER_RADIUS = 12
 DOCK_BG_COLOR = win32api.RGB(27, 34, 44)
 DOCK_EDGE_COLOR = win32api.RGB(64, 120, 78)
@@ -239,6 +240,9 @@ class ScreenMoverWorker:
         self.title_bar_dock_enabled = True
         self.activation_button = "middle"
         self.app_hwnd = None
+        self._last_title_bar_hwnd = None
+        self._last_title_bar_rect = None
+        self._suppress_dock_until = 0.0
 
     def configure(self, *, app_hwnd=None):
         if app_hwnd:
@@ -343,6 +347,27 @@ class ScreenMoverWorker:
             + 8
         )
 
+    def _is_left_button_pressed(self):
+        try:
+            return bool(win32api.GetAsyncKeyState(win32con.VK_LBUTTON) & 0x8000)
+        except Exception:
+            return False
+
+    def _track_title_bar_motion(self, hwnd, rect):
+        now = time.monotonic()
+
+        if hwnd != self._last_title_bar_hwnd:
+            self._last_title_bar_hwnd = hwnd
+            self._last_title_bar_rect = rect
+            return False
+
+        if rect != self._last_title_bar_rect:
+            self._last_title_bar_rect = rect
+            self._suppress_dock_until = now + WINDOW_MOVE_SETTLE_SECONDS
+            return True
+
+        return now < self._suppress_dock_until
+
     def _title_bar_candidate(self):
         try:
             cursor_x, cursor_y = win32gui.GetCursorPos()
@@ -375,6 +400,15 @@ class ScreenMoverWorker:
             return None, None
 
         if not (left + TITLE_BAR_SIDE_MARGIN <= cursor_x <= right - TITLE_BAR_BUTTON_GAP):
+            return None, None
+
+        if self._is_left_button_pressed():
+            self._last_title_bar_hwnd = hwnd
+            self._last_title_bar_rect = rect
+            self._suppress_dock_until = time.monotonic() + WINDOW_MOVE_SETTLE_SECONDS
+            return None, None
+
+        if self._track_title_bar_motion(hwnd, rect):
             return None, None
 
         return hwnd, rect
