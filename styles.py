@@ -333,7 +333,22 @@ def organizing_combo_style(font_size: int) -> str:
             background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
             color: {qcolor_css(theme_text_color())};
             selection-background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            selection-color: {qcolor_css(theme_text_color())};
             border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+            outline: 0;
+        }}
+        QComboBox QAbstractItemView::item {{
+            padding: 4px 8px;
+            border: none;
+        }}
+        QComboBox QAbstractItemView::item:selected {{
+            background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            color: {qcolor_css(theme_text_color())};
+            border-left: 3px solid {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
+        }}
+        QComboBox QAbstractItemView::item:hover {{
+            background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            color: {qcolor_css(theme_text_color())};
         }}
     """
 
