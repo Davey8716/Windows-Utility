@@ -167,14 +167,15 @@ def window_style() -> str:
     """
 
 
-def tooltip_style(font_size: int = 13) -> str:
+def tooltip_style() -> str:
     return f"""
         QToolTip {{
             background-color: {qcolor_css(tooltip_bg())};
             color: {qcolor_css(tooltip_text_color())};
             border: 1px solid {qcolor_css(tooltip_border())};
-            padding: 4px 6px;
-            font-size: {font_size}px;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-weight: 700;
         }}
     """
 

@@ -1,4 +1,5 @@
 from PySide6.QtCore import QObject, QTimer, QPoint, QEvent
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QToolTip
 
 
@@ -78,9 +79,36 @@ class QtTooltipManager(QObject):
         if hasattr(app, "tooltips_enabled") and not app.tooltips_enabled:
             return
 
+        QToolTip.setFont(self._build_tooltip_font())
         pos = self.widget.mapToGlobal(QPoint(20, self.widget.height()))
         QToolTip.showText(pos, self.text, self.widget)
 
     def _hide(self):
         self._timer.stop()
         QToolTip.hideText()
+
+    def _build_tooltip_font(self) -> QFont:
+        font = QFont(self.widget.font())
+        style_font_size = self.widget.property("styleFontSize")
+
+        pixel_size = None
+        if style_font_size is not None:
+            try:
+                pixel_size = max(12, int(style_font_size) + 1)
+            except (TypeError, ValueError):
+                pixel_size = None
+
+        if pixel_size is None:
+            widget_pixel_size = font.pixelSize()
+            if widget_pixel_size > 0:
+                pixel_size = max(12, widget_pixel_size)
+            else:
+                point_size = font.pointSizeF()
+                if point_size > 0:
+                    font.setPointSizeF(max(10.5, point_size))
+
+        if pixel_size is not None:
+            font.setPixelSize(pixel_size)
+
+        font.setBold(True)
+        return font
