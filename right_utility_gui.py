@@ -188,7 +188,8 @@ class AdvancedToolsPanel(QWidget):
         self.sidebar_output = QTextEdit()
         self.sidebar_output.setFixedHeight(285)
         self.sidebar_output.setReadOnly(True)
-        self.sidebar_output.setStyleSheet(styles.text_edit_style("Consolas", 15))
+        self.sidebar_output.setProperty("surfaceFieldStyle", True)
+        self.sidebar_output.setStyleSheet(styles.surfaced_text_edit_style("Consolas", 15))
         self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
 
         self.display_space_section = CollapsibleSection(
@@ -280,6 +281,7 @@ class AdvancedToolsPanel(QWidget):
         )
         self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.drive_space_list.setWordWrap(False)
+        self.drive_space_list.setProperty("surfaceFieldStyle", True)
         self._apply_drive_space_list_style()
         drive_parent.addWidget(self.drive_space_list)
 
@@ -304,32 +306,7 @@ class AdvancedToolsPanel(QWidget):
 
     def _apply_drive_space_list_style(self):
         self.drive_space_list.setStyleSheet(
-            """
-            QListWidget {
-                %s
-                background-color: %s;
-                color: %s;
-                border: 2px solid %s;
-                border-radius: 6px;
-                padding: 6px;
-            }
-            QListWidget::item {
-                padding: 1px 6px;
-                margin: 0px;
-            }
-            QListWidget::item:selected {
-                background-color: %s;
-                color: %s;
-            }
-            """
-            % (
-                styles.label_style(font_size=15, bold=True, font_family="Consolas"),
-                styles.qcolor_css(styles.PANEL_BG),
-                styles.qcolor_css(styles.TEXT_LIGHT),
-                styles.qcolor_css(styles.PANEL_BORDER),
-                styles.qcolor_css(styles.PANEL_HOVER),
-                styles.qcolor_css(styles.TEXT_LIGHT),
-            )
+            styles.surfaced_list_widget_style("Consolas", 15)
         )
 
     def _refresh_this_pc_button(self):

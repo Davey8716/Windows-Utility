@@ -2,6 +2,7 @@ from PySide6.QtGui import QColor
 
 TEXT_LIGHT = QColor(255, 255, 255)
 TEXT_DARK = QColor(0, 0, 0)
+OFF_WHITE_FIELD_BG = QColor(245, 245, 240)
 
 WINDOW_BG = QColor(40, 40, 50)
 SURFACE_BG = QColor(58, 72, 96)
@@ -14,6 +15,7 @@ SURFACE_DARK = SURFACE_BG
 SURFACE_HOVER_DARK = SURFACE_HOVER
 SURFACE_HOVER_LIGHT = SURFACE_HOVER
 CURRENT_TEXT = TEXT_LIGHT
+THEME_IS_DARK = True
 BUTTON_BORDER = SURFACE_BORDER
 BUTTON_ACTIVE_BG = QColor(47, 93, 58)
 BUTTON_ACTIVE_BORDER = QColor(93, 162, 113)
@@ -36,19 +38,21 @@ RIGHT_SECTION_MAX_WIDTH = 520
 def set_theme(is_dark: bool) -> None:
     global WINDOW_BG, SURFACE_BG, SURFACE_HOVER, PANEL_BG, PANEL_HOVER
     global SURFACE_BORDER, SURFACE_DARK, SURFACE_HOVER_DARK, SURFACE_HOVER_LIGHT
-    global CURRENT_TEXT, BUTTON_BORDER, LEFT_PANEL_FRAME_STYLE, RIGHT_PANEL_FRAME_STYLE
+    global CURRENT_TEXT, THEME_IS_DARK, BUTTON_BORDER, LEFT_PANEL_FRAME_STYLE, RIGHT_PANEL_FRAME_STYLE
 
     # Blue data-entry and output surfaces stay unchanged in both themes.
     PANEL_BG = QColor(58, 72, 96)
     PANEL_HOVER = QColor(74, 111, 168)
 
     if is_dark:
+        THEME_IS_DARK = True
         WINDOW_BG = QColor(40, 40, 50)
         SURFACE_BG = QColor(58, 72, 96)
         SURFACE_HOVER = QColor(74, 111, 168)
         SURFACE_BORDER = QColor(255, 255, 255)
         CURRENT_TEXT = TEXT_LIGHT
     else:
+        THEME_IS_DARK = False
         WINDOW_BG = QColor(255, 255, 255)
         SURFACE_BG = QColor(255, 255, 255)
         SURFACE_HOVER = QColor(230, 236, 244)
@@ -65,6 +69,18 @@ def set_theme(is_dark: bool) -> None:
 
 def theme_text_color() -> QColor:
     return CURRENT_TEXT
+
+
+def themed_surface_field_bg() -> QColor:
+    return PANEL_BG if THEME_IS_DARK else OFF_WHITE_FIELD_BG
+
+
+def themed_surface_field_text() -> QColor:
+    return TEXT_LIGHT if THEME_IS_DARK else TEXT_DARK
+
+
+def themed_surface_field_border() -> QColor:
+    return PANEL_BORDER if THEME_IS_DARK else SURFACE_BORDER
 
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
@@ -184,6 +200,22 @@ def text_edit_style(font_family: str, font_size: int) -> str:
         }}
     """
 
+def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
+    return f"""
+        QTextEdit {{
+            {label_style(
+                font_size=font_size,
+                bold=True,
+                color=themed_surface_field_text(),
+                font_family=font_family,
+            )}
+            background-color: {qcolor_css(themed_surface_field_bg())};
+            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            border-radius: 6px;
+            selection-background-color: {qcolor_css(PANEL_HOVER)};
+        }}
+    """
+
 def button_text_style(font_size: int) -> str:
     return organizing_button_style(font_size=font_size)
 
@@ -193,6 +225,22 @@ def line_edit_style(font_size: int) -> str:
             {label_style(font_size=font_size, bold=True, color=TEXT_LIGHT)}
             background-color: {qcolor_css(PANEL_BG)};
             border: 2px solid {qcolor_css(PANEL_BORDER)};
+            border-radius: 6px;
+            padding: 4px 8px;
+            selection-background-color: {qcolor_css(PANEL_HOVER)};
+        }}
+    """
+
+def surfaced_line_edit_style(font_size: int) -> str:
+    return f"""
+        QLineEdit {{
+            {label_style(
+                font_size=font_size,
+                bold=True,
+                color=themed_surface_field_text(),
+            )}
+            background-color: {qcolor_css(themed_surface_field_bg())};
+            border: 2px solid {qcolor_css(themed_surface_field_border())};
             border-radius: 6px;
             padding: 4px 8px;
             selection-background-color: {qcolor_css(PANEL_HOVER)};
@@ -222,6 +270,42 @@ def combo_style(font_size: int) -> str:
 
 LEFT_PANEL_FRAME_STYLE = collapsible_section_frame_style()
 RIGHT_PANEL_FRAME_STYLE = collapsible_section_frame_style()
+
+
+def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
+    return (
+        """
+        QListWidget {
+            %s
+            background-color: %s;
+            color: %s;
+            border: 2px solid %s;
+            border-radius: 6px;
+            padding: 6px;
+        }
+        QListWidget::item {
+            padding: 1px 6px;
+            margin: 0px;
+        }
+        QListWidget::item:selected {
+            background-color: %s;
+            color: %s;
+        }
+        """
+        % (
+            label_style(
+                font_size=font_size,
+                bold=True,
+                color=themed_surface_field_text(),
+                font_family=font_family,
+            ),
+            qcolor_css(themed_surface_field_bg()),
+            qcolor_css(themed_surface_field_text()),
+            qcolor_css(themed_surface_field_border()),
+            qcolor_css(PANEL_HOVER),
+            qcolor_css(themed_surface_field_text()),
+        )
+    )
 
 def organizing_combo_style(font_size: int) -> str:
     return f"""

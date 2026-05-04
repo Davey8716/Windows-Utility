@@ -660,7 +660,8 @@ class UtilityControlApp(QWidget):
         folder_input.setText(state.get("folder_to_desktop_name", ""))
         folder_input.setReadOnly(False)
         folder_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        folder_input.setStyleSheet(styles.line_edit_style(15))
+        folder_input.setProperty("surfaceFieldStyle", True)
+        folder_input.setStyleSheet(styles.surfaced_line_edit_style(15))
         self.register_tooltip(folder_input, "Enter the name of the folder to create on the desktop.")
 
         folder_row_layout.addWidget(folder_btn)
@@ -747,7 +748,8 @@ class UtilityControlApp(QWidget):
         self.backup_path_input.setText(self._get_master_backup_dir())
         self.backup_path_input.setReadOnly(True)
         self.backup_path_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        self.backup_path_input.setStyleSheet(styles.line_edit_style(15))
+        self.backup_path_input.setProperty("surfaceFieldStyle", True)
+        self.backup_path_input.setStyleSheet(styles.surfaced_line_edit_style(15))
         master_backup_row_layout.addWidget(self.backup_path_input)
         self.register_tooltip(self.backup_path_input, "Shows the current master backup folder path.")
 
@@ -1126,7 +1128,10 @@ class UtilityControlApp(QWidget):
             frame.setStyleSheet(styles.collapsible_section_frame_style())
 
         for line_edit in self.findChildren(QLineEdit):
-            line_edit.setStyleSheet(styles.line_edit_style(15))
+            if line_edit.property("surfaceFieldStyle"):
+                line_edit.setStyleSheet(styles.surfaced_line_edit_style(15))
+            else:
+                line_edit.setStyleSheet(styles.line_edit_style(15))
 
         for button in self.findChildren(QPushButton):
             font_size = int(button.property("styleFontSize") or 14)
@@ -1138,9 +1143,14 @@ class UtilityControlApp(QWidget):
 
         if hasattr(self, "right_tools_panel"):
             if hasattr(self.right_tools_panel, "sidebar_output"):
-                self.right_tools_panel.sidebar_output.setStyleSheet(
-                    styles.text_edit_style("Consolas", 15)
-                )
+                if self.right_tools_panel.sidebar_output.property("surfaceFieldStyle"):
+                    self.right_tools_panel.sidebar_output.setStyleSheet(
+                        styles.surfaced_text_edit_style("Consolas", 15)
+                    )
+                else:
+                    self.right_tools_panel.sidebar_output.setStyleSheet(
+                        styles.text_edit_style("Consolas", 15)
+                    )
             if hasattr(self.right_tools_panel, "drive_space_list"):
                 self.right_tools_panel._apply_drive_space_list_style()
 
