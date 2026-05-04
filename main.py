@@ -81,16 +81,20 @@ def ensure_single_instance():
 
 class UtilityControlApp(QWidget):
     MAIN_PANEL_WIDTH = 450
+    RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 70
+    MAIN_SECTION_SIDE_PADDING = 14
     MAIN_SECTION_FRAME_WIDTH = 385
-    MAIN_SECTION_OUTER_WIDTH = MAIN_SECTION_FRAME_WIDTH + 20
+    MAIN_SECTION_OUTER_WIDTH = (
+        MAIN_SECTION_FRAME_WIDTH + (MAIN_SECTION_SIDE_PADDING * 2)
+    )
 
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("Windows Resurface")
         self.setStyleSheet(styles.window_style())
-        self.COLLAPSED_WIDTH = 485
-        self.EXPANDED_WIDTH = 950
+        self.COLLAPSED_WIDTH = 470
+        self.EXPANDED_WIDTH = self.COLLAPSED_WIDTH + self.RIGHT_PANEL_WIDTH
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
         self.WINDOW_HEIGHT = 875
@@ -219,7 +223,12 @@ class UtilityControlApp(QWidget):
         header.setFixedWidth(self.MAIN_SECTION_OUTER_WIDTH)
         header.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(10, 10, 10, 10)
+        header_layout.setContentsMargins(
+            self.MAIN_SECTION_SIDE_PADDING,
+            10,
+            self.MAIN_SECTION_SIDE_PADDING,
+            10,
+        )
 
         title = QLabel("Windows Resurface", header)
         title.setStyleSheet(styles.label_style(font_size=20))
@@ -254,7 +263,12 @@ class UtilityControlApp(QWidget):
             section.setFixedWidth(self.MAIN_SECTION_OUTER_WIDTH)
             section.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             layout = QVBoxLayout(section)
-            layout.setContentsMargins(10, 5, 10, 5)
+            layout.setContentsMargins(
+                self.MAIN_SECTION_SIDE_PADDING,
+                5,
+                self.MAIN_SECTION_SIDE_PADDING,
+                5,
+            )
             layout.setSpacing(4)
 
             sec_header = QWidget(section)

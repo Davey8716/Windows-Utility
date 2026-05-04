@@ -72,7 +72,7 @@ class AdvancedToolsPanel(QWidget):
         root_layout.addWidget(self.scroll)
 
         self.side_frame = QWidget()
-        self.side_frame.setFixedWidth(self.app.main_scroll.width())
+        self.side_frame.setFixedWidth(self.app.RIGHT_PANEL_WIDTH)
         self.scroll.setWidget(self.side_frame)
 
         self.side_layout = QVBoxLayout(self.side_frame)
@@ -245,9 +245,9 @@ class AdvancedToolsPanel(QWidget):
         self.drive_space_list.setFixedHeight(120)
         self.drive_space_list.setSpacing(0)
         self.drive_space_list.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideNone)
+        self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.drive_space_list.setWordWrap(False)
         self.drive_space_list.setStyleSheet(
             """
@@ -281,7 +281,6 @@ class AdvancedToolsPanel(QWidget):
 
         def refresh_drive_display():
             self.drive_space_list.clear()
-            metrics = self.drive_space_list.fontMetrics()
             for d in get_drive_info():
                 used_gb = (d["total"] - d["free"]) / (1024 ** 3)
                 total_gb = d["total"] / (1024 ** 3)
@@ -291,8 +290,7 @@ class AdvancedToolsPanel(QWidget):
                     f"Total: {total_gb:.1f} GB"
                 )
                 item = QListWidgetItem(text)
-                item_width = metrics.horizontalAdvance(text) + 24
-                item.setSizeHint(QSize(item_width, 20))
+                item.setSizeHint(QSize(0, 20))
                 self.drive_space_list.addItem(item)
 
         refresh_drive_display()
