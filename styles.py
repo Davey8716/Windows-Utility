@@ -193,6 +193,9 @@ def organizing_combo_style(font_size: int) -> str:
         QComboBox:on {{
             background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
         }}
+        QComboBox[persistPressed="true"] {{
+            background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
+        }}
         QComboBox QAbstractItemView {{
             background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
             color: {qcolor_css(TEXT_LIGHT)};

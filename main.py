@@ -522,18 +522,47 @@ class UtilityControlApp(QWidget):
 
         title_bar_dock_btn.toggled.connect(on_title_bar_dock_changed)
 
-        mmb_btn = make_toggle_button("Middle Mouse Move", state.get("mmb_activation_enabled", True))
-        bind_toggle_text(mmb_btn, "Middle Mouse Move Off", "Middle Mouse Move On")
-        screen_row_layout.addWidget(mmb_btn)
-        self.register_tooltip(mmb_btn, "Lets you move a window by middle-clicking the tracked title-bar dock.")
+        screen_move_button_combo = QComboBox()
+        screen_move_button_combo.addItem("Move Button: Off", "off")
+        screen_move_button_combo.addItem("Left Mouse Button", "left")
+        screen_move_button_combo.addItem("Middle Mouse Button", "middle")
+        screen_move_button_combo.addItem("Right Mouse Button", "right")
+        screen_move_button_combo.setCursor(Qt.CursorShape.PointingHandCursor)
+        styles.apply_default_button_size(screen_move_button_combo)
+        screen_move_button_combo.setStyleSheet(styles.organizing_combo_style(14))
+
+        def update_screen_move_combo_state() -> None:
+            screen_move_button_combo.setProperty(
+                "persistPressed",
+                screen_move_button_combo.currentData() != "off",
+            )
+            screen_move_button_combo.style().unpolish(screen_move_button_combo)
+            screen_move_button_combo.style().polish(screen_move_button_combo)
+
+        stored_move_button = str(state.get("screen_mover_activation_button", "")).strip().lower()
+        if stored_move_button not in {"left", "middle", "right", "off"}:
+            stored_move_button = "middle" if state.get("mmb_activation_enabled", True) else "off"
+        combo_index = screen_move_button_combo.findData(stored_move_button)
+        if combo_index >= 0:
+            screen_move_button_combo.setCurrentIndex(combo_index)
+        update_screen_move_combo_state()
+
+        screen_row_layout.addWidget(screen_move_button_combo)
+        self.register_tooltip(
+            screen_move_button_combo,
+            "Chooses which mouse button activates moving a window from the tracked title-bar dock.",
+        )
         screen_row_layout.addStretch()
 
-        def on_mmb_changed(checked: bool):
-            state["mmb_activation_enabled"] = checked
+        def on_screen_move_button_changed(_text: str):
+            button_value = screen_move_button_combo.currentData()
+            state["screen_mover_activation_button"] = button_value
+            state["mmb_activation_enabled"] = button_value == "middle"
             save_state(state)
-            SCREEN_MOVER.enable_mmb = checked
+            SCREEN_MOVER.activation_button = button_value
+            update_screen_move_combo_state()
 
-        mmb_btn.toggled.connect(on_mmb_changed)
+        screen_move_button_combo.currentTextChanged.connect(on_screen_move_button_changed)
         self.main_layout.addWidget(screen_section)
         self.left_sections.append(screen_section)
 

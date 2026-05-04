@@ -177,7 +177,7 @@ class ScreenMoverWorker:
         self.lock = threading.Lock()
 
         self.title_bar_dock_enabled = True
-        self.enable_mmb = True
+        self.activation_button = "middle"
         self.app_hwnd = None
 
     def configure(self, *, app_hwnd=None):
@@ -187,8 +187,27 @@ class ScreenMoverWorker:
 
     def refresh_from_state(self):
         state = load_state()
-        self.enable_mmb = bool(state.get("mmb_activation_enabled", True))
+        self.activation_button = self._load_activation_button(state)
         self.title_bar_dock_enabled = bool(state.get("title_bar_dock_enabled", True))
+
+    def _load_activation_button(self, state):
+        button = str(state.get("screen_mover_activation_button", "")).strip().lower()
+        if button in {"left", "middle", "right", "off"}:
+            return button
+
+        if "mmb_activation_enabled" in state:
+            return "middle" if bool(state.get("mmb_activation_enabled", True)) else "off"
+
+        return "middle"
+
+    def _activation_button_matches(self, button) -> bool:
+        mapping = {
+            "left": mouse.Button.left,
+            "middle": mouse.Button.middle,
+            "right": mouse.Button.right,
+        }
+        expected = mapping.get(self.activation_button)
+        return expected is not None and button == expected
 
     def _pump_messages(self):
         try:
@@ -421,7 +440,12 @@ class ScreenMoverWorker:
         self.thread = None
 
     def on_mouse_click(self, x, y, button, pressed):
-        if not self.enabled or not self.enable_mmb or button != mouse.Button.middle or not pressed:
+        if (
+            not self.enabled
+            or self.activation_button == "off"
+            or not pressed
+            or not self._activation_button_matches(button)
+        ):
             return
 
         direction = self.dock_overlay.hit_test(x, y)
