@@ -54,8 +54,8 @@ def get_drive_info():
 
 class AdvancedToolsPanel(QWidget):
     WINDOWS_UTILITIES_FRAME_WIDTH = 370
-    WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 4
-    WINDOWS_UTILITIES_CONTENT_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH - 4
+    WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 8
+    WINDOWS_UTILITIES_CONTENT_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH - 8
     WINDOWS_UTILITIES_ROW_WIDTH = WINDOWS_UTILITIES_CONTENT_WIDTH - 20
     WINDOWS_UTILITIES_COLUMN_WIDTH = (
         WINDOWS_UTILITIES_ROW_WIDTH - 10
@@ -149,6 +149,9 @@ class AdvancedToolsPanel(QWidget):
         self.app.register_tooltip(
             self.windows_utility_section.toggle_btn,
             "Shows windows utilities grouped by type and quick actions.",
+        )
+        self.windows_utility_section.main_layout.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )
         self.windows_utility_section.setFixedWidth(
             self.WINDOWS_UTILITIES_SECTION_WIDTH
