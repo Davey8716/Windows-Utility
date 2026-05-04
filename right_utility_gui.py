@@ -12,6 +12,7 @@ from collapsible_section import CollapsibleSection
 from state_manager import save_state
 from tooltips import tooltip_text
 from universal_bookmarks_export import BraveBookmarksExporter
+import win32file
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
 from PySide6.QtWidgets import (
     QComboBox,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QListWidget,
     QMessageBox,
+    QMenu,
     QPushButton,
     QScrollArea,
     QTextEdit,
@@ -32,7 +34,49 @@ from PySide6.QtWidgets import (
 )
 
 
+def get_usb_drive_letters() -> set[str]:
+    try:
+        result = subprocess.check_output(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                (
+                    "Get-CimInstance Win32_DiskDrive | "
+                    "Where-Object { $_.InterfaceType -eq 'USB' } | "
+                    "ForEach-Object { "
+                    "Get-CimAssociatedInstance -InputObject $_ "
+                    "-Association Win32_DiskDriveToDiskPartition | "
+                    "ForEach-Object { "
+                    "Get-CimAssociatedInstance -InputObject $_ "
+                    "-Association Win32_LogicalDiskToPartition | "
+                    "ForEach-Object { $_.DeviceID } } }"
+                ),
+            ],
+            text=True,
+            errors="ignore",
+            startupinfo=_hidden_startupinfo(),
+        )
+    except Exception:
+        return set()
+
+    drive_letters = set()
+    for line in result.splitlines():
+        entry = line.strip().upper()
+        if len(entry) >= 2 and entry[1] == ":":
+            drive_letters.add(f"{entry[:2]}\\")
+    return drive_letters
+
+
+def _hidden_startupinfo():
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = 0
+    return startupinfo
+
+
 def get_drive_info():
+    usb_drives = get_usb_drive_letters()
     drives = []
     for letter in string.ascii_uppercase:
         path = f"{letter}:\\"
@@ -42,12 +86,20 @@ def get_drive_info():
             total, used, free = shutil.disk_usage(path)
         except Exception:
             continue
+        try:
+            drive_type = win32file.GetDriveType(path)
+        except Exception:
+            drive_type = None
         drives.append(
             {
                 "drive": path,
                 "total": total,
                 "free": free,
                 "used": used,
+                "ejectable": (
+                    drive_type == win32file.DRIVE_REMOVABLE
+                    or path.upper() in usb_drives
+                ),
             }
         )
     return drives
@@ -306,27 +358,17 @@ class AdvancedToolsPanel(QWidget):
         self.drive_space_list.setProperty("surfaceFieldStyle", True)
         self._apply_drive_space_list_style()
         self.drive_space_list.itemDoubleClicked.connect(self._open_drive_from_item)
+        self.drive_space_list.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.drive_space_list.customContextMenuRequested.connect(
+            self._show_drive_context_menu
+        )
         drive_parent.addWidget(self.drive_space_list)
 
-        def refresh_drive_display():
-            self.drive_space_list.clear()
-            for d in get_drive_info():
-                used_gb = (d["total"] - d["free"]) / (1024 ** 3)
-                total_gb = d["total"] / (1024 ** 3)
-                free_gb = d["free"] / (1024 ** 3)
-                text = (
-                    f"{d['drive']}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  "
-                    f"Total: {total_gb:.1f} GB"
-                )
-                item = QListWidgetItem(text)
-                item.setData(Qt.ItemDataRole.UserRole, d["drive"])
-                item.setToolTip(f"Open {d['drive']} in File Explorer")
-                item.setSizeHint(QSize(0, 20))
-                self.drive_space_list.addItem(item)
-
-        refresh_drive_display()
+        self._refresh_drive_space_display()
         self.drive_refresh_timer = QTimer(self)
-        self.drive_refresh_timer.timeout.connect(refresh_drive_display)
+        self.drive_refresh_timer.timeout.connect(self._refresh_drive_space_display)
         self.drive_refresh_timer.start(10_000)
 
     def _apply_drive_space_list_style(self):
@@ -339,6 +381,76 @@ class AdvancedToolsPanel(QWidget):
         if not drive_path:
             return
         self._minimize_and_run(lambda: os.startfile(drive_path))
+
+    def _show_drive_context_menu(self, pos: QPoint):
+        item = self.drive_space_list.itemAt(pos)
+        if not item:
+            return
+
+        if not item.data(Qt.ItemDataRole.UserRole + 1):
+            return
+
+        drive_path = item.data(Qt.ItemDataRole.UserRole)
+        if not drive_path:
+            return
+
+        menu = QMenu(self.drive_space_list)
+        remove_action = menu.addAction(f"Safely Remove {drive_path}")
+        selected_action = menu.exec(self.drive_space_list.mapToGlobal(pos))
+        if selected_action is remove_action:
+            self._safely_remove_drive(drive_path)
+
+    def _safely_remove_drive(self, drive_path: str):
+        drive_name = drive_path[:2]
+        try:
+            subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    (
+                        "(New-Object -ComObject Shell.Application)"
+                        f".Namespace(17).ParseName('{drive_name}').InvokeVerb('Eject')"
+                    ),
+                ],
+                check=True,
+                startupinfo=_hidden_startupinfo(),
+            )
+        except Exception as exc:
+            self.app._show_timed_message(
+                QMessageBox.Icon.Warning,
+                "Drive Removal",
+                f"Could not safely remove {drive_name}.\n{exc}",
+            )
+            return
+
+        self.app._show_timed_message(
+            QMessageBox.Icon.Information,
+            "Drive Removal",
+            f"Requested safe removal for {drive_name}.",
+        )
+        QTimer.singleShot(1500, self.drive_space_list.clear)
+        QTimer.singleShot(1600, self._refresh_drive_space_display)
+
+    def _refresh_drive_space_display(self):
+        self.drive_space_list.clear()
+        for d in get_drive_info():
+            used_gb = (d["total"] - d["free"]) / (1024 ** 3)
+            total_gb = d["total"] / (1024 ** 3)
+            free_gb = d["free"] / (1024 ** 3)
+            text = (
+                f"{d['drive']}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  "
+                f"Total: {total_gb:.1f} GB"
+            )
+            item = QListWidgetItem(text)
+            item.setData(Qt.ItemDataRole.UserRole, d["drive"])
+            item.setData(Qt.ItemDataRole.UserRole + 1, d["ejectable"])
+            tooltip = f"Open {d['drive']} in File Explorer"
+            if d["ejectable"]:
+                tooltip += "\nRight-click to safely remove this drive."
+            item.setToolTip(tooltip)
+            item.setSizeHint(QSize(0, 20))
+            self.drive_space_list.addItem(item)
 
     def _refresh_this_pc_button(self):
         is_open = self.app.actions.is_this_pc_open()
