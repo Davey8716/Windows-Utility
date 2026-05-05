@@ -78,7 +78,7 @@ class ExternalDriveMixin:
 
     def _show_connected_drive_warning(self, title: str, body: str, on_close=None):
         return self._show_acknowledged_message(
-            self._message_box_icon("Warning"),
+            self._message_box_icon("NoIcon"),
             title,
             body,
             on_close=on_close,
@@ -153,7 +153,10 @@ class ExternalDriveMixin:
             current_signature
         )
         confirm_box = QMessageBox(self)
-        confirm_box.setIcon(self._message_box_icon("Warning"))
+        self._apply_message_box_icon(
+            confirm_box,
+            self._message_box_icon("NoIcon"),
+        )
         confirm_box.setWindowTitle(f"{action_name} With External Drive Connected")
         confirm_box.setText(
             (

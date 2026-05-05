@@ -1,10 +1,21 @@
 import styles
 from PySide6.QtCore import QRectF, Qt, QTimer
-from PySide6.QtGui import QPainterPath, QRegion
+from PySide6.QtGui import QPainterPath, QPixmap, QRegion
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 
 class WindowMessageMixin:
+    def _apply_message_box_icon(self, message_box: QMessageBox, icon) -> None:
+        if icon == self._message_box_icon("NoIcon"):
+            message_box.setIcon(icon)
+            message_box.setIconPixmap(QPixmap())
+            return
+        if icon == self._message_box_icon("Information"):
+            message_box.setIcon(self._message_box_icon("NoIcon"))
+            message_box.setIconPixmap(QPixmap())
+            return
+        message_box.setIcon(icon)
+
     def _compose_timed_message_text(self, text: str, timeout_seconds: int) -> str:
         return f"{text}\n\nThis message will close in {timeout_seconds} seconds."
 
@@ -94,10 +105,7 @@ class WindowMessageMixin:
             message_box = QMessageBox(self)
         except TypeError:
             return None
-        if icon == self._message_box_icon("Information"):
-            message_box.setIcon(self._message_box_icon("NoIcon"))
-        else:
-            message_box.setIcon(icon)
+        self._apply_message_box_icon(message_box, icon)
         message_box.setWindowTitle(title)
         if merge_group:
             message_box._grouped_entries = [(title, text)]
@@ -153,7 +161,7 @@ class WindowMessageMixin:
             if on_close:
                 on_close()
             return None
-        message_box.setIcon(icon)
+        self._apply_message_box_icon(message_box, icon)
         message_box.setWindowTitle(title)
         message_box.setText(text)
         message_box.setStandardButtons(self._message_box_button("Ok"))
