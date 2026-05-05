@@ -1098,7 +1098,21 @@ class UtilityControlApp(
             age_rule_values,
             current_age_rule_text,
         )
+        recycle_bin_age_rule_combo.setProperty("recycleBinAgeRuleStyle", True)
         recycle_bin_age_rule_combo.setEnabled(recycle_bin_auto_clean_enabled)
+
+        def refresh_recycle_bin_age_rule_combo_style() -> None:
+            font_size = int(recycle_bin_age_rule_combo.property("styleFontSize") or 14)
+            if recycle_bin_age_rule_combo.isEnabled():
+                recycle_bin_age_rule_combo.setStyleSheet(
+                    styles.organizing_combo_style(font_size)
+                )
+            else:
+                recycle_bin_age_rule_combo.setStyleSheet(
+                    styles.recycle_bin_age_rule_combo_style(font_size)
+                )
+
+        refresh_recycle_bin_age_rule_combo_style()
         self.register_tooltip(
             recycle_bin_age_rule_combo,
             tooltip_text("recycle_bin_age_rule"),
@@ -1115,6 +1129,7 @@ class UtilityControlApp(
         def on_recycle_bin_auto_clean_changed(checked: bool):
             state["recycle_bin_auto_clean_enabled"] = checked
             recycle_bin_age_rule_combo.setEnabled(checked)
+            refresh_recycle_bin_age_rule_combo_style()
             save_state(state)
 
         def on_recycle_bin_age_rule_changed(text: str):
@@ -1296,6 +1311,15 @@ class UtilityControlApp(
             font_size = int(combo.property("styleFontSize") or 14)
             if combo.property("surfaceFieldStyle"):
                 combo.setStyleSheet(styles.surfaced_combo_style(font_size=font_size))
+            elif combo.property("recycleBinAgeRuleStyle"):
+                if combo.isEnabled():
+                    combo.setStyleSheet(
+                        styles.organizing_combo_style(font_size=font_size)
+                    )
+                else:
+                    combo.setStyleSheet(
+                        styles.recycle_bin_age_rule_combo_style(font_size=font_size)
+                    )
             else:
                 combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
 
