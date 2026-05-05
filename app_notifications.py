@@ -1,7 +1,7 @@
 import styles
 from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QPainterPath, QPixmap, QRegion
-from PySide6.QtWidgets import QMessageBox, QWidget
+from PySide6.QtWidgets import QDialogButtonBox, QGridLayout, QMessageBox, QWidget
 
 
 class WindowMessageMixin:
@@ -62,6 +62,28 @@ class WindowMessageMixin:
         message_box.setWindowFlag(Qt.WindowType.Tool, tool_window)
         message_box.setStyleSheet(styles.message_box_style())
         return message_box
+
+    def _center_message_box_buttons(self, message_box: QMessageBox) -> None:
+        button_box = message_box.findChild(QDialogButtonBox)
+        if button_box is None:
+            return
+
+        button_box.setCenterButtons(True)
+        layout = message_box.layout()
+        if isinstance(layout, QGridLayout):
+            index = layout.indexOf(button_box)
+            if index >= 0:
+                row, _, row_span, _ = layout.getItemPosition(index)
+                layout.removeWidget(button_box)
+                column_span = max(1, layout.columnCount())
+                layout.addWidget(
+                    button_box,
+                    row,
+                    0,
+                    row_span,
+                    column_span,
+                    Qt.AlignmentFlag.AlignHCenter,
+                )
 
     def _apply_rounded_window_mask(self, widget: QWidget, radius: int = 10) -> None:
         rect = QRectF(widget.rect())

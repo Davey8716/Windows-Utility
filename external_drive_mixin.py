@@ -169,6 +169,7 @@ class ExternalDriveMixin:
             self._message_box_button("Yes") | self._message_box_button("Cancel")
         )
         confirm_box.setDefaultButton(self._message_box_button("Cancel"))
+        self._center_message_box_buttons(confirm_box)
         confirm_box.setWindowModality(Qt.WindowModality.ApplicationModal)
         self._set_borderless_message_box(
             confirm_box,
