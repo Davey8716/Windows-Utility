@@ -16,7 +16,6 @@ import win32file
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
 from PySide6.QtWidgets import (
     QComboBox,
-    QFileDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -941,18 +940,37 @@ class AdvancedToolsPanel(QWidget):
     def _run_brave_export(self):
         start_dir = Path(self.app.get_default_bookmarks_export_dir())
         start_dir.mkdir(parents=True, exist_ok=True)
-        out_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Export Bookmarks",
-            str(start_dir / "Brave_Bookmarks.html"),
-            "HTML Files (*.html)",
+        out_path = start_dir / "Brave_Bookmarks.html"
+        prompt = (
+            "Save bookmarks export to:\n"
+            f"{out_path}"
         )
-        if not out_path:
+        if out_path.exists():
+            prompt += "\n\nThis file already exists and will be replaced."
+
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.NoIcon)
+        message_box.setWindowTitle("Export Bookmarks")
+        message_box.setText(prompt)
+        message_box.setStandardButtons(
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel
+        )
+        message_box.setDefaultButton(QMessageBox.StandardButton.Save)
+        message_box.setModal(False)
+        self.app._set_borderless_message_box(
+            message_box,
+            stays_on_top=True,
+            tool_window=True,
+        )
+        message_box.show()
+        self.app._apply_rounded_window_mask(message_box)
+        result = message_box.exec()
+        if result != QMessageBox.StandardButton.Save:
             return None
 
-        if BraveBookmarksExporter().export_to_file(out_path):
+        if BraveBookmarksExporter().export_to_file(str(out_path)):
             save_state(self.app.state)
-            return out_path
+            return str(out_path)
 
         return False
 
