@@ -1,6 +1,6 @@
 from right_utility_gui import get_drive_info
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMenu, QMessageBox
 
 
 class ExternalDriveMixin:
@@ -37,9 +37,36 @@ class ExternalDriveMixin:
         if drives:
             text = "Drives connected: " + ", ".join(drives)
         else:
-            text = "Drives connected: None"
+            text = "No Drives Connected"
 
         self.connected_drives_field.setText(text)
+
+    def _show_connected_drives_context_menu(self, pos):
+        if not hasattr(self, "connected_drives_field"):
+            return
+
+        drives = tuple(sorted(self._current_external_drives()))
+        if not drives:
+            return
+
+        removal_handler = getattr(
+            getattr(self, "right_tools_panel", None),
+            "_safely_remove_drive",
+            None,
+        )
+        if not callable(removal_handler):
+            return
+
+        menu = QMenu(self.connected_drives_field)
+        actions = {}
+        for drive_path in drives:
+            action = menu.addAction(f"Safely Remove {drive_path}")
+            actions[action] = drive_path
+
+        selected_action = menu.exec(self.connected_drives_field.mapToGlobal(pos))
+        drive_path = actions.get(selected_action)
+        if drive_path:
+            removal_handler(drive_path)
 
     def _show_connected_drive_warning(self, title: str, body: str, on_close=None):
         return self._show_acknowledged_message(

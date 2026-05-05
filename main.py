@@ -824,7 +824,17 @@ class UtilityControlApp(
         self.connected_drives_field.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
         self.connected_drives_field.setProperty("surfaceFieldStyle", True)
         self.connected_drives_field.setStyleSheet(styles.surfaced_line_edit_style(15))
+        self.connected_drives_field.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.connected_drives_field.customContextMenuRequested.connect(
+            self._show_connected_drives_context_menu
+        )
         leave_reminder_row_layout.addWidget(self.connected_drives_field)
+        self.register_tooltip(
+            self.connected_drives_field,
+            "Shows currently connected external drives. Right-click to safely remove one.",
+        )
         usb_layout.addWidget(leave_reminder_row)
         self._refresh_connected_drive_status_label()
 
@@ -903,8 +913,8 @@ class UtilityControlApp(
         folder_input.setText(state.get("folder_to_desktop_name", ""))
         folder_input.setReadOnly(False)
         folder_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        folder_input.setProperty("surfaceFieldStyle", True)
-        folder_input.setStyleSheet(styles.surfaced_line_edit_style(15))
+        folder_input.setProperty("emphasizedSurfaceFieldStyle", True)
+        folder_input.setStyleSheet(styles.emphasized_surface_line_edit_style(15))
         self.register_tooltip(folder_input, tooltip_text("folder_name_input"))
 
         folder_row_layout.addWidget(folder_btn)
@@ -1079,7 +1089,9 @@ class UtilityControlApp(
             frame.setStyleSheet(styles.collapsible_section_frame_style())
 
         for line_edit in self.findChildren(QLineEdit):
-            if line_edit.property("surfaceFieldStyle"):
+            if line_edit.property("emphasizedSurfaceFieldStyle"):
+                line_edit.setStyleSheet(styles.emphasized_surface_line_edit_style(15))
+            elif line_edit.property("surfaceFieldStyle"):
                 line_edit.setStyleSheet(styles.surfaced_line_edit_style(15))
             else:
                 line_edit.setStyleSheet(styles.line_edit_style(15))

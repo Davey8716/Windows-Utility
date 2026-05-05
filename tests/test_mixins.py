@@ -16,6 +16,7 @@ import app_notifications
 import app_paths
 import desktop_operations
 import external_drive_mixin
+from PySide6.QtCore import QPoint
 
 
 class _PathsApp(app_paths.MasterBackupPathsMixin):
@@ -163,13 +164,42 @@ class ExternalDriveMixinTests(unittest.TestCase):
         app = _DriveApp()
 
         app._refresh_connected_drive_status_label(set())
-        app.connected_drives_field.setText.assert_called_with("Drives connected: None")
+        app.connected_drives_field.setText.assert_called_with("No Drives Connected")
 
         app.connected_drives_field.reset_mock()
         app._refresh_connected_drive_status_label({"F:\\", "E:\\"})
         app.connected_drives_field.setText.assert_called_once_with(
             "Drives connected: E:\\, F:\\"
         )
+
+    def test_show_connected_drives_context_menu_uses_right_panel_safe_remove_handler(self):
+        app = _DriveApp()
+        app.connected_drives_field.mapToGlobal = Mock(return_value=QPoint())
+        remove_drive = Mock()
+        app.right_tools_panel = type(
+            "RightToolsPanel",
+            (),
+            {"_safely_remove_drive": remove_drive},
+        )()
+        app._current_external_drives = Mock(return_value={"E:\\"})
+
+        fake_action = object()
+
+        class FakeMenu:
+            def __init__(self, *_args, **_kwargs):
+                self.actions = []
+
+            def addAction(self, text):
+                self.actions.append(text)
+                return fake_action
+
+            def exec(self, _pos):
+                return fake_action
+
+        with patch.object(external_drive_mixin, "QMenu", FakeMenu):
+            app._show_connected_drives_context_menu(QPoint())
+
+        remove_drive.assert_called_once_with("E:\\")
 
 
 class DesktopOperationsMixinTests(unittest.TestCase):
