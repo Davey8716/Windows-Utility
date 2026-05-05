@@ -106,6 +106,7 @@ def get_drive_info():
 
 
 class AdvancedToolsPanel(QWidget):
+    OUTER_SIDE_PADDING = 14
     WINDOWS_UTILITIES_FRAME_WIDTH = 370
     WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 8
     WINDOWS_UTILITIES_CONTENT_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH - 8
@@ -152,7 +153,7 @@ class AdvancedToolsPanel(QWidget):
         self.scroll.setWidget(self.side_frame)
 
         self.side_layout = QVBoxLayout(self.side_frame)
-        self.side_layout.setContentsMargins(10, 0, 10, 5)
+        self.side_layout.setContentsMargins(self.OUTER_SIDE_PADDING, 0, self.OUTER_SIDE_PADDING, 5)
         self.side_layout.setSpacing(6)
         self.side_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
@@ -160,7 +161,12 @@ class AdvancedToolsPanel(QWidget):
         title_row.setMaximumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
         title_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         title_row_layout = QHBoxLayout(title_row)
-        title_row_layout.setContentsMargins(10, 10, 10, 10)
+        title_row_layout.setContentsMargins(
+            self.OUTER_SIDE_PADDING,
+            10,
+            self.OUTER_SIDE_PADDING,
+            10,
+        )
 
         title_spacer = QWidget(title_row)
         title_spacer.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)

@@ -101,7 +101,9 @@ class UtilityControlApp(
     LEFT_SECTION_TOP_MARGIN = 5
     LEFT_SECTION_BOTTOM_MARGIN = 12
     USER_INTERFACE_TOP_SPACER = 6
-    ORGANISING_SECTION_TOP_SPACER = 18
+    SCREEN_MOVER_TOP_SPACER = 38
+    DRIVE_REMINDER_TOP_SPACER = 38
+    ORGANISING_SECTION_TOP_SPACER = 38
     MAIN_SECTION_FRAME_WIDTH = 405
     LEFT_SECTION_VISIBLE_FRAME_WIDTH = MAIN_SECTION_FRAME_WIDTH - 4
     MAIN_SECTION_OUTER_WIDTH = (
@@ -749,6 +751,7 @@ class UtilityControlApp(
             update_screen_move_combo_state()
 
         screen_move_button_combo.currentTextChanged.connect(on_screen_move_button_changed)
+        self.main_layout.addSpacing(self.SCREEN_MOVER_TOP_SPACER)
         self.main_layout.addWidget(screen_section)
         self.left_sections.append(screen_section)
 
@@ -824,17 +827,7 @@ class UtilityControlApp(
         self.connected_drives_field.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
         self.connected_drives_field.setProperty("surfaceFieldStyle", True)
         self.connected_drives_field.setStyleSheet(styles.surfaced_line_edit_style(15))
-        self.connected_drives_field.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
-        self.connected_drives_field.customContextMenuRequested.connect(
-            self._show_connected_drives_context_menu
-        )
         leave_reminder_row_layout.addWidget(self.connected_drives_field)
-        self.register_tooltip(
-            self.connected_drives_field,
-            "Shows currently connected external drives. Right-click to safely remove one.",
-        )
         usb_layout.addWidget(leave_reminder_row)
         self._refresh_connected_drive_status_label()
 
@@ -869,6 +862,7 @@ class UtilityControlApp(
         )
         usb_layout.addWidget(plug_combo)
 
+        self.main_layout.addSpacing(self.DRIVE_REMINDER_TOP_SPACER)
         self.main_layout.addWidget(usb_section)
         self.left_sections.append(usb_section)
 
