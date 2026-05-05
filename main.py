@@ -25,6 +25,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QWidget,
     QComboBox,
+    QGridLayout,
     QLabel,
     QPushButton,
     QToolButton,
@@ -102,11 +103,12 @@ class UtilityControlApp(
     LEFT_SECTION_BOTTOM_MARGIN = 12
     LEFT_SECTION_COLLAPSED_TOP_MARGIN = 10
     LEFT_SECTION_COLLAPSED_BOTTOM_MARGIN = 0
-    LEFT_SECTION_COLLAPSED_SPACER = 6
-    USER_INTERFACE_TOP_SPACER = 6
-    SCREEN_MOVER_TOP_SPACER = 38
-    DRIVE_REMINDER_TOP_SPACER = 38
-    ORGANISING_SECTION_TOP_SPACER = 38
+    LEFT_SECTION_COLLAPSED_SPACER = 0
+    USER_INTERFACE_TOP_SPACER = 0
+    SCREEN_MOVER_TOP_SPACER = 0
+    DRIVE_REMINDER_TOP_SPACER = 0
+    ORGANISING_SECTION_TOP_SPACER = 0
+    RECYCLE_BIN_ACTIONS_TOP_SPACER = 0
     MAIN_SECTION_FRAME_WIDTH = 405
     LEFT_SECTION_VISIBLE_FRAME_WIDTH = MAIN_SECTION_FRAME_WIDTH - 4
     MAIN_SECTION_OUTER_WIDTH = (
@@ -156,6 +158,7 @@ class UtilityControlApp(
         self.show()
         self._apply_fixed_window_style()
         self._register_session_notifications()
+        QTimer.singleShot(0, self.run_recycle_bin_auto_cleanup)
 
         ctypes.windll.user32.SetWindowPos(
             int(self.winId()),
@@ -344,7 +347,7 @@ class UtilityControlApp(
 
         self.main_layout = QVBoxLayout(self.main_frame)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(10)
+        self.main_layout.setSpacing(4)
         self.main_layout.setAlignment(
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )
@@ -566,6 +569,16 @@ class UtilityControlApp(
                 combo.setCurrentText(placeholder)
 
             combo.currentTextChanged.connect(run_action)
+            return combo
+
+        def make_value_dropdown(values: list[str], current_value: str) -> QComboBox:
+            combo = QComboBox()
+            combo.addItems(values)
+            combo.setCurrentText(current_value if current_value in values else values[0])
+            combo.setCursor(Qt.CursorShape.ArrowCursor)
+            styles.apply_default_button_size(combo)
+            combo.setProperty("styleFontSize", 14)
+            combo.setStyleSheet(styles.organizing_combo_style(14))
             return combo
 
         ui_section, ui_layout = make_section("User Interface", "user_interface")
@@ -1032,6 +1045,99 @@ class UtilityControlApp(
             org_section,
             top_spacer=org_section_spacer,
             expanded_spacer_height=self.ORGANISING_SECTION_TOP_SPACER,
+        )
+
+        recycle_bin_section, recycle_bin_layout = make_section(
+            "Recycle Bin Actions",
+            "recycle_bin_actions",
+        )
+
+        recycle_bin_controls = QWidget()
+        recycle_bin_controls.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        recycle_bin_controls_layout = QGridLayout(recycle_bin_controls)
+        recycle_bin_controls_layout.setContentsMargins(0, 0, 0, 0)
+        recycle_bin_controls_layout.setHorizontalSpacing(10)
+        recycle_bin_controls_layout.setVerticalSpacing(10)
+
+        cleanup_actions_combo = make_action_dropdown(
+            " Cleanup Actions ",
+            {
+                "Empty Recycle Bin": self.empty_recycle_bin,
+                "Open Recycle Bin": self.open_recycle_bin,
+                "Clean Older Items": self.run_recycle_bin_cleanup_now,
+            },
+        )
+        recycle_bin_controls_layout.addWidget(cleanup_actions_combo, 0, 0)
+        self.register_tooltip(cleanup_actions_combo, tooltip_text("cleanup_actions"))
+
+        recycle_bin_auto_clean_enabled = bool(
+            state.get("recycle_bin_auto_clean_enabled", False)
+        )
+        recycle_bin_auto_clean_btn = make_toggle_button(
+            "Auto-clean On",
+            recycle_bin_auto_clean_enabled,
+        )
+        bind_toggle_text(
+            recycle_bin_auto_clean_btn,
+            "Auto-clean On",
+            "Auto-clean Off",
+        )
+        recycle_bin_controls_layout.addWidget(recycle_bin_auto_clean_btn, 0, 1)
+        self.register_tooltip(
+            recycle_bin_auto_clean_btn,
+            tooltip_text("recycle_bin_auto_clean"),
+        )
+
+        age_rule_values = ["7 days", "14 days", "30 days"]
+        current_age_rule_days = int(state.get("recycle_bin_age_rule_days", 30))
+        current_age_rule_text = f"{current_age_rule_days} days"
+        recycle_bin_age_rule_combo = make_value_dropdown(
+            age_rule_values,
+            current_age_rule_text,
+        )
+        recycle_bin_age_rule_combo.setEnabled(recycle_bin_auto_clean_enabled)
+        self.register_tooltip(
+            recycle_bin_age_rule_combo,
+            tooltip_text("recycle_bin_age_rule"),
+        )
+
+        cleanup_rule_label = QLabel("Delete items older than")
+        cleanup_rule_label.setStyleSheet(styles.label_style(font_size=14))
+        recycle_bin_controls_layout.addWidget(cleanup_rule_label, 1, 0)
+        recycle_bin_controls_layout.addWidget(recycle_bin_age_rule_combo, 1, 1)
+        recycle_bin_controls_layout.setColumnStretch(0, 1)
+        recycle_bin_controls_layout.setColumnStretch(1, 1)
+        recycle_bin_layout.addWidget(recycle_bin_controls)
+
+        def on_recycle_bin_auto_clean_changed(checked: bool):
+            state["recycle_bin_auto_clean_enabled"] = checked
+            recycle_bin_age_rule_combo.setEnabled(checked)
+            save_state(state)
+
+        def on_recycle_bin_age_rule_changed(text: str):
+            try:
+                days = int(text.split()[0])
+            except (IndexError, ValueError):
+                return
+            state["recycle_bin_age_rule_days"] = days
+            save_state(state)
+
+        recycle_bin_auto_clean_btn.toggled.connect(on_recycle_bin_auto_clean_changed)
+        recycle_bin_age_rule_combo.currentTextChanged.connect(
+            on_recycle_bin_age_rule_changed
+        )
+
+        recycle_bin_section_spacer = add_left_section_spacer(
+            self.RECYCLE_BIN_ACTIONS_TOP_SPACER
+        )
+        self.main_layout.addWidget(recycle_bin_section)
+        register_left_section(
+            recycle_bin_section,
+            top_spacer=recycle_bin_section_spacer,
+            expanded_spacer_height=self.RECYCLE_BIN_ACTIONS_TOP_SPACER,
         )
 
         self.main_layout.addStretch(1)

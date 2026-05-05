@@ -134,6 +134,9 @@ class _DummyFont:
 
 
 class _DummyMessageBox:
+    Yes = 1
+    Cancel = 2
+
     @staticmethod
     def information(*_args, **_kwargs):
         return None
@@ -141,6 +144,10 @@ class _DummyMessageBox:
     @staticmethod
     def warning(*_args, **_kwargs):
         return None
+
+    @staticmethod
+    def question(*_args, **_kwargs):
+        return _DummyMessageBox.Yes
 
 
 class _DummyFileDialog:

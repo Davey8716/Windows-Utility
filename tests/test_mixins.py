@@ -60,8 +60,13 @@ class _DriveApp(external_drive_mixin.ExternalDriveMixin):
 
 class _DesktopApp(desktop_operations.DesktopOperationsMixin):
     def __init__(self):
-        self.state = {"folder_to_desktop_name": "Reports"}
+        self.state = {
+            "folder_to_desktop_name": "Reports",
+            "recycle_bin_auto_clean_enabled": False,
+            "recycle_bin_age_rule_days": 30,
+        }
         self.messages = []
+        self.actions = Mock()
 
     def _message_box_icon(self, name: str):
         return name
@@ -233,6 +238,25 @@ class DesktopOperationsMixinTests(unittest.TestCase):
         self.assertEqual(app.state["folder_to_desktop_name"], "")
         save_state_mock.assert_called_once_with(app.state)
         self.assertEqual(app.messages[0][1], "Folder to Desktop")
+
+    def test_run_recycle_bin_auto_cleanup_skips_when_disabled(self):
+        app = _DesktopApp()
+
+        app.run_recycle_bin_auto_cleanup()
+
+        app.actions.cleanup_recycle_bin_items_older_than.assert_not_called()
+
+    def test_run_recycle_bin_auto_cleanup_uses_selected_age_rule(self):
+        app = _DesktopApp()
+        app.state["recycle_bin_auto_clean_enabled"] = True
+        app.state["recycle_bin_age_rule_days"] = 14
+        app.actions.cleanup_recycle_bin_items_older_than.return_value = 2
+
+        app.run_recycle_bin_auto_cleanup()
+
+        app.actions.cleanup_recycle_bin_items_older_than.assert_called_once_with(14)
+        self.assertEqual(app.messages[0][1], "Recycle Bin Auto-Clean")
+        self.assertIn("2 Recycle Bin item(s)", app.messages[0][2])
 
 
 if __name__ == "__main__":

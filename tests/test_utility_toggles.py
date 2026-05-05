@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -152,6 +153,39 @@ class UtilityTogglesTests(unittest.TestCase):
             count = manager.restore_desktop_layout("layout.json")
 
         self.assertEqual(count, 0)
+
+    def test_open_recycle_bin_returns_true_when_explorer_launches(self):
+        manager = utility_toggles.UtilityActionsManager()
+
+        with patch.object(utility_toggles.subprocess, "Popen") as popen_mock:
+            opened = manager.open_recycle_bin()
+
+        self.assertTrue(opened)
+        popen_mock.assert_called_once()
+
+    def test_cleanup_recycle_bin_items_older_than_deletes_only_expired_entries(self):
+        manager = utility_toggles.UtilityActionsManager()
+        old_item = Path("C:/old/$I123")
+        new_item = Path("C:/new/$I456")
+        now = datetime.now(timezone.utc)
+
+        with patch.object(
+            utility_toggles,
+            "_iter_recycle_bin_metadata_files",
+            return_value=iter([old_item, new_item]),
+        ), patch.object(
+            utility_toggles,
+            "_read_recycle_bin_deleted_at",
+            side_effect=[now - timedelta(days=31), now - timedelta(days=2)],
+        ), patch.object(
+            utility_toggles,
+            "_delete_recycle_bin_entry",
+            return_value=True,
+        ) as delete_mock:
+            deleted_count = manager.cleanup_recycle_bin_items_older_than(30)
+
+        self.assertEqual(deleted_count, 1)
+        delete_mock.assert_called_once_with(old_item)
 
 
 if __name__ == "__main__":

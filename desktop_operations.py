@@ -154,6 +154,96 @@ class DesktopOperationsMixin:
                 "Could not export bookmarks.",
             )
 
+    def open_recycle_bin(self):
+        if self.actions.open_recycle_bin():
+            return
+
+        self._show_timed_message(
+            self._message_box_icon("Warning"),
+            "Recycle Bin",
+            "Could not open Recycle Bin.",
+        )
+
+    def empty_recycle_bin(self):
+        question = QMessageBox.question(
+            self,
+            "Empty Recycle Bin",
+            "Permanently delete all items currently in Recycle Bin?",
+            self._message_box_button("Yes") | self._message_box_button("Cancel"),
+            self._message_box_button("Cancel"),
+        )
+        if question != self._message_box_button("Yes"):
+            return
+
+        if self.actions.empty_recycle_bin():
+            self._show_timed_message(
+                self._message_box_icon("Information"),
+                "Recycle Bin",
+                "Recycle Bin emptied.",
+            )
+            return
+
+        self._show_timed_message(
+            self._message_box_icon("Warning"),
+            "Recycle Bin",
+            "Could not empty Recycle Bin.",
+        )
+
+    def run_recycle_bin_auto_cleanup(self):
+        if not self.state.get("recycle_bin_auto_clean_enabled", False):
+            return
+
+        self._run_recycle_bin_age_cleanup(automatic=True)
+
+    def run_recycle_bin_cleanup_now(self):
+        self._run_recycle_bin_age_cleanup(automatic=False)
+
+    def _run_recycle_bin_age_cleanup(self, *, automatic: bool):
+        days = int(self.state.get("recycle_bin_age_rule_days", 30))
+        if days <= 0:
+            if not automatic:
+                self._show_timed_message(
+                    self._message_box_icon("Warning"),
+                    "Recycle Bin Cleanup",
+                    "Choose a valid age rule before running cleanup.",
+                )
+            return
+
+        if not automatic:
+            question = QMessageBox.question(
+                self,
+                "Recycle Bin Cleanup",
+                f"Permanently delete Recycle Bin items older than {days} days?",
+                self._message_box_button("Yes") | self._message_box_button("Cancel"),
+                self._message_box_button("Cancel"),
+            )
+            if question != self._message_box_button("Yes"):
+                return
+
+        deleted_count = self.actions.cleanup_recycle_bin_items_older_than(days)
+        if deleted_count > 0:
+            title = "Recycle Bin Auto-Clean" if automatic else "Recycle Bin Cleanup"
+            self._show_timed_message(
+                self._message_box_icon("Information"),
+                title,
+                f"Deleted {deleted_count} Recycle Bin item(s) older than {days} days.",
+            )
+            return
+
+        if automatic:
+            self._show_timed_message(
+                self._message_box_icon("Information"),
+                "Recycle Bin Auto-Clean",
+                f"No Recycle Bin items older than {days} days were found.",
+            )
+            return
+
+        self._show_timed_message(
+            self._message_box_icon("Information"),
+            "Recycle Bin Cleanup",
+            f"No Recycle Bin items older than {days} days were found.",
+        )
+
     def _create_desktop_folder(self, folder_input: QLineEdit):
         path_type = self._get_app_module_attr("Path", Path)
         save_state_fn = self._get_app_module_attr("save_state", save_state)

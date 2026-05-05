@@ -1,11 +1,13 @@
-import subprocess
-import webbrowser
 import ctypes
-import win32gui
-import win32con
 import os
 import shutil
+import subprocess
+import webbrowser
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+import win32con
+import win32gui
 from PySide6.QtCore import Qt
 
 from screen_mover import SCREEN_MOVER
@@ -244,6 +246,51 @@ class UtilityActionsManager:
 
         return count
 
+    def open_recycle_bin(self) -> bool:
+        try:
+            subprocess.Popen(
+                ["explorer.exe", "shell:RecycleBinFolder"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return True
+        except Exception as e:
+            print("[RECYCLE BIN] Failed to open:", e)
+            return False
+
+    def empty_recycle_bin(self) -> bool:
+        no_confirmation = 0x00000001
+        no_progress = 0x00000002
+        no_sound = 0x00000004
+        flags = no_confirmation | no_progress | no_sound
+
+        try:
+            result = ctypes.windll.shell32.SHEmptyRecycleBinW(None, None, flags)
+            if result not in (0,):
+                print(f"[RECYCLE BIN] SHEmptyRecycleBinW returned {result}")
+                return False
+            return True
+        except Exception as e:
+            print("[RECYCLE BIN] Failed to empty:", e)
+            return False
+
+    def cleanup_recycle_bin_items_older_than(self, days: int) -> int:
+        if days <= 0:
+            return 0
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        deleted_count = 0
+
+        for metadata_path in _iter_recycle_bin_metadata_files():
+            deleted_at = _read_recycle_bin_deleted_at(metadata_path)
+            if deleted_at is None or deleted_at > cutoff:
+                continue
+
+            if _delete_recycle_bin_entry(metadata_path):
+                deleted_count += 1
+
+        return deleted_count
+
     def open_backup_folder(self, path: str | None = None) -> bool:
         if path is None and self.app:
             path = getattr(
@@ -386,6 +433,85 @@ class UtilityActionsManager:
         except Exception as e:
             print("[DESKTOP ICONS] Visibility read failed:", e)
             return None
+
+
+def _iter_recycle_bin_metadata_files():
+    for drive_root in _iter_windows_drive_roots():
+        recycle_root = drive_root / "$Recycle.Bin"
+        if not recycle_root.exists():
+            continue
+
+        try:
+            for metadata_path in recycle_root.rglob("$I*"):
+                if metadata_path.is_file():
+                    yield metadata_path
+        except (OSError, PermissionError):
+            continue
+
+
+def _iter_windows_drive_roots():
+    try:
+        drive_mask = ctypes.windll.kernel32.GetLogicalDrives()
+    except Exception:
+        drive_mask = 0
+
+    for index in range(26):
+        if not (drive_mask & (1 << index)):
+            continue
+
+        drive_letter = chr(ord("A") + index)
+        drive_root = Path(f"{drive_letter}:\\")
+        if drive_root.exists():
+            yield drive_root
+
+
+def _read_recycle_bin_deleted_at(metadata_path: Path) -> datetime | None:
+    try:
+        with metadata_path.open("rb") as metadata_file:
+            header = metadata_file.read(24)
+    except OSError:
+        return None
+
+    if len(header) < 24:
+        return None
+
+    filetime = int.from_bytes(header[16:24], "little", signed=False)
+    if filetime <= 0:
+        return None
+
+    return _filetime_to_utc_datetime(filetime)
+
+
+def _filetime_to_utc_datetime(filetime: int) -> datetime:
+    unix_epoch_offset = 116444736000000000
+    return datetime.fromtimestamp(
+        (filetime - unix_epoch_offset) / 10_000_000,
+        tz=timezone.utc,
+    )
+
+
+def _delete_recycle_bin_entry(metadata_path: Path) -> bool:
+    resource_path = metadata_path.with_name(
+        "$R" + metadata_path.name[2:]
+    )
+
+    deleted_any = False
+
+    for path in (metadata_path, resource_path):
+        if not path.exists():
+            continue
+
+        try:
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=False)
+            else:
+                path.unlink()
+            deleted_any = True
+        except OSError as e:
+            print(f"[RECYCLE BIN] Failed to delete {path}: {e}")
+            return False
+
+    return deleted_any
 
 def _should_skip(hwnd: int, skip_hwnd: int) -> bool:
     if hwnd == skip_hwnd:
