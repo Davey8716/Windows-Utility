@@ -107,7 +107,7 @@ def get_drive_info():
 
 class AdvancedToolsPanel(QWidget):
     OUTER_SIDE_PADDING = 14
-    WINDOWS_UTILITIES_FRAME_WIDTH = 370
+    WINDOWS_UTILITIES_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH
     WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 8
     WINDOWS_UTILITIES_CONTENT_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH - 8
     WINDOWS_UTILITIES_ROW_WIDTH = WINDOWS_UTILITIES_CONTENT_WIDTH - 20
@@ -595,7 +595,8 @@ class AdvancedToolsPanel(QWidget):
     def _add_windows_dropdown(self, parent_layout, label, actions_map):
         placeholder = f" {label} "
         combo = QComboBox()
-        combo.setFixedWidth(160)
+        combo.setMinimumWidth(180)
+        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         combo.addItem(placeholder)
         combo.addItems(sorted(actions_map.keys()))
         combo.setCurrentText(placeholder)
