@@ -651,6 +651,7 @@ class UtilityControlApp(
             save_state(state)
 
         desktop_zen_btn = make_toggle_button("Zen Mode", desktop_zen_mode_enabled)
+        self.desktop_zen_btn = desktop_zen_btn
         bind_toggle_text(desktop_zen_btn, "Show Icons", "Zen Mode")
         ui_bottom_row_layout.addWidget(desktop_zen_btn)
         self.register_tooltip(desktop_zen_btn, tooltip_text("desktop_zen_mode"))
