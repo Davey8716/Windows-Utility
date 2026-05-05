@@ -1,7 +1,7 @@
 import styles
 from right_utility_gui import get_drive_info
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QMenu, QMessageBox
+from PySide6.QtWidgets import QMenu
 
 
 class ExternalDriveMixin:
@@ -152,34 +152,17 @@ class ExternalDriveMixin:
         drive_label, drive_lines = self._format_external_drive_message(
             current_signature
         )
-        confirm_box = QMessageBox(self)
-        self._apply_message_box_icon(
-            confirm_box,
+        if self._show_modal_message(
             self._message_box_icon("NoIcon"),
-        )
-        confirm_box.setWindowTitle(f"{action_name} With External Drive Connected")
-        confirm_box.setText(
+            f"{action_name} With External Drive Connected",
             (
                 f"The following external {drive_label} still connected:\n"
                 f"{drive_lines}\n\n"
                 f"Do you want to continue with {action_name.lower()} anyway?"
-            )
-        )
-        confirm_box.setStandardButtons(
-            self._message_box_button("Yes") | self._message_box_button("Cancel")
-        )
-        confirm_box.setDefaultButton(self._message_box_button("Cancel"))
-        self._balance_message_box_text_padding(confirm_box)
-        self._center_message_box_buttons(confirm_box)
-        confirm_box.setWindowModality(Qt.WindowModality.ApplicationModal)
-        self._set_borderless_message_box(
-            confirm_box,
-            stays_on_top=True,
-            tool_window=True,
-        )
-        QTimer.singleShot(0, lambda: self._apply_rounded_window_mask(confirm_box))
-
-        if confirm_box.exec() == self._message_box_button("Yes"):
+            ),
+            self._message_box_button("Yes") | self._message_box_button("Cancel"),
+            self._message_box_button("Cancel"),
+        ) == self._message_box_button("Yes"):
             action_callback()
 
     def _check_external_drive_changes(self):

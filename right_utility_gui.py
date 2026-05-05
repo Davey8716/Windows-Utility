@@ -940,23 +940,13 @@ class AdvancedToolsPanel(QWidget):
         if out_path.exists():
             prompt += "\n\nThis file already exists and will be replaced."
 
-        message_box = QMessageBox(self)
-        message_box.setIcon(QMessageBox.Icon.NoIcon)
-        message_box.setWindowTitle("Export Bookmarks")
-        message_box.setText(prompt)
-        message_box.setStandardButtons(
-            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel
+        result = self.app._show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            "Export Bookmarks",
+            prompt,
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
         )
-        message_box.setDefaultButton(QMessageBox.StandardButton.Save)
-        message_box.setModal(False)
-        self.app._set_borderless_message_box(
-            message_box,
-            stays_on_top=True,
-            tool_window=True,
-        )
-        message_box.show()
-        self.app._apply_rounded_window_mask(message_box)
-        result = message_box.exec()
         if result != QMessageBox.StandardButton.Save:
             return None
 

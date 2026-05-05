@@ -4,7 +4,7 @@ from pathlib import Path
 
 from PIL import ImageGrab
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QLineEdit, QMessageBox
+from PySide6.QtWidgets import QLineEdit
 
 from state_manager import save_state
 
@@ -97,10 +97,12 @@ class DesktopOperationsMixin:
             if closed:
                 return
 
-            QMessageBox.warning(
-                self,
+            self._show_modal_message(
+                self._message_box_icon("Warning"),
                 "Close Backup Folder",
                 f"Could not close backup folder:\n{path}",
+                self._message_box_button("Ok"),
+                self._message_box_button("Ok"),
             )
             return
 
@@ -111,10 +113,12 @@ class DesktopOperationsMixin:
             QTimer.singleShot(500, self._refresh_taskbar_backup_folder_button)
             return
 
-        QMessageBox.warning(
-            self,
+        self._show_modal_message(
+            self._message_box_icon("Warning"),
             "Open Backup Folder",
             f"Could not open backup folder:\n{path}",
+            self._message_box_button("Ok"),
+            self._message_box_button("Ok"),
         )
 
     def capture_desktop_layout(self):
@@ -181,8 +185,8 @@ class DesktopOperationsMixin:
         )
 
     def empty_recycle_bin(self):
-        question = QMessageBox.question(
-            self,
+        question = self._show_modal_message(
+            self._message_box_icon("NoIcon"),
             "Empty Recycle Bin",
             "Permanently delete all items currently in Recycle Bin?",
             self._message_box_button("Yes") | self._message_box_button("Cancel"),
@@ -230,8 +234,8 @@ class DesktopOperationsMixin:
             return
 
         if not automatic:
-            question = QMessageBox.question(
-                self,
+            question = self._show_modal_message(
+                self._message_box_icon("NoIcon"),
                 "Recycle Bin Cleanup",
                 f"Permanently delete Recycle Bin items older than {days} days?",
                 self._message_box_button("Yes") | self._message_box_button("Cancel"),

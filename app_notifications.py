@@ -69,6 +69,11 @@ class WindowMessageMixin:
         message_box.setStyleSheet(styles.message_box_style())
         return message_box
 
+    def _prepare_message_box_layout(self, message_box: QMessageBox) -> None:
+        self._balance_message_box_text_padding(message_box)
+        if message_box.standardButtons() != self._message_box_button("NoButton"):
+            self._center_message_box_buttons(message_box)
+
     def _center_message_box_buttons(self, message_box: QMessageBox) -> None:
         button_box = message_box.findChild(QDialogButtonBox)
         if button_box is None:
@@ -132,6 +137,49 @@ class WindowMessageMixin:
         path.addRoundedRect(rect, radius, radius)
         widget.setMask(QRegion(path.toFillPolygon().toPolygon()))
 
+    def _exec_message_box(
+        self,
+        message_box: QMessageBox,
+        *,
+        stays_on_top: bool = True,
+        tool_window: bool = True,
+    ) -> int:
+        self._set_borderless_message_box(
+            message_box,
+            stays_on_top=stays_on_top,
+            tool_window=tool_window,
+        )
+        self._prepare_message_box_layout(message_box)
+        QTimer.singleShot(0, lambda: self._apply_rounded_window_mask(message_box))
+        return message_box.exec()
+
+    def _show_modal_message(
+        self,
+        icon,
+        title: str,
+        text: str,
+        buttons,
+        default_button,
+        *,
+        stays_on_top: bool = True,
+        tool_window: bool = True,
+    ) -> int:
+        try:
+            message_box = QMessageBox(self)
+        except TypeError:
+            return self._message_box_button("Cancel")
+        self._apply_message_box_icon(message_box, icon)
+        message_box.setWindowTitle(title)
+        message_box.setText(text)
+        message_box.setStandardButtons(buttons)
+        message_box.setDefaultButton(default_button)
+        message_box.setWindowModality(Qt.WindowModality.ApplicationModal)
+        return self._exec_message_box(
+            message_box,
+            stays_on_top=stays_on_top,
+            tool_window=tool_window,
+        )
+
     def _show_timed_message(
         self,
         icon,
@@ -186,6 +234,7 @@ class WindowMessageMixin:
             stays_on_top=True,
             tool_window=True,
         )
+        self._prepare_message_box_layout(message_box)
         self._active_message_boxes.append(message_box)
         close_timer = QTimer(message_box)
         close_timer.setSingleShot(True)
@@ -232,6 +281,7 @@ class WindowMessageMixin:
             stays_on_top=True,
             tool_window=True,
         )
+        self._prepare_message_box_layout(message_box)
         message_box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         message_box.setModal(False)
         self._active_message_boxes.append(message_box)
