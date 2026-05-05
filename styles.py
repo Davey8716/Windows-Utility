@@ -371,10 +371,31 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
         QListWidget::item {
             padding: 1px 6px;
             margin: 0px;
+            border: none;
+            outline: 0;
         }
         QListWidget::item:selected {
             background-color: %s;
             color: %s;
+            border: none;
+            outline: 0;
+        }
+        QListWidget::item:selected:active,
+        QListWidget::item:selected:focus {
+            border: none;
+            outline: 0;
+        }
+        QListView::item {
+            border: none;
+            outline: 0;
+        }
+        QListView::item:selected,
+        QListView::item:selected:active,
+        QListView::item:selected:focus {
+            background-color: %s;
+            color: %s;
+            border: none;
+            outline: 0;
         }
         """
         % (
@@ -387,6 +408,8 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
             qcolor_css(themed_surface_field_bg()),
             qcolor_css(themed_surface_field_text()),
             qcolor_css(themed_surface_field_border()),
+            qcolor_css(PANEL_HOVER),
+            qcolor_css(themed_surface_field_text()),
             qcolor_css(PANEL_HOVER),
             qcolor_css(themed_surface_field_text()),
         )

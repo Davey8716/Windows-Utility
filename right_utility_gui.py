@@ -355,6 +355,7 @@ class AdvancedToolsPanel(QWidget):
         )
         self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.drive_space_list.setWordWrap(False)
+        self.drive_space_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.drive_space_list.setProperty("surfaceFieldStyle", True)
         self._apply_drive_space_list_style()
         self.drive_space_list.itemDoubleClicked.connect(self._open_drive_from_item)
