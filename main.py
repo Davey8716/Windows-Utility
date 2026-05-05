@@ -362,7 +362,9 @@ class UtilityControlApp(
         header_layout.setContentsMargins(
             self.MAIN_SECTION_SIDE_PADDING,
             10,
-            self.MAIN_SECTION_SIDE_PADDING,
+            self.MAIN_SECTION_SIDE_PADDING + (
+                self.MAIN_SECTION_FRAME_WIDTH - self.LEFT_SECTION_VISIBLE_FRAME_WIDTH
+            ),
             10,
         )
 
@@ -371,14 +373,24 @@ class UtilityControlApp(
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         header_spacer = QWidget(header)
-        header_spacer.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
+        header_spacer.setFixedSize(
+            styles.SECTION_TOGGLE_WIDTH,
+            styles.SECTION_TOGGLE_HEIGHT,
+        )
 
         master_btn = QToolButton(header)
-        master_btn.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
+        master_btn.setFixedSize(
+            styles.SECTION_TOGGLE_WIDTH,
+            styles.SECTION_TOGGLE_HEIGHT,
+        )
         master_btn.setCursor(Qt.CursorShape.ArrowCursor)
         master_btn.setArrowType(Qt.ArrowType.DownArrow)
         master_btn.setStyleSheet(
-            styles.arrow_button_style(styles.theme_text_color(), styles.SURFACE_DARK)
+            styles.arrow_button_style(
+                styles.theme_text_color(),
+                styles.SURFACE_DARK,
+                font_size=16,
+            )
         )
         self.master_collapse_btn_left = master_btn
 

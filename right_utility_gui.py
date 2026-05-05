@@ -161,14 +161,17 @@ class AdvancedToolsPanel(QWidget):
         title_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         title_row_layout = QHBoxLayout(title_row)
         title_row_layout.setContentsMargins(
-            self.OUTER_SIDE_PADDING,
+            0,
             10,
-            self.OUTER_SIDE_PADDING,
+            0,
             10,
         )
 
         title_spacer = QWidget(title_row)
-        title_spacer.setFixedSize(styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT)
+        title_spacer.setFixedSize(
+            styles.SECTION_TOGGLE_WIDTH,
+            styles.SECTION_TOGGLE_HEIGHT,
+        )
 
         self.advanced_title = QLabel("Advanced Tools", title_row)
         self.advanced_title.setStyleSheet(styles.label_style(font_size=20))
@@ -181,8 +184,8 @@ class AdvancedToolsPanel(QWidget):
 
         self.master_collapse_btn_right = QToolButton()
         self.master_collapse_btn_right.setFixedSize(
-            styles.ICON_BUTTON_WIDTH,
-            styles.ICON_BUTTON_HEIGHT,
+            styles.SECTION_TOGGLE_WIDTH,
+            styles.SECTION_TOGGLE_HEIGHT,
         )
         self.app.master_toggle_right_state = bool(
             self.app.saved_state.get("master_toggle_right", False)
@@ -193,7 +196,11 @@ class AdvancedToolsPanel(QWidget):
             else Qt.ArrowType.UpArrow
         )
         self.master_collapse_btn_right.setStyleSheet(
-            styles.arrow_button_style(styles.theme_text_color(), styles.SURFACE_DARK)
+            styles.arrow_button_style(
+                styles.theme_text_color(),
+                styles.SURFACE_DARK,
+                font_size=16,
+            )
         )
         self.master_collapse_btn_right.clicked.connect(
             self.toggle_all_right_sections
@@ -219,21 +226,6 @@ class AdvancedToolsPanel(QWidget):
         self.app.register_tooltip(
             self.windows_utility_section.toggle_btn,
             tooltip_text("windows_utilities_toggle"),
-        )
-        self.windows_utility_section.main_layout.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
-        )
-        self.windows_utility_section.setFixedWidth(
-            styles.RIGHT_SECTION_MAX_WIDTH
-        )
-        self.windows_utility_section.header.setFixedWidth(
-            self.WINDOWS_UTILITIES_FRAME_WIDTH
-        )
-        self.windows_utility_section.container.setFixedWidth(
-            self.WINDOWS_UTILITIES_FRAME_WIDTH
-        )
-        self.windows_utility_section.content.setFixedWidth(
-            self.WINDOWS_UTILITIES_CONTENT_WIDTH
         )
 
         self._build_windows_utilities()
