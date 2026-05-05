@@ -77,8 +77,3 @@ class MasterBackupPathsMixin:
             self.get_default_taskbar_backup_dir()
         )
         self._taskbar_backup_folder_open = is_open
-
-        if hasattr(self, "open_backup_btn"):
-            self.open_backup_btn.setText(
-                "Close Backup Folder" if is_open else "Open Backup Folder"
-            )

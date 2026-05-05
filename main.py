@@ -850,11 +850,28 @@ class UtilityControlApp(
         org_section, org_layout = make_section("Organising Utilities", "organising_utilities")
         self.backup_path = self._get_master_backup_dir()
 
+        desktop_actions_row = QWidget()
+        desktop_actions_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        desktop_actions_row_layout = QHBoxLayout(desktop_actions_row)
+        desktop_actions_row_layout.setContentsMargins(0, 0, 0, 0)
+        desktop_actions_row_layout.setSpacing(10)
+
         screenshot_btn = QPushButton("Desktop Screenshot")
         style_organizing_button(screenshot_btn)
-        org_layout.addWidget(screenshot_btn)
+        desktop_actions_row_layout.addWidget(screenshot_btn)
         screenshot_btn.clicked.connect(self.take_desktop_screenshot)
         self.register_tooltip(screenshot_btn, tooltip_text("desktop_screenshot"))
+
+        layout_actions_combo = make_action_dropdown(
+            " Desktop Actions ",
+            {
+                "Capture Layout": self.capture_desktop_layout,
+                "Restore Layout": self.restore_desktop_layout,
+            },
+        )
+        desktop_actions_row_layout.addWidget(layout_actions_combo)
+        org_layout.addWidget(desktop_actions_row)
+        self.register_tooltip(layout_actions_combo, tooltip_text("capture_desktop_layout"))
 
         folder_row = QWidget()
         folder_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -892,50 +909,28 @@ class UtilityControlApp(
         folder_btn.clicked.connect(on_create_folder_clicked)
         folder_input.textChanged.connect(on_folder_name_changed)
 
-        taskbar_row = QWidget()
-        taskbar_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        taskbar_row_layout = QHBoxLayout(taskbar_row)
-        taskbar_row_layout.setContentsMargins(0, 0, 0, 0)
-        taskbar_row_layout.setSpacing(10)
-        org_layout.addWidget(taskbar_row)
-
-        backup_taskbar_btn = QPushButton("Backup Taskbar")
-        style_organizing_button(backup_taskbar_btn)
-        taskbar_row_layout.addWidget(backup_taskbar_btn)
-        backup_taskbar_btn.clicked.connect(self.backup_taskbar_apps)
-        self.register_tooltip(backup_taskbar_btn, tooltip_text("backup_taskbar"))
-
-        open_backup_btn = QPushButton("Open Backup Folder")
-        style_organizing_button(open_backup_btn)
-        taskbar_row_layout.addWidget(open_backup_btn)
-        self.open_backup_btn = open_backup_btn
-        open_backup_btn.clicked.connect(self.open_taskbar_backup_folder)
-        self.register_tooltip(open_backup_btn, tooltip_text("open_backup_folder"))
-
-        layout_row = QWidget()
-        layout_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        layout_row_layout = QHBoxLayout(layout_row)
-        layout_row_layout.setContentsMargins(0, 0, 0, 0)
-        layout_row_layout.setSpacing(10)
-        org_layout.addWidget(layout_row)
-
-        capture_layout_btn = QPushButton("Capture Desktop Layout")
-        style_organizing_button(capture_layout_btn)
-        layout_row_layout.addWidget(capture_layout_btn)
-        capture_layout_btn.clicked.connect(self.capture_desktop_layout)
-        self.register_tooltip(capture_layout_btn, tooltip_text("capture_desktop_layout"))
-
-        restore_layout_btn = QPushButton("Restore Desktop Layout")
-        style_organizing_button(restore_layout_btn)
-        layout_row_layout.addWidget(restore_layout_btn)
-        restore_layout_btn.clicked.connect(self.restore_desktop_layout)
-        self.register_tooltip(restore_layout_btn, tooltip_text("restore_desktop_layout"))
+        bookmarks_taskbar_row = QWidget()
+        bookmarks_taskbar_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        bookmarks_taskbar_row_layout = QHBoxLayout(bookmarks_taskbar_row)
+        bookmarks_taskbar_row_layout.setContentsMargins(0, 0, 0, 0)
+        bookmarks_taskbar_row_layout.setSpacing(10)
 
         brave_export_btn = QPushButton("Export Bookmarks")
         style_organizing_button(brave_export_btn)
-        org_layout.addWidget(brave_export_btn)
+        bookmarks_taskbar_row_layout.addWidget(brave_export_btn)
         brave_export_btn.clicked.connect(self.export_bookmarks)
         self.register_tooltip(brave_export_btn, tooltip_text("export_bookmarks"))
+
+        taskbar_actions_combo = make_action_dropdown(
+            " Taskbar Actions ",
+            {
+                "Backup Taskbar": self.backup_taskbar_apps,
+                "Open Backup Folder": self.open_taskbar_backup_folder,
+            },
+        )
+        bookmarks_taskbar_row_layout.addWidget(taskbar_actions_combo)
+        org_layout.addWidget(bookmarks_taskbar_row)
+        self.register_tooltip(taskbar_actions_combo, tooltip_text("backup_taskbar"))
 
         master_backup_row = QWidget()
         master_backup_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
