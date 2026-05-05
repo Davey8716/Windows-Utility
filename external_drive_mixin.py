@@ -1,6 +1,7 @@
 import os
 
 import styles
+from PySide6.QtGui import QFont, QFontMetrics
 from right_utility_gui import get_drive_info
 from PySide6.QtCore import QEvent, QModelIndex, Qt, QTimer
 from PySide6.QtWidgets import QMenu
@@ -46,6 +47,54 @@ class ExternalDriveMixin:
         drive_lines = "\n".join(drives)
         return drive_label, drive_lines
 
+    def _apply_connected_drives_field_style(self) -> None:
+        combo = getattr(self, "connected_drives_field", None)
+        if combo is None:
+            return
+
+        visible_text = ""
+        current_text_getter = getattr(combo, "currentText", None)
+        if callable(current_text_getter):
+            visible_text = current_text_getter() or ""
+        if not visible_text:
+            placeholder_text_getter = getattr(combo, "placeholderText", None)
+            if callable(placeholder_text_getter):
+                visible_text = placeholder_text_getter() or ""
+
+        combo_width = 0
+        width_getter = getattr(combo, "width", None)
+        if callable(width_getter):
+            measured_width = width_getter()
+            if isinstance(measured_width, (int, float)):
+                combo_width = int(measured_width)
+
+        chosen_font_size = 15
+        chosen_font_family = "Segoe UI"
+        if visible_text and combo_width > 0:
+            text_width_limit = max(0, combo_width - 34)
+            for candidate_family in ("Segoe UI", "Arial", "Consolas"):
+                for candidate_size in (15, 14, 13, 12):
+                    metrics = QFontMetrics(QFont(candidate_family, candidate_size))
+                    if metrics.horizontalAdvance(visible_text) <= text_width_limit:
+                        chosen_font_family = candidate_family
+                        chosen_font_size = candidate_size
+                        break
+                else:
+                    continue
+                break
+            else:
+                chosen_font_size = 12
+                chosen_font_family = "Arial"
+
+        combo.setProperty("styleFontSize", chosen_font_size)
+        combo.setProperty("styleFontFamily", chosen_font_family)
+        combo.setStyleSheet(
+            styles.connected_drives_combo_style(
+                chosen_font_size,
+                chosen_font_family,
+            )
+        )
+
     def _refresh_connected_drive_status_label(self, drives=None):
         if not hasattr(self, "connected_drives_field"):
             return
@@ -57,6 +106,7 @@ class ExternalDriveMixin:
 
         self.connected_drives_field.clear()
         if drives:
+            self.connected_drives_field.setPlaceholderText("")
             display_drives = [f"{drive} Connected" for drive in drives]
             for drive_path, display_text in zip(drives, display_drives):
                 self.connected_drives_field.addItem(display_text, drive_path)
@@ -65,9 +115,12 @@ class ExternalDriveMixin:
                 "Connected drives:\n" + "\n".join(display_drives)
             )
         else:
-            self.connected_drives_field.addItem("No Drives Connected", None)
-            self.connected_drives_field.setCurrentIndex(0)
+            self.connected_drives_field.setPlaceholderText("No Drives Connected")
+            self.connected_drives_field.setCurrentIndex(-1)
             self.connected_drives_field.setToolTip("No Drives Connected")
+
+        self._apply_connected_drives_field_style()
+        QTimer.singleShot(0, self._apply_connected_drives_field_style)
 
     def _open_connected_drive_from_index(self, index: QModelIndex) -> None:
         if not hasattr(self, "connected_drives_field") or not index.isValid():

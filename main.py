@@ -880,9 +880,18 @@ class UtilityControlApp(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,
         )
+        self.connected_drives_field.setMinimumContentsLength(
+            len("No Drives Connected")
+        )
+        self.connected_drives_field.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.connected_drives_field.setProperty("connectedDrivesFieldStyle", True)
         self.connected_drives_field.setProperty("surfaceFieldStyle", True)
         self.connected_drives_field.setProperty("styleFontSize", 15)
-        self.connected_drives_field.setStyleSheet(styles.surfaced_combo_style(15))
+        self.connected_drives_field.setStyleSheet(
+            styles.connected_drives_combo_style(15)
+        )
         self.connected_drives_field.setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
         )
@@ -1311,7 +1320,9 @@ class UtilityControlApp(
 
         for combo in self.findChildren(QComboBox):
             font_size = int(combo.property("styleFontSize") or 14)
-            if combo.property("surfaceFieldStyle"):
+            if combo.property("connectedDrivesFieldStyle"):
+                self._apply_connected_drives_field_style()
+            elif combo.property("surfaceFieldStyle"):
                 combo.setStyleSheet(styles.surfaced_combo_style(font_size=font_size))
             elif combo.property("recycleBinAgeRuleStyle"):
                 if combo.isEnabled():
