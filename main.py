@@ -44,6 +44,7 @@ ENDSESSION_LOGOFF = 0x80000000
 WM_WTSSESSION_CHANGE = 0x02B1
 WTS_SESSION_LOCK = 0x7
 NOTIFY_FOR_THIS_SESSION = 0
+WM_APP_RESTORE_INSTANCE = 0x8001
 
 def bring_existing_instance_to_front():
     target_hwnd = None
@@ -71,9 +72,7 @@ def bring_existing_instance_to_front():
         return
 
     try:
-        win32gui.ShowWindow(target_hwnd, win32con.SW_SHOW)
-        win32gui.ShowWindow(target_hwnd, win32con.SW_RESTORE)
-        win32gui.SetForegroundWindow(target_hwnd)
+        win32gui.PostMessage(target_hwnd, WM_APP_RESTORE_INSTANCE, 0, 0)
     except Exception as e:
         print("[RESTORE] failed:", e)
 
@@ -129,6 +128,7 @@ class UtilityControlApp(QWidget):
         self.advanced_settings_open = bool(self.state.get("advanced_panel_open", False))
         self.collapsible_sections = []
         self._quit_requested = False
+        self._shutdown_complete = False
         self.actions = UtilityActionsManager(self)
         self.tray_manager = TrayIconManager(self)
 
@@ -206,8 +206,45 @@ class UtilityControlApp(QWidget):
                 )
                 if self._block_end_session_for_connected_drives(end_session_reason):
                     return True, 0
+            elif msg.message == WM_APP_RESTORE_INSTANCE:
+                QTimer.singleShot(0, self.restore_from_activation)
+                return True, 0
 
         return False, 0
+
+    def restore_from_activation(self):
+        self.show()
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+        self.repaint()
+        self.update()
+
+        try:
+            hwnd = int(self.winId())
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            win32gui.SetForegroundWindow(hwnd)
+        except Exception:
+            pass
+
+    def prepare_for_shutdown(self):
+        if self._shutdown_complete:
+            return
+
+        self._shutdown_complete = True
+        self._unregister_session_notifications()
+
+        try:
+            SCREEN_MOVER.stop()
+        except Exception:
+            pass
+
+        tray = getattr(getattr(self, "tray_manager", None), "tray", None)
+        if tray:
+            try:
+                tray.hide()
+            except Exception:
+                pass
 
     def _register_session_notifications(self):
         if self._session_notification_registered:
@@ -1592,7 +1629,7 @@ class UtilityControlApp(QWidget):
     def closeEvent(self, event):
         self.save_all_settings()
         if self._quit_requested:
-            self._unregister_session_notifications()
+            self.prepare_for_shutdown()
             event.accept()
             return
 

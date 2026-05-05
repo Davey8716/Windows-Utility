@@ -92,6 +92,16 @@ class MainHelperTests(unittest.TestCase):
         self.assertFalse(app.state["master_toggle_left"])
         self.assertFalse(app.state["master_toggle_right"])
 
+    def test_bring_existing_instance_posts_restore_message(self):
+        with patch.object(main.win32gui, "EnumWindows") as enum_windows, \
+             patch.object(main.win32gui, "GetWindowText", return_value="Windows Resurface"), \
+             patch.object(main.win32gui, "PostMessage") as post_message:
+            enum_windows.side_effect = lambda callback, extra: callback(321, extra)
+
+            main.bring_existing_instance_to_front()
+
+        post_message.assert_called_once_with(321, main.WM_APP_RESTORE_INSTANCE, 0, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

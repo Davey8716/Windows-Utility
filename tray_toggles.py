@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QSystemTrayIcon, QMenu
+from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import QObject
 from screen_mover import SCREEN_MOVER
@@ -40,21 +40,16 @@ class TrayIconManager(QObject):
         if self.app.isVisible():
             self.app.hide()
         else:
-            self.app.showNormal()
-            self.app.raise_()
-            self.app.activateWindow()
+            self.app.restore_from_activation()
 
     def quit_from_tray(self):
-        try:
-            SCREEN_MOVER.stop()
-        except Exception:
-            pass
-
-        if self.tray:
-            self.tray.hide()
-
         setattr(self.app, "_quit_requested", True)
+        if hasattr(self.app, "prepare_for_shutdown"):
+            self.app.prepare_for_shutdown()
         self.app.close()
+        qt_app = QApplication.instance()
+        if qt_app:
+            qt_app.quit()
 
     def on_tray_activated(self, reason):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:

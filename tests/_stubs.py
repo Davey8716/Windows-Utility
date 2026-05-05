@@ -87,6 +87,12 @@ class _BaseWidget:
         return _method
 
 
+class _DummyApplication(_BaseWidget):
+    @staticmethod
+    def instance():
+        return None
+
+
 class _DummyIcon:
     @staticmethod
     def fromTheme(_name):
@@ -120,6 +126,11 @@ class _DummyColor:
 
 class _DummySystemTrayIcon(_BaseWidget):
     ActivationReason = _DummyTrayActivationReason
+
+
+class _DummyFont:
+    def __init__(self, *_args, **_kwargs):
+        pass
 
 
 class _DummyMessageBox:
@@ -202,6 +213,7 @@ def install_dependency_stubs():
         qtcore.QObject = _BaseWidget
         qtcore.QPoint = _DummyPoint
         qtcore.QSize = _DummySize
+        qtcore.QRectF = _DummyPoint
         qtcore.QEvent = _DummyEvent
 
         qtwidgets.QWidget = _BaseWidget
@@ -217,7 +229,7 @@ def install_dependency_stubs():
         qtwidgets.QTextEdit = _BaseWidget
         qtwidgets.QListWidgetItem = _BaseWidget
         qtwidgets.QListWidget = _BaseWidget
-        qtwidgets.QApplication = _BaseWidget
+        qtwidgets.QApplication = _DummyApplication
         qtwidgets.QFrame = _BaseWidget
         qtwidgets.QSizePolicy = _DummySizePolicy
         qtwidgets.QFileDialog = _DummyFileDialog
@@ -229,6 +241,9 @@ def install_dependency_stubs():
         qtgui.QIcon = _DummyIcon
         qtgui.QAction = _BaseWidget
         qtgui.QColor = _DummyColor
+        qtgui.QFont = _DummyFont
+        qtgui.QPainterPath = _BaseWidget
+        qtgui.QRegion = _BaseWidget
 
         pyside6.QtCore = qtcore
         pyside6.QtWidgets = qtwidgets
@@ -278,4 +293,6 @@ def install_dependency_stubs():
         desktop_icon_layout = types.ModuleType("desktop_icon_layout")
         desktop_icon_layout.save_desktop_icon_layout = lambda _path: 0
         desktop_icon_layout.restore_desktop_icon_layout = lambda _path: 0
+        desktop_icon_layout.desktop_icons_visible = lambda: True
+        desktop_icon_layout.set_desktop_icons_visible = lambda _visible: None
         sys.modules["desktop_icon_layout"] = desktop_icon_layout
