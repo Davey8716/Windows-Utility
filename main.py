@@ -696,18 +696,18 @@ class UtilityControlApp(
         power_dropdown = make_action_dropdown(
             " Power and Session ",
             {
-                "Sleep": lambda: self._confirm_power_action("Sleep", self.right_tools_panel.run_sleep),
                 "Lock PC": lambda: self._confirm_power_action("Lock PC", self.right_tools_panel.run_lock_pc),
-                "Restart": lambda: self._confirm_power_action("Restart", self.right_tools_panel.run_restart),
+                "Sleep": lambda: self._confirm_power_action("Sleep", self.right_tools_panel.run_sleep),
                 "Log out": lambda: self._confirm_power_action("Log out", self.right_tools_panel.run_logout),
+                "Restart": lambda: self._confirm_power_action("Restart", self.right_tools_panel.run_restart),
                 "Shutdown": lambda: self._confirm_power_action("Shutdown", self.right_tools_panel.run_shutdown),
             },
             power_action_style=True,
             severity_map={
+                "Lock PC": "blue",
                 "Sleep": "yellow",
-                "Lock PC": "amber",
-                "Restart": "orange",
-                "Log out": "orange_red",
+                "Restart": "orange_red",
+                "Log out": "orange",
                 "Shutdown": "red",
             },
         )
@@ -1364,6 +1364,7 @@ class UtilityControlApp(
     def _power_action_item_colors(self) -> dict[str, QColor]:
         return {
             "placeholder": QColor(26, 118, 214) if styles.THEME_IS_DARK else QColor(42, 134, 230),
+            "blue": QColor(36, 104, 196) if styles.THEME_IS_DARK else QColor(68, 142, 236),
             "yellow": QColor(196, 162, 32) if styles.THEME_IS_DARK else QColor(224, 196, 74),
             "amber": QColor(207, 132, 30) if styles.THEME_IS_DARK else QColor(230, 154, 56),
             "orange": QColor(210, 95, 26) if styles.THEME_IS_DARK else QColor(234, 118, 42),
