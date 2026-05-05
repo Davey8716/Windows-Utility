@@ -124,12 +124,12 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
     """
 
 def collapsible_section_frame_style(border_color: QColor | None = None, radius: int = 10) -> str:
-    border = border_color or SURFACE_BORDER
+    border = border_color or WINDOW_BG
     return f"""
         QFrame#CollapsibleSectionFrame {{
             border: 2px solid {qcolor_css(border)};
             border-radius: {radius}px;
-            background-color: {qcolor_css(SURFACE_BG)};
+            background-color: {qcolor_css(WINDOW_BG)};
         }}
     """
 
