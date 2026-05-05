@@ -421,6 +421,40 @@ def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") 
     """
 
 
+def power_combo_style(font_size: int) -> str:
+    power_bg = QColor(26, 118, 214) if THEME_IS_DARK else QColor(42, 134, 230)
+    power_hover = QColor(44, 138, 235) if THEME_IS_DARK else QColor(58, 148, 242)
+    power_pressed = QColor(18, 94, 176) if THEME_IS_DARK else QColor(30, 108, 196)
+    power_border = QColor(132, 198, 255) if THEME_IS_DARK else QColor(23, 86, 158)
+
+    return f"""
+        QComboBox {{
+            {label_style(font_size=font_size, bold=True, color=theme_text_color())}
+            background-color: {qcolor_css(power_bg)};
+            border: 1px solid {qcolor_css(power_border)};
+            border-radius: 3px;
+            padding: 4px 8px;
+        }}
+        QComboBox:hover {{
+            background-color: {qcolor_css(power_hover)};
+        }}
+        QComboBox:on {{
+            background-color: {qcolor_css(power_pressed)};
+        }}
+        QComboBox QAbstractItemView {{
+            background-color: {qcolor_css(themed_surface_field_bg())};
+            color: {qcolor_css(theme_text_color())};
+            border: 1px solid {qcolor_css(power_border)};
+            outline: 0;
+            padding: 2px;
+        }}
+        QComboBox QAbstractItemView::item {{
+            padding: 4px 8px;
+            border: none;
+        }}
+    """
+
+
 def emphasized_surface_line_edit_style(font_size: int) -> str:
     active_bg = PANEL_HOVER if THEME_IS_DARK else QColor(214, 226, 242)
     active_border = PANEL_BORDER if THEME_IS_DARK else QColor(58, 72, 96)

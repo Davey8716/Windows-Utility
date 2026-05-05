@@ -6,6 +6,7 @@ from pathlib import Path
 import styles
 import win32gui
 import win32con
+from PySide6.QtGui import QColor, QPainter
 
 from app_notifications import WindowMessageMixin
 from app_paths import MasterBackupPathsMixin
@@ -37,6 +38,8 @@ from PySide6.QtWidgets import (
     QFrame,
     QMessageBox,
     QSizePolicy,
+    QStyle,
+    QStyledItemDelegate,
 )
 
 MUTEX_NAME = "Windows Resurface"
@@ -46,6 +49,45 @@ WM_WTSSESSION_CHANGE = 0x02B1
 WTS_SESSION_LOCK = 0x7
 NOTIFY_FOR_THIS_SESSION = 0
 WM_APP_RESTORE_INSTANCE = 0x8001
+
+
+class SeverityComboItemDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        background = index.data(Qt.ItemDataRole.BackgroundRole)
+        foreground = index.data(Qt.ItemDataRole.ForegroundRole)
+
+        bg_color = (
+            background.color()
+            if hasattr(background, "color")
+            else background
+            if isinstance(background, QColor)
+            else None
+        )
+        fg_color = (
+            foreground.color()
+            if hasattr(foreground, "color")
+            else foreground
+            if isinstance(foreground, QColor)
+            else styles.theme_text_color()
+        )
+
+        painter.save()
+
+        if bg_color is not None:
+            fill_color = bg_color.lighter(112) if option.state & QStyle.StateFlag.State_Selected else bg_color
+            painter.fillRect(option.rect, fill_color)
+
+        text_rect = option.rect.adjusted(10, 0, -8, 0)
+        painter.setPen(fg_color)
+        font = option.font
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(
+            text_rect,
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+            index.data(Qt.ItemDataRole.DisplayRole) or "",
+        )
+        painter.restore()
 
 def bring_existing_instance_to_front():
     target_hwnd = None
@@ -563,7 +605,13 @@ class UtilityControlApp(
             install_green_flash(button)
             return button
 
-        def make_action_dropdown(placeholder: str, actions_map: dict[str, callable]):
+        def make_action_dropdown(
+            placeholder: str,
+            actions_map: dict[str, callable],
+            *,
+            power_action_style: bool = False,
+            severity_map: dict[str, str] | None = None,
+        ):
             combo = QComboBox()
             combo.addItem(placeholder)
             combo.addItems(actions_map.keys())
@@ -571,7 +619,13 @@ class UtilityControlApp(
             combo.setCursor(Qt.CursorShape.ArrowCursor)
             styles.apply_default_button_size(combo)
             combo.setProperty("styleFontSize", 14)
-            combo.setStyleSheet(styles.organizing_combo_style(14))
+            if power_action_style:
+                combo.setProperty("powerActionStyle", True)
+                combo.setProperty("powerActionPlaceholder", placeholder)
+                combo.setProperty("powerActionSeverityMap", severity_map or {})
+                self._apply_power_action_dropdown_style(combo)
+            else:
+                combo.setStyleSheet(styles.organizing_combo_style(14))
 
             def run_action(text: str):
                 if text == placeholder:
@@ -640,13 +694,21 @@ class UtilityControlApp(
         self.register_tooltip(always_on_top_btn, tooltip_text("always_on_top"))
 
         power_dropdown = make_action_dropdown(
-            " Power Options ",
+            " Power and Session ",
             {
                 "Sleep": lambda: self._confirm_power_action("Sleep", self.right_tools_panel.run_sleep),
                 "Lock PC": lambda: self._confirm_power_action("Lock PC", self.right_tools_panel.run_lock_pc),
                 "Restart": lambda: self._confirm_power_action("Restart", self.right_tools_panel.run_restart),
                 "Log out": lambda: self._confirm_power_action("Log out", self.right_tools_panel.run_logout),
                 "Shutdown": lambda: self._confirm_power_action("Shutdown", self.right_tools_panel.run_shutdown),
+            },
+            power_action_style=True,
+            severity_map={
+                "Sleep": "yellow",
+                "Lock PC": "amber",
+                "Restart": "orange",
+                "Log out": "orange_red",
+                "Shutdown": "red",
             },
         )
         ui_right_layout.addWidget(power_dropdown)
@@ -1299,6 +1361,36 @@ class UtilityControlApp(
             "hover": styles.SURFACE_HOVER_DARK,
         }
 
+    def _power_action_item_colors(self) -> dict[str, QColor]:
+        return {
+            "placeholder": QColor(26, 118, 214) if styles.THEME_IS_DARK else QColor(42, 134, 230),
+            "yellow": QColor(196, 162, 32) if styles.THEME_IS_DARK else QColor(224, 196, 74),
+            "amber": QColor(207, 132, 30) if styles.THEME_IS_DARK else QColor(230, 154, 56),
+            "orange": QColor(210, 95, 26) if styles.THEME_IS_DARK else QColor(234, 118, 42),
+            "orange_red": QColor(198, 67, 35) if styles.THEME_IS_DARK else QColor(220, 88, 48),
+            "red": QColor(176, 38, 38) if styles.THEME_IS_DARK else QColor(204, 52, 52),
+        }
+
+    def _apply_power_action_dropdown_style(self, combo: QComboBox) -> None:
+        font_size = int(combo.property("styleFontSize") or 14)
+        combo.setStyleSheet(styles.power_combo_style(font_size))
+
+        severity_map = combo.property("powerActionSeverityMap") or {}
+        placeholder_text = combo.property("powerActionPlaceholder") or ""
+        color_map = self._power_action_item_colors()
+        text_color = styles.theme_text_color()
+
+        for row in range(combo.count()):
+            label = combo.itemText(row)
+            severity = "placeholder" if label == placeholder_text else severity_map.get(label)
+            if not severity:
+                continue
+            combo.setItemData(row, color_map[severity], Qt.ItemDataRole.BackgroundRole)
+            combo.setItemData(row, text_color, Qt.ItemDataRole.ForegroundRole)
+
+        if not isinstance(combo.itemDelegate(), SeverityComboItemDelegate):
+            combo.setItemDelegate(SeverityComboItemDelegate(combo))
+
     def apply_theme(self, is_dark: bool):
         styles.set_theme(is_dark)
         self.setStyleSheet(styles.window_style() + styles.tooltip_style())
@@ -1322,6 +1414,8 @@ class UtilityControlApp(
             font_size = int(combo.property("styleFontSize") or 14)
             if combo.property("connectedDrivesFieldStyle"):
                 self._apply_connected_drives_field_style()
+            elif combo.property("powerActionStyle"):
+                self._apply_power_action_dropdown_style(combo)
             elif combo.property("surfaceFieldStyle"):
                 combo.setStyleSheet(styles.surfaced_combo_style(font_size=font_size))
             elif combo.property("recycleBinAgeRuleStyle"):
