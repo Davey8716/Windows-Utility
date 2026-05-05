@@ -350,7 +350,7 @@ class AdvancedToolsPanel(QWidget):
         self.drive_space_list.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
-        self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideRight)
+        self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideNone)
         self.drive_space_list.setWordWrap(False)
         self.drive_space_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.drive_space_list.setProperty("surfaceFieldStyle", True)
@@ -372,6 +372,15 @@ class AdvancedToolsPanel(QWidget):
     def _apply_drive_space_list_style(self):
         self.drive_space_list.setStyleSheet(
             styles.surfaced_list_widget_style("Consolas", 15)
+            + """
+            QListWidget {
+                padding: 6px;
+            }
+            QListWidget::item {
+                padding: 0px;
+                margin: 0px;
+            }
+            """
         )
 
     def _open_drive_from_item(self, item: QListWidgetItem):
