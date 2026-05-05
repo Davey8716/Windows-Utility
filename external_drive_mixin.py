@@ -25,6 +25,22 @@ class ExternalDriveMixin:
         drive_lines = "\n".join(drives)
         return drive_label, drive_lines
 
+    def _refresh_connected_drive_status_label(self, drives=None):
+        if not hasattr(self, "connected_drives_field"):
+            return
+
+        if drives is None:
+            drives = tuple(sorted(self._current_external_drives()))
+        elif not isinstance(drives, tuple):
+            drives = tuple(sorted(drives))
+
+        if drives:
+            text = "Drives connected: " + ", ".join(drives)
+        else:
+            text = "Drives connected: None"
+
+        self.connected_drives_field.setText(text)
+
     def _show_connected_drive_warning(self, title: str, body: str, on_close=None):
         return self._show_acknowledged_message(
             self._message_box_icon("Warning"),
@@ -128,6 +144,7 @@ class ExternalDriveMixin:
 
     def _check_external_drive_changes(self):
         current_drives = self._current_external_drives()
+        self._refresh_connected_drive_status_label(current_drives)
 
         if self.state.get("usb_plug_notify_mode", "on") == "off":
             self._known_external_drives = current_drives

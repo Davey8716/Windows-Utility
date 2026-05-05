@@ -36,6 +36,7 @@ class _DriveApp(external_drive_mixin.ExternalDriveMixin):
         self._known_external_drives = set()
         self.warning_calls = []
         self.timed_calls = []
+        self.connected_drives_field = Mock()
 
     def _show_connected_drive_warning(self, title, body, on_close=None):
         self.warning_calls.append((title, body, on_close))
@@ -153,6 +154,21 @@ class ExternalDriveMixinTests(unittest.TestCase):
                 ("Drive Connected", "External drive connected:\nF:\\"),
                 ("Drive Removed", "External drive removed:\nE:\\"),
             ],
+        )
+        app.connected_drives_field.setText.assert_called_once_with(
+            "Drives connected: F:\\"
+        )
+
+    def test_refresh_connected_drive_status_label_handles_empty_and_populated_states(self):
+        app = _DriveApp()
+
+        app._refresh_connected_drive_status_label(set())
+        app.connected_drives_field.setText.assert_called_with("Drives connected: None")
+
+        app.connected_drives_field.reset_mock()
+        app._refresh_connected_drive_status_label({"F:\\", "E:\\"})
+        app.connected_drives_field.setText.assert_called_once_with(
+            "Drives connected: E:\\, F:\\"
         )
 
 

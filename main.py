@@ -752,7 +752,7 @@ class UtilityControlApp(
         self.main_layout.addWidget(screen_section)
         self.left_sections.append(screen_section)
 
-        usb_section, usb_layout = make_section("Drive Reminder Options", "drive_reminder_options")
+        usb_section, usb_layout = make_section("External Drive Reminder Options", "drive_reminder_options")
 
         def create_drive_reminder_combo(
             tooltip_key: str,
@@ -797,21 +797,36 @@ class UtilityControlApp(
             self.register_tooltip(combo, tooltip_text(tooltip_key))
             return combo
 
+        leave_reminder_row = QWidget()
+        leave_reminder_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        leave_reminder_row_layout = QHBoxLayout(leave_reminder_row)
+        leave_reminder_row_layout.setContentsMargins(0, 0, 0, 0)
+        leave_reminder_row_layout.setSpacing(10)
+
         leave_reminder_btn = make_toggle_button(
-            "External Drive Leave Reminder Off",
+            "Drive Leave Reminder Off",
             state.get("usb_idle_enabled", True),
         )
         bind_toggle_text(
             leave_reminder_btn,
-            "External Drive Leave Reminder On",
-            "External Drive Leave Reminder Off",
+            "Drive Leave Reminder On",
+            "Drive Leave Reminder Off",
         )
         leave_reminder_btn.setFixedSize(
-            270,
+            190,
             styles.DEFAULT_BUTTON_HEIGHT,
         )
-        usb_layout.addWidget(leave_reminder_btn)
+        leave_reminder_row_layout.addWidget(leave_reminder_btn)
         self.register_tooltip(leave_reminder_btn, tooltip_text("idle_plugged_reminder"))
+
+        self.connected_drives_field = QLineEdit()
+        self.connected_drives_field.setReadOnly(True)
+        self.connected_drives_field.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        self.connected_drives_field.setProperty("surfaceFieldStyle", True)
+        self.connected_drives_field.setStyleSheet(styles.surfaced_line_edit_style(15))
+        leave_reminder_row_layout.addWidget(self.connected_drives_field)
+        usb_layout.addWidget(leave_reminder_row)
+        self._refresh_connected_drive_status_label()
 
         def on_leave_reminder_changed(checked: bool):
             state["usb_idle_enabled"] = checked
