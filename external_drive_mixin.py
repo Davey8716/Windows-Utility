@@ -37,10 +37,11 @@ class ExternalDriveMixin:
 
         self.connected_drives_field.clear()
         if drives:
-            self.connected_drives_field.addItems(list(drives))
+            display_drives = [f"{drive} Connected" for drive in drives]
+            self.connected_drives_field.addItems(display_drives)
             self.connected_drives_field.setCurrentIndex(0)
             self.connected_drives_field.setToolTip(
-                "Connected drives:\n" + "\n".join(drives)
+                "Connected drives:\n" + "\n".join(display_drives)
             )
         else:
             self.connected_drives_field.addItem("No Drives Connected")
