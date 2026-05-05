@@ -134,6 +134,7 @@ class UtilityControlApp(
         self.tooltips_enabled = bool(self.state.get("tooltips_enabled", True))
         self._tooltip_managers = []
         self._active_message_boxes = []
+        self._grouped_timed_message_boxes = {}
         self._known_external_drives = set()
         self._session_notification_registered = False
         self._pending_end_session_warning = False

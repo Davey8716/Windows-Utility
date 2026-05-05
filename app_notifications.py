@@ -5,6 +5,25 @@ from PySide6.QtWidgets import QMessageBox, QWidget
 
 
 class WindowMessageMixin:
+    def _compose_timed_message_text(self, text: str, timeout_seconds: int) -> str:
+        return f"{text}\n\nThis message will close in {timeout_seconds} seconds."
+
+    def _refresh_grouped_timed_message(
+        self,
+        message_box: QMessageBox,
+        *,
+        title: str,
+        timeout_ms: int,
+    ) -> None:
+        entries = getattr(message_box, "_grouped_entries", [])
+        timeout_seconds = max(1, timeout_ms // 1000)
+        body = "\n\n".join(
+            f"{entry_title}\n{entry_text}" for entry_title, entry_text in entries
+        )
+        message_box.setWindowTitle(title)
+        message_box.setText(self._compose_timed_message_text(body, timeout_seconds))
+        self._apply_rounded_window_mask(message_box)
+
     def _message_box_icon(self, name: str):
         icon_namespace = getattr(QMessageBox, "Icon", QMessageBox)
         return getattr(icon_namespace, name, None)
@@ -47,17 +66,50 @@ class WindowMessageMixin:
         title: str,
         text: str,
         timeout_ms: int = 10_000,
+        merge_group: str | None = None,
+        merge_title: str | None = None,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
+        if merge_group:
+            active_grouped_box = getattr(self, "_grouped_timed_message_boxes", {}).get(
+                merge_group
+            )
+            if active_grouped_box is not None:
+                active_grouped_box._grouped_entries.append((title, text))
+                if icon == self._message_box_icon("Warning"):
+                    active_grouped_box.setIcon(icon)
+                self._refresh_grouped_timed_message(
+                    active_grouped_box,
+                    title=merge_title or title,
+                    timeout_ms=timeout_ms,
+                )
+                close_timer = getattr(active_grouped_box, "_close_timer", None)
+                if close_timer is not None:
+                    close_timer.start(timeout_ms)
+                active_grouped_box.show()
+                active_grouped_box.raise_()
+                active_grouped_box.activateWindow()
+                return active_grouped_box
         try:
             message_box = QMessageBox(self)
         except TypeError:
             return None
-        message_box.setIcon(icon)
+        if icon == self._message_box_icon("Information"):
+            message_box.setIcon(self._message_box_icon("NoIcon"))
+        else:
+            message_box.setIcon(icon)
         message_box.setWindowTitle(title)
-        message_box.setText(
-            f"{text}\n\nThis message will close in {timeout_seconds} seconds."
-        )
+        if merge_group:
+            message_box._grouped_entries = [(title, text)]
+            self._refresh_grouped_timed_message(
+                message_box,
+                title=merge_title or title,
+                timeout_ms=timeout_ms,
+            )
+        else:
+            message_box.setText(
+                self._compose_timed_message_text(text, timeout_seconds)
+            )
         message_box.setStandardButtons(self._message_box_button("NoButton"))
         message_box.setModal(False)
         self._set_borderless_message_box(
@@ -68,14 +120,21 @@ class WindowMessageMixin:
         self._active_message_boxes.append(message_box)
         close_timer = QTimer(message_box)
         close_timer.setSingleShot(True)
+        message_box._close_timer = close_timer
 
         def cleanup_message_box():
             if message_box in self._active_message_boxes:
                 self._active_message_boxes.remove(message_box)
+            if merge_group:
+                grouped_boxes = getattr(self, "_grouped_timed_message_boxes", {})
+                if grouped_boxes.get(merge_group) is message_box:
+                    grouped_boxes.pop(merge_group, None)
             message_box.deleteLater()
 
         message_box.finished.connect(lambda _: cleanup_message_box())
         close_timer.timeout.connect(message_box.accept)
+        if merge_group:
+            self._grouped_timed_message_boxes[merge_group] = message_box
         message_box.show()
         self._apply_rounded_window_mask(message_box)
         close_timer.start(timeout_ms)

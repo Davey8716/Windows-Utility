@@ -10,6 +10,22 @@ from state_manager import save_state
 
 
 class DesktopOperationsMixin:
+    def _show_organizing_timed_message(
+        self,
+        icon,
+        title: str,
+        text: str,
+        timeout_ms: int = 10_000,
+    ):
+        return self._show_timed_message(
+            icon,
+            title,
+            text,
+            timeout_ms=timeout_ms,
+            merge_group="organizing_utilities",
+            merge_title="Organising Utilities",
+        )
+
     def _get_app_module_attr(self, name: str, default):
         module = sys.modules.get(self.__class__.__module__)
         return getattr(module, name, default)
@@ -38,7 +54,7 @@ class DesktopOperationsMixin:
             self.state["desktop_screenshot_last_path"] = str(save_path)
             save_state_fn(self.state)
             print(f"[SCREENSHOT] Saved: {save_path}")
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
                 "Desktop Screenshot",
                 f"Desktop screenshot saved to:\n{save_path}",
@@ -47,7 +63,7 @@ class DesktopOperationsMixin:
 
         except Exception as exc:
             print("[SCREENSHOT] Error:", exc)
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Warning"),
                 "Desktop Screenshot",
                 f"Could not save desktop screenshot:\n{exc}",
@@ -59,14 +75,14 @@ class DesktopOperationsMixin:
         count = self.actions.backup_pinned_shortcuts(backup_dir)
 
         if count > 0:
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
                 "Backup Taskbar",
                 f"Backed up {count} taskbar shortcut(s) to:\n{backup_dir}",
             )
             return
 
-        self._show_timed_message(
+        self._show_organizing_timed_message(
             self._message_box_icon("Warning"),
             "Backup Taskbar",
             "No taskbar shortcuts were backed up.",
@@ -106,14 +122,14 @@ class DesktopOperationsMixin:
         count = self.actions.capture_desktop_layout(out_path)
 
         if count > 0:
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
                 "Desktop Layout",
                 f"Captured desktop layout with {count} icon position(s) saved to:\n{out_path}",
             )
             return
 
-        self._show_timed_message(
+        self._show_organizing_timed_message(
             self._message_box_icon("Warning"),
             "Desktop Layout",
             f"Could not capture desktop layout to:\n{out_path}",
@@ -124,14 +140,14 @@ class DesktopOperationsMixin:
         count = self.actions.restore_desktop_layout(layout_path)
 
         if count > 0:
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
                 "Desktop Layout",
                 f"Desktop icons restored from:\n{layout_path}",
             )
             return
 
-        self._show_timed_message(
+        self._show_organizing_timed_message(
             self._message_box_icon("Warning"),
             "Desktop Layout",
             f"Could not restore desktop layout from:\n{layout_path}",
@@ -140,7 +156,7 @@ class DesktopOperationsMixin:
     def export_bookmarks(self):
         out_path = self.right_tools_panel._run_brave_export()
         if isinstance(out_path, str) and out_path:
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
                 "Export Bookmarks",
                 f"Bookmarks exported to:\n{out_path}",
@@ -148,7 +164,7 @@ class DesktopOperationsMixin:
             return
 
         if out_path is False:
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Warning"),
                 "Export Bookmarks",
                 "Could not export bookmarks.",
@@ -267,7 +283,7 @@ class DesktopOperationsMixin:
 
         try:
             if new_path.exists():
-                self._show_timed_message(
+                self._show_organizing_timed_message(
                     self._message_box_icon("Warning"),
                     "Folder to Desktop",
                     "A folder with that name already exists on Desktop.",
@@ -278,14 +294,14 @@ class DesktopOperationsMixin:
             folder_input.clear()
             self.state["folder_to_desktop_name"] = ""
             save_state_fn(self.state)
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
                 "Folder to Desktop",
                 f"Created desktop folder:\n{new_path}",
             )
 
         except Exception as exc:
-            self._show_timed_message(
+            self._show_organizing_timed_message(
                 self._message_box_icon("Warning"),
                 "Folder to Desktop",
                 f"Could not create folder:\n{exc}",
