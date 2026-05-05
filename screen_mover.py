@@ -14,8 +14,8 @@ import win32process
 from state_manager import load_state
 
 TITLE_BAR_SIDE_MARGIN = 60
-TITLE_BAR_BUTTON_GAP = 140
-DOCK_WIDTH = 140
+TITLE_BAR_BUTTON_GAP = 180
+DOCK_WIDTH = 180
 DOCK_HEIGHT = 30
 DOCK_TOP_OFFSET = 14
 DOCK_RESTORED_TOP_OFFSET = 2
@@ -26,7 +26,7 @@ DOCK_BG_COLOR = win32api.RGB(27, 34, 44)
 DOCK_EDGE_COLOR = win32api.RGB(64, 120, 78)
 DOCK_ARROW_COLOR = win32api.RGB(130, 255, 165)
 DOCK_ARROW_GLOW_COLOR = win32api.RGB(58, 168, 92)
-DOCK_LABELS = ("<<", "<", ">", ">>")
+DOCK_LABELS = ("<<", "<", ">", ">>", "_")
 LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 WNDPROC_TYPE = ctypes.WINFUNCTYPE(
     LRESULT,
@@ -222,7 +222,7 @@ class DockOverlayButton:
 
         segment_width = DOCK_WIDTH / len(DOCK_LABELS)
         index = min(int((x - left) // segment_width), len(DOCK_LABELS) - 1)
-        return ("FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT")[index]
+        return ("FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT", "MINIMIZE")[index]
 
     def hide(self):
         self.target_hwnd = None
@@ -522,6 +522,14 @@ class ScreenMoverWorker:
         except Exception as e:
             print(f"[ERROR] move_window_to_monitor: {e}")
 
+    def minimize_window(self, hwnd):
+        try:
+            if not self._can_move_window(hwnd):
+                return
+            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+        except Exception as e:
+            print(f"[ERROR] minimize_window: {e}")
+
     def worker_loop(self):
         print("[THREAD] Screen mover loop started.")
 
@@ -577,7 +585,10 @@ class ScreenMoverWorker:
         target = self.dock_overlay.target_hwnd
         if direction and target:
             self.dock_overlay.hide()
-            self.move_window_to_monitor(target, direction)
+            if direction == "MINIMIZE":
+                self.minimize_window(target)
+            else:
+                self.move_window_to_monitor(target, direction)
 
 
 SCREEN_MOVER = ScreenMoverWorker()
