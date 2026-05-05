@@ -566,16 +566,14 @@ class UtilityControlApp(
             styles.apply_default_button_size(button)
             button.setProperty("styleFontSize", 14)
             button.setStyleSheet(styles.toggle_button_style(font_size=14))
-            install_green_flash(button)
             return button
 
-        def bind_toggle_text(
+        def bind_toggle_state_text(
             button: QPushButton,
-            checked_text: str,
-            unchecked_text: str,
+            label: str,
         ) -> None:
             def update_text(checked: bool) -> None:
-                button.setText(checked_text if checked else unchecked_text)
+                button.setText(f"{label} On" if checked else f"{label} Off")
 
             update_text(button.isChecked())
             button.toggled.connect(update_text)
@@ -684,12 +682,12 @@ class UtilityControlApp(
         ui_rows_layout.setAlignment(ui_right_col, Qt.AlignmentFlag.AlignTop)
 
         dark_mode_btn = make_toggle_button("Dark Mode", state.get("theme_dark", True))
-        bind_toggle_text(dark_mode_btn, "Light Mode", "Dark Mode")
+        bind_toggle_state_text(dark_mode_btn, "Dark Mode")
         ui_left_layout.addWidget(dark_mode_btn)
         self.register_tooltip(dark_mode_btn, tooltip_text("dark_mode"))
 
         always_on_top_btn = make_toggle_button("Always on Top", state.get("main_always_on_top_enabled", True))
-        bind_toggle_text(always_on_top_btn, "Always on Top Off", "Always on Top On")
+        bind_toggle_state_text(always_on_top_btn, "Always on Top")
         ui_left_layout.addWidget(always_on_top_btn)
         self.register_tooltip(always_on_top_btn, tooltip_text("always_on_top"))
 
@@ -714,8 +712,8 @@ class UtilityControlApp(
         ui_right_layout.addWidget(power_dropdown)
         self.register_tooltip(power_dropdown, tooltip_text("power_options"))
 
-        tooltips_btn = make_toggle_button("Enable Tooltips", state.get("tooltips_enabled", True))
-        bind_toggle_text(tooltips_btn, "Disable Tooltips", "Enable Tooltips")
+        tooltips_btn = make_toggle_button("Tooltips", state.get("tooltips_enabled", True))
+        bind_toggle_state_text(tooltips_btn, "Tooltips")
         ui_right_layout.addWidget(tooltips_btn)
         self.register_tooltip(tooltips_btn, tooltip_text("enable_tooltips"))
 
@@ -726,10 +724,16 @@ class UtilityControlApp(
         ui_bottom_row_layout.setSpacing(10)
         ui_layout.addWidget(ui_bottom_row)
 
-        min_all_btn = make_toggle_button("Maximize All On", state.get("minimize_all_enabled", False))
-        bind_toggle_text(min_all_btn, "Maximize All Off", "Maximize All On")
-        ui_bottom_row_layout.addWidget(min_all_btn)
-        self.register_tooltip(min_all_btn, tooltip_text("maximize_all"))
+        maximize_all_enabled = bool(
+            state.get(
+                "maximize_all_enabled",
+                not state.get("minimize_all_enabled", False),
+            )
+        )
+        max_all_btn = make_toggle_button("Maximize All", maximize_all_enabled)
+        bind_toggle_state_text(max_all_btn, "Maximize All")
+        ui_bottom_row_layout.addWidget(max_all_btn)
+        self.register_tooltip(max_all_btn, tooltip_text("maximize_all"))
 
         desktop_zen_mode_enabled = bool(state.get("desktop_zen_mode_enabled", False))
         current_icons_visible = self.actions.desktop_icons_visible()
@@ -740,7 +744,7 @@ class UtilityControlApp(
 
         desktop_zen_btn = make_toggle_button("Zen Mode", desktop_zen_mode_enabled)
         self.desktop_zen_btn = desktop_zen_btn
-        bind_toggle_text(desktop_zen_btn, "Show Icons", "Zen Mode")
+        bind_toggle_state_text(desktop_zen_btn, "Zen Mode")
         ui_bottom_row_layout.addWidget(desktop_zen_btn)
         self.register_tooltip(desktop_zen_btn, tooltip_text("desktop_zen_mode"))
 
@@ -767,16 +771,21 @@ class UtilityControlApp(
 
         tooltips_btn.toggled.connect(on_tooltips_changed)
         
-        def on_min_all_changed(checked: bool):
-            state["minimize_all_enabled"] = checked
+        def on_max_all_changed(checked: bool):
+            state["maximize_all_enabled"] = checked
+            state.pop("minimize_all_enabled", None)
             save_state(state)
 
-            if hasattr(self.actions, "minimize_all_toggle"):
+            if hasattr(self.actions, "maximize_all_toggle"):
+                self.actions.maximize_all_toggle(checked)
+            elif hasattr(self.actions, "minimize_all_toggle"):
                 self.actions.minimize_all_toggle(checked)
+            elif hasattr(self.actions, "maximize_all"):
+                self.actions.maximize_all(checked)
             elif hasattr(self.actions, "minimize_all"):
                 self.actions.minimize_all(checked)
 
-        min_all_btn.toggled.connect(on_min_all_changed)
+        max_all_btn.toggled.connect(on_max_all_changed)
 
         def on_desktop_zen_mode_changed(checked: bool):
             state["desktop_zen_mode_enabled"] = checked
@@ -810,7 +819,7 @@ class UtilityControlApp(
         screen_layout.addWidget(screen_row)
 
         title_bar_dock_btn = make_toggle_button("Title Bar Dock", state.get("title_bar_dock_enabled", True))
-        bind_toggle_text(title_bar_dock_btn, "Title Bar Dock Off", "Title Bar Dock On")
+        bind_toggle_state_text(title_bar_dock_btn, "Title Bar Dock")
         screen_row_layout.addWidget(title_bar_dock_btn)
         self.register_tooltip(title_bar_dock_btn, tooltip_text("title_bar_dock"))
 
@@ -922,11 +931,7 @@ class UtilityControlApp(
             "Drive Leave Reminder Off",
             state.get("usb_idle_enabled", True),
         )
-        bind_toggle_text(
-            leave_reminder_btn,
-            "Drive Leave Reminder On",
-            "Drive Leave Reminder Off",
-        )
+        bind_toggle_state_text(leave_reminder_btn, "Drive Leave Reminder")
         leave_reminder_btn.setFixedSize(
             190,
             styles.DEFAULT_BUTTON_HEIGHT,
@@ -1151,11 +1156,7 @@ class UtilityControlApp(
             "Auto-clean On",
             recycle_bin_auto_clean_enabled,
         )
-        bind_toggle_text(
-            recycle_bin_auto_clean_btn,
-            "Auto-clean On",
-            "Auto-clean Off",
-        )
+        bind_toggle_state_text(recycle_bin_auto_clean_btn, "Auto-clean")
         recycle_bin_controls_layout.addWidget(recycle_bin_auto_clean_btn, 0, 1)
         self.register_tooltip(
             recycle_bin_auto_clean_btn,

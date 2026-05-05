@@ -10,7 +10,7 @@ EXPECTED_PERSISTED_KEYS = {
     "theme_dark",
     "main_always_on_top_enabled",
     "tooltips_enabled",
-    "minimize_all_enabled",
+    "maximize_all_enabled",
     "power_options_enabled",
     "mmb_activation_enabled",
     "screen_mover_activation_button",
@@ -18,6 +18,9 @@ EXPECTED_PERSISTED_KEYS = {
     "usb_idle_enabled",
     "usb_plug_enabled",
     "usb_plug_notify_mode",
+    "recycle_bin_auto_clean_enabled",
+    "recycle_bin_age_rule_days",
+    "recycle_bin_last_auto_clean_popup_days",
     "master_backup_output_path",
     "advanced_panel_open",
     "master_toggle_left",
@@ -36,11 +39,14 @@ class StateManagerTests(unittest.TestCase):
 
     def test_load_state_returns_defaults_when_file_missing(self):
         config_path = self.make_temp_dir("state-missing") / "missing.json"
-        with patch.object(state_manager, "get_config_path", return_value=config_path):
+        legacy_config_path = self.make_temp_dir("state-missing-legacy") / "legacy.json"
+        with patch.object(state_manager, "get_config_path", return_value=config_path), \
+             patch.object(state_manager, "LEGACY_CONFIG_PATH", legacy_config_path):
             state = state_manager.load_state()
 
         self.assertTrue(state["theme_dark"])
         self.assertTrue(state["main_always_on_top_enabled"])
+        self.assertTrue(state["maximize_all_enabled"])
         self.assertIn("left_section_states", state)
 
     def test_load_state_merges_defaults_into_existing_file(self):
@@ -53,6 +59,19 @@ class StateManagerTests(unittest.TestCase):
         self.assertFalse(state["theme_dark"])
         self.assertIn("tooltips_enabled", state)
         self.assertIn("right_section_states", state)
+
+    def test_load_state_migrates_legacy_minimize_all_key(self):
+        config_path = self.make_temp_dir("state-legacy-minimize-all") / "state.json"
+        config_path.write_text(
+            json.dumps({"minimize_all_enabled": True}),
+            encoding="utf-8",
+        )
+
+        with patch.object(state_manager, "get_config_path", return_value=config_path):
+            state = state_manager.load_state()
+
+        self.assertFalse(state["maximize_all_enabled"])
+        self.assertNotIn("minimize_all_enabled", state)
 
     def test_save_state_writes_json_file(self):
         config_path = self.make_temp_dir("state-save") / "state.json"

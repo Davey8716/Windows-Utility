@@ -47,6 +47,40 @@ class UtilityTogglesTests(unittest.TestCase):
         self.assertTrue(enabled)
         self.assertTrue(app.saved)
 
+    def test_maximize_all_toggle_restores_windows_when_enabled(self):
+        app = SimpleNamespace(
+            winId=lambda: 99,
+            save_all_settings=lambda: setattr(app, "saved", True),
+        )
+        app.saved = False
+        manager = utility_toggles.UtilityActionsManager(app)
+
+        with patch.object(utility_toggles, "restore_all_except_gui") as restore_mock, \
+             patch.object(utility_toggles, "minimize_all_except_gui") as minimize_mock:
+            enabled = manager.maximize_all_toggle(True)
+
+        self.assertTrue(enabled)
+        restore_mock.assert_called_once_with(99)
+        minimize_mock.assert_not_called()
+        self.assertTrue(app.saved)
+
+    def test_minimize_all_toggle_keeps_legacy_minimize_semantics(self):
+        app = SimpleNamespace(
+            winId=lambda: 99,
+            save_all_settings=lambda: setattr(app, "saved", True),
+        )
+        app.saved = False
+        manager = utility_toggles.UtilityActionsManager(app)
+
+        with patch.object(utility_toggles, "restore_all_except_gui") as restore_mock, \
+             patch.object(utility_toggles, "minimize_all_except_gui") as minimize_mock:
+            enabled = manager.minimize_all_toggle(True)
+
+        self.assertTrue(enabled)
+        minimize_mock.assert_called_once_with(99)
+        restore_mock.assert_not_called()
+        self.assertTrue(app.saved)
+
     def test_backup_pinned_shortcuts_copies_only_shortcuts(self):
         appdata_dir = self.make_temp_dir("appdata")
         backup_dir = self.make_temp_dir("backup")

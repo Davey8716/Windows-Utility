@@ -10,7 +10,7 @@ DEFAULTS = {
     "theme_dark": True,
     "main_always_on_top_enabled": True,
     "tooltips_enabled": True,
-    "minimize_all_enabled": False,
+    "maximize_all_enabled": True,
     "power_options_enabled": False,
     "mmb_activation_enabled": True,
     "screen_mover_activation_button": "middle",
@@ -39,6 +39,14 @@ DEFAULTS = {
     },
 }
 
+LEGACY_KEY_MAP = {
+    "maximize_all_enabled": "minimize_all_enabled",
+}
+
+LEGACY_VALUE_TRANSFORMS = {
+    "maximize_all_enabled": lambda value: not bool(value),
+}
+
 
 def get_config_path() -> Path:
     local_app_data = os.environ.get("LOCALAPPDATA")
@@ -62,7 +70,14 @@ def _build_persisted_state(state: dict) -> dict:
             persisted[key] = merged
             continue
 
-        persisted[key] = payload.get(key, default)
+        legacy_key = LEGACY_KEY_MAP.get(key)
+        if key in payload:
+            persisted[key] = payload[key]
+        elif legacy_key and legacy_key in payload:
+            transform = LEGACY_VALUE_TRANSFORMS.get(key, lambda value: value)
+            persisted[key] = transform(payload[legacy_key])
+        else:
+            persisted[key] = default
 
     return persisted
 

@@ -88,17 +88,21 @@ class UtilityActionsManager:
             print("[ROUTER] Failed:", e)
             return None
 
-    def minimize_all_toggle(self, enabled: bool | None = None):
+    def maximize_all_toggle(self, enabled: bool | None = None):
         if enabled is None:
-            enabled = bool(
-                getattr(
-                    getattr(self.app, "minimize_all_var", None),
-                    "get",
-                    lambda: False
-                )()
-            )
+            maximize_var = getattr(self.app, "maximize_all_var", None)
+            if maximize_var is not None:
+                enabled = bool(getattr(maximize_var, "get", lambda: True)())
+            else:
+                enabled = not bool(
+                    getattr(
+                        getattr(self.app, "minimize_all_var", None),
+                        "get",
+                        lambda: False,
+                    )()
+                )
 
-        print(f"[INFO] Min/Max All toggled → {enabled}")
+        print(f"[INFO] Maximize All toggled → {enabled}")
 
         hwnd = None
         if self.app and hasattr(self.app, "winId"):
@@ -112,9 +116,9 @@ class UtilityActionsManager:
 
         if hwnd:
             if enabled:
-                minimize_all_except_gui(hwnd)
-            else:
                 restore_all_except_gui(hwnd)
+            else:
+                minimize_all_except_gui(hwnd)
 
         if self.app and hasattr(self.app, "save_all_settings"):
             self.app.save_all_settings()
@@ -425,6 +429,19 @@ class UtilityActionsManager:
         if self.app and hasattr(self.app, "save_all_settings"):
             self.app.save_all_settings()
 
+        return enabled
+
+    def minimize_all_toggle(self, enabled: bool | None = None):
+        if enabled is None:
+            enabled = bool(
+                getattr(
+                    getattr(self.app, "minimize_all_var", None),
+                    "get",
+                    lambda: False,
+                )()
+            )
+
+        self.maximize_all_toggle(not enabled)
         return enabled
 
     def desktop_icons_visible(self) -> bool | None:
