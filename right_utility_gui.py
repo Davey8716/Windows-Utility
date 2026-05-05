@@ -257,7 +257,15 @@ class AdvancedToolsPanel(QWidget):
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
         self.sidebar_output.setProperty("surfaceFieldStyle", True)
-        self.sidebar_output.setStyleSheet(styles.surfaced_text_edit_style("Consolas", 15))
+        self.sidebar_output.document().setDocumentMargin(6)
+        self.sidebar_output.setStyleSheet(
+            styles.surfaced_text_edit_style("Consolas", 15)
+            + """
+            QTextEdit {
+                padding: 6px;
+            }
+            """
+        )
         self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
 
         self.display_space_section = CollapsibleSection(
