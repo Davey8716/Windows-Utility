@@ -313,6 +313,42 @@ def surfaced_line_edit_style(font_size: int) -> str:
         }}
     """
 
+def surfaced_combo_style(font_size: int) -> str:
+    return f"""
+        QComboBox {{
+            {label_style(
+                font_size=font_size,
+                bold=True,
+                color=themed_surface_field_text(),
+            )}
+            background-color: {qcolor_css(themed_surface_field_bg())};
+            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            border-radius: 6px;
+            padding: 4px 28px 4px 8px;
+        }}
+        QComboBox:hover,
+        QComboBox:on {{
+            background-color: {qcolor_css(themed_surface_field_bg())};
+        }}
+        QComboBox::drop-down {{
+            border: none;
+            background: transparent;
+            width: 22px;
+        }}
+        QComboBox QAbstractItemView {{
+            background-color: {qcolor_css(themed_surface_field_bg())};
+            color: {qcolor_css(themed_surface_field_text())};
+            selection-background-color: {qcolor_css(PANEL_HOVER)};
+            selection-color: {qcolor_css(themed_surface_field_text())};
+            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            outline: 0;
+        }}
+        QComboBox QAbstractItemView::item {{
+            padding: 4px 8px;
+            border: none;
+        }}
+    """
+
 
 def emphasized_surface_line_edit_style(font_size: int) -> str:
     active_bg = PANEL_HOVER if THEME_IS_DARK else QColor(214, 226, 242)

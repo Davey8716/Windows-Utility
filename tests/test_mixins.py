@@ -156,20 +156,29 @@ class ExternalDriveMixinTests(unittest.TestCase):
                 ("Drive Removed", "External drive removed:\nE:\\"),
             ],
         )
-        app.connected_drives_field.setText.assert_called_once_with(
-            "Drives connected: F:\\"
+        app.connected_drives_field.clear.assert_called_once_with()
+        app.connected_drives_field.addItems.assert_called_once_with(["F:\\"])
+        app.connected_drives_field.setCurrentIndex.assert_called_once_with(0)
+        app.connected_drives_field.setToolTip.assert_called_once_with(
+            "Connected drives:\nF:\\"
         )
 
     def test_refresh_connected_drive_status_label_handles_empty_and_populated_states(self):
         app = _DriveApp()
 
         app._refresh_connected_drive_status_label(set())
-        app.connected_drives_field.setText.assert_called_with("No Drives Connected")
+        app.connected_drives_field.clear.assert_called_once_with()
+        app.connected_drives_field.addItem.assert_called_once_with("No Drives Connected")
+        app.connected_drives_field.setCurrentIndex.assert_called_once_with(0)
+        app.connected_drives_field.setToolTip.assert_called_once_with("No Drives Connected")
 
         app.connected_drives_field.reset_mock()
         app._refresh_connected_drive_status_label({"F:\\", "E:\\"})
-        app.connected_drives_field.setText.assert_called_once_with(
-            "Drives connected: E:\\, F:\\"
+        app.connected_drives_field.clear.assert_called_once_with()
+        app.connected_drives_field.addItems.assert_called_once_with(["E:\\", "F:\\"])
+        app.connected_drives_field.setCurrentIndex.assert_called_once_with(0)
+        app.connected_drives_field.setToolTip.assert_called_once_with(
+            "Connected drives:\nE:\\\nF:\\"
         )
 
     def test_show_connected_drives_context_menu_uses_right_panel_safe_remove_handler(self):

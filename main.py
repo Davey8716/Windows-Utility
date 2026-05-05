@@ -845,11 +845,23 @@ class UtilityControlApp(
         leave_reminder_row_layout.addWidget(leave_reminder_btn)
         self.register_tooltip(leave_reminder_btn, tooltip_text("idle_plugged_reminder"))
 
-        self.connected_drives_field = QLineEdit()
-        self.connected_drives_field.setReadOnly(True)
+        self.connected_drives_field = QComboBox()
+        self.connected_drives_field.setEditable(False)
+        self.connected_drives_field.setCursor(Qt.CursorShape.ArrowCursor)
         self.connected_drives_field.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        self.connected_drives_field.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         self.connected_drives_field.setProperty("surfaceFieldStyle", True)
-        self.connected_drives_field.setStyleSheet(styles.surfaced_line_edit_style(15))
+        self.connected_drives_field.setProperty("styleFontSize", 15)
+        self.connected_drives_field.setStyleSheet(styles.surfaced_combo_style(15))
+        self.connected_drives_field.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.connected_drives_field.customContextMenuRequested.connect(
+            self._show_connected_drives_context_menu
+        )
         leave_reminder_row_layout.addWidget(self.connected_drives_field)
         usb_layout.addWidget(leave_reminder_row)
         self._refresh_connected_drive_status_label()
@@ -1175,7 +1187,10 @@ class UtilityControlApp(
 
         for combo in self.findChildren(QComboBox):
             font_size = int(combo.property("styleFontSize") or 14)
-            combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
+            if combo.property("surfaceFieldStyle"):
+                combo.setStyleSheet(styles.surfaced_combo_style(font_size=font_size))
+            else:
+                combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
 
         if hasattr(self, "right_tools_panel"):
             if hasattr(self.right_tools_panel, "sidebar_output"):

@@ -34,12 +34,17 @@ class ExternalDriveMixin:
         elif not isinstance(drives, tuple):
             drives = tuple(sorted(drives))
 
+        self.connected_drives_field.clear()
         if drives:
-            text = "Drives connected: " + ", ".join(drives)
+            self.connected_drives_field.addItems(list(drives))
+            self.connected_drives_field.setCurrentIndex(0)
+            self.connected_drives_field.setToolTip(
+                "Connected drives:\n" + "\n".join(drives)
+            )
         else:
-            text = "No Drives Connected"
-
-        self.connected_drives_field.setText(text)
+            self.connected_drives_field.addItem("No Drives Connected")
+            self.connected_drives_field.setCurrentIndex(0)
+            self.connected_drives_field.setToolTip("No Drives Connected")
 
     def _show_connected_drives_context_menu(self, pos):
         if not hasattr(self, "connected_drives_field"):
