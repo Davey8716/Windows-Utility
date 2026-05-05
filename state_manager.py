@@ -22,6 +22,7 @@ DEFAULTS = {
     "usb_plug_notify_mode": "on",
     "recycle_bin_auto_clean_enabled": False,
     "recycle_bin_age_rule_days": 30,
+    "recycle_bin_last_auto_clean_popup_days": None,
     "master_backup_output_path": str(Path.home()),
     "advanced_panel_open": False,
     "master_toggle_left": True,

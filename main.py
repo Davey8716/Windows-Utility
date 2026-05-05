@@ -1118,7 +1118,7 @@ class UtilityControlApp(
             tooltip_text("recycle_bin_age_rule"),
         )
 
-        cleanup_rule_label = QLabel("Delete items older than")
+        cleanup_rule_label = QLabel("Delete items older than:")
         cleanup_rule_label.setStyleSheet(styles.label_style(font_size=14))
         recycle_bin_controls_layout.addWidget(cleanup_rule_label, 1, 0)
         recycle_bin_controls_layout.addWidget(recycle_bin_age_rule_combo, 1, 1)
@@ -1137,6 +1137,8 @@ class UtilityControlApp(
                 days = int(text.split()[0])
             except (IndexError, ValueError):
                 return
+            if state.get("recycle_bin_age_rule_days") != days:
+                state["recycle_bin_last_auto_clean_popup_days"] = None
             state["recycle_bin_age_rule_days"] = days
             save_state(state)
 
