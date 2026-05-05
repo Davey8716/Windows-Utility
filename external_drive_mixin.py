@@ -1,10 +1,30 @@
+import os
+
 import styles
 from right_utility_gui import get_drive_info
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, QModelIndex, Qt, QTimer
 from PySide6.QtWidgets import QMenu
 
 
 class ExternalDriveMixin:
+    def eventFilter(self, watched, event):
+        combo = getattr(self, "connected_drives_field", None)
+        if combo is not None:
+            popup_view = combo.view()
+            popup_viewport = popup_view.viewport()
+            if watched is popup_viewport:
+                if event.type() == QEvent.Type.MouseButtonRelease:
+                    if popup_view.indexAt(event.pos()).isValid():
+                        return True
+                if event.type() == QEvent.Type.MouseButtonDblClick:
+                    index = popup_view.indexAt(event.pos())
+                    if index.isValid():
+                        self._open_connected_drive_from_index(index)
+                        combo.hidePopup()
+                        return True
+
+        return super().eventFilter(watched, event)
+
     def _current_external_drives(self) -> set[str]:
         drives = set()
         for drive in get_drive_info():
@@ -38,15 +58,35 @@ class ExternalDriveMixin:
         self.connected_drives_field.clear()
         if drives:
             display_drives = [f"{drive} Connected" for drive in drives]
-            self.connected_drives_field.addItems(display_drives)
+            for drive_path, display_text in zip(drives, display_drives):
+                self.connected_drives_field.addItem(display_text, drive_path)
             self.connected_drives_field.setCurrentIndex(0)
             self.connected_drives_field.setToolTip(
                 "Connected drives:\n" + "\n".join(display_drives)
             )
         else:
-            self.connected_drives_field.addItem("No Drives Connected")
+            self.connected_drives_field.addItem("No Drives Connected", None)
             self.connected_drives_field.setCurrentIndex(0)
             self.connected_drives_field.setToolTip("No Drives Connected")
+
+    def _open_connected_drive_from_index(self, index: QModelIndex) -> None:
+        if not hasattr(self, "connected_drives_field") or not index.isValid():
+            return
+
+        drive_path = self.connected_drives_field.itemData(index.row())
+        if not drive_path:
+            return
+
+        minimize_and_run = getattr(
+            getattr(self, "right_tools_panel", None),
+            "_minimize_and_run",
+            None,
+        )
+        if callable(minimize_and_run):
+            minimize_and_run(lambda: os.startfile(drive_path))
+            return
+
+        os.startfile(drive_path)
 
     def _show_connected_drives_context_menu(self, pos):
         if not hasattr(self, "connected_drives_field"):

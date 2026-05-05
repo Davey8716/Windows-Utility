@@ -886,6 +886,7 @@ class UtilityControlApp(
         self.connected_drives_field.setContextMenuPolicy(
             Qt.ContextMenuPolicy.CustomContextMenu
         )
+        self.connected_drives_field.view().viewport().installEventFilter(self)
         self.connected_drives_field.customContextMenuRequested.connect(
             self._show_connected_drives_context_menu
         )
