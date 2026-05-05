@@ -5,8 +5,6 @@ Button Sizes in general, colours relative to state
 
 Button Icons etc especially for USB reminder Dialogue etc
 
-Spacing on left hand panel dosnt match right
-
 Outer spacing for both panels dosnt match
 
 Make sure the green clicked not clicked states logically match for behaviour
@@ -14,8 +12,6 @@ Make sure the green clicked not clicked states logically match for behaviour
 Give tray icon behaviour like for zen mode etc
 
 Frame removal?
-
-Remove text frame of drive space display drives
 
 General Colour changes?
 

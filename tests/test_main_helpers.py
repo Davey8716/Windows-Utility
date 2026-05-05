@@ -92,6 +92,129 @@ class MainHelperTests(unittest.TestCase):
         self.assertFalse(app.state["master_toggle_left"])
         self.assertFalse(app.state["master_toggle_right"])
 
+    def test_sync_left_section_spacing_uses_collapsed_profile_when_hidden(self):
+        app = self._build_app()
+        app.MAIN_SECTION_SIDE_PADDING = 14
+        app.LEFT_SECTION_TOP_MARGIN = 5
+        app.LEFT_SECTION_BOTTOM_MARGIN = 12
+        app.LEFT_SECTION_COLLAPSED_TOP_MARGIN = 10
+        app.LEFT_SECTION_COLLAPSED_BOTTOM_MARGIN = 0
+        app.LEFT_SECTION_COLLAPSED_SPACER = 6
+        app.main_layout = Mock()
+
+        top_spacer = Mock()
+        section_layout = Mock()
+        section = type(
+            "Section",
+            (),
+            {
+                "content": type("Content", (), {"isVisible": lambda self: False})(),
+                "top_spacer": top_spacer,
+                "expanded_spacer_height": 38,
+                "section_layout": section_layout,
+            },
+        )()
+
+        app._sync_left_section_spacing(section)
+
+        top_spacer.changeSize.assert_called_once_with(
+            0,
+            6,
+            main.QSizePolicy.Policy.Fixed,
+            main.QSizePolicy.Policy.Fixed,
+        )
+        section_layout.setContentsMargins.assert_called_once_with(14, 10, 14, 0)
+        app.main_layout.invalidate.assert_called_once_with()
+
+    def test_sync_left_section_spacing_restores_original_profile_when_visible(self):
+        app = self._build_app()
+        app.MAIN_SECTION_SIDE_PADDING = 14
+        app.LEFT_SECTION_TOP_MARGIN = 5
+        app.LEFT_SECTION_BOTTOM_MARGIN = 12
+        app.LEFT_SECTION_COLLAPSED_TOP_MARGIN = 10
+        app.LEFT_SECTION_COLLAPSED_BOTTOM_MARGIN = 0
+        app.LEFT_SECTION_COLLAPSED_SPACER = 6
+        app.main_layout = Mock()
+
+        top_spacer = Mock()
+        section_layout = Mock()
+        section = type(
+            "Section",
+            (),
+            {
+                "content": type("Content", (), {"isVisible": lambda self: True})(),
+                "top_spacer": top_spacer,
+                "expanded_spacer_height": 38,
+                "section_layout": section_layout,
+            },
+        )()
+
+        app._sync_left_section_spacing(section)
+
+        top_spacer.changeSize.assert_called_once_with(
+            0,
+            38,
+            main.QSizePolicy.Policy.Fixed,
+            main.QSizePolicy.Policy.Fixed,
+        )
+        section_layout.setContentsMargins.assert_called_once_with(14, 5, 14, 12)
+        app.main_layout.invalidate.assert_called_once_with()
+
+    def test_sync_left_section_spacing_uses_logical_open_state_during_startup(self):
+        app = self._build_app()
+        app.MAIN_SECTION_SIDE_PADDING = 14
+        app.LEFT_SECTION_TOP_MARGIN = 5
+        app.LEFT_SECTION_BOTTOM_MARGIN = 12
+        app.LEFT_SECTION_COLLAPSED_TOP_MARGIN = 10
+        app.LEFT_SECTION_COLLAPSED_BOTTOM_MARGIN = 0
+        app.LEFT_SECTION_COLLAPSED_SPACER = 6
+        app.main_layout = Mock()
+
+        top_spacer = Mock()
+        section_layout = Mock()
+        section = type(
+            "Section",
+            (),
+            {
+                "is_open": True,
+                "content": type("Content", (), {"isVisible": lambda self: False})(),
+                "top_spacer": top_spacer,
+                "expanded_spacer_height": 38,
+                "section_layout": section_layout,
+            },
+        )()
+
+        app._sync_left_section_spacing(section)
+
+        top_spacer.changeSize.assert_called_once_with(
+            0,
+            38,
+            main.QSizePolicy.Policy.Fixed,
+            main.QSizePolicy.Policy.Fixed,
+        )
+        section_layout.setContentsMargins.assert_called_once_with(14, 5, 14, 12)
+        app.main_layout.invalidate.assert_called_once_with()
+
+    def test_set_left_section_open_updates_visibility_arrow_and_spacing(self):
+        app = self._build_app()
+        app._sync_left_section_spacing = Mock()
+        section = type(
+            "Section",
+            (),
+            {
+                "content": Mock(),
+                "frame": Mock(),
+                "toggle_btn": Mock(),
+            },
+        )()
+
+        app._set_left_section_open(section, True)
+
+        section.content.setVisible.assert_called_once_with(True)
+        section.frame.setVisible.assert_called_once_with(True)
+        section.toggle_btn.setArrowType.assert_called_once_with(main.Qt.ArrowType.DownArrow)
+        app._sync_left_section_spacing.assert_called_once_with(section)
+
     def test_bring_existing_instance_posts_restore_message(self):
         with patch.object(main.win32gui, "EnumWindows") as enum_windows, \
              patch.object(main.win32gui, "GetWindowText", return_value="Windows Resurface"), \

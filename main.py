@@ -100,6 +100,9 @@ class UtilityControlApp(
     MAIN_SECTION_SIDE_PADDING = 14
     LEFT_SECTION_TOP_MARGIN = 5
     LEFT_SECTION_BOTTOM_MARGIN = 12
+    LEFT_SECTION_COLLAPSED_TOP_MARGIN = 10
+    LEFT_SECTION_COLLAPSED_BOTTOM_MARGIN = 0
+    LEFT_SECTION_COLLAPSED_SPACER = 6
     USER_INTERFACE_TOP_SPACER = 6
     SCREEN_MOVER_TOP_SPACER = 38
     DRIVE_REMINDER_TOP_SPACER = 38
@@ -386,12 +389,28 @@ class UtilityControlApp(
         self.left_sections = []
         self.master_toggle_left_state = bool(state.get("master_toggle_left", True))
 
+        def add_left_section_spacer(height: int):
+            self.main_layout.addSpacing(height)
+            return self.main_layout.itemAt(self.main_layout.count() - 1).spacerItem()
+
+        def register_left_section(
+            section: QWidget,
+            *,
+            top_spacer,
+            expanded_spacer_height: int,
+        ) -> None:
+            section.top_spacer = top_spacer
+            section.expanded_spacer_height = expanded_spacer_height
+            self.left_sections.append(section)
+            self._sync_left_section_spacing(section)
+
         def make_section(title_text, section_id: str):
             section = QWidget(self.main_frame)
             section.section_id = section_id
             section.setFixedWidth(self.MAIN_SECTION_OUTER_WIDTH)
             section.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             layout = QVBoxLayout(section)
+            section.section_layout = layout
             layout.setContentsMargins(
                 self.MAIN_SECTION_SIDE_PADDING,
                 self.LEFT_SECTION_TOP_MARGIN,
@@ -458,6 +477,7 @@ class UtilityControlApp(
                 QSizePolicy.Policy.Fixed,
             )
             initial_open = self.state.get("left_section_states", {}).get(section_id, True)
+            section.is_open = bool(initial_open)
             content.setVisible(initial_open)
             frame.setVisible(initial_open)
 
@@ -470,12 +490,7 @@ class UtilityControlApp(
             
 
             def toggle_section():
-                visible = content.isVisible()
-                content.setVisible(not visible)
-                frame.setVisible(not visible)
-                toggle.setArrowType(
-                    Qt.ArrowType.DownArrow if not visible else Qt.ArrowType.UpArrow
-                )
+                self._set_left_section_open(section, not bool(section.is_open))
                 self.save_all_settings()
 
             toggle.clicked.connect(toggle_section)
@@ -554,9 +569,13 @@ class UtilityControlApp(
             return combo
 
         ui_section, ui_layout = make_section("User Interface", "user_interface")
-        self.main_layout.addSpacing(self.USER_INTERFACE_TOP_SPACER)
+        ui_section_spacer = add_left_section_spacer(self.USER_INTERFACE_TOP_SPACER)
         self.main_layout.addWidget(ui_section)
-        self.left_sections.append(ui_section)
+        register_left_section(
+            ui_section,
+            top_spacer=ui_section_spacer,
+            expanded_spacer_height=self.USER_INTERFACE_TOP_SPACER,
+        )
 
         ui_rows = QWidget(ui_section.content)
         ui_rows.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -751,9 +770,13 @@ class UtilityControlApp(
             update_screen_move_combo_state()
 
         screen_move_button_combo.currentTextChanged.connect(on_screen_move_button_changed)
-        self.main_layout.addSpacing(self.SCREEN_MOVER_TOP_SPACER)
+        screen_section_spacer = add_left_section_spacer(self.SCREEN_MOVER_TOP_SPACER)
         self.main_layout.addWidget(screen_section)
-        self.left_sections.append(screen_section)
+        register_left_section(
+            screen_section,
+            top_spacer=screen_section_spacer,
+            expanded_spacer_height=self.SCREEN_MOVER_TOP_SPACER,
+        )
 
         usb_section, usb_layout = make_section("External Drive Reminder Options", "drive_reminder_options")
 
@@ -862,9 +885,13 @@ class UtilityControlApp(
         )
         usb_layout.addWidget(plug_combo)
 
-        self.main_layout.addSpacing(self.DRIVE_REMINDER_TOP_SPACER)
+        usb_section_spacer = add_left_section_spacer(self.DRIVE_REMINDER_TOP_SPACER)
         self.main_layout.addWidget(usb_section)
-        self.left_sections.append(usb_section)
+        register_left_section(
+            usb_section,
+            top_spacer=usb_section_spacer,
+            expanded_spacer_height=self.DRIVE_REMINDER_TOP_SPACER,
+        )
 
         org_section, org_layout = make_section("Organising Utilities", "organising_utilities")
         self.backup_path = self._get_master_backup_dir()
@@ -986,15 +1013,19 @@ class UtilityControlApp(
         self._taskbar_backup_folder_timer.start(1000)
         self._refresh_taskbar_backup_folder_button()
 
-        self.main_layout.addSpacing(self.ORGANISING_SECTION_TOP_SPACER)
+        org_section_spacer = add_left_section_spacer(self.ORGANISING_SECTION_TOP_SPACER)
         self.main_layout.addWidget(org_section)
-        self.left_sections.append(org_section)
+        register_left_section(
+            org_section,
+            top_spacer=org_section_spacer,
+            expanded_spacer_height=self.ORGANISING_SECTION_TOP_SPACER,
+        )
 
         self.main_layout.addStretch(1)
         
         def toggle_all():
             any_visible = any(
-                section.content.isVisible()
+                bool(getattr(section, "is_open", False))
                 for section in self.left_sections
             )
 
@@ -1007,13 +1038,7 @@ class UtilityControlApp(
             )
 
             for section in self.left_sections:
-                section.content.setVisible(new_state)
-                if hasattr(section, "frame"):
-                    section.frame.setVisible(new_state)
-                if hasattr(section, "toggle_btn"):
-                    section.toggle_btn.setArrowType(
-                        Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
-                    )
+                self._set_left_section_open(section, new_state)
 
             self.save_all_settings()
             
@@ -1063,6 +1088,60 @@ class UtilityControlApp(
         x = self.MAIN_PANEL_WIDTH - self.advanced_settings_toggle.width() + 14
         y = (self.height() - self.advanced_settings_toggle.height()) // 2
         self.advanced_settings_toggle.move(x, y)
+
+    def _set_left_section_open(self, section, is_open: bool):
+        section.is_open = bool(is_open)
+        section.content.setVisible(is_open)
+        if hasattr(section, "frame"):
+            section.frame.setVisible(is_open)
+        if hasattr(section, "toggle_btn"):
+            section.toggle_btn.setArrowType(
+                Qt.ArrowType.DownArrow if is_open else Qt.ArrowType.UpArrow
+            )
+        self._sync_left_section_spacing(section)
+
+    def _sync_left_section_spacing(self, section):
+        if hasattr(section, "is_open"):
+            is_open = bool(section.is_open)
+        else:
+            is_open = bool(section.content.isVisible())
+
+        top_spacer = getattr(section, "top_spacer", None)
+        if top_spacer is not None:
+            spacer_height = (
+                getattr(section, "expanded_spacer_height", self.LEFT_SECTION_COLLAPSED_SPACER)
+                if is_open
+                else self.LEFT_SECTION_COLLAPSED_SPACER
+            )
+            top_spacer.changeSize(
+                0,
+                spacer_height,
+                QSizePolicy.Policy.Fixed,
+                QSizePolicy.Policy.Fixed,
+            )
+
+        section_layout = getattr(section, "section_layout", None)
+        if section_layout is not None:
+            top_margin = (
+                self.LEFT_SECTION_TOP_MARGIN
+                if is_open
+                else self.LEFT_SECTION_COLLAPSED_TOP_MARGIN
+            )
+            bottom_margin = (
+                self.LEFT_SECTION_BOTTOM_MARGIN
+                if is_open
+                else self.LEFT_SECTION_COLLAPSED_BOTTOM_MARGIN
+            )
+            section_layout.setContentsMargins(
+                self.MAIN_SECTION_SIDE_PADDING,
+                top_margin,
+                self.MAIN_SECTION_SIDE_PADDING,
+                bottom_margin,
+            )
+
+        main_layout = getattr(self, "main_layout", None)
+        if main_layout is not None:
+            main_layout.invalidate()
 
     def resizeEvent(self, event):
         self._update_panel_geometries()
@@ -1143,7 +1222,9 @@ class UtilityControlApp(
         for section in self.left_sections:
             section_id = getattr(section, "section_id", None)
             if section_id and hasattr(section, "content"):
-                left_states[section_id] = section.content.isVisible()
+                left_states[section_id] = bool(
+                    getattr(section, "is_open", section.content.isVisible())
+                )
 
         if left_states:
             self.state["left_section_states"] = left_states
