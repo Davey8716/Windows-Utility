@@ -3,12 +3,14 @@ import sys
 import ctypes
 from ctypes import wintypes
 from pathlib import Path
-from datetime import datetime
 import styles
-from PIL import ImageGrab
 import win32gui
 import win32con
 
+from app_notifications import WindowMessageMixin
+from app_paths import MasterBackupPathsMixin
+from desktop_operations import DesktopOperationsMixin
+from external_drive_mixin import ExternalDriveMixin
 from right_utility_gui import (
     AdvancedToolsPanel as RightAdvancedToolsPanel,
     get_drive_info,
@@ -18,8 +20,7 @@ from tray_toggles import TrayIconManager
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from tooltips import QtTooltipManager, tooltip_text
-from PySide6.QtCore import Qt, QTimer, QRectF
-from PySide6.QtGui import QPainterPath, QRegion
+from PySide6.QtCore import Qt, QTimer
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -33,7 +34,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QApplication,
     QFrame,
-    QFileDialog,
     QMessageBox,
     QSizePolicy,
 )
@@ -88,7 +88,13 @@ def ensure_single_instance():
 
     return mutex
 
-class UtilityControlApp(QWidget):
+class UtilityControlApp(
+    MasterBackupPathsMixin,
+    WindowMessageMixin,
+    ExternalDriveMixin,
+    DesktopOperationsMixin,
+    QWidget,
+):
     MAIN_PANEL_WIDTH = 450
     RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 70
     MAIN_SECTION_SIDE_PADDING = 14
@@ -1011,25 +1017,6 @@ class UtilityControlApp(QWidget):
         self._update_panel_geometries()
         self._position_advanced_settings_toggle()
 
-    def _get_master_backup_dir(self) -> str:
-        return (
-            self.state.get("master_backup_output_path")
-            or self.state.get("backup_output_path")
-            or self.state.get("backup_folder_path")
-            or str(Path.home())
-        )
-
-    def _choose_master_backup_dir(self):
-        start_dir = self._get_master_backup_dir().strip() or str(Path.home())
-        selected_dir = QFileDialog.getExistingDirectory(
-            self,
-            "Choose Master Backup Folder",
-            start_dir
-        )
-
-        if selected_dir:
-            self._set_master_backup_dir(selected_dir)
-
     def toggle_advanced_settings_panel(self):
         self.advanced_settings_open = not self.advanced_settings_open
         self.state["advanced_panel_open"] = self.advanced_settings_open
@@ -1067,451 +1054,6 @@ class UtilityControlApp(QWidget):
         self._update_panel_geometries()
         self._position_advanced_settings_toggle()
         super().resizeEvent(event)
-
-    def _set_master_backup_dir(self, path: str):
-        clean_path = path.strip()
-        if not clean_path:
-            return
-
-        self.backup_path = clean_path
-        self.state["master_backup_output_path"] = clean_path
-        self.state["backup_output_path"] = clean_path
-        self.state["backup_folder_path"] = clean_path
-
-        if hasattr(self, "backup_path_input") and self.backup_path_input.text() != clean_path:
-            self.backup_path_input.setText(clean_path)
-
-        save_state(self.state)
-
-    def _build_master_output_path(self, filename: str) -> str:
-        base_dir = self._get_master_backup_dir().strip()
-        return str(Path(base_dir) / filename) if base_dir else filename
-
-    def get_default_taskbar_backup_dir(self) -> str:
-        base_dir = self._get_master_backup_dir().strip() or str(Path.home())
-        return str(Path(base_dir) / "TaskBarApps")
-
-    def get_default_bookmarks_export_dir(self) -> str:
-        base_dir = self._get_master_backup_dir().strip() or str(Path.home())
-        return str(Path(base_dir) / "Bookmarks")
-
-    def get_default_desktop_layout_path(self) -> str:
-        return self._build_master_output_path("desktop_icon_layout.json")
-
-    def get_default_screenshot_path(self) -> str:
-        return self._build_master_output_path("desktop_screenshot.png")
-
-    def _refresh_taskbar_backup_folder_button(self):
-        is_open = self.actions.is_backup_folder_open(
-            self.get_default_taskbar_backup_dir()
-        )
-        self._taskbar_backup_folder_open = is_open
-
-        if hasattr(self, "open_backup_btn"):
-            self.open_backup_btn.setText(
-                "Close Backup Folder" if is_open else "Open Backup Folder"
-            )
-
-    def _set_borderless_message_box(
-        self,
-        message_box: QMessageBox,
-        *,
-        stays_on_top: bool = False,
-        tool_window: bool = False,
-    ) -> QMessageBox:
-        message_box.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        message_box.setWindowFlag(Qt.WindowType.CustomizeWindowHint, True)
-        message_box.setWindowFlag(Qt.WindowType.WindowTitleHint, False)
-        message_box.setWindowFlag(Qt.WindowType.WindowSystemMenuHint, False)
-        message_box.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
-        message_box.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, False)
-        message_box.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
-        message_box.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
-        message_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, stays_on_top)
-        message_box.setWindowFlag(Qt.WindowType.Tool, tool_window)
-        message_box.setStyleSheet(styles.message_box_style())
-        return message_box
-
-    def _apply_rounded_window_mask(self, widget: QWidget, radius: int = 10) -> None:
-        rect = QRectF(widget.rect())
-        if rect.isEmpty():
-            return
-        path = QPainterPath()
-        path.addRoundedRect(rect, radius, radius)
-        widget.setMask(QRegion(path.toFillPolygon().toPolygon()))
-
-    def _show_timed_message(
-        self,
-        icon: QMessageBox.Icon,
-        title: str,
-        text: str,
-        timeout_ms: int = 10_000,
-    ) -> QMessageBox:
-        timeout_seconds = max(1, timeout_ms // 1000)
-        message_box = QMessageBox(self)
-        message_box.setIcon(icon)
-        message_box.setWindowTitle(title)
-        message_box.setText(
-            f"{text}\n\nThis message will close in {timeout_seconds} seconds."
-        )
-        message_box.setStandardButtons(QMessageBox.StandardButton.NoButton)
-        message_box.setModal(False)
-        self._set_borderless_message_box(message_box, stays_on_top=True, tool_window=True)
-        self._active_message_boxes.append(message_box)
-        close_timer = QTimer(message_box)
-        close_timer.setSingleShot(True)
-
-        def cleanup_message_box():
-            if message_box in self._active_message_boxes:
-                self._active_message_boxes.remove(message_box)
-            message_box.deleteLater()
-
-        message_box.finished.connect(lambda _: cleanup_message_box())
-        close_timer.timeout.connect(message_box.accept)
-        message_box.show()
-        self._apply_rounded_window_mask(message_box)
-        close_timer.start(timeout_ms)
-        return message_box
-
-    def _show_acknowledged_message(
-        self,
-        icon: QMessageBox.Icon,
-        title: str,
-        text: str,
-        on_close=None,
-    ) -> QMessageBox:
-        message_box = QMessageBox(self)
-        message_box.setIcon(icon)
-        message_box.setWindowTitle(title)
-        message_box.setText(text)
-        message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-        message_box.setWindowModality(Qt.WindowModality.NonModal)
-        self._set_borderless_message_box(message_box, stays_on_top=True, tool_window=True)
-        message_box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        message_box.setModal(False)
-        self._active_message_boxes.append(message_box)
-
-        def cleanup_message_box():
-            if message_box in self._active_message_boxes:
-                self._active_message_boxes.remove(message_box)
-            if on_close:
-                on_close()
-            message_box.deleteLater()
-
-        message_box.finished.connect(lambda _: cleanup_message_box())
-        message_box.show()
-        self._apply_rounded_window_mask(message_box)
-        message_box.raise_()
-        message_box.activateWindow()
-        return message_box
-
-    def _current_external_drives(self) -> set[str]:
-        drives = set()
-        for drive in get_drive_info():
-            if drive.get("ejectable"):
-                drives.add(str(drive["drive"]))
-        return drives
-
-    def _leave_drive_reminder_enabled(self) -> bool:
-        return bool(self.state.get("usb_idle_enabled", True))
-
-    def _connected_external_drive_signature(self) -> tuple[str, ...]:
-        return tuple(sorted(self._current_external_drives()))
-
-    def _format_external_drive_message(self, drives: tuple[str, ...]) -> tuple[str, str]:
-        drive_label = "drive is" if len(drives) == 1 else "drives are"
-        drive_lines = "\n".join(drives)
-        return drive_label, drive_lines
-
-    def _show_connected_drive_warning(self, title: str, body: str, on_close=None):
-        return self._show_acknowledged_message(
-            QMessageBox.Icon.Warning,
-            title,
-            body,
-            on_close=on_close,
-        )
-
-    def _handle_session_lock_reminder(self):
-        if not self._leave_drive_reminder_enabled():
-            return
-
-        current_signature = self._connected_external_drive_signature()
-        if not current_signature:
-            return
-
-        drive_label, drive_lines = self._format_external_drive_message(current_signature)
-        self._show_connected_drive_warning(
-            "Session Locked With External Drive Connected",
-            (
-                f"The following external {drive_label} still connected:\n"
-                f"{drive_lines}\n\n"
-                "If you are stepping away, remove the drive first."
-            ),
-        )
-
-    def _block_end_session_for_connected_drives(self, action_name: str) -> bool:
-        if not self._leave_drive_reminder_enabled():
-            self._pending_end_session_warning = False
-            return False
-
-        current_signature = self._connected_external_drive_signature()
-        if not current_signature:
-            self._pending_end_session_warning = False
-            return False
-
-        if self._pending_end_session_warning:
-            return True
-
-        self._pending_end_session_warning = True
-        drive_label, drive_lines = self._format_external_drive_message(current_signature)
-
-        def clear_warning_state():
-            self._pending_end_session_warning = False
-
-        QTimer.singleShot(
-            0,
-            lambda: self._show_connected_drive_warning(
-                f"{action_name} Blocked",
-                (
-                    f"{action_name} was blocked because the following external {drive_label} still connected:\n"
-                    f"{drive_lines}\n\n"
-                    "Remove the drive first, then try again if you still want to continue."
-                ),
-                on_close=clear_warning_state,
-            ),
-        )
-        return True
-
-    def _confirm_power_action(self, action_name: str, action_callback):
-        if not self._leave_drive_reminder_enabled():
-            action_callback()
-            return
-
-        current_signature = self._connected_external_drive_signature()
-        if not current_signature:
-            action_callback()
-            return
-
-        drive_label, drive_lines = self._format_external_drive_message(current_signature)
-        confirm_box = QMessageBox(self)
-        confirm_box.setIcon(QMessageBox.Icon.Warning)
-        confirm_box.setWindowTitle(f"{action_name} With External Drive Connected")
-        confirm_box.setText(
-            (
-                f"The following external {drive_label} still connected:\n"
-                f"{drive_lines}\n\n"
-                f"Do you want to continue with {action_name.lower()} anyway?"
-            )
-        )
-        confirm_box.setStandardButtons(
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-        )
-        confirm_box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        confirm_box.setWindowModality(Qt.WindowModality.ApplicationModal)
-        self._set_borderless_message_box(confirm_box, stays_on_top=True, tool_window=True)
-        QTimer.singleShot(0, lambda: self._apply_rounded_window_mask(confirm_box))
-
-        if confirm_box.exec() == QMessageBox.StandardButton.Yes:
-            action_callback()
-
-    def _check_external_drive_changes(self):
-        current_drives = self._current_external_drives()
-
-        if self.state.get("usb_plug_notify_mode", "on") == "off":
-            self._known_external_drives = current_drives
-            return
-
-        added_drives = sorted(current_drives - self._known_external_drives)
-        removed_drives = sorted(self._known_external_drives - current_drives)
-        self._known_external_drives = current_drives
-
-        if added_drives:
-            drive_label = "drive" if len(added_drives) == 1 else "drives"
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Drive Connected",
-                f"External {drive_label} connected:\n" + "\n".join(added_drives),
-                timeout_ms=10_000,
-            )
-
-        if removed_drives:
-            drive_label = "drive" if len(removed_drives) == 1 else "drives"
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Drive Removed",
-                f"External {drive_label} removed:\n" + "\n".join(removed_drives),
-                timeout_ms=10_000,
-            )
-
-    def take_desktop_screenshot(self):
-        self.showMinimized()
-        QTimer.singleShot(
-            250,
-            self._capture_desktop_screenshot,
-        )
-
-    def _capture_desktop_screenshot(self):
-        try:
-            img = ImageGrab.grab()
-
-            default_name = f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-            save_dir = Path(self._get_master_backup_dir())
-            save_dir.mkdir(parents=True, exist_ok=True)
-            save_path = save_dir / default_name
-
-            img.save(save_path)
-            self.state["desktop_screenshot_last_path"] = str(save_path)
-            save_state(self.state)
-            print(f"[SCREENSHOT] Saved: {save_path}")
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Desktop Screenshot",
-                f"Desktop screenshot saved to:\n{save_path}",
-                timeout_ms=5_000,
-            )
-
-        except Exception as e:
-            print("[SCREENSHOT] Error:", e)
-            self._show_timed_message(
-                QMessageBox.Icon.Warning,
-                "Desktop Screenshot",
-                f"Could not save desktop screenshot:\n{e}",
-                timeout_ms=5_000,
-            )
-
-    def backup_taskbar_apps(self):
-        backup_dir = self.get_default_taskbar_backup_dir()
-        count = self.actions.backup_pinned_shortcuts(backup_dir)
-
-        if count > 0:
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Backup Taskbar",
-                f"Backed up {count} taskbar shortcut(s) to:\n{backup_dir}",
-            )
-            return
-
-        self._show_timed_message(
-            QMessageBox.Icon.Warning,
-            "Backup Taskbar",
-            "No taskbar shortcuts were backed up.",
-        )
-
-    def open_taskbar_backup_folder(self):
-        path = self.get_default_taskbar_backup_dir()
-        if self.actions.is_backup_folder_open(path):
-            closed = self.actions.close_backup_folder(path)
-            self._refresh_taskbar_backup_folder_button()
-
-            if closed:
-                return
-
-            QMessageBox.warning(
-                self,
-                "Close Backup Folder",
-                f"Could not close backup folder:\n{path}"
-            )
-            return
-
-        opened = self.actions.open_backup_folder(path)
-        self._refresh_taskbar_backup_folder_button()
-
-        if opened:
-            QTimer.singleShot(500, self._refresh_taskbar_backup_folder_button)
-            return
-
-        QMessageBox.warning(
-            self,
-            "Open Backup Folder",
-            f"Could not open backup folder:\n{path}"
-        )
-
-    def capture_desktop_layout(self):
-        out_path = self.get_default_desktop_layout_path()
-        count = self.actions.capture_desktop_layout(out_path)
-
-        if count > 0:
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Desktop Layout",
-                f"Captured desktop layout with {count} icon position(s) saved to:\n{out_path}",
-            )
-            return
-
-        self._show_timed_message(
-            QMessageBox.Icon.Warning,
-            "Desktop Layout",
-            f"Could not capture desktop layout to:\n{out_path}",
-        )
-
-    def restore_desktop_layout(self):
-        layout_path = self.get_default_desktop_layout_path()
-        count = self.actions.restore_desktop_layout(layout_path)
-
-        if count > 0:
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Desktop Layout",
-                f"Desktop icons restored from:\n{layout_path}",
-            )
-            return
-
-        self._show_timed_message(
-            QMessageBox.Icon.Warning,
-            "Desktop Layout",
-            f"Could not restore desktop layout from:\n{layout_path}",
-        )
-
-    def export_bookmarks(self):
-        out_path = self.right_tools_panel._run_brave_export()
-        if isinstance(out_path, str) and out_path:
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Export Bookmarks",
-                f"Bookmarks exported to:\n{out_path}",
-            )
-            return
-
-        if out_path is False:
-            self._show_timed_message(
-                QMessageBox.Icon.Warning,
-                "Export Bookmarks",
-                "Could not export bookmarks.",
-            )
-
-    def _create_desktop_folder(self, folder_input: QLineEdit):
-        folder_name = folder_input.text().strip()
-        if not folder_name:
-            return
-
-        desktop = Path.home() / "Desktop"
-        new_path = desktop / folder_name
-
-        try:
-            if new_path.exists():
-                self._show_timed_message(
-                    QMessageBox.Icon.Warning,
-                    "Folder to Desktop",
-                    "A folder with that name already exists on Desktop.",
-                )
-                return
-
-            new_path.mkdir(parents=True, exist_ok=False)
-            folder_input.clear()
-            self.state["folder_to_desktop_name"] = ""
-            save_state(self.state)
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Folder to Desktop",
-                f"Created desktop folder:\n{new_path}",
-            )
-
-        except Exception as e:
-            self._show_timed_message(
-                QMessageBox.Icon.Warning,
-                "Folder to Desktop",
-                f"Could not create folder:\n{e}",
-            )
 
     def _get_arrow_colors(self):
         return {

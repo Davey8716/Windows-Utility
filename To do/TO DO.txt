@@ -1,6 +1,4 @@
-
-
-FIX When app is running in tray and clicked again gui comes up as white/broken. Instance mutex problem?
+Think about refactoring
 
 Threading/lag
 
@@ -33,8 +31,6 @@ Fix mover arrows so if any app is at the far ends and cant go farther then the a
 Fix location of the mmb clicker relative to tabs etc
 
 Fix all maintenance and quick actions 
-
-Think about refactoring
 
 A hook for workspace builder ?
 
