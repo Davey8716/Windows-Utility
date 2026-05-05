@@ -887,20 +887,6 @@ class UtilityControlApp(
 
         leave_reminder_btn.toggled.connect(on_leave_reminder_changed)
 
-        download_combo = create_drive_reminder_combo(
-            "download_done_reminder",
-            "usb_download_reminder_interval",
-            "usb_download_enabled",
-            [
-                ("Download Done Reminder: Off", "off"),
-                ("Remind 10 minutes after download completes", "10m"),
-                ("Remind 20 minutes after download completes", "20m"),
-                ("Remind 30 minutes after download completes", "30m"),
-                ("Remind 1 hour after download completes", "1h"),
-            ],
-        )
-        usb_layout.addWidget(download_combo)
-
         plug_combo = create_drive_reminder_combo(
             "plug_unplug_notify",
             "usb_plug_notify_mode",
