@@ -170,6 +170,39 @@ def message_box_style(radius: int = 10) -> str:
     """
 
 
+def message_popup_menu_style(radius: int = 10) -> str:
+    border = qcolor_css(SURFACE_BORDER)
+    background = qcolor_css(SURFACE_BG)
+    hover = qcolor_css(SURFACE_HOVER)
+    text = qcolor_css(CURRENT_TEXT)
+    return f"""
+        QMenu {{
+            background-color: {background};
+            color: {text};
+            border: 2px solid {border};
+            border-radius: {radius}px;
+            padding: 6px;
+        }}
+        QMenu::item {{
+            background-color: transparent;
+            color: {text};
+            padding: 7px 12px;
+            border-radius: 6px;
+            margin: 1px 0px;
+            font-weight: bold;
+        }}
+        QMenu::item:selected {{
+            background-color: {hover};
+            color: {text};
+        }}
+        QMenu::separator {{
+            height: 1px;
+            margin: 4px 8px;
+            background: {border};
+        }}
+    """
+
+
 def window_style() -> str:
     return f"""
         QWidget {{

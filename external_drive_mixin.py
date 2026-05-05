@@ -1,3 +1,4 @@
+import styles
 from right_utility_gui import get_drive_info
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QMenu, QMessageBox
@@ -63,6 +64,7 @@ class ExternalDriveMixin:
             return
 
         menu = QMenu(self.connected_drives_field)
+        menu.setStyleSheet(styles.message_popup_menu_style())
         actions = {}
         for drive_path in drives:
             action = menu.addAction(f"Safely Remove {drive_path}")
