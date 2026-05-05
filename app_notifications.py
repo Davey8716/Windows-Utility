@@ -1,7 +1,13 @@
 import styles
 from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QPainterPath, QPixmap, QRegion
-from PySide6.QtWidgets import QDialogButtonBox, QGridLayout, QMessageBox, QWidget
+from PySide6.QtWidgets import (
+    QDialogButtonBox,
+    QGridLayout,
+    QLabel,
+    QMessageBox,
+    QWidget,
+)
 
 
 class WindowMessageMixin:
@@ -84,6 +90,39 @@ class WindowMessageMixin:
                     column_span,
                     Qt.AlignmentFlag.AlignHCenter,
                 )
+
+    def _balance_message_box_text_padding(
+        self,
+        message_box: QMessageBox,
+        padding: int = 16,
+    ) -> None:
+        layout = message_box.layout()
+        if not isinstance(layout, QGridLayout):
+            return
+
+        layout.setContentsMargins(padding, padding, padding, padding)
+        layout.setHorizontalSpacing(0)
+
+        text_label = message_box.findChild(QLabel, "qt_msgbox_label")
+        if text_label is None:
+            return
+
+        index = layout.indexOf(text_label)
+        if index < 0:
+            return
+
+        row, _, row_span, _ = layout.getItemPosition(index)
+        layout.removeWidget(text_label)
+        text_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        column_span = max(1, layout.columnCount())
+        layout.addWidget(
+            text_label,
+            row,
+            0,
+            row_span,
+            column_span,
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+        )
 
     def _apply_rounded_window_mask(self, widget: QWidget, radius: int = 10) -> None:
         rect = QRectF(widget.rect())
