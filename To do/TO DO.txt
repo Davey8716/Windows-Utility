@@ -1,7 +1,5 @@
 Fix regression that wiped out the bundling of exe icon to be the tray icon
 
-Make the mover appear for explorer folder movement also delete items older than
-
 Change the size of the master toggles left right and panel opener
 
 Fix the ugly af grey shit for the 

@@ -1,7 +1,17 @@
+import os
+from pathlib import Path
+
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import QObject
 from screen_mover import SCREEN_MOVER
+
+
+TRAY_ICON_ENV_VAR = "EXE_BUILDER_TRAY_ICON_PATH"
+LOCAL_ICON_CANDIDATES = (
+    Path(__file__).resolve().parent / "Icons" / "Windows_utility_Icon.ico",
+    Path(__file__).resolve().parent / "Icons" / "WindowsIcon.ico",
+)
 
 
 class TrayIconManager(QObject):
@@ -11,12 +21,31 @@ class TrayIconManager(QObject):
         self.tray = None
         self.zen_mode_action = None
 
+    def _resolve_tray_icon(self):
+        env_icon = os.environ.get(TRAY_ICON_ENV_VAR, "").strip()
+        if env_icon:
+            icon = QIcon(env_icon)
+            if not icon.isNull():
+                return icon
+
+        for candidate in LOCAL_ICON_CANDIDATES:
+            if candidate.is_file():
+                icon = QIcon(str(candidate))
+                if not icon.isNull():
+                    return icon
+
+        icon = self.app.windowIcon()
+        if not icon.isNull():
+            return icon
+
+        return QIcon.fromTheme("applications-system")
+
     def create_tray_icon(self):
         self.tray = QSystemTrayIcon(self.app)
 
-        icon = self.app.windowIcon()
-        if icon.isNull():
-            icon = QIcon.fromTheme("applications-system")
+        icon = self._resolve_tray_icon()
+        if hasattr(self.app, "setWindowIcon"):
+            self.app.setWindowIcon(icon)
 
         self.tray.setIcon(icon)
         self.tray.setToolTip("Utility Suite")
