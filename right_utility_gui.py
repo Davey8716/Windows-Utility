@@ -640,7 +640,7 @@ class AdvancedToolsPanel(QWidget):
     def _sidebar_network_actions(self):
         return {
             "Flush DNS": self.flush_dns,
-            "Renew IP": self.renew_ip,
+            "Renew DHCP Lease": self.renew_ip,
             "IP Config": self.show_ip_config,
             "Restart Explorer": self.restart_explorer,
             "Restart Bluetooth Service": self.restart_bluetooth,

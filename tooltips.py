@@ -37,7 +37,7 @@ TOOLTIP_TEXT = {
     "windows_dropdown_hardware": "Opens hardware and device management tools such as Device Manager, Disk Management, Services, and Event Viewer.",
     "windows_dropdown_network": "Opens network-related tools such as adapter settings, firewall controls, IP configuration, and router login.",
     "windows_dropdown_startup_power": "Opens startup app controls and Windows power options.",
-    "sidebar_dropdown_network_fix": "Runs quick network and system repair actions such as flushing DNS, renewing IP, restarting Explorer, or restarting Bluetooth service.",
+    "sidebar_dropdown_network_fix": "Runs quick network and system repair actions such as flushing DNS, renewing the local DHCP lease, restarting Explorer, or restarting Bluetooth service. This does not change the public IP address shown by websites.",
     "sidebar_dropdown_cleanup": "Runs cleanup and quick utility actions such as clearing temp files or clearing the clipboard.",
     "sidebar_dropdown_quick_open": "Opens common locations and tools such as Downloads, the Startup folder, and Clipboard History settings.",
     "sidebar_dropdown_integrity": "Runs system integrity and disk health tools such as SFC and CHKDSK.",

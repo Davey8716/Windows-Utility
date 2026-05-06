@@ -144,6 +144,16 @@ class RightUtilityGuiTests(unittest.TestCase):
         open_startup_apps.assert_called_once_with()
         open_power_options.assert_called_once_with()
 
+    def test_sidebar_network_actions_use_dhcp_lease_label(self):
+        panel = self.make_panel()
+
+        actions = panel._sidebar_network_actions()
+
+        self.assertIn("Renew DHCP Lease", actions)
+        self.assertIs(actions["Renew DHCP Lease"].__self__, panel)
+        self.assertIs(actions["Renew DHCP Lease"].__func__, panel.renew_ip.__func__)
+        self.assertNotIn("Renew IP", actions)
+
     def test_shell_open_uses_shell_execute_without_parameters(self):
         panel = self.make_panel()
         with patch.object(
