@@ -11,6 +11,7 @@ DEFAULTS = {
     "main_always_on_top_enabled": True,
     "tooltips_enabled": True,
     "maximize_all_enabled": True,
+    "minimize_after_use_enabled": True,
     "power_options_enabled": False,
     "mmb_activation_enabled": True,
     "screen_mover_activation_button": "middle",

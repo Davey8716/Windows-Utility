@@ -573,9 +573,16 @@ class AdvancedToolsPanel(QWidget):
             None, "open", target, parameters, None, 1
         )
 
+    def _should_minimize_after_use(self) -> bool:
+        app_state = getattr(getattr(self, "app", None), "state", None)
+        if isinstance(app_state, dict):
+            return bool(app_state.get("minimize_after_use_enabled", True))
+        return True
+
     def _minimize_and_run(self, action):
-        self.app.showMinimized()
-        self.showMinimized()
+        if self._should_minimize_after_use():
+            self.app.showMinimized()
+            self.showMinimized()
         action()
 
     def _network_utilities(self):
@@ -647,9 +654,9 @@ class AdvancedToolsPanel(QWidget):
 
     def _sidebar_quick_open_actions(self):
         return {
-            "Open Downloads Folder": self.open_downloads,
-            "Open Startup Folder": self.open_startup_folder,
-            "Clipboard History": self.open_clipboard_history,
+            "Open Downloads Folder": lambda: self._minimize_and_run(self.open_downloads),
+            "Open Startup Folder": lambda: self._minimize_and_run(self.open_startup_folder),
+            "Clipboard History": lambda: self._minimize_and_run(self.open_clipboard_history),
         }
 
     def build_sidebar_utilities(self):

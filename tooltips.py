@@ -8,6 +8,7 @@ TOOLTIP_TEXT = {
     "always_on_top": "Keeps the main window above other windows.",
     "enable_tooltips": "Enables or disables delayed hover tooltips across the app.",
     "maximize_all": "Controls whether the maximize-all utility is enabled.",
+    "minimize_after_use": "Controls whether launcher-style utilities minimize the app before opening or running.",
     "power_options": "Choose a power action such as sleep, lock, restart, log out, or shutdown.",
     "title_bar_dock": "Shows a small left/right mover dock when you hover an app window's title bar.",
     "screen_move_button": "Chooses which mouse button activates moving a window from the tracked title-bar dock.",

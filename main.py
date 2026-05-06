@@ -592,9 +592,12 @@ class UtilityControlApp(
         def bind_toggle_state_text(
             button: QPushButton,
             label: str,
+            *,
+            on_text: str = "On",
+            off_text: str = "Off",
         ) -> None:
             def update_text(checked: bool) -> None:
-                button.setText(f"{label} On" if checked else f"{label} Off")
+                button.setText(f"{label} {on_text}" if checked else f"{label} {off_text}")
 
             update_text(button.isChecked())
             button.toggled.connect(update_text)
@@ -770,6 +773,30 @@ class UtilityControlApp(
         ui_bottom_row_layout.addWidget(desktop_zen_btn)
         self.register_tooltip(desktop_zen_btn, tooltip_text("desktop_zen_mode"))
 
+        minimize_after_use_btn = make_toggle_button(
+            "Minimize After Use",
+            bool(state.get("minimize_after_use_enabled", True)),
+        )
+        bind_toggle_state_text(
+            minimize_after_use_btn,
+            "Minimize After Use",
+            on_text="On",
+            off_text="Off",
+        )
+        minimize_after_use_btn.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        styles.apply_default_button_size(
+            minimize_after_use_btn,
+            width=(styles.DEFAULT_BUTTON_WIDTH * 2) + ui_bottom_row_layout.spacing(),
+        )
+        ui_layout.addWidget(minimize_after_use_btn)
+        self.register_tooltip(
+            minimize_after_use_btn,
+            tooltip_text("minimize_after_use"),
+        )
+
         def on_dark_mode_changed(checked: bool):
             state["theme_dark"] = checked
             self.apply_theme(checked)
@@ -808,6 +835,12 @@ class UtilityControlApp(
                 self.actions.minimize_all(checked)
 
         max_all_btn.toggled.connect(on_max_all_changed)
+
+        def on_minimize_after_use_changed(checked: bool):
+            state["minimize_after_use_enabled"] = checked
+            save_state(state)
+
+        minimize_after_use_btn.toggled.connect(on_minimize_after_use_changed)
 
         def on_desktop_zen_mode_changed(checked: bool):
             state["desktop_zen_mode_enabled"] = checked

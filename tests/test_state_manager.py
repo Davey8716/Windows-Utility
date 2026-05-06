@@ -11,6 +11,7 @@ EXPECTED_PERSISTED_KEYS = {
     "main_always_on_top_enabled",
     "tooltips_enabled",
     "maximize_all_enabled",
+    "minimize_after_use_enabled",
     "power_options_enabled",
     "mmb_activation_enabled",
     "screen_mover_activation_button",
@@ -47,6 +48,7 @@ class StateManagerTests(unittest.TestCase):
         self.assertTrue(state["theme_dark"])
         self.assertTrue(state["main_always_on_top_enabled"])
         self.assertTrue(state["maximize_all_enabled"])
+        self.assertTrue(state["minimize_after_use_enabled"])
         self.assertIn("left_section_states", state)
 
     def test_load_state_merges_defaults_into_existing_file(self):

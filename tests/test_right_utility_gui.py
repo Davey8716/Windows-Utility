@@ -23,6 +23,7 @@ class RightUtilityGuiTests(unittest.TestCase):
         panel.app = SimpleNamespace(
             showMinimized=Mock(),
             actions=SimpleNamespace(open_router_page=Mock()),
+            state={"minimize_after_use_enabled": True},
         )
         panel.showMinimized = Mock()
         return panel
@@ -125,6 +126,17 @@ class RightUtilityGuiTests(unittest.TestCase):
         panel.showMinimized.assert_called_once_with()
         action.assert_called_once_with()
 
+    def test_minimize_and_run_skips_minimizing_when_disabled(self):
+        panel = self.make_panel()
+        panel.app.state["minimize_after_use_enabled"] = False
+        action = Mock()
+
+        panel._minimize_and_run(action)
+
+        panel.app.showMinimized.assert_not_called()
+        panel.showMinimized.assert_not_called()
+        action.assert_called_once_with()
+
     def test_open_this_pc_launches_expected_explorer_target(self):
         panel = self.make_panel()
         with patch.object(right_utility_gui.subprocess, "Popen") as popen:
@@ -168,6 +180,17 @@ class RightUtilityGuiTests(unittest.TestCase):
             panel.run_shutdown()
 
         popen.assert_called_once_with(["shutdown", "/s", "/t", "0"])
+
+    def test_sidebar_quick_open_actions_use_minimize_controller(self):
+        panel = self.make_panel()
+        with patch.object(panel, "_minimize_and_run") as minimize_and_run:
+            actions = panel._sidebar_quick_open_actions()
+
+            actions["Open Downloads Folder"]()
+            actions["Open Startup Folder"]()
+            actions["Clipboard History"]()
+
+        self.assertEqual(minimize_and_run.call_count, 3)
 
     def test_run_sfc_scannow_uses_plain_command_arguments(self):
         panel = self.make_panel()
