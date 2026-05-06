@@ -368,7 +368,9 @@ class UtilityControlApp(
         self.advanced_settings_toggle.setProperty("sidePanelToggleButton", True)
         self.advanced_settings_toggle.setCursor(Qt.CursorShape.ArrowCursor)
         self.advanced_settings_toggle.setArrowType(Qt.ArrowType.NoArrow)
-        self.advanced_settings_toggle.setText(">")
+        self.advanced_settings_toggle.setText(
+            styles.arrow_glyph(Qt.ArrowType.RightArrow)
+        )
         self.advanced_settings_toggle.setStyleSheet(
             styles.side_panel_toggle_style(
                 styles.theme_text_color(),
@@ -1278,7 +1280,9 @@ class UtilityControlApp(
             self.WINDOW_WIDTH = self.EXPANDED_WIDTH
             self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
             self.advanced_settings_panel.show()
-            self.advanced_settings_toggle.setText("<")
+            self.advanced_settings_toggle.setText(
+                styles.arrow_glyph(Qt.ArrowType.LeftArrow)
+            )
 
         self._update_panel_geometries()
         self._position_advanced_settings_toggle()
@@ -1290,11 +1294,15 @@ class UtilityControlApp(
         if self.advanced_settings_open:
             self.WINDOW_WIDTH = self.EXPANDED_WIDTH
             self.advanced_settings_panel.show()
-            self.advanced_settings_toggle.setText("<")
+            self.advanced_settings_toggle.setText(
+                styles.arrow_glyph(Qt.ArrowType.LeftArrow)
+            )
         else:
             self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
             self.advanced_settings_panel.hide()
-            self.advanced_settings_toggle.setText(">")
+            self.advanced_settings_toggle.setText(
+                styles.arrow_glyph(Qt.ArrowType.RightArrow)
+            )
 
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         self._update_panel_geometries()
