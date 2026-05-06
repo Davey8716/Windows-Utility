@@ -786,10 +786,16 @@ class AdvancedToolsPanel(QWidget):
 
         self._reset_sidebar_process()
 
+    def _command_display_text(self, cmd) -> str:
+        if isinstance(cmd, str):
+            return cmd
+        return subprocess.list2cmdline([str(part) for part in cmd])
+
     def _run_and_output(self, cmd, shell=False):
         self.sidebar_output.clear()
         try:
             self._reset_sidebar_process()
+            command_text = self._command_display_text(cmd)
 
             process = QProcess(self)
             process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
@@ -813,7 +819,7 @@ class AdvancedToolsPanel(QWidget):
                 self.sidebar_output.setPlainText(output)
                 return
 
-            self.sidebar_output.setPlainText(f"Running: {process.program()}\n")
+            self.sidebar_output.setPlainText(f"Running: {command_text}\n")
         except Exception as e:
             output = str(e)
             self.sidebar_output.setPlainText(output)
@@ -871,7 +877,7 @@ class AdvancedToolsPanel(QWidget):
             self.sidebar_output.setPlainText("Could not start elevated process.")
             return
 
-        command_text = " ".join(command)
+        command_text = self._command_display_text(command)
         self.sidebar_output.setPlainText(
             f"Running: {command_text}\n"
             "Waiting for administrator approval if prompted...\n\n"

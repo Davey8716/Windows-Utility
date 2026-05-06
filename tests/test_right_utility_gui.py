@@ -15,6 +15,54 @@ install_dependency_stubs()
 import right_utility_gui
 
 
+class _FakeSignal:
+    def connect(self, *_args, **_kwargs):
+        return None
+
+
+class _FakeSidebarOutput:
+    def __init__(self):
+        self.text = ""
+
+    def clear(self):
+        self.text = ""
+
+    def setPlainText(self, text):
+        self.text = text
+
+    def toPlainText(self):
+        return self.text
+
+
+class _FakeQProcess:
+    class ProcessChannelMode:
+        SeparateChannels = 0
+
+    instances = []
+
+    def __init__(self, *_args, **_kwargs):
+        self.readyReadStandardOutput = _FakeSignal()
+        self.readyReadStandardError = _FakeSignal()
+        self.finished = _FakeSignal()
+        self.start_command = None
+        self.start_program = None
+        self.start_args = None
+        _FakeQProcess.instances.append(self)
+
+    def setProcessChannelMode(self, _mode):
+        return None
+
+    def startCommand(self, command):
+        self.start_command = command
+
+    def start(self, program, args):
+        self.start_program = program
+        self.start_args = args
+
+    def waitForStarted(self, _timeout):
+        return True
+
+
 class RightUtilityGuiTests(unittest.TestCase):
     def make_panel(self):
         panel = right_utility_gui.AdvancedToolsPanel.__new__(
@@ -225,6 +273,19 @@ class RightUtilityGuiTests(unittest.TestCase):
             panel.run_chkdsk()
 
         run_elevated.assert_called_once_with(["chkdsk", "C:"])
+
+    def test_run_and_output_shows_full_string_command_in_status_line(self):
+        panel = self.make_panel()
+        panel.sidebar_output = _FakeSidebarOutput()
+        panel._reset_sidebar_process = Mock()
+        panel._read_process_output = Mock()
+        _FakeQProcess.instances.clear()
+
+        with patch.object(right_utility_gui, "QProcess", _FakeQProcess):
+            panel._run_and_output("ipconfig /flushdns")
+
+        self.assertEqual(panel.sidebar_output.text, "Running: ipconfig /flushdns\n")
+        self.assertEqual(_FakeQProcess.instances[-1].start_command, "ipconfig /flushdns")
 
 
 if __name__ == "__main__":
