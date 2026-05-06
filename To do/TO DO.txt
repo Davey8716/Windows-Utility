@@ -1,5 +1,3 @@
-Change the size of the master toggles left right and panel opener
-
 Threading/lag
 
 Button Sizes in general, colours relative to state

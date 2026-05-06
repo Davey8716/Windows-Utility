@@ -84,11 +84,11 @@ def left_master_toggle_style(text_color: QColor, hover_color: QColor) -> str:
 
 
 def right_master_toggle_style(text_color: QColor, hover_color: QColor) -> str:
-    return _toggle_glyph_style(text_color, 18)
+    return _toggle_glyph_style(text_color, 20)
 
 
 def section_toggle_style(text_color: QColor, hover_color: QColor) -> str:
-    return _toggle_glyph_style(text_color, 18)
+    return _toggle_glyph_style(text_color, 15)
 
 
 def set_theme(is_dark: bool) -> None:
