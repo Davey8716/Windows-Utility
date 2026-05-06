@@ -1,3 +1,6 @@
+import html
+import textwrap
+
 from PySide6.QtCore import QObject, QTimer, QPoint, QEvent
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QToolTip
@@ -28,6 +31,8 @@ TOOLTIP_TEXT = {
     "desktop_zen_mode": "Hides desktop icons and sends the app to the system tray in Zen Mode, then shows icons again when toggled back.",
     "master_backup_path": "Chooses the base folder used by backup and layout utilities.",
     "backup_path_input": "Shows the current master backup folder path.",
+    "side_panel_toggle": "Shows or hides the advanced tools side panel.",
+    "master_collapse_left": "Master collapse toggle for all left-panel sections.",
     "master_collapse_right": "Master collapse toggle for all of these regions.",
     "windows_utilities_toggle": "Shows windows utilities grouped by type and quick actions.",
     "maintenance_quick_actions_toggle": "Shows maintenance, cleanup, repair, and quick-access action menus.",
@@ -46,6 +51,34 @@ TOOLTIP_TEXT = {
 
 def tooltip_text(key: str) -> str:
     return TOOLTIP_TEXT[key]
+
+
+def left_section_toggle_tooltip(title: str) -> str:
+    return f"Shows or hides the {title} section."
+
+
+def format_tooltip_text(text: str, wrap_width: int = 62) -> str:
+    paragraphs: list[str] = []
+    for raw_line in text.splitlines():
+        stripped = " ".join(raw_line.split())
+        if not stripped:
+            paragraphs.append("")
+            continue
+
+        wrapped_lines = textwrap.wrap(
+            stripped,
+            width=wrap_width,
+            break_long_words=False,
+            break_on_hyphens=False,
+        )
+        paragraphs.append("<br>".join(html.escape(line) for line in wrapped_lines))
+
+    wrapped_html = "<br>".join(paragraphs).strip("<br>")
+    return (
+        "<div style='padding: 10px; margin: 0px;'>"
+        f"{wrapped_html}"
+        "</div>"
+    )
 
 
 class QtTooltipManager(QObject):
@@ -85,7 +118,7 @@ class QtTooltipManager(QObject):
 
         QToolTip.setFont(self._build_tooltip_font())
         pos = self.widget.mapToGlobal(QPoint(20, self.widget.height()))
-        QToolTip.showText(pos, self.text, self.widget)
+        QToolTip.showText(pos, format_tooltip_text(self.text), self.widget)
 
     def _hide(self):
         self._timer.stop()
@@ -93,26 +126,6 @@ class QtTooltipManager(QObject):
 
     def _build_tooltip_font(self) -> QFont:
         font = QFont(self.widget.font())
-        style_font_size = self.widget.property("styleFontSize")
-
-        pixel_size = None
-        if style_font_size is not None:
-            try:
-                pixel_size = max(12, int(style_font_size) + 1)
-            except (TypeError, ValueError):
-                pixel_size = None
-
-        if pixel_size is None:
-            widget_pixel_size = font.pixelSize()
-            if widget_pixel_size > 0:
-                pixel_size = max(12, widget_pixel_size)
-            else:
-                point_size = font.pointSizeF()
-                if point_size > 0:
-                    font.setPointSizeF(max(10.5, point_size))
-
-        if pixel_size is not None:
-            font.setPixelSize(pixel_size)
-
+        font.setPixelSize(14)
         font.setBold(True)
         return font

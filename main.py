@@ -19,7 +19,7 @@ from screen_mover import SCREEN_MOVER
 from tray_toggles import TrayIconManager
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
-from tooltips import QtTooltipManager, tooltip_text
+from tooltips import QtTooltipManager, left_section_toggle_tooltip, tooltip_text
 from PySide6.QtCore import Qt, QTimer
 
 from PySide6.QtWidgets import (
@@ -384,6 +384,10 @@ class UtilityControlApp(
             side_panel_slot_width,
             side_panel_slot_height,
         )
+        self.register_tooltip(
+            self.advanced_settings_toggle,
+            tooltip_text("side_panel_toggle"),
+        )
         self.advanced_settings_toggle.clicked.connect(
             self.toggle_advanced_settings_panel
         )
@@ -442,6 +446,7 @@ class UtilityControlApp(
             left_master_slot_height,
         )
         self.master_collapse_btn_left = master_btn
+        self.register_tooltip(master_btn, tooltip_text("master_collapse_left"))
 
         header_spacer = QWidget(header)
         header_spacer.setFixedSize(
@@ -520,6 +525,10 @@ class UtilityControlApp(
                 section_toggle_slot_height,
             )
             section.toggle_btn = toggle
+            self.register_tooltip(
+                toggle,
+                left_section_toggle_tooltip(title_text),
+            )
 
             title_spacer = QWidget(sec_header)
             title_spacer.setFixedSize(

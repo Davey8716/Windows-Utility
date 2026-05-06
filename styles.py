@@ -299,7 +299,7 @@ def tooltip_style() -> str:
             color: {qcolor_css(tooltip_text_color())};
             border: 1px solid {qcolor_css(tooltip_border())};
             border-radius: 6px;
-            padding: 6px 8px;
+            padding: 0px;
             font-weight: 700;
         }}
     """

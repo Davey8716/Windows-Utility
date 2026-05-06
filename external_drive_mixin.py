@@ -5,6 +5,7 @@ from PySide6.QtGui import QFont, QFontMetrics
 from right_utility_gui import get_drive_info
 from PySide6.QtCore import QEvent, QModelIndex, Qt, QTimer
 from PySide6.QtWidgets import QMenu
+from tooltips import format_tooltip_text
 
 
 class ExternalDriveMixin:
@@ -112,12 +113,16 @@ class ExternalDriveMixin:
                 self.connected_drives_field.addItem(display_text, drive_path)
             self.connected_drives_field.setCurrentIndex(0)
             self.connected_drives_field.setToolTip(
-                "Connected drives:\n" + "\n".join(display_drives)
+                format_tooltip_text(
+                    "Connected drives:\n" + "\n".join(display_drives)
+                )
             )
         else:
             self.connected_drives_field.setPlaceholderText("No Drives Connected")
             self.connected_drives_field.setCurrentIndex(-1)
-            self.connected_drives_field.setToolTip("No Drives Connected")
+            self.connected_drives_field.setToolTip(
+                format_tooltip_text("No Drives Connected")
+            )
 
         self._apply_connected_drives_field_style()
         QTimer.singleShot(0, self._apply_connected_drives_field_style)

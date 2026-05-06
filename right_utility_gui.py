@@ -10,7 +10,7 @@ from pathlib import Path
 import styles
 from collapsible_section import CollapsibleSection
 from state_manager import save_state
-from tooltips import tooltip_text
+from tooltips import format_tooltip_text, tooltip_text
 from universal_bookmarks_export import BraveBookmarksExporter
 import win32file
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
@@ -468,7 +468,7 @@ class AdvancedToolsPanel(QWidget):
             tooltip = f"Open {d['drive']} in File Explorer"
             if d["ejectable"]:
                 tooltip += "\nRight-click to safely remove this drive."
-            item.setToolTip(tooltip)
+            item.setToolTip(format_tooltip_text(tooltip))
             item.setSizeHint(QSize(0, 20))
             self.drive_space_list.addItem(item)
 
