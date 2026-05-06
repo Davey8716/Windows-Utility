@@ -30,7 +30,14 @@ class MasterBackupPathsMixin:
         )
 
         if selected_dir:
-            self._set_master_backup_dir(selected_dir)
+            def action():
+                self._set_master_backup_dir(selected_dir)
+
+            minimize_runner = getattr(self, "_run_with_optional_minimize", None)
+            if callable(minimize_runner):
+                minimize_runner(action)
+            else:
+                action()
 
     def _set_master_backup_dir(self, path: str):
         clean_path = path.strip()

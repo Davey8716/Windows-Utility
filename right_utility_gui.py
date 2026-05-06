@@ -980,7 +980,19 @@ class AdvancedToolsPanel(QWidget):
         if result != QMessageBox.StandardButton.Save:
             return None
 
-        if BraveBookmarksExporter().export_to_file(str(out_path)):
+        exported = False
+
+        def run_export():
+            nonlocal exported
+            exported = BraveBookmarksExporter().export_to_file(str(out_path))
+
+        minimize_runner = getattr(self.app, "_run_with_optional_minimize", None)
+        if callable(minimize_runner):
+            minimize_runner(run_export)
+        else:
+            run_export()
+
+        if exported:
             save_state(self.app.state)
             return str(out_path)
 

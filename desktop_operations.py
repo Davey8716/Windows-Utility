@@ -11,6 +11,25 @@ from state_manager import save_state
 
 
 class DesktopOperationsMixin:
+    def _should_minimize_after_use(self) -> bool:
+        app_state = getattr(self, "state", None)
+        if isinstance(app_state, dict):
+            return bool(app_state.get("minimize_after_use_enabled", True))
+        return True
+
+    def _run_with_optional_minimize(
+        self,
+        action,
+        *,
+        delay_ms_when_minimized: int = 0,
+    ) -> None:
+        if self._should_minimize_after_use():
+            self.showMinimized()
+            if delay_ms_when_minimized > 0:
+                QTimer.singleShot(delay_ms_when_minimized, action)
+                return
+        action()
+
     def _save_state_safely(self, state: dict) -> None:
         save_state_fn = self._get_app_module_attr("save_state", save_state)
         try:
@@ -53,10 +72,9 @@ class DesktopOperationsMixin:
         return getattr(module, name, default)
 
     def take_desktop_screenshot(self):
-        self.showMinimized()
-        QTimer.singleShot(
-            250,
+        self._run_with_optional_minimize(
             self._capture_desktop_screenshot,
+            delay_ms_when_minimized=250,
         )
 
     def _capture_desktop_screenshot(self):
@@ -96,91 +114,103 @@ class DesktopOperationsMixin:
             )
 
     def backup_taskbar_apps(self):
-        backup_dir = self.get_default_taskbar_backup_dir()
-        count = self.actions.backup_pinned_shortcuts(backup_dir)
+        def action():
+            backup_dir = self.get_default_taskbar_backup_dir()
+            count = self.actions.backup_pinned_shortcuts(backup_dir)
 
-        if count > 0:
+            if count > 0:
+                self._show_organizing_timed_message(
+                    self._message_box_icon("Information"),
+                    "Backup Taskbar",
+                    f"Backed up {count} taskbar shortcut(s) to:\n{backup_dir}",
+                )
+                return
+
             self._show_organizing_timed_message(
-                self._message_box_icon("Information"),
+                self._message_box_icon("Warning"),
                 "Backup Taskbar",
-                f"Backed up {count} taskbar shortcut(s) to:\n{backup_dir}",
+                "No taskbar shortcuts were backed up.",
             )
-            return
 
-        self._show_organizing_timed_message(
-            self._message_box_icon("Warning"),
-            "Backup Taskbar",
-            "No taskbar shortcuts were backed up.",
-        )
+        self._run_with_optional_minimize(action)
 
     def open_taskbar_backup_folder(self):
-        path = self.get_default_taskbar_backup_dir()
-        if self.actions.is_backup_folder_open(path):
-            closed = self.actions.close_backup_folder(path)
+        def action():
+            path = self.get_default_taskbar_backup_dir()
+            if self.actions.is_backup_folder_open(path):
+                closed = self.actions.close_backup_folder(path)
+                self._refresh_taskbar_backup_folder_button()
+
+                if closed:
+                    return
+
+                self._show_modal_message(
+                    self._message_box_icon("Warning"),
+                    "Close Backup Folder",
+                    f"Could not close backup folder:\n{path}",
+                    self._message_box_button("Ok"),
+                    self._message_box_button("Ok"),
+                )
+                return
+
+            opened = self.actions.open_backup_folder(path)
             self._refresh_taskbar_backup_folder_button()
 
-            if closed:
+            if opened:
+                QTimer.singleShot(500, self._refresh_taskbar_backup_folder_button)
                 return
 
             self._show_modal_message(
                 self._message_box_icon("Warning"),
-                "Close Backup Folder",
-                f"Could not close backup folder:\n{path}",
+                "Open Backup Folder",
+                f"Could not open backup folder:\n{path}",
                 self._message_box_button("Ok"),
                 self._message_box_button("Ok"),
             )
-            return
 
-        opened = self.actions.open_backup_folder(path)
-        self._refresh_taskbar_backup_folder_button()
-
-        if opened:
-            QTimer.singleShot(500, self._refresh_taskbar_backup_folder_button)
-            return
-
-        self._show_modal_message(
-            self._message_box_icon("Warning"),
-            "Open Backup Folder",
-            f"Could not open backup folder:\n{path}",
-            self._message_box_button("Ok"),
-            self._message_box_button("Ok"),
-        )
+        self._run_with_optional_minimize(action)
 
     def capture_desktop_layout(self):
-        out_path = self.get_default_desktop_layout_path()
-        count = self.actions.capture_desktop_layout(out_path)
+        def action():
+            out_path = self.get_default_desktop_layout_path()
+            count = self.actions.capture_desktop_layout(out_path)
 
-        if count > 0:
+            if count > 0:
+                self._show_organizing_timed_message(
+                    self._message_box_icon("Information"),
+                    "Desktop Layout",
+                    f"Captured desktop layout with {count} icon position(s) saved to:\n{out_path}",
+                )
+                return
+
             self._show_organizing_timed_message(
-                self._message_box_icon("Information"),
+                self._message_box_icon("Warning"),
                 "Desktop Layout",
-                f"Captured desktop layout with {count} icon position(s) saved to:\n{out_path}",
+                f"Could not capture desktop layout to:\n{out_path}",
             )
-            return
 
-        self._show_organizing_timed_message(
-            self._message_box_icon("Warning"),
-            "Desktop Layout",
-            f"Could not capture desktop layout to:\n{out_path}",
-        )
+        self._run_with_optional_minimize(action)
 
     def restore_desktop_layout(self):
-        layout_path = self.get_default_desktop_layout_path()
-        count = self.actions.restore_desktop_layout(layout_path)
+        def action():
+            layout_path = self.get_default_desktop_layout_path()
+            count = self.actions.restore_desktop_layout(layout_path)
 
-        if count > 0:
+            if count > 0:
+                self._show_organizing_timed_message(
+                    self._message_box_icon("Information"),
+                    "Desktop Layout",
+                    f"Desktop icons restored from:\n{layout_path}",
+                )
+                return
+
             self._show_organizing_timed_message(
-                self._message_box_icon("Information"),
+                self._message_box_icon("Warning"),
                 "Desktop Layout",
-                f"Desktop icons restored from:\n{layout_path}",
+                f"Could not restore desktop layout from:\n{layout_path}",
             )
-            return
 
-        self._show_organizing_timed_message(
-            self._message_box_icon("Warning"),
-            "Desktop Layout",
-            f"Could not restore desktop layout from:\n{layout_path}",
-        )
+        self._run_with_optional_minimize(action)
 
     def export_bookmarks(self):
         out_path = self.right_tools_panel._run_brave_export()
@@ -200,14 +230,17 @@ class DesktopOperationsMixin:
             )
 
     def open_recycle_bin(self):
-        if self.actions.open_recycle_bin():
-            return
+        def action():
+            if self.actions.open_recycle_bin():
+                return
 
-        self._show_timed_message(
-            self._message_box_icon("Warning"),
-            "Recycle Bin",
-            "Could not open Recycle Bin.",
-        )
+            self._show_timed_message(
+                self._message_box_icon("Warning"),
+                "Recycle Bin",
+                "Could not open Recycle Bin.",
+            )
+
+        self._run_with_optional_minimize(action)
 
     def empty_recycle_bin(self):
         question = self._show_modal_message(
@@ -220,19 +253,22 @@ class DesktopOperationsMixin:
         if question != self._message_box_button("Yes"):
             return
 
-        if self.actions.empty_recycle_bin():
-            self._show_timed_message(
-                self._message_box_icon("Information"),
-                "Recycle Bin",
-                "Recycle Bin emptied.",
-            )
-            return
+        def action():
+            if self.actions.empty_recycle_bin():
+                self._show_timed_message(
+                    self._message_box_icon("Information"),
+                    "Recycle Bin",
+                    "Recycle Bin emptied.",
+                )
+                return
 
-        self._show_timed_message(
-            self._message_box_icon("Warning"),
-            "Recycle Bin",
-            "Could not empty Recycle Bin.",
-        )
+            self._show_timed_message(
+                self._message_box_icon("Warning"),
+                "Recycle Bin",
+                "Could not empty Recycle Bin.",
+            )
+
+        self._run_with_optional_minimize(action)
 
     def run_recycle_bin_auto_cleanup(self):
         if not self.state.get("recycle_bin_auto_clean_enabled", False):
@@ -269,36 +305,43 @@ class DesktopOperationsMixin:
             if question != self._message_box_button("Yes"):
                 return
 
-        deleted_count = self.actions.cleanup_recycle_bin_items_older_than(days)
-        if deleted_count > 0:
-            title = "Recycle Bin Auto-Clean" if automatic else "Recycle Bin Cleanup"
-            if should_show_automatic_popup:
-                self._show_timed_message(
-                    self._message_box_icon("Information"),
-                    title,
-                    f"Deleted {deleted_count} Recycle Bin item(s) older than {days} days.",
-                )
-            if automatic and should_show_automatic_popup:
-                self.state["recycle_bin_last_auto_clean_popup_days"] = days
-                self._save_state_safely(self.state)
-            return
+        def action():
+            deleted_count = self.actions.cleanup_recycle_bin_items_older_than(days)
+            if deleted_count > 0:
+                title = "Recycle Bin Auto-Clean" if automatic else "Recycle Bin Cleanup"
+                if should_show_automatic_popup:
+                    self._show_timed_message(
+                        self._message_box_icon("Information"),
+                        title,
+                        f"Deleted {deleted_count} Recycle Bin item(s) older than {days} days.",
+                    )
+                if automatic and should_show_automatic_popup:
+                    self.state["recycle_bin_last_auto_clean_popup_days"] = days
+                    self._save_state_safely(self.state)
+                return
+
+            if automatic:
+                if should_show_automatic_popup:
+                    self._show_timed_message(
+                        self._message_box_icon("Information"),
+                        "Recycle Bin Auto-Clean",
+                        f"No Recycle Bin items older than {days} days were found.",
+                    )
+                    self.state["recycle_bin_last_auto_clean_popup_days"] = days
+                    self._save_state_safely(self.state)
+                return
+
+            self._show_timed_message(
+                self._message_box_icon("Information"),
+                "Recycle Bin Cleanup",
+                f"No Recycle Bin items older than {days} days were found.",
+            )
 
         if automatic:
-            if should_show_automatic_popup:
-                self._show_timed_message(
-                    self._message_box_icon("Information"),
-                    "Recycle Bin Auto-Clean",
-                    f"No Recycle Bin items older than {days} days were found.",
-                )
-                self.state["recycle_bin_last_auto_clean_popup_days"] = days
-                self._save_state_safely(self.state)
+            action()
             return
 
-        self._show_timed_message(
-            self._message_box_icon("Information"),
-            "Recycle Bin Cleanup",
-            f"No Recycle Bin items older than {days} days were found.",
-        )
+        self._run_with_optional_minimize(action)
 
     def _create_desktop_folder(self, folder_input: QLineEdit):
         path_type = self._get_app_module_attr("Path", Path)
@@ -307,34 +350,37 @@ class DesktopOperationsMixin:
         if not folder_name:
             return
 
-        desktop = path_type.home() / "Desktop"
-        new_path = desktop / folder_name
+        def action():
+            desktop = path_type.home() / "Desktop"
+            new_path = desktop / folder_name
 
-        try:
-            if new_path.exists():
+            try:
+                if new_path.exists():
+                    self._show_organizing_timed_message(
+                        self._message_box_icon("Warning"),
+                        "Folder to Desktop",
+                        "A folder with that name already exists on Desktop.",
+                    )
+                    return
+
+                new_path.mkdir(parents=True, exist_ok=False)
+                folder_input.clear()
+                self.state["folder_to_desktop_name"] = ""
+                try:
+                    save_state_fn(self.state)
+                except Exception as exc:
+                    print(f"[STATE] Save failed: {exc}")
+                self._show_organizing_timed_message(
+                    self._message_box_icon("Information"),
+                    "Folder to Desktop",
+                    f"Created desktop folder:\n{new_path}",
+                )
+
+            except Exception as exc:
                 self._show_organizing_timed_message(
                     self._message_box_icon("Warning"),
                     "Folder to Desktop",
-                    "A folder with that name already exists on Desktop.",
+                    f"Could not create folder:\n{exc}",
                 )
-                return
 
-            new_path.mkdir(parents=True, exist_ok=False)
-            folder_input.clear()
-            self.state["folder_to_desktop_name"] = ""
-            try:
-                save_state_fn(self.state)
-            except Exception as exc:
-                print(f"[STATE] Save failed: {exc}")
-            self._show_organizing_timed_message(
-                self._message_box_icon("Information"),
-                "Folder to Desktop",
-                f"Created desktop folder:\n{new_path}",
-            )
-
-        except Exception as exc:
-            self._show_organizing_timed_message(
-                self._message_box_icon("Warning"),
-                "Folder to Desktop",
-                f"Could not create folder:\n{exc}",
-            )
+        self._run_with_optional_minimize(action)

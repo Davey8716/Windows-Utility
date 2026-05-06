@@ -64,12 +64,20 @@ class _DesktopApp(desktop_operations.DesktopOperationsMixin):
             "folder_to_desktop_name": "Reports",
             "recycle_bin_auto_clean_enabled": False,
             "recycle_bin_age_rule_days": 30,
+            "minimize_after_use_enabled": True,
         }
         self.messages = []
         self.actions = Mock()
+        self.showMinimized = Mock()
 
     def _message_box_icon(self, name: str):
         return name
+
+    def _message_box_button(self, name: str):
+        return {"Yes": 1, "Cancel": 2, "Ok": 3}.get(name, 0)
+
+    def _show_modal_message(self, icon, title, text, buttons, default_button):
+        return self._message_box_button("Yes")
 
     def _show_timed_message(self, icon, title, text, timeout_ms=10_000):
         self.messages.append((icon, title, text, timeout_ms))
@@ -80,6 +88,7 @@ class MasterBackupPathsMixinTests(unittest.TestCase):
     def test_choose_master_backup_dir_uses_dialog_selection(self):
         app = _PathsApp()
         app.state = {"master_backup_output_path": "C:\\initial"}
+        app._run_with_optional_minimize = Mock(side_effect=lambda action: action())
 
         with patch.object(app_paths.QFileDialog, "getExistingDirectory", return_value="C:\\chosen"), \
              patch.object(app_paths, "save_state") as save_state_mock:
@@ -88,6 +97,7 @@ class MasterBackupPathsMixinTests(unittest.TestCase):
         self.assertEqual(app.backup_path, "C:\\chosen")
         self.assertEqual(app.state["master_backup_output_path"], "C:\\chosen")
         app.backup_path_input.setText.assert_called_once_with("C:\\chosen")
+        app._run_with_optional_minimize.assert_called_once()
         save_state_mock.assert_called_once_with(app.state)
 
     def test_get_default_taskbar_backup_dir_uses_home_when_state_missing(self):
@@ -249,7 +259,28 @@ class DesktopOperationsMixinTests(unittest.TestCase):
         folder_input.clear.assert_called_once_with()
         self.assertEqual(app.state["folder_to_desktop_name"], "")
         save_state_mock.assert_called_once_with(app.state)
+        app.showMinimized.assert_called_once_with()
         self.assertEqual(app.messages[0][1], "Folder to Desktop")
+
+    def test_open_recycle_bin_minimizes_before_running_action(self):
+        app = _DesktopApp()
+        app.actions.open_recycle_bin.return_value = True
+
+        app.open_recycle_bin()
+
+        app.showMinimized.assert_called_once_with()
+        app.actions.open_recycle_bin.assert_called_once_with()
+
+    def test_run_recycle_bin_cleanup_now_minimizes_after_confirmation(self):
+        app = _DesktopApp()
+        app.state["recycle_bin_age_rule_days"] = 14
+        app.actions.cleanup_recycle_bin_items_older_than.return_value = 2
+
+        app.run_recycle_bin_cleanup_now()
+
+        app.showMinimized.assert_called_once_with()
+        app.actions.cleanup_recycle_bin_items_older_than.assert_called_once_with(14)
+        self.assertEqual(app.messages[0][1], "Recycle Bin Cleanup")
 
     def test_run_recycle_bin_auto_cleanup_skips_when_disabled(self):
         app = _DesktopApp()
