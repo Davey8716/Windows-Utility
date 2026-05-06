@@ -599,6 +599,19 @@ class UtilityControlApp(
             button.setStyleSheet(styles.toggle_button_style(font_size=14))
             return button
 
+        def make_compact_toggle_button(
+            text: str,
+            checked: bool = False,
+            *,
+            width: int,
+            font_size: int = 11,
+        ) -> QPushButton:
+            button = make_toggle_button(text, checked)
+            styles.apply_default_button_size(button, width=width)
+            button.setProperty("styleFontSize", font_size)
+            button.setStyleSheet(styles.toggle_button_style(font_size=font_size))
+            return button
+
         def bind_toggle_state_text(
             button: QPushButton,
             label: str,
@@ -628,6 +641,47 @@ class UtilityControlApp(
 
             update_icon(button.isChecked())
             button.toggled.connect(update_icon)
+
+        def bind_toggle_state_text_with_checked_icon(
+            button: QPushButton,
+            label: str,
+            *,
+            checked_icon_path: Path,
+            checked_text: str = "",
+            unchecked_text: str = "Off",
+            icon_size: int = 18,
+        ) -> None:
+            checked_icon = QIcon(str(checked_icon_path))
+            button.setIconSize(QSize(icon_size, icon_size))
+
+            def update_state(checked: bool) -> None:
+                if checked:
+                    button.setText(f"{label} {checked_text}".rstrip())
+                    button.setIcon(checked_icon)
+                else:
+                    button.setText(f"{label} {unchecked_text}")
+                    button.setIcon(QIcon())
+
+            update_state(button.isChecked())
+            button.toggled.connect(update_state)
+
+        def bind_toggle_icon_only(
+            button: QPushButton,
+            *,
+            checked_icon_path: Path,
+            unchecked_icon_path: Path,
+            icon_size: int = 18,
+        ) -> None:
+            checked_icon = QIcon(str(checked_icon_path))
+            unchecked_icon = QIcon(str(unchecked_icon_path))
+            button.setIconSize(QSize(icon_size, icon_size))
+
+            def update_state(checked: bool) -> None:
+                button.setText("")
+                button.setIcon(checked_icon if checked else unchecked_icon)
+
+            update_state(button.isChecked())
+            button.toggled.connect(update_state)
 
         def bind_combo_placeholder_icon(
             combo: QComboBox,
@@ -719,46 +773,53 @@ class UtilityControlApp(
             expanded_spacer_height=self.USER_INTERFACE_TOP_SPACER,
         )
 
-        ui_rows = QWidget(ui_section.content)
-        ui_rows.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        ui_rows_layout = QHBoxLayout(ui_rows)
-        ui_rows_layout.setContentsMargins(0, 0, 0, 0)
-        ui_rows_layout.setSpacing(10)
-        ui_layout.addWidget(ui_rows)
+        compact_toggle_width = (styles.DEFAULT_BUTTON_WIDTH - 10) // 2
 
-        ui_left_col = QWidget(ui_rows)
-        ui_left_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        ui_left_layout = QVBoxLayout(ui_left_col)
-        ui_left_layout.setContentsMargins(0, 0, 0, 0)
-        ui_left_layout.setSpacing(10)
+        ui_top_row = QWidget(ui_section.content)
+        ui_top_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        ui_top_row_layout = QHBoxLayout(ui_top_row)
+        ui_top_row_layout.setContentsMargins(0, 0, 0, 0)
+        ui_top_row_layout.setSpacing(10)
+        ui_layout.addWidget(ui_top_row)
 
-        ui_right_col = QWidget(ui_rows)
-        ui_right_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        ui_right_layout = QVBoxLayout(ui_right_col)
-        ui_right_layout.setContentsMargins(0, 0, 0, 0)
-        ui_right_layout.setSpacing(10)
-
-        ui_rows_layout.addWidget(ui_left_col)
-        ui_rows_layout.addWidget(ui_right_col)
-        ui_rows_layout.setStretch(0, 1)
-        ui_rows_layout.setStretch(1, 1)
-        ui_rows_layout.setAlignment(ui_left_col, Qt.AlignmentFlag.AlignTop)
-        ui_rows_layout.setAlignment(ui_right_col, Qt.AlignmentFlag.AlignTop)
-
-        dark_mode_btn = make_toggle_button("Dark Mode", state.get("theme_dark", True))
-        bind_toggle_state_text(dark_mode_btn, "Dark Mode")
-        bind_toggle_state_icon(
+        dark_mode_btn = make_compact_toggle_button(
+            "",
+            state.get("theme_dark", True),
+            width=compact_toggle_width,
+            font_size=10,
+        )
+        bind_toggle_icon_only(
             dark_mode_btn,
             checked_icon_path=Path(__file__).resolve().parent.parent / "App Icons" / "Dark Theme" / "Dark Mode.png",
             unchecked_icon_path=Path(__file__).resolve().parent.parent / "App Icons" / "Dark Theme" / "Light Mode.png",
+            icon_size=18,
         )
-        ui_left_layout.addWidget(dark_mode_btn)
+        ui_top_row_layout.addWidget(dark_mode_btn)
         self.register_tooltip(dark_mode_btn, tooltip_text("dark_mode"))
 
-        always_on_top_btn = make_toggle_button("Always on Top", state.get("main_always_on_top_enabled", True))
-        bind_toggle_state_text(always_on_top_btn, "Always on Top")
-        ui_left_layout.addWidget(always_on_top_btn)
-        self.register_tooltip(always_on_top_btn, tooltip_text("always_on_top"))
+        desktop_zen_mode_enabled = bool(state.get("desktop_zen_mode_enabled", False))
+        current_icons_visible = self.actions.desktop_icons_visible()
+        if current_icons_visible is not None:
+            desktop_zen_mode_enabled = not current_icons_visible
+            state["desktop_zen_mode_enabled"] = desktop_zen_mode_enabled
+            save_state(state)
+
+        desktop_zen_btn = make_compact_toggle_button(
+            "Zen Mode",
+            desktop_zen_mode_enabled,
+            width=compact_toggle_width,
+            font_size=10,
+        )
+        self.desktop_zen_btn = desktop_zen_btn
+        bind_toggle_state_text_with_checked_icon(
+            desktop_zen_btn,
+            "Zen Mode",
+            checked_icon_path=Path(__file__).resolve().parent.parent / "App Icons" / "Zen Mode On.png",
+            unchecked_text="Off",
+            icon_size=18,
+        )
+        ui_top_row_layout.addWidget(desktop_zen_btn)
+        self.register_tooltip(desktop_zen_btn, tooltip_text("desktop_zen_mode"))
 
         power_dropdown = make_action_dropdown(
             " Power and Session ",
@@ -778,17 +839,25 @@ class UtilityControlApp(
                 "Shutdown": "red",
             },
         )
-        bind_combo_placeholder_icon(
-            power_dropdown,
-            placeholder=" Power and Session ",
-            icon_path=Path(__file__).resolve().parent.parent / "App Icons" / "Dark Theme" / "Power.png",
-        )
-        ui_right_layout.addWidget(power_dropdown)
+        ui_top_row_layout.addWidget(power_dropdown)
+        ui_top_row_layout.setStretch(2, 1)
         self.register_tooltip(power_dropdown, tooltip_text("power_options"))
+
+        ui_middle_row = QWidget(ui_section.content)
+        ui_middle_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        ui_middle_row_layout = QHBoxLayout(ui_middle_row)
+        ui_middle_row_layout.setContentsMargins(0, 0, 0, 0)
+        ui_middle_row_layout.setSpacing(10)
+        ui_layout.addWidget(ui_middle_row)
+
+        always_on_top_btn = make_toggle_button("Always on Top", state.get("main_always_on_top_enabled", True))
+        bind_toggle_state_text(always_on_top_btn, "Always on Top")
+        ui_middle_row_layout.addWidget(always_on_top_btn)
+        self.register_tooltip(always_on_top_btn, tooltip_text("always_on_top"))
 
         tooltips_btn = make_toggle_button("Tooltips", state.get("tooltips_enabled", True))
         bind_toggle_state_text(tooltips_btn, "Tooltips")
-        ui_right_layout.addWidget(tooltips_btn)
+        ui_middle_row_layout.addWidget(tooltips_btn)
         self.register_tooltip(tooltips_btn, tooltip_text("enable_tooltips"))
 
         ui_bottom_row = QWidget(ui_section.content)
@@ -809,19 +878,6 @@ class UtilityControlApp(
         ui_bottom_row_layout.addWidget(max_all_btn)
         self.register_tooltip(max_all_btn, tooltip_text("maximize_all"))
 
-        desktop_zen_mode_enabled = bool(state.get("desktop_zen_mode_enabled", False))
-        current_icons_visible = self.actions.desktop_icons_visible()
-        if current_icons_visible is not None:
-            desktop_zen_mode_enabled = not current_icons_visible
-            state["desktop_zen_mode_enabled"] = desktop_zen_mode_enabled
-            save_state(state)
-
-        desktop_zen_btn = make_toggle_button("Zen Mode", desktop_zen_mode_enabled)
-        self.desktop_zen_btn = desktop_zen_btn
-        bind_toggle_state_text(desktop_zen_btn, "Zen Mode")
-        ui_bottom_row_layout.addWidget(desktop_zen_btn)
-        self.register_tooltip(desktop_zen_btn, tooltip_text("desktop_zen_mode"))
-
         minimize_after_use_btn = make_toggle_button(
             "Minimize After Use",
             bool(state.get("minimize_after_use_enabled", True)),
@@ -833,14 +889,11 @@ class UtilityControlApp(
             off_text="Off",
         )
         minimize_after_use_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
         )
-        styles.apply_default_button_size(
-            minimize_after_use_btn,
-            width=(styles.DEFAULT_BUTTON_WIDTH * 2) + ui_bottom_row_layout.spacing(),
-        )
-        ui_layout.addWidget(minimize_after_use_btn)
+        styles.apply_default_button_size(minimize_after_use_btn)
+        ui_bottom_row_layout.addWidget(minimize_after_use_btn)
         self.register_tooltip(
             minimize_after_use_btn,
             tooltip_text("minimize_after_use"),
