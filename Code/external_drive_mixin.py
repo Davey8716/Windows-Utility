@@ -5,7 +5,7 @@ import styles
 from PySide6.QtGui import QFont, QFontMetrics
 from right_utility_gui import get_drive_info
 from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt, QTimer
-from PySide6.QtWidgets import QMenu
+from PySide6.QtWidgets import QMenu, QMessageBox
 from tooltips import format_tooltip_text
 
 
@@ -195,6 +195,35 @@ class ExternalDriveMixin:
             accessory_leading_spacer_width=34,
         )
 
+    def _update_power_action_message_box(
+        self,
+        message_box: QMessageBox,
+        action_name: str,
+    ) -> bool:
+        current_signature = self._connected_external_drive_signature()
+        if current_signature:
+            drive_label, drive_lines = self._format_external_drive_message(
+                current_signature
+            )
+            title = f"{action_name} With External Drive Connected"
+            body = (
+                f"The following external {drive_label} still connected:\n"
+                f"{drive_lines}\n\n"
+                f"Do you want to continue with {action_name.lower()} anyway?"
+            )
+        else:
+            title = f"{action_name} Ready"
+            body = (
+                "Drive removed.\n\n"
+                f"Do you want to continue with {action_name.lower()}?"
+            )
+
+        message_box.setWindowTitle(title)
+        message_box.setText(body)
+        self._prepare_message_box_layout(message_box)
+        self._apply_rounded_window_mask(message_box)
+        return not current_signature
+
     def _handle_session_lock_reminder(self):
         if not self._leave_drive_reminder_enabled():
             return
@@ -260,26 +289,42 @@ class ExternalDriveMixin:
             action_callback()
             return
 
-        drive_label, drive_lines = self._format_external_drive_message(
-            current_signature
-        )
-        if self._show_modal_message(
+        try:
+            message_box = QMessageBox(self)
+        except TypeError:
+            return
+
+        self._apply_message_box_icon(
+            message_box,
             self._message_box_icon("NoIcon"),
-            f"{action_name} With External Drive Connected",
-            (
-                f"The following external {drive_label} still connected:\n"
-                f"{drive_lines}\n\n"
-                f"Do you want to continue with {action_name.lower()} anyway?"
-            ),
-            self._message_box_button("Yes") | self._message_box_button("Cancel"),
-            self._message_box_button("Cancel"),
-            accessory_icon_path=self._usb_popup_icon_path(),
-            accessory_icon_size=self.USB_POPUP_ICON_SIZE,
-            minimum_popup_width=460,
-            text_minimum_width=320,
-            center_text_block=True,
-            accessory_leading_spacer_width=34,
-        ) == self._message_box_button("Yes"):
+        )
+        message_box._accessory_icon_path = self._usb_popup_icon_path()
+        message_box._accessory_icon_size = self.USB_POPUP_ICON_SIZE
+        message_box._minimum_popup_width = 460
+        message_box._text_minimum_width = 320
+        message_box._center_text_block = True
+        message_box._accessory_leading_spacer_width = 34
+        message_box.setStandardButtons(
+            self._message_box_button("Yes") | self._message_box_button("Cancel")
+        )
+        message_box.setDefaultButton(self._message_box_button("Cancel"))
+        message_box.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self._suppress_drive_change_popup_signature = current_signature
+        self._update_power_action_message_box(message_box, action_name)
+
+        refresh_timer = QTimer(message_box)
+        refresh_timer.setInterval(400)
+        refresh_timer.timeout.connect(
+            lambda: self._update_power_action_message_box(message_box, action_name)
+        )
+        refresh_timer.start()
+
+        try:
+            result = self._exec_message_box(message_box)
+        finally:
+            self._suppress_drive_change_popup_signature = None
+
+        if result == self._message_box_button("Yes"):
             action_callback()
 
     def _check_external_drive_changes(self):
@@ -293,6 +338,15 @@ class ExternalDriveMixin:
         added_drives = sorted(current_drives - self._known_external_drives)
         removed_drives = sorted(self._known_external_drives - current_drives)
         self._known_external_drives = current_drives
+        suppressed_signature = getattr(
+            self,
+            "_suppress_drive_change_popup_signature",
+            None,
+        )
+        if suppressed_signature:
+            suppressed_drives = set(suppressed_signature)
+            if removed_drives and set(removed_drives).issubset(suppressed_drives):
+                removed_drives = []
 
         if added_drives:
             drive_label = "drive" if len(added_drives) == 1 else "drives"
