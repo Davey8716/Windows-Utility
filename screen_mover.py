@@ -22,11 +22,13 @@ DOCK_RESTORED_TOP_OFFSET = 2
 LOOP_SLEEP = 0.03
 WINDOW_MOVE_SETTLE_SECONDS = 0.2
 DOCK_CORNER_RADIUS = 12
+DOCK_SIDE_PADDING = 13
+DOCK_ICON_SPACING_REDUCTION = 2
 DOCK_BG_COLOR = win32api.RGB(27, 34, 44)
 DOCK_EDGE_COLOR = win32api.RGB(64, 120, 78)
 DOCK_ARROW_COLOR = win32api.RGB(130, 255, 165)
 DOCK_ARROW_GLOW_COLOR = win32api.RGB(58, 168, 92)
-DOCK_LABELS = ("<<", "<", ">", ">>", "_")
+DOCK_LABELS = ("<<", "<", ">", ">>", "_", "□")
 LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 WNDPROC_TYPE = ctypes.WINFUNCTYPE(
     LRESULT,
@@ -105,6 +107,20 @@ class DockOverlayButton:
             print(f"[DOCK] WNDPROC error: {e}")
             return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
+    def _icon_centers(self, left, right):
+        icon_count = len(DOCK_LABELS)
+        if icon_count <= 1:
+            return [left + ((right - left) / 2.0)]
+
+        default_step = (right - left) / icon_count
+        icon_step = max(1.0, default_step - DOCK_ICON_SPACING_REDUCTION)
+        total_span = icon_step * (icon_count - 1)
+        min_start = left + DOCK_SIDE_PADDING
+        max_start = right - DOCK_SIDE_PADDING - total_span
+        centered_start = left + (((right - left) - total_span) / 2.0)
+        start = min(max(centered_start, min_start), max_start)
+        return [start + (index * icon_step) for index in range(icon_count)]
+
     def _paint(self, hwnd):
         hdc, paint_struct = win32gui.BeginPaint(hwnd)
 
@@ -134,11 +150,20 @@ class DockOverlayButton:
             old_font = win32gui.SelectObject(hdc, font)
 
             glow_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            segment_width = (right - left) / len(DOCK_LABELS)
+            centers = self._icon_centers(left, right)
+            icon_step = centers[1] - centers[0] if len(centers) > 1 else right - left
+            vertical_center = (top + bottom) // 2
             for index, label in enumerate(DOCK_LABELS):
-                seg_left = int(left + (index * segment_width))
-                seg_right = int(left + ((index + 1) * segment_width))
-                text_rect = (seg_left, top, seg_right, bottom)
+                center_x = centers[index]
+                seg_left = int(center_x - (icon_step / 2.0))
+                seg_right = int(center_x + (icon_step / 2.0))
+                text_width, text_height = win32gui.GetTextExtentPoint32(hdc, label)
+                text_rect = (
+                    int(seg_left),
+                    int(vertical_center - (text_height / 2.0)),
+                    int(seg_right),
+                    int(vertical_center + (text_height / 2.0)),
+                )
 
                 for dx, dy in glow_offsets:
                     glow_rect = (
@@ -220,9 +245,14 @@ class DockOverlayButton:
         if not (left <= x < right and top <= y < bottom):
             return None
 
-        segment_width = DOCK_WIDTH / len(DOCK_LABELS)
-        index = min(int((x - left) // segment_width), len(DOCK_LABELS) - 1)
-        return ("FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT", "MINIMIZE")[index]
+        centers = self._icon_centers(left, right)
+        boundaries = [(centers[i] + centers[i + 1]) / 2.0 for i in range(len(centers) - 1)]
+        index = 0
+        for boundary_index, boundary in enumerate(boundaries):
+            if x < boundary:
+                break
+            index = boundary_index + 1
+        return ("FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT", "MINIMIZE", "MAXIMIZE")[index]
 
     def hide(self):
         self.target_hwnd = None
@@ -539,6 +569,14 @@ class ScreenMoverWorker:
         except Exception as e:
             print(f"[ERROR] minimize_window: {e}")
 
+    def maximize_window(self, hwnd):
+        try:
+            if not self._can_move_window(hwnd):
+                return
+            win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+        except Exception as e:
+            print(f"[ERROR] maximize_window: {e}")
+
     def worker_loop(self):
         print("[THREAD] Screen mover loop started.")
 
@@ -596,6 +634,8 @@ class ScreenMoverWorker:
             self.dock_overlay.hide()
             if direction == "MINIMIZE":
                 self.minimize_window(target)
+            elif direction == "MAXIMIZE":
+                self.maximize_window(target)
             else:
                 self.move_window_to_monitor(target, direction)
 
