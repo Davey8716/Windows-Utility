@@ -1013,7 +1013,7 @@ class AdvancedToolsPanel(QWidget):
 
     def open_clipboard_history(self):
         self.sidebar_output.clear()
-        subprocess.Popen(["cmd", "/c", "start", "ms-settings:clipboard"])
+        self._shell_open("ms-settings:clipboard")
         self.sidebar_output.append("Opened Clipboard History.")
 
     def run_sfc_scannow(self):

@@ -27,6 +27,12 @@ class _FakeSidebarOutput:
     def clear(self):
         self.text = ""
 
+    def append(self, text):
+        if self.text:
+            self.text = f"{self.text}\n{text}"
+        else:
+            self.text = text
+
     def setPlainText(self, text):
         self.text = text
 
@@ -214,6 +220,16 @@ class RightUtilityGuiTests(unittest.TestCase):
             panel._open_this_pc()
 
         popen.assert_called_once_with(["explorer", "shell:MyComputerFolder"])
+
+    def test_open_clipboard_history_uses_shell_open(self):
+        panel = self.make_panel()
+        panel.sidebar_output = _FakeSidebarOutput()
+
+        with patch.object(panel, "_shell_open") as shell_open:
+            panel.open_clipboard_history()
+
+        shell_open.assert_called_once_with("ms-settings:clipboard")
+        self.assertEqual(panel.sidebar_output.toPlainText(), "Opened Clipboard History.")
 
     def test_run_sleep_launches_expected_command(self):
         panel = self.make_panel()
