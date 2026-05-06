@@ -1,5 +1,7 @@
+from pathlib import Path
+
 import styles
-from PySide6.QtCore import QRectF, Qt, QTimer
+from PySide6.QtCore import QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QPainterPath, QPixmap, QRegion
 from PySide6.QtWidgets import (
     QDialogButtonBox,
@@ -89,6 +91,8 @@ class WindowMessageMixin:
 
     def _prepare_message_box_layout(self, message_box: QMessageBox) -> None:
         self._balance_message_box_text_padding(message_box)
+        self._apply_message_box_accessory(message_box)
+        self._center_message_box_text_block(message_box)
         if message_box.standardButtons() != self._message_box_button("NoButton"):
             self._center_message_box_buttons(message_box)
 
@@ -147,6 +151,101 @@ class WindowMessageMixin:
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
         )
 
+    def _center_message_box_text_block(self, message_box: QMessageBox) -> None:
+        if not getattr(message_box, "_center_text_block", False):
+            return
+
+        text_label = message_box.findChild(QLabel, "qt_msgbox_label")
+        if text_label is None:
+            return
+
+        text_label.setAlignment(
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+        )
+
+    def _apply_message_box_accessory(self, message_box: QMessageBox) -> None:
+        accessory_path = getattr(message_box, "_accessory_icon_path", None)
+        if not accessory_path:
+            return
+
+        layout = message_box.layout()
+        if not isinstance(layout, QGridLayout):
+            return
+
+        text_label = message_box.findChild(QLabel, "qt_msgbox_label")
+        if text_label is None:
+            return
+
+        accessory_label = getattr(message_box, "_accessory_icon_label", None)
+        if accessory_label is None:
+            accessory_label = QLabel(message_box)
+            accessory_label.setObjectName("message_box_accessory_icon")
+            accessory_label.setAlignment(
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            )
+            message_box._accessory_icon_label = accessory_label
+
+        pixmap = QPixmap(str(accessory_path))
+        if pixmap.isNull():
+            return
+
+        icon_size = getattr(message_box, "_accessory_icon_size", QSize(42, 42))
+        scaled_pixmap = pixmap.scaled(
+            icon_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        accessory_label.setPixmap(scaled_pixmap)
+        accessory_label.setFixedSize(icon_size)
+
+        text_label.setWordWrap(True)
+        text_label.setMinimumWidth(
+            max(
+                int(getattr(message_box, "_text_minimum_width", 0)),
+                text_label.minimumWidth(),
+            )
+        )
+
+        leading_spacer_width = int(
+            getattr(message_box, "_accessory_leading_spacer_width", 0)
+        )
+
+        text_index = layout.indexOf(text_label)
+        if text_index < 0:
+            return
+
+        text_row, _, text_row_span, _ = layout.getItemPosition(text_index)
+        layout.removeWidget(text_label)
+        if leading_spacer_width > 0:
+            layout.setColumnMinimumWidth(0, leading_spacer_width)
+            layout.setColumnStretch(0, 0)
+        else:
+            layout.setColumnMinimumWidth(0, 0)
+        layout.addWidget(
+            text_label,
+            text_row,
+            1 if leading_spacer_width > 0 else 0,
+            text_row_span,
+            1,
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+        )
+
+        accessory_index = layout.indexOf(accessory_label)
+        if accessory_index >= 0:
+            layout.removeWidget(accessory_label)
+        layout.addWidget(
+            accessory_label,
+            text_row,
+            2 if leading_spacer_width > 0 else 1,
+            text_row_span,
+            1,
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+        )
+
+        minimum_width = int(getattr(message_box, "_minimum_popup_width", 0))
+        if minimum_width > 0:
+            message_box.setMinimumWidth(minimum_width)
+
     def _apply_rounded_window_mask(self, widget: QWidget, radius: int = 10) -> None:
         rect = QRectF(widget.rect())
         if rect.isEmpty():
@@ -181,6 +280,12 @@ class WindowMessageMixin:
         *,
         stays_on_top: bool = True,
         tool_window: bool = True,
+        accessory_icon_path: str | Path | None = None,
+        accessory_icon_size: QSize | None = None,
+        minimum_popup_width: int | None = None,
+        text_minimum_width: int | None = None,
+        center_text_block: bool = False,
+        accessory_leading_spacer_width: int | None = None,
     ) -> int:
         try:
             message_box = QMessageBox(self)
@@ -189,6 +294,14 @@ class WindowMessageMixin:
         self._apply_message_box_icon(message_box, icon)
         message_box.setWindowTitle(title)
         message_box.setText(text)
+        if accessory_icon_path:
+            message_box._accessory_icon_path = Path(accessory_icon_path)
+            message_box._accessory_icon_size = accessory_icon_size or QSize(42, 42)
+            message_box._minimum_popup_width = minimum_popup_width or 420
+            message_box._text_minimum_width = text_minimum_width or 280
+        message_box._center_text_block = center_text_block
+        if accessory_leading_spacer_width:
+            message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(buttons)
         message_box.setDefaultButton(default_button)
         message_box.setWindowModality(Qt.WindowModality.ApplicationModal)
@@ -206,6 +319,12 @@ class WindowMessageMixin:
         timeout_ms: int = 10_000,
         merge_group: str | None = None,
         merge_title: str | None = None,
+        accessory_icon_path: str | Path | None = None,
+        accessory_icon_size: QSize | None = None,
+        minimum_popup_width: int | None = None,
+        text_minimum_width: int | None = None,
+        center_text_block: bool = False,
+        accessory_leading_spacer_width: int | None = None,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
         grouped_boxes = self._get_grouped_timed_message_boxes()
@@ -244,6 +363,14 @@ class WindowMessageMixin:
             message_box.setText(
                 self._compose_timed_message_text(text, timeout_seconds)
             )
+        if accessory_icon_path:
+            message_box._accessory_icon_path = Path(accessory_icon_path)
+            message_box._accessory_icon_size = accessory_icon_size or QSize(42, 42)
+            message_box._minimum_popup_width = minimum_popup_width or 420
+            message_box._text_minimum_width = text_minimum_width or 280
+        message_box._center_text_block = center_text_block
+        if accessory_leading_spacer_width:
+            message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(self._message_box_button("NoButton"))
         message_box.setModal(False)
         self._set_borderless_message_box(
@@ -281,6 +408,12 @@ class WindowMessageMixin:
         title: str,
         text: str,
         on_close=None,
+        accessory_icon_path: str | Path | None = None,
+        accessory_icon_size: QSize | None = None,
+        minimum_popup_width: int | None = None,
+        text_minimum_width: int | None = None,
+        center_text_block: bool = False,
+        accessory_leading_spacer_width: int | None = None,
     ) -> QMessageBox:
         try:
             message_box = QMessageBox(self)
@@ -291,6 +424,14 @@ class WindowMessageMixin:
         self._apply_message_box_icon(message_box, icon)
         message_box.setWindowTitle(title)
         message_box.setText(text)
+        if accessory_icon_path:
+            message_box._accessory_icon_path = Path(accessory_icon_path)
+            message_box._accessory_icon_size = accessory_icon_size or QSize(42, 42)
+            message_box._minimum_popup_width = minimum_popup_width or 420
+            message_box._text_minimum_width = text_minimum_width or 280
+        message_box._center_text_block = center_text_block
+        if accessory_leading_spacer_width:
+            message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(self._message_box_button("Ok"))
         message_box.setWindowModality(Qt.WindowModality.NonModal)
         self._set_borderless_message_box(

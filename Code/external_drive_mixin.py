@@ -1,14 +1,20 @@
 import os
+from pathlib import Path
 
 import styles
 from PySide6.QtGui import QFont, QFontMetrics
 from right_utility_gui import get_drive_info
-from PySide6.QtCore import QEvent, QModelIndex, Qt, QTimer
+from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt, QTimer
 from PySide6.QtWidgets import QMenu
 from tooltips import format_tooltip_text
 
 
 class ExternalDriveMixin:
+    USB_POPUP_ICON_SIZE = QSize(126, 126)
+
+    def _usb_popup_icon_path(self) -> Path:
+        return Path(__file__).resolve().parent.parent / "App Icons" / "Usb Icon.png"
+
     def eventFilter(self, watched, event):
         combo = getattr(self, "connected_drives_field", None)
         if combo is not None:
@@ -181,6 +187,12 @@ class ExternalDriveMixin:
             title,
             body,
             on_close=on_close,
+            accessory_icon_path=self._usb_popup_icon_path(),
+            accessory_icon_size=self.USB_POPUP_ICON_SIZE,
+            minimum_popup_width=460,
+            text_minimum_width=320,
+            center_text_block=True,
+            accessory_leading_spacer_width=34,
         )
 
     def _handle_session_lock_reminder(self):
@@ -261,6 +273,12 @@ class ExternalDriveMixin:
             ),
             self._message_box_button("Yes") | self._message_box_button("Cancel"),
             self._message_box_button("Cancel"),
+            accessory_icon_path=self._usb_popup_icon_path(),
+            accessory_icon_size=self.USB_POPUP_ICON_SIZE,
+            minimum_popup_width=460,
+            text_minimum_width=320,
+            center_text_block=True,
+            accessory_leading_spacer_width=34,
         ) == self._message_box_button("Yes"):
             action_callback()
 
@@ -283,6 +301,12 @@ class ExternalDriveMixin:
                 "Drive Connected",
                 f"External {drive_label} connected:\n" + "\n".join(added_drives),
                 timeout_ms=10_000,
+                accessory_icon_path=self._usb_popup_icon_path(),
+                accessory_icon_size=self.USB_POPUP_ICON_SIZE,
+                minimum_popup_width=460,
+                text_minimum_width=320,
+                center_text_block=True,
+                accessory_leading_spacer_width=34,
             )
 
         if removed_drives:
@@ -292,4 +316,10 @@ class ExternalDriveMixin:
                 "Drive Removed",
                 f"External {drive_label} removed:\n" + "\n".join(removed_drives),
                 timeout_ms=10_000,
+                accessory_icon_path=self._usb_popup_icon_path(),
+                accessory_icon_size=self.USB_POPUP_ICON_SIZE,
+                minimum_popup_width=460,
+                text_minimum_width=320,
+                center_text_block=True,
+                accessory_leading_spacer_width=34,
             )

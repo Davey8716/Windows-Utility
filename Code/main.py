@@ -2,10 +2,11 @@
 import sys
 import ctypes
 from ctypes import wintypes
+from pathlib import Path
 import styles
 import win32gui
 import win32con
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QIcon
 
 from app_notifications import WindowMessageMixin
 from app_paths import MasterBackupPathsMixin
@@ -20,7 +21,7 @@ from tray_toggles import TrayIconManager
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from tooltips import QtTooltipManager, left_section_toggle_tooltip, tooltip_text
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QSize
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -611,6 +612,35 @@ class UtilityControlApp(
             update_text(button.isChecked())
             button.toggled.connect(update_text)
 
+        def bind_toggle_state_icon(
+            button: QPushButton,
+            *,
+            checked_icon_path: Path,
+            unchecked_icon_path: Path,
+            icon_size: int = 18,
+        ) -> None:
+            checked_icon = QIcon(str(checked_icon_path))
+            unchecked_icon = QIcon(str(unchecked_icon_path))
+            button.setIconSize(QSize(icon_size, icon_size))
+
+            def update_icon(checked: bool) -> None:
+                button.setIcon(checked_icon if checked else unchecked_icon)
+
+            update_icon(button.isChecked())
+            button.toggled.connect(update_icon)
+
+        def bind_combo_placeholder_icon(
+            combo: QComboBox,
+            *,
+            placeholder: str,
+            icon_path: Path,
+            icon_size: int = 18,
+        ) -> None:
+            combo.setIconSize(QSize(icon_size, icon_size))
+            placeholder_index = combo.findText(placeholder)
+            if placeholder_index >= 0:
+                combo.setItemIcon(placeholder_index, QIcon(str(icon_path)))
+
         def install_green_flash(button: QPushButton):
             def flash_active():
                 button.setProperty("flashActive", True)
@@ -717,6 +747,11 @@ class UtilityControlApp(
 
         dark_mode_btn = make_toggle_button("Dark Mode", state.get("theme_dark", True))
         bind_toggle_state_text(dark_mode_btn, "Dark Mode")
+        bind_toggle_state_icon(
+            dark_mode_btn,
+            checked_icon_path=Path(__file__).resolve().parent.parent / "App Icons" / "Dark Theme" / "Dark Mode.png",
+            unchecked_icon_path=Path(__file__).resolve().parent.parent / "App Icons" / "Dark Theme" / "Light Mode.png",
+        )
         ui_left_layout.addWidget(dark_mode_btn)
         self.register_tooltip(dark_mode_btn, tooltip_text("dark_mode"))
 
@@ -742,6 +777,11 @@ class UtilityControlApp(
                 "Log out": "orange",
                 "Shutdown": "red",
             },
+        )
+        bind_combo_placeholder_icon(
+            power_dropdown,
+            placeholder=" Power and Session ",
+            icon_path=Path(__file__).resolve().parent.parent / "App Icons" / "Dark Theme" / "Power.png",
         )
         ui_right_layout.addWidget(power_dropdown)
         self.register_tooltip(power_dropdown, tooltip_text("power_options"))

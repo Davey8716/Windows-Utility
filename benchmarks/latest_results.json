@@ -1,0 +1,215 @@
+{
+  "generated_at": "2026-05-05T19:23:03.844302+00:00",
+  "step_tax_ms": 250.0,
+  "workflow_steps": {
+    "quick_launcher": 5,
+    "inventory": 6,
+    "file_task": 8,
+    "maintenance": 6
+  },
+  "results": [
+    {
+      "slug": "router_gateway_detection",
+      "name": "Router Gateway Detection",
+      "category": "Quick Action",
+      "kind": "interactive",
+      "workflow_class": "quick_launcher",
+      "notes": "Runs the real ipconfig parse path and suppresses browser launch.",
+      "app": {
+        "iterations": 7,
+        "min_ms": 13.7372,
+        "median_ms": 13.8743,
+        "mean_ms": 14.02587142857143,
+        "p95_ms": 14.5102,
+        "max_ms": 14.5102
+      },
+      "shell": {
+        "iterations": 7,
+        "min_ms": 251.1509,
+        "median_ms": 266.2106,
+        "mean_ms": 264.4592714285714,
+        "p95_ms": 279.2537,
+        "max_ms": 279.2537
+      },
+      "workflow_tax_ms": 1250.0,
+      "agentic_estimate_ms": 1516.2105999999999,
+      "speedup_vs_shell": 19.187317558363304,
+      "speedup_vs_agentic": 109.28195296339274
+    },
+    {
+      "slug": "usb_drive_letter_detection",
+      "name": "USB Drive Letter Detection",
+      "category": "Inventory",
+      "kind": "interactive",
+      "workflow_class": "inventory",
+      "notes": "Benchmarks the PowerShell-backed USB drive discovery helper used by drive features.",
+      "app": {
+        "iterations": 5,
+        "min_ms": 326.8409,
+        "median_ms": 335.3555,
+        "mean_ms": 334.89106000000004,
+        "p95_ms": 345.4402,
+        "max_ms": 345.4402
+      },
+      "shell": {
+        "iterations": 5,
+        "min_ms": 273.8169,
+        "median_ms": 285.3144,
+        "mean_ms": 286.70192,
+        "p95_ms": 304.0528,
+        "max_ms": 304.0528
+      },
+      "workflow_tax_ms": 1500.0,
+      "agentic_estimate_ms": 1785.3144,
+      "speedup_vs_shell": 0.8507819314130824,
+      "speedup_vs_agentic": 5.3236472936928125
+    },
+    {
+      "slug": "drive_inventory_scan",
+      "name": "Drive Inventory Scan",
+      "category": "Inventory",
+      "kind": "interactive",
+      "workflow_class": "inventory",
+      "notes": "Measures the app-side drive scan with total/free space and ejectable detection.",
+      "app": {
+        "iterations": 5,
+        "min_ms": 328.7252,
+        "median_ms": 333.9577,
+        "mean_ms": 337.84238,
+        "p95_ms": 351.917,
+        "max_ms": 351.917
+      },
+      "shell": {
+        "iterations": 5,
+        "min_ms": 236.0253,
+        "median_ms": 244.69,
+        "mean_ms": 246.32738,
+        "p95_ms": 256.4112,
+        "max_ms": 256.4112
+      },
+      "workflow_tax_ms": 1500.0,
+      "agentic_estimate_ms": 1744.69,
+      "speedup_vs_shell": 0.7326975841551191,
+      "speedup_vs_agentic": 5.224284392903653
+    },
+    {
+      "slug": "desktop_folder_creation",
+      "name": "Desktop Folder Creation",
+      "category": "File Task",
+      "kind": "interactive",
+      "workflow_class": "file_task",
+      "notes": "Uses a synthetic Desktop folder so the benchmark does not touch the real user profile.",
+      "app": {
+        "iterations": 12,
+        "min_ms": 0.2868,
+        "median_ms": 0.3146,
+        "mean_ms": 0.3309,
+        "p95_ms": 0.3437,
+        "max_ms": 0.5091
+      },
+      "shell": {
+        "iterations": 12,
+        "min_ms": 218.9007,
+        "median_ms": 230.1793,
+        "mean_ms": 232.85645,
+        "p95_ms": 243.593,
+        "max_ms": 256.7201
+      },
+      "workflow_tax_ms": 2000.0,
+      "agentic_estimate_ms": 2230.1793,
+      "speedup_vs_shell": 731.6570247933885,
+      "speedup_vs_agentic": 7088.9361093452
+    },
+    {
+      "slug": "taskbar_shortcut_backup",
+      "name": "Taskbar Shortcut Backup",
+      "category": "File Task",
+      "kind": "interactive",
+      "workflow_class": "file_task",
+      "notes": "Copies 40 synthetic shortcut files and ignores non-shortcut files like the app does.",
+      "app": {
+        "iterations": 10,
+        "min_ms": 33.6699,
+        "median_ms": 35.01025,
+        "mean_ms": 35.23007,
+        "p95_ms": 37.5662,
+        "max_ms": 37.5662
+      },
+      "shell": {
+        "iterations": 10,
+        "min_ms": 273.4563,
+        "median_ms": 292.90745000000004,
+        "mean_ms": 297.37531,
+        "p95_ms": 332.666,
+        "max_ms": 332.666
+      },
+      "workflow_tax_ms": 2000.0,
+      "agentic_estimate_ms": 2292.90745,
+      "speedup_vs_shell": 8.366334145000394,
+      "speedup_vs_agentic": 65.4924614934198
+    },
+    {
+      "slug": "bookmarks_export",
+      "name": "Brave Bookmarks Export",
+      "category": "File Task",
+      "kind": "interactive",
+      "workflow_class": "file_task",
+      "notes": "Exports three synthetic Brave profiles with nested folders and hundreds of URLs.",
+      "app": {
+        "iterations": 8,
+        "min_ms": 57.527,
+        "median_ms": 59.97635,
+        "mean_ms": 60.202087500000005,
+        "p95_ms": 65.9543,
+        "max_ms": 65.9543
+      },
+      "shell": null,
+      "workflow_tax_ms": 2000.0,
+      "agentic_estimate_ms": 2059.97635,
+      "speedup_vs_shell": null,
+      "speedup_vs_agentic": 34.34647740317642
+    },
+    {
+      "slug": "recycle_bin_age_cleanup",
+      "name": "Recycle Bin Age Cleanup",
+      "category": "Maintenance",
+      "kind": "interactive",
+      "workflow_class": "maintenance",
+      "notes": "Deletes old items from a synthetic recycle-bin fixture across two fake drives.",
+      "app": {
+        "iterations": 8,
+        "min_ms": 29.1749,
+        "median_ms": 32.365750000000006,
+        "mean_ms": 32.3531125,
+        "p95_ms": 35.1845,
+        "max_ms": 35.1845
+      },
+      "shell": null,
+      "workflow_tax_ms": 1500.0,
+      "agentic_estimate_ms": 1532.36575,
+      "speedup_vs_shell": null,
+      "speedup_vs_agentic": 47.34528784285857
+    },
+    {
+      "slug": "drive_poll_refresh",
+      "name": "External Drive Poll Refresh",
+      "category": "Resident Automation",
+      "kind": "resident",
+      "workflow_class": null,
+      "notes": "Resident poll path that refreshes connected-drive state and notification deltas.",
+      "app": {
+        "iterations": 40,
+        "min_ms": 0.0096,
+        "median_ms": 0.01185,
+        "mean_ms": 0.0127625,
+        "p95_ms": 0.0189,
+        "max_ms": 0.0217
+      },
+      "shell": null,
+      "workflow_tax_ms": null,
+      "agentic_estimate_ms": null,
+      "speedup_vs_shell": null,
+      "speedup_vs_agentic": null
+    }
+  ]
+}
