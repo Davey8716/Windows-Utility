@@ -21,7 +21,7 @@ TOOLTIP_TEXT = {
     "open_backup_folder": "Opens the TaskBarApps backup folder inside the master backup path, or closes it if already open.",
     "capture_desktop_layout": "Saves the current desktop icon layout to the master backup location.",
     "restore_desktop_layout": "Restores the saved desktop icon layout from the master backup location.",
-    "export_bookmarks": "Exports Brave bookmarks into the Bookmarks folder inside the master backup path.",
+    "export_bookmarks": "Exports supported browser bookmarks into separate HTML files inside the Bookmarks folder in the master backup path.",
     "cleanup_actions": "Opens Recycle Bin cleanup actions such as emptying the bin, opening it, or cleaning older items.",
     "recycle_bin_auto_clean": "Automatically cleans Recycle Bin items using the selected age rule each time the app starts.",
     "recycle_bin_age_rule": "Chooses how old Recycle Bin items must be before the startup cleanup deletes them.",

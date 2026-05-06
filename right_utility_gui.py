@@ -16,6 +16,7 @@ import win32file
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
 from PySide6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -1065,13 +1066,26 @@ class AdvancedToolsPanel(QWidget):
     def _run_brave_export(self):
         start_dir = Path(self.app.get_default_bookmarks_export_dir())
         start_dir.mkdir(parents=True, exist_ok=True)
-        out_path = start_dir / "Brave_Bookmarks.html"
-        prompt = (
-            "Save bookmarks export to:\n"
-            f"{out_path}"
+        exporters = [
+            exporter
+            for exporter in BraveBookmarksExporter.supported_exporters()
+            if exporter.has_bookmarks()
+        ]
+        if not exporters:
+            return False
+
+        export_targets = [
+            (exporter, start_dir / exporter.output_filename)
+            for exporter in exporters
+        ]
+        prompt = "Export bookmarks to:\n" + "\n".join(
+            str(out_path) for _exporter, out_path in export_targets
         )
-        if out_path.exists():
-            prompt += "\n\nThis file already exists and will be replaced."
+        if any(out_path.exists() for _exporter, out_path in export_targets):
+            prompt += (
+                "\n\nExisting bookmark export files will ask for overwrite "
+                "confirmation one at a time."
+            )
 
         result = self.app._show_modal_message(
             QMessageBox.Icon.NoIcon,
@@ -1083,11 +1097,33 @@ class AdvancedToolsPanel(QWidget):
         if result != QMessageBox.StandardButton.Save:
             return None
 
-        exported = False
+        approved_targets = []
+        for exporter, out_path in export_targets:
+            if not out_path.exists():
+                approved_targets.append((exporter, out_path))
+                continue
+
+            selected_path, _selected_filter = QFileDialog.getSaveFileName(
+                self,
+                f"Save {exporter.browser_name} Bookmarks",
+                str(out_path),
+                "HTML Files (*.html);;All Files (*)",
+            )
+            if not selected_path:
+                return None
+
+            approved_targets.append((exporter, Path(selected_path)))
+
+        if not approved_targets:
+            return None
+
+        exported_paths = []
 
         def run_export():
-            nonlocal exported
-            exported = BraveBookmarksExporter().export_to_file(str(out_path))
+            nonlocal exported_paths
+            for exporter, out_path in approved_targets:
+                if exporter.export_to_file(str(out_path)):
+                    exported_paths.append(str(out_path))
 
         minimize_runner = getattr(self.app, "_run_with_optional_minimize", None)
         if callable(minimize_runner):
@@ -1095,9 +1131,9 @@ class AdvancedToolsPanel(QWidget):
         else:
             run_export()
 
-        if exported:
+        if exported_paths:
             save_state(self.app.state)
-            return str(out_path)
+            return exported_paths
 
         return False
 

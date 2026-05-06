@@ -218,16 +218,23 @@ class DesktopOperationsMixin:
         self._run_with_optional_minimize(action)
 
     def export_bookmarks(self):
-        out_path = self.right_tools_panel._run_brave_export()
-        if isinstance(out_path, str) and out_path:
+        out_paths = self.right_tools_panel._run_brave_export()
+        if isinstance(out_paths, str) and out_paths:
+            exported_paths = [out_paths]
+        elif isinstance(out_paths, (list, tuple)) and out_paths:
+            exported_paths = list(out_paths)
+        else:
+            exported_paths = []
+
+        if exported_paths:
             self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
                 "Export Bookmarks",
-                f"Bookmarks exported to:\n{out_path}",
+                "Bookmarks exported to:\n" + "\n".join(exported_paths),
             )
             return
 
-        if out_path is False:
+        if out_paths is False:
             self._show_organizing_timed_message(
                 self._message_box_icon("Warning"),
                 "Export Bookmarks",

@@ -71,7 +71,10 @@ class MasterBackupPathsMixin:
     def get_default_bookmarks_export_dir(self) -> str:
         path_type = self._get_app_module_attr("Path", Path)
         base_dir = self._get_master_backup_dir().strip() or str(path_type.home())
-        return str(path_type(base_dir) / "Bookmarks")
+        base_path = path_type(base_dir)
+        if base_path.name.lower() == "bookmarks":
+            return str(base_path)
+        return str(base_path / "Bookmarks")
 
     def get_default_desktop_layout_path(self) -> str:
         return self._build_master_output_path("desktop_icon_layout.json")
