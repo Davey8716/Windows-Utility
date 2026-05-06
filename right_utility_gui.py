@@ -130,6 +130,7 @@ class AdvancedToolsPanel(QWidget):
         super().__init__(app)
         self.app = app
         self._sidebar_process = None
+        self._sidebar_finished_handler = None
         self._sidebar_output_timer = None
         self._sidebar_output_path = None
         self._sidebar_output_offset = 0
@@ -709,6 +710,20 @@ class AdvancedToolsPanel(QWidget):
         except Exception:
             return False
 
+    def _message_box_button(self, name: str):
+        getter = getattr(getattr(self, "app", None), "_message_box_button", None)
+        if callable(getter):
+            return getter(name)
+        button_namespace = getattr(QMessageBox, "StandardButton", QMessageBox)
+        return getattr(button_namespace, name, 0)
+
+    def _message_box_icon(self, name: str):
+        getter = getattr(getattr(self, "app", None), "_message_box_icon", None)
+        if callable(getter):
+            return getter(name)
+        icon_namespace = getattr(QMessageBox, "Icon", QMessageBox)
+        return getattr(icon_namespace, name, None)
+
     def _stop_sidebar_output_timer(self):
         timer = self._sidebar_output_timer
         if timer is not None:
@@ -721,6 +736,7 @@ class AdvancedToolsPanel(QWidget):
             self._sidebar_process.kill()
             self._sidebar_process.deleteLater()
             self._sidebar_process = None
+        self._sidebar_finished_handler = None
         self._stop_sidebar_output_timer()
         self._sidebar_output_path = None
         self._sidebar_output_offset = 0
@@ -784,18 +800,23 @@ class AdvancedToolsPanel(QWidget):
                 f"[no output]\n\n[Process finished with exit code {exit_code}]"
             )
 
+        output_text = self.sidebar_output.toPlainText()
+        finished_handler = self._sidebar_finished_handler
         self._reset_sidebar_process()
+        if callable(finished_handler):
+            finished_handler(exit_code, output_text)
 
     def _command_display_text(self, cmd) -> str:
         if isinstance(cmd, str):
             return cmd
         return subprocess.list2cmdline([str(part) for part in cmd])
 
-    def _run_and_output(self, cmd, shell=False):
+    def _run_and_output(self, cmd, shell=False, finished_handler=None):
         self.sidebar_output.clear()
         try:
             self._reset_sidebar_process()
             command_text = self._command_display_text(cmd)
+            self._sidebar_finished_handler = finished_handler
 
             process = QProcess(self)
             process.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
@@ -815,6 +836,7 @@ class AdvancedToolsPanel(QWidget):
             if not process.waitForStarted(3000):
                 output = "Could not start process."
                 self._sidebar_process = None
+                self._sidebar_finished_handler = None
                 process.deleteLater()
                 self.sidebar_output.setPlainText(output)
                 return
@@ -849,7 +871,7 @@ class AdvancedToolsPanel(QWidget):
         args_expr = f"@({quoted_args})"
         ps_command = (
             f"$p = Start-Process -FilePath 'cmd.exe' "
-            f"-ArgumentList {args_expr} -Verb RunAs "
+            f"-ArgumentList {args_expr} -Verb RunAs -WindowStyle Hidden "
             f"-PassThru -Wait; "
             f"exit $p.ExitCode"
         )
@@ -901,8 +923,73 @@ class AdvancedToolsPanel(QWidget):
     def restart_bluetooth(self):
         self._run_and_output("powershell Restart-Service bthserv -Force")
 
+    def _clear_temp_command(self) -> list[str]:
+        local_app_data = os.environ.get("LOCALAPPDATA", "").strip()
+        if local_app_data:
+            temp_dir = os.path.join(local_app_data, "Temp")
+        else:
+            temp_dir = tempfile.gettempdir()
+        temp_dir = temp_dir.rstrip("\\/")
+        quoted_temp_dir = "'" + temp_dir.replace("'", "''") + "'"
+        command = (
+            f"$tempDir = {quoted_temp_dir}; "
+            "if (Test-Path -LiteralPath $tempDir) { "
+            "$accessDenied = 0; "
+            "$inUse = 0; "
+            "$other = 0; "
+            "Get-ChildItem -LiteralPath $tempDir -Force -Recurse -ErrorAction SilentlyContinue | "
+            "ForEach-Object { "
+            "try { "
+            "Remove-Item -LiteralPath $_.FullName -Force -Recurse -ErrorAction Stop "
+            "} catch { "
+            "$message = $_.Exception.Message; "
+            "if ($message -match 'Access to the path .* is denied|Access is denied') { $accessDenied++ } "
+            "elseif ($message -match 'being used by another process') { $inUse++ } "
+            "else { $other++ } "
+            "} "
+            "}; "
+            "if ($accessDenied -gt 0) { Write-Output \"Access is denied for $accessDenied item(s).\" } "
+            "if ($inUse -gt 0) { Write-Output \"In-use files were skipped: $inUse item(s).\" } "
+            "if ($other -gt 0) { Write-Output \"Additional cleanup errors: $other item(s).\" } "
+            "}"
+        )
+        return ["powershell.exe", "-WindowStyle", "Hidden", "-NoProfile", "-Command", command]
+
+    def _handle_clear_temp_finished(self, exit_code: int, output_text: str):
+        if self._is_admin():
+            return
+
+        if "access is denied" not in output_text.lower():
+            return
+
+        show_modal = getattr(getattr(self, "app", None), "_show_modal_message", None)
+        if not callable(show_modal):
+            return
+
+        yes_button = self._message_box_button("Yes")
+        no_button = self._message_box_button("No")
+        if not no_button:
+            no_button = self._message_box_button("Cancel")
+
+        result = show_modal(
+            self._message_box_icon("NoIcon"),
+            "Temp Cleanup Needs Admin Access",
+            (
+                "Some temp files could not be removed because access was denied.\n\n"
+                "Run temp cleanup again as administrator?\n\n"
+                "Files currently in use may still be skipped."
+            ),
+            yes_button | no_button,
+            no_button,
+        )
+        if result == yes_button:
+            self._run_elevated_and_output(self._clear_temp_command())
+
     def clear_temp(self):
-        self._run_and_output("del /q /s %temp%\\*", shell=True)
+        kwargs = {}
+        if not self._is_admin():
+            kwargs["finished_handler"] = self._handle_clear_temp_finished
+        self._run_and_output(self._clear_temp_command(), **kwargs)
 
     def clear_clipboard(self):
         self._run_and_output("cmd /c echo off | clip")

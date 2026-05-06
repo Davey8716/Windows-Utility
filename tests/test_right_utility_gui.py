@@ -72,6 +72,9 @@ class RightUtilityGuiTests(unittest.TestCase):
             showMinimized=Mock(),
             actions=SimpleNamespace(open_router_page=Mock()),
             state={"minimize_after_use_enabled": True},
+            _show_modal_message=Mock(),
+            _message_box_button=lambda name: {"Yes": 1, "No": 2, "Cancel": 3}.get(name, 0),
+            _message_box_icon=lambda name: name,
         )
         panel.showMinimized = Mock()
         return panel
@@ -283,6 +286,109 @@ class RightUtilityGuiTests(unittest.TestCase):
             panel.run_chkdsk()
 
         run_elevated.assert_called_once_with(["chkdsk", "C:"])
+
+    def test_clear_temp_uses_completion_handler_when_not_admin(self):
+        panel = self.make_panel()
+        with patch.object(panel, "_is_admin", return_value=False), \
+             patch.dict(right_utility_gui.os.environ, {"LOCALAPPDATA": r"C:\Users\davey\AppData\Local"}), \
+             patch.object(panel, "_run_and_output") as run_and_output:
+            panel.clear_temp()
+
+        run_and_output.assert_called_once()
+        args, kwargs = run_and_output.call_args
+        self.assertEqual(
+            args,
+            (
+                [
+                    "powershell.exe",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-NoProfile",
+                    "-Command",
+                    "$tempDir = 'C:\\Users\\davey\\AppData\\Local\\Temp'; "
+                    "if (Test-Path -LiteralPath $tempDir) { "
+                    "$accessDenied = 0; "
+                    "$inUse = 0; "
+                    "$other = 0; "
+                    "Get-ChildItem -LiteralPath $tempDir -Force -Recurse -ErrorAction SilentlyContinue | "
+                    "ForEach-Object { "
+                    "try { "
+                    "Remove-Item -LiteralPath $_.FullName -Force -Recurse -ErrorAction Stop "
+                    "} catch { "
+                    "$message = $_.Exception.Message; "
+                    "if ($message -match 'Access to the path .* is denied|Access is denied') { $accessDenied++ } "
+                    "elseif ($message -match 'being used by another process') { $inUse++ } "
+                    "else { $other++ } "
+                    "} "
+                    "}; "
+                    "if ($accessDenied -gt 0) { Write-Output \"Access is denied for $accessDenied item(s).\" } "
+                    "if ($inUse -gt 0) { Write-Output \"In-use files were skipped: $inUse item(s).\" } "
+                    "if ($other -gt 0) { Write-Output \"Additional cleanup errors: $other item(s).\" } "
+                    "}",
+                ],
+            ),
+        )
+        self.assertNotIn("shell", kwargs)
+        self.assertIs(
+            kwargs["finished_handler"].__func__,
+            panel._handle_clear_temp_finished.__func__,
+        )
+
+    def test_handle_clear_temp_finished_prompts_and_reruns_elevated_on_access_denied(self):
+        panel = self.make_panel()
+        panel.app._show_modal_message.return_value = 1
+
+        with patch.object(panel, "_is_admin", return_value=False), \
+             patch.dict(right_utility_gui.os.environ, {"LOCALAPPDATA": r"C:\Users\davey\AppData\Local"}), \
+             patch.object(panel, "_run_elevated_and_output") as run_elevated:
+            panel._handle_clear_temp_finished(
+                0,
+                "Access is denied.\n\n[Process finished with exit code 0]",
+            )
+
+        panel.app._show_modal_message.assert_called_once()
+        self.assertEqual(panel.app._show_modal_message.call_args.args[0], "NoIcon")
+        run_elevated.assert_called_once_with(
+            [
+                "powershell.exe",
+                "-WindowStyle",
+                "Hidden",
+                "-NoProfile",
+                "-Command",
+                "$tempDir = 'C:\\Users\\davey\\AppData\\Local\\Temp'; "
+                "if (Test-Path -LiteralPath $tempDir) { "
+                "$accessDenied = 0; "
+                "$inUse = 0; "
+                "$other = 0; "
+                "Get-ChildItem -LiteralPath $tempDir -Force -Recurse -ErrorAction SilentlyContinue | "
+                "ForEach-Object { "
+                "try { "
+                "Remove-Item -LiteralPath $_.FullName -Force -Recurse -ErrorAction Stop "
+                "} catch { "
+                "$message = $_.Exception.Message; "
+                "if ($message -match 'Access to the path .* is denied|Access is denied') { $accessDenied++ } "
+                "elseif ($message -match 'being used by another process') { $inUse++ } "
+                "else { $other++ } "
+                "} "
+                "}; "
+                "if ($accessDenied -gt 0) { Write-Output \"Access is denied for $accessDenied item(s).\" } "
+                "if ($inUse -gt 0) { Write-Output \"In-use files were skipped: $inUse item(s).\" } "
+                "if ($other -gt 0) { Write-Output \"Additional cleanup errors: $other item(s).\" } "
+                "}",
+            ]
+        )
+
+    def test_handle_clear_temp_finished_ignores_in_use_only_errors(self):
+        panel = self.make_panel()
+        with patch.object(panel, "_is_admin", return_value=False), \
+             patch.object(panel, "_run_elevated_and_output") as run_elevated:
+            panel._handle_clear_temp_finished(
+                0,
+                "The process cannot access the file because it is being used by another process.",
+            )
+
+        panel.app._show_modal_message.assert_not_called()
+        run_elevated.assert_not_called()
 
     def test_run_and_output_shows_full_string_command_in_status_line(self):
         panel = self.make_panel()
