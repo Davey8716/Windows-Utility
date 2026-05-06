@@ -2,11 +2,10 @@
 import sys
 import ctypes
 from ctypes import wintypes
-from pathlib import Path
 import styles
 import win32gui
 import win32con
-from PySide6.QtGui import QColor, QPainter
+from PySide6.QtGui import QColor
 
 from app_notifications import WindowMessageMixin
 from app_paths import MasterBackupPathsMixin
@@ -614,6 +613,7 @@ class UtilityControlApp(
             combo.addItem(placeholder)
             combo.addItems(actions_map.keys())
             combo.setCurrentText(placeholder)
+            combo.view().setRowHidden(0, True)
             combo.setCursor(Qt.CursorShape.ArrowCursor)
             styles.apply_default_button_size(combo)
             combo.setProperty("styleFontSize", 14)
