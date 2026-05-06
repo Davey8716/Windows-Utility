@@ -2,10 +2,12 @@ import unittest
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
+import tray_toggles
 
 TESTS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = TESTS_DIR.parent
-for path in (PROJECT_ROOT, TESTS_DIR):
+CODE_DIR = PROJECT_ROOT / "Code"
+for path in (PROJECT_ROOT, TESTS_DIR, CODE_DIR):
     path_str = str(path)
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
@@ -14,7 +16,7 @@ from _stubs import install_dependency_stubs
 
 install_dependency_stubs()
 
-import tray_toggles
+
 
 
 class _DummyIcon:
@@ -37,10 +39,9 @@ class TrayIconManagerTests(unittest.TestCase):
 
         app.restore_from_activation.assert_called_once_with()
 
-    def test_resolve_tray_icon_prefers_builder_env_icon(self):
+    def test_resolve_application_icon_prefers_builder_env_icon(self):
         app = Mock()
         app.windowIcon.return_value = _DummyIcon(is_null=True)
-        manager = tray_toggles.TrayIconManager(app)
 
         def fake_qicon(source=None):
             if source == r"C:\icons\built.ico":
@@ -50,14 +51,13 @@ class TrayIconManagerTests(unittest.TestCase):
         with patch.dict(tray_toggles.os.environ, {tray_toggles.TRAY_ICON_ENV_VAR: r"C:\icons\built.ico"}, clear=False), \
              patch.object(tray_toggles, "QIcon", side_effect=fake_qicon), \
              patch.object(tray_toggles.QIcon, "fromTheme", return_value=_DummyIcon(source="theme", is_null=False)):
-            icon = manager._resolve_tray_icon()
+            icon = tray_toggles.resolve_application_icon(app)
 
         self.assertEqual(icon.source, r"C:\icons\built.ico")
 
-    def test_resolve_tray_icon_falls_back_to_repo_icon(self):
+    def test_resolve_application_icon_falls_back_to_repo_icon(self):
         app = Mock()
         app.windowIcon.return_value = _DummyIcon(is_null=True)
-        manager = tray_toggles.TrayIconManager(app)
 
         def fake_qicon(source=None):
             text = str(source)
@@ -69,9 +69,20 @@ class TrayIconManagerTests(unittest.TestCase):
              patch.object(tray_toggles, "QIcon", side_effect=fake_qicon), \
              patch.object(tray_toggles.QIcon, "fromTheme", return_value=_DummyIcon(source="theme", is_null=False)), \
              patch.object(tray_toggles.Path, "is_file", autospec=True, side_effect=lambda path: str(path).endswith("Windows_utility_Icon.ico")):
-            icon = manager._resolve_tray_icon()
+            icon = tray_toggles.resolve_application_icon(app)
 
         self.assertTrue(icon.source.endswith("Windows_utility_Icon.ico"))
+
+    def test_resolve_tray_icon_prefers_window_icon(self):
+        app = Mock()
+        window_icon = _DummyIcon(source="window", is_null=False)
+        app.windowIcon.return_value = window_icon
+        manager = tray_toggles.TrayIconManager(app)
+
+        with patch.object(tray_toggles, "resolve_application_icon", return_value=_DummyIcon(source="fallback", is_null=False)):
+            icon = manager._resolve_tray_icon()
+
+        self.assertIs(icon, window_icon)
 
     def test_quit_from_tray_runs_explicit_app_shutdown(self):
         app = Mock()

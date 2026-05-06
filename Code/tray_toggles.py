@@ -22,23 +22,11 @@ class TrayIconManager(QObject):
         self.zen_mode_action = None
 
     def _resolve_tray_icon(self):
-        env_icon = os.environ.get(TRAY_ICON_ENV_VAR, "").strip()
-        if env_icon:
-            icon = QIcon(env_icon)
-            if not icon.isNull():
-                return icon
-
-        for candidate in LOCAL_ICON_CANDIDATES:
-            if candidate.is_file():
-                icon = QIcon(str(candidate))
-                if not icon.isNull():
-                    return icon
-
         icon = self.app.windowIcon()
         if not icon.isNull():
             return icon
 
-        return QIcon.fromTheme("applications-system")
+        return resolve_application_icon()
 
     def create_tray_icon(self):
         self.tray = QSystemTrayIcon(self.app)
@@ -121,3 +109,28 @@ class TrayIconManager(QObject):
 
     def on_close_to_tray(self):
         self.app.hide()
+
+
+def resolve_application_icon(window=None):
+    env_icon = os.environ.get(TRAY_ICON_ENV_VAR, "").strip()
+    if env_icon:
+        icon = QIcon(env_icon)
+        if not icon.isNull():
+            return icon
+
+    base_dir = Path(__file__).resolve().parent.parent
+    for candidate in (
+        *(base_dir / "Exe Tray Icons" / path.name for path in LOCAL_ICON_CANDIDATES),
+        *LOCAL_ICON_CANDIDATES,
+    ):
+        if candidate.is_file():
+            icon = QIcon(str(candidate))
+            if not icon.isNull():
+                return icon
+
+    if window is not None and hasattr(window, "windowIcon"):
+        icon = window.windowIcon()
+        if not icon.isNull():
+            return icon
+
+    return QIcon.fromTheme("applications-system")

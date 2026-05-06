@@ -17,7 +17,7 @@ from right_utility_gui import (
     get_drive_info,
 )
 from screen_mover import SCREEN_MOVER
-from tray_toggles import TrayIconManager
+from tray_toggles import TrayIconManager, resolve_application_icon
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from tooltips import QtTooltipManager, left_section_toggle_tooltip, tooltip_text
@@ -165,6 +165,7 @@ class UtilityControlApp(
         styles.set_theme(bool(self.state.get("theme_dark", True)))
         self.setWindowTitle("Windows Resurface")
         self.setStyleSheet(styles.window_style() + styles.tooltip_style())
+        self.setWindowIcon(resolve_application_icon(self))
         self.COLLAPSED_WIDTH = 470
         self.EXPANDED_WIDTH = self.COLLAPSED_WIDTH + self.RIGHT_PANEL_WIDTH
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
