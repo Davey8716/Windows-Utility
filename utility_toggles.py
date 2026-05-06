@@ -8,6 +8,9 @@ from pathlib import Path
 
 import win32con
 import win32gui
+import win32process
+import pythoncom
+import win32com.client
 from PySide6.QtCore import Qt
 
 from screen_mover import SCREEN_MOVER
@@ -294,6 +297,21 @@ class UtilityActionsManager:
                 deleted_count += 1
 
         return deleted_count
+
+    def is_recycle_bin_open(self) -> bool:
+        return bool(find_recycle_bin_explorer_windows())
+
+    def close_recycle_bin(self) -> bool:
+        handles = [entry["hwnd"] for entry in find_recycle_bin_explorer_windows()]
+        closed_any = False
+        for hwnd in handles:
+            try:
+                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                closed_any = True
+            except Exception as e:
+                print(f"[DEBUG] close_recycle_bin failed for hwnd {hwnd}: {e}")
+
+        return closed_any
 
     def open_backup_folder(self, path: str | None = None) -> bool:
         if path is None and self.app:
@@ -665,3 +683,61 @@ def find_explorer_windows_by_title(title: str) -> list[int]:
         print(f"[DEBUG] find_explorer_windows_by_title failed: {e}")
 
     return handles
+
+
+RECYCLE_BIN_CLSID = "{645FF040-5081-101B-9F08-00AA002F954E}"
+
+
+def find_recycle_bin_explorer_windows() -> list[dict[str, int]]:
+    windows: list[dict[str, int]] = []
+
+    try:
+        pythoncom.CoInitialize()
+    except Exception:
+        pass
+
+    try:
+        shell = win32com.client.Dispatch("Shell.Application")
+        shell_windows = shell.Windows()
+    except Exception as e:
+        print(f"[DEBUG] find_recycle_bin_explorer_windows failed: {e}")
+        return windows
+
+    for window in shell_windows:
+        try:
+            hwnd = int(window.HWND)
+        except Exception:
+            continue
+
+        try:
+            folder = window.Document.Folder
+            folder_self = folder.Self
+        except Exception:
+            continue
+
+        try:
+            folder_path = str(getattr(folder_self, "Path", "") or "")
+        except Exception:
+            folder_path = ""
+
+        try:
+            folder_name = str(getattr(folder_self, "Name", "") or "")
+        except Exception:
+            folder_name = ""
+
+        normalized_path = folder_path.casefold()
+        normalized_name = folder_name.casefold()
+        if (
+            RECYCLE_BIN_CLSID.casefold() not in normalized_path
+            and "recycle bin" != normalized_name
+        ):
+            continue
+
+        try:
+            _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
+        except Exception:
+            pid = 0
+
+        windows.append({"hwnd": hwnd, "pid": int(pid)})
+
+    return windows

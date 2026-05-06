@@ -1,10 +1,18 @@
 import os
 import shutil
+import sys
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+
+TESTS_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = TESTS_DIR.parent
+for path in (PROJECT_ROOT, TESTS_DIR):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
 
 from _stubs import install_dependency_stubs
 
@@ -196,6 +204,60 @@ class UtilityTogglesTests(unittest.TestCase):
 
         self.assertTrue(opened)
         popen_mock.assert_called_once()
+
+    def test_is_recycle_bin_open_returns_true_when_matching_explorer_window_exists(self):
+        manager = utility_toggles.UtilityActionsManager()
+
+        with patch.object(
+            utility_toggles,
+            "find_recycle_bin_explorer_windows",
+            return_value=[{"hwnd": 101, "pid": 3030}],
+        ):
+            self.assertTrue(manager.is_recycle_bin_open())
+
+    def test_close_recycle_bin_posts_wm_close_to_matching_windows(self):
+        manager = utility_toggles.UtilityActionsManager()
+
+        with patch.object(
+            utility_toggles,
+            "find_recycle_bin_explorer_windows",
+            return_value=[{"hwnd": 101, "pid": 3030}, {"hwnd": 202, "pid": 4040}],
+        ), patch.object(utility_toggles.win32gui, "PostMessage") as post_message:
+            closed = manager.close_recycle_bin()
+
+        self.assertTrue(closed)
+        self.assertEqual(post_message.call_count, 2)
+        post_message.assert_any_call(101, utility_toggles.win32con.WM_CLOSE, 0, 0)
+        post_message.assert_any_call(202, utility_toggles.win32con.WM_CLOSE, 0, 0)
+
+    def test_find_recycle_bin_explorer_windows_returns_hwnd_and_pid(self):
+        manager = utility_toggles.UtilityActionsManager()
+
+        recycle_bin_window = Mock()
+        recycle_bin_window.HWND = 123
+        recycle_bin_window.Document.Folder.Self.Path = (
+            f"::{utility_toggles.RECYCLE_BIN_CLSID}"
+        )
+        recycle_bin_window.Document.Folder.Self.Name = "Recycle Bin"
+
+        downloads_window = Mock()
+        downloads_window.HWND = 456
+        downloads_window.Document.Folder.Self.Path = r"C:\Users\tester\Downloads"
+        downloads_window.Document.Folder.Self.Name = "Downloads"
+
+        shell = Mock()
+        shell.Windows.return_value = [recycle_bin_window, downloads_window]
+
+        with patch.object(utility_toggles.pythoncom, "CoInitialize"), \
+             patch.object(utility_toggles.win32com.client, "Dispatch", return_value=shell), \
+             patch.object(
+                 utility_toggles.win32process,
+                 "GetWindowThreadProcessId",
+                 return_value=(99, 7777),
+             ):
+            windows = utility_toggles.find_recycle_bin_explorer_windows()
+
+        self.assertEqual(windows, [{"hwnd": 123, "pid": 7777}])
 
     def test_cleanup_recycle_bin_items_older_than_deletes_only_expired_entries(self):
         manager = utility_toggles.UtilityActionsManager()

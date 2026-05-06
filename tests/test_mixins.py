@@ -302,7 +302,17 @@ class DesktopOperationsMixinTests(unittest.TestCase):
 
         app.showMinimized.assert_called_once_with()
         app.actions.cleanup_recycle_bin_items_older_than.assert_called_once_with(14)
+        app.actions.close_recycle_bin.assert_called_once_with()
         self.assertEqual(app.messages[0][1], "Recycle Bin Cleanup")
+
+    def test_empty_recycle_bin_closes_open_recycle_bin_after_action(self):
+        app = _DesktopApp()
+        app.actions.empty_recycle_bin.return_value = True
+
+        app.empty_recycle_bin()
+
+        app.actions.empty_recycle_bin.assert_called_once_with()
+        app.actions.close_recycle_bin.assert_called_once_with()
 
     def test_run_recycle_bin_auto_cleanup_skips_when_disabled(self):
         app = _DesktopApp()

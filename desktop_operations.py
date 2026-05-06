@@ -259,19 +259,24 @@ class DesktopOperationsMixin:
             return
 
         def action():
-            if self.actions.empty_recycle_bin():
-                self._show_timed_message(
-                    self._message_box_icon("Information"),
-                    "Recycle Bin",
-                    "Recycle Bin emptied.",
-                )
-                return
+            try:
+                if self.actions.empty_recycle_bin():
+                    self._show_timed_message(
+                        self._message_box_icon("Information"),
+                        "Recycle Bin",
+                        "Recycle Bin emptied.",
+                    )
+                    return
 
-            self._show_timed_message(
-                self._message_box_icon("Warning"),
-                "Recycle Bin",
-                "Could not empty Recycle Bin.",
-            )
+                self._show_timed_message(
+                    self._message_box_icon("Warning"),
+                    "Recycle Bin",
+                    "Could not empty Recycle Bin.",
+                )
+            finally:
+                close_recycle_bin = getattr(self.actions, "close_recycle_bin", None)
+                if callable(close_recycle_bin):
+                    close_recycle_bin()
 
         self._run_with_optional_minimize(action)
 
@@ -311,36 +316,42 @@ class DesktopOperationsMixin:
                 return
 
         def action():
-            deleted_count = self.actions.cleanup_recycle_bin_items_older_than(days)
-            if deleted_count > 0:
-                title = "Recycle Bin Auto-Clean" if automatic else "Recycle Bin Cleanup"
-                if should_show_automatic_popup:
-                    self._show_timed_message(
-                        self._message_box_icon("Information"),
-                        title,
-                        f"Deleted {deleted_count} Recycle Bin item(s) older than {days} days.",
-                    )
-                if automatic and should_show_automatic_popup:
-                    self.state["recycle_bin_last_auto_clean_popup_days"] = days
-                    self._save_state_safely(self.state)
-                return
+            try:
+                deleted_count = self.actions.cleanup_recycle_bin_items_older_than(days)
+                if deleted_count > 0:
+                    title = "Recycle Bin Auto-Clean" if automatic else "Recycle Bin Cleanup"
+                    if should_show_automatic_popup:
+                        self._show_timed_message(
+                            self._message_box_icon("Information"),
+                            title,
+                            f"Deleted {deleted_count} Recycle Bin item(s) older than {days} days.",
+                        )
+                    if automatic and should_show_automatic_popup:
+                        self.state["recycle_bin_last_auto_clean_popup_days"] = days
+                        self._save_state_safely(self.state)
+                    return
 
-            if automatic:
-                if should_show_automatic_popup:
-                    self._show_timed_message(
-                        self._message_box_icon("Information"),
-                        "Recycle Bin Auto-Clean",
-                        f"No Recycle Bin items older than {days} days were found.",
-                    )
-                    self.state["recycle_bin_last_auto_clean_popup_days"] = days
-                    self._save_state_safely(self.state)
-                return
+                if automatic:
+                    if should_show_automatic_popup:
+                        self._show_timed_message(
+                            self._message_box_icon("Information"),
+                            "Recycle Bin Auto-Clean",
+                            f"No Recycle Bin items older than {days} days were found.",
+                        )
+                        self.state["recycle_bin_last_auto_clean_popup_days"] = days
+                        self._save_state_safely(self.state)
+                    return
 
-            self._show_timed_message(
-                self._message_box_icon("Information"),
-                "Recycle Bin Cleanup",
-                f"No Recycle Bin items older than {days} days were found.",
-            )
+                self._show_timed_message(
+                    self._message_box_icon("Information"),
+                    "Recycle Bin Cleanup",
+                    f"No Recycle Bin items older than {days} days were found.",
+                )
+            finally:
+                if not automatic:
+                    close_recycle_bin = getattr(self.actions, "close_recycle_bin", None)
+                    if callable(close_recycle_bin):
+                        close_recycle_bin()
 
         if automatic:
             action()
