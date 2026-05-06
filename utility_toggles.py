@@ -102,7 +102,7 @@ class UtilityActionsManager:
                     )()
                 )
 
-        print(f"[INFO] Maximize All toggled → {enabled}")
+        print(f"[INFO] Maximize All toggled -> {enabled}")
 
         hwnd = None
         if self.app and hasattr(self.app, "winId"):
@@ -204,7 +204,7 @@ class UtilityActionsManager:
         return enabled
 
     def backup_pinned_shortcuts(self, backup_folder: str | None = None) -> int:
-        print("[BACKUP] Starting backup of pinned shortcuts…")
+        print("[BACKUP] Starting backup of pinned shortcuts...")
 
         pinned_path = os.path.join(
             os.environ.get("APPDATA", ""),
@@ -582,15 +582,15 @@ def restore_all_except_gui(skip_hwnd: int) -> None:
     win32gui.EnumWindows(enum_handler, None)
 
 def theme_intent(dark_mode: bool) -> bool:
-    print(f"[THEME] Theme intent set → {'Dark' if dark_mode else 'Light'}")
+    print(f"[THEME] Theme intent set -> {'Dark' if dark_mode else 'Light'}")
     return dark_mode
 
 def usb_reminder_intent(enabled: bool) -> bool:
-    print(f"[INFO] USB Reminder intent → {enabled}")
+    print(f"[INFO] USB Reminder intent -> {enabled}")
     return enabled
 
 def mover_options_intent(enabled: bool) -> bool:
-    print(f"[INFO] Screen Mover options intent → {enabled}")
+    print(f"[INFO] Screen Mover options intent -> {enabled}")
     return enabled
 
 

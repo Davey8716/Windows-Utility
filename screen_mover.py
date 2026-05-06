@@ -300,8 +300,17 @@ class ScreenMoverWorker:
         except Exception:
             return ""
 
+    def _is_file_explorer_window(self, hwnd):
+        try:
+            class_name = win32gui.GetClassName(hwnd)
+        except Exception:
+            return False
+        return class_name in {"CabinetWClass", "ExploreWClass"}
+
     def _is_system_window(self, hwnd):
         exe = self._get_window_exe(hwnd)
+        if exe == "explorer.exe" and self._is_file_explorer_window(hwnd):
+            return False
         return exe in {
             "explorer.exe",
             "shellexperiencehost.exe",

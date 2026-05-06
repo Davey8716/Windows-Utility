@@ -1,4 +1,5 @@
 import sys
+import inspect
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +11,13 @@ from state_manager import save_state
 
 
 class DesktopOperationsMixin:
+    def _save_state_safely(self, state: dict) -> None:
+        save_state_fn = self._get_app_module_attr("save_state", save_state)
+        try:
+            save_state_fn(state)
+        except Exception as exc:
+            print(f"[STATE] Save failed: {exc}")
+
     def _show_organizing_timed_message(
         self,
         icon,
@@ -17,13 +25,27 @@ class DesktopOperationsMixin:
         text: str,
         timeout_ms: int = 10_000,
     ):
-        return self._show_timed_message(
+        show_timed_message = self._show_timed_message
+        try:
+            params = inspect.signature(show_timed_message).parameters
+        except (TypeError, ValueError):
+            params = {}
+
+        if "merge_group" in params and "merge_title" in params:
+            return show_timed_message(
+                icon,
+                title,
+                text,
+                timeout_ms=timeout_ms,
+                merge_group="organizing_utilities",
+                merge_title="Organising Utilities",
+            )
+
+        return show_timed_message(
             icon,
             title,
             text,
             timeout_ms=timeout_ms,
-            merge_group="organizing_utilities",
-            merge_title="Organising Utilities",
         )
 
     def _get_app_module_attr(self, name: str, default):
@@ -52,7 +74,10 @@ class DesktopOperationsMixin:
 
             img.save(save_path)
             self.state["desktop_screenshot_last_path"] = str(save_path)
-            save_state_fn(self.state)
+            try:
+                save_state_fn(self.state)
+            except Exception as exc:
+                print(f"[STATE] Save failed: {exc}")
             print(f"[SCREENSHOT] Saved: {save_path}")
             self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
@@ -255,7 +280,7 @@ class DesktopOperationsMixin:
                 )
             if automatic and should_show_automatic_popup:
                 self.state["recycle_bin_last_auto_clean_popup_days"] = days
-                save_state(self.state)
+                self._save_state_safely(self.state)
             return
 
         if automatic:
@@ -266,7 +291,7 @@ class DesktopOperationsMixin:
                     f"No Recycle Bin items older than {days} days were found.",
                 )
                 self.state["recycle_bin_last_auto_clean_popup_days"] = days
-                save_state(self.state)
+                self._save_state_safely(self.state)
             return
 
         self._show_timed_message(
@@ -297,7 +322,10 @@ class DesktopOperationsMixin:
             new_path.mkdir(parents=True, exist_ok=False)
             folder_input.clear()
             self.state["folder_to_desktop_name"] = ""
-            save_state_fn(self.state)
+            try:
+                save_state_fn(self.state)
+            except Exception as exc:
+                print(f"[STATE] Save failed: {exc}")
             self._show_organizing_timed_message(
                 self._message_box_icon("Information"),
                 "Folder to Desktop",

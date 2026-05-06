@@ -158,7 +158,8 @@ class ExternalDriveMixin:
             return
 
         menu = QMenu(self.connected_drives_field)
-        menu.setStyleSheet(styles.message_popup_menu_style())
+        if hasattr(menu, "setStyleSheet"):
+            menu.setStyleSheet(styles.message_popup_menu_style())
         actions = {}
         for drive_path in drives:
             action = menu.addAction(f"Safely Remove {drive_path}")

@@ -14,6 +14,14 @@ class _DummyTrayActivationReason:
 class _DummyWindowType:
     WindowStaysOnTopHint = 1
     WindowMaximizeButtonHint = 2
+    FramelessWindowHint = 3
+    CustomizeWindowHint = 4
+    WindowTitleHint = 5
+    WindowSystemMenuHint = 6
+    WindowCloseButtonHint = 7
+    WindowMinimizeButtonHint = 8
+    WindowContextHelpButtonHint = 9
+    Tool = 10
 
 
 class _DummyScrollBarPolicy:
@@ -25,6 +33,7 @@ class _DummyScrollBarPolicy:
 class _DummyAlignmentFlag:
     AlignTop = 0
     AlignCenter = 1
+    AlignHCenter = 2
 
 
 class _DummyCursorShape:
@@ -50,6 +59,13 @@ class _DummyQt:
     AlignmentFlag = _DummyAlignmentFlag
     CursorShape = _DummyCursorShape
     ArrowType = _DummyArrowType
+    class WindowModality:
+        NonModal = 0
+    class WidgetAttribute:
+        WA_DeleteOnClose = 0
+    class ItemDataRole:
+        BackgroundRole = 0
+        ForegroundRole = 1
     class TextElideMode:
         ElideNone = 0
     AlignCenter = 1
@@ -63,6 +79,11 @@ class _DummyPoint:
 class _DummySize:
     def __init__(self, *_args, **_kwargs):
         pass
+
+
+class _DummyModelIndex:
+    def isValid(self):
+        return False
 
 
 class _DummyEvent:
@@ -129,6 +150,11 @@ class _DummySystemTrayIcon(_BaseWidget):
 
 
 class _DummyFont:
+    def __init__(self, *_args, **_kwargs):
+        pass
+
+
+class _DummyFontMetrics:
     def __init__(self, *_args, **_kwargs):
         pass
 
@@ -219,6 +245,7 @@ def install_dependency_stubs():
         qtcore.QProcess = _DummyQProcess
         qtcore.QObject = _BaseWidget
         qtcore.QPoint = _DummyPoint
+        qtcore.QModelIndex = _DummyModelIndex
         qtcore.QSize = _DummySize
         qtcore.QRectF = _DummyPoint
         qtcore.QEvent = _DummyEvent
@@ -237,19 +264,25 @@ def install_dependency_stubs():
         qtwidgets.QListWidgetItem = _BaseWidget
         qtwidgets.QListWidget = _BaseWidget
         qtwidgets.QApplication = _DummyApplication
+        qtwidgets.QDialogButtonBox = _BaseWidget
         qtwidgets.QFrame = _BaseWidget
         qtwidgets.QSizePolicy = _DummySizePolicy
         qtwidgets.QFileDialog = _DummyFileDialog
         qtwidgets.QMessageBox = _DummyMessageBox
         qtwidgets.QSystemTrayIcon = _DummySystemTrayIcon
         qtwidgets.QMenu = _BaseWidget
+        qtwidgets.QStyle = _BaseWidget
+        qtwidgets.QStyledItemDelegate = _BaseWidget
         qtwidgets.QToolTip = _DummyToolTip
 
         qtgui.QIcon = _DummyIcon
         qtgui.QAction = _BaseWidget
         qtgui.QColor = _DummyColor
         qtgui.QFont = _DummyFont
+        qtgui.QFontMetrics = _DummyFontMetrics
+        qtgui.QPainter = _BaseWidget
         qtgui.QPainterPath = _BaseWidget
+        qtgui.QPixmap = _BaseWidget
         qtgui.QRegion = _BaseWidget
 
         pyside6.QtCore = qtcore
@@ -265,6 +298,7 @@ def install_dependency_stubs():
         win32gui = types.ModuleType("win32gui")
         win32gui.GetWindowText = lambda _hwnd: ""
         win32gui.GetClassName = lambda _hwnd: ""
+        win32gui.IsWindow = lambda _hwnd: True
         win32gui.IsWindowVisible = lambda _hwnd: True
         win32gui.GetParent = lambda _hwnd: 0
         win32gui.GetWindowPlacement = lambda _hwnd: (None, 0)

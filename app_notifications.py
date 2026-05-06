@@ -11,6 +11,24 @@ from PySide6.QtWidgets import (
 
 
 class WindowMessageMixin:
+    def _get_grouped_timed_message_boxes(self) -> dict:
+        grouped_boxes = getattr(self, "_grouped_timed_message_boxes", None)
+        if isinstance(grouped_boxes, dict):
+            return grouped_boxes
+
+        grouped_boxes = {}
+        self._grouped_timed_message_boxes = grouped_boxes
+        return grouped_boxes
+
+    def _get_active_message_boxes(self) -> list:
+        active_boxes = getattr(self, "_active_message_boxes", None)
+        if isinstance(active_boxes, list):
+            return active_boxes
+
+        active_boxes = []
+        self._active_message_boxes = active_boxes
+        return active_boxes
+
     def _apply_message_box_icon(self, message_box: QMessageBox, icon) -> None:
         if icon == self._message_box_icon("NoIcon"):
             message_box.setIcon(icon)
@@ -190,10 +208,9 @@ class WindowMessageMixin:
         merge_title: str | None = None,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
+        grouped_boxes = self._get_grouped_timed_message_boxes()
         if merge_group:
-            active_grouped_box = getattr(self, "_grouped_timed_message_boxes", {}).get(
-                merge_group
-            )
+            active_grouped_box = grouped_boxes.get(merge_group)
             if active_grouped_box is not None:
                 active_grouped_box._grouped_entries.append((title, text))
                 if icon == self._message_box_icon("Warning"):
@@ -235,16 +252,16 @@ class WindowMessageMixin:
             tool_window=True,
         )
         self._prepare_message_box_layout(message_box)
-        self._active_message_boxes.append(message_box)
+        self._get_active_message_boxes().append(message_box)
         close_timer = QTimer(message_box)
         close_timer.setSingleShot(True)
         message_box._close_timer = close_timer
 
         def cleanup_message_box():
-            if message_box in self._active_message_boxes:
-                self._active_message_boxes.remove(message_box)
+            active_boxes = self._get_active_message_boxes()
+            if message_box in active_boxes:
+                active_boxes.remove(message_box)
             if merge_group:
-                grouped_boxes = getattr(self, "_grouped_timed_message_boxes", {})
                 if grouped_boxes.get(merge_group) is message_box:
                     grouped_boxes.pop(merge_group, None)
             message_box.deleteLater()
@@ -252,7 +269,7 @@ class WindowMessageMixin:
         message_box.finished.connect(lambda _: cleanup_message_box())
         close_timer.timeout.connect(message_box.accept)
         if merge_group:
-            self._grouped_timed_message_boxes[merge_group] = message_box
+            grouped_boxes[merge_group] = message_box
         message_box.show()
         self._apply_rounded_window_mask(message_box)
         close_timer.start(timeout_ms)
@@ -284,11 +301,12 @@ class WindowMessageMixin:
         self._prepare_message_box_layout(message_box)
         message_box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         message_box.setModal(False)
-        self._active_message_boxes.append(message_box)
+        self._get_active_message_boxes().append(message_box)
 
         def cleanup_message_box():
-            if message_box in self._active_message_boxes:
-                self._active_message_boxes.remove(message_box)
+            active_boxes = self._get_active_message_boxes()
+            if message_box in active_boxes:
+                active_boxes.remove(message_box)
             if on_close:
                 on_close()
             message_box.deleteLater()
