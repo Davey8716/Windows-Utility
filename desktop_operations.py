@@ -17,14 +17,19 @@ class DesktopOperationsMixin:
             return bool(app_state.get("minimize_after_use_enabled", True))
         return True
 
+    def _minimize_self_if_configured(self) -> bool:
+        if not self._should_minimize_after_use():
+            return False
+        self.showMinimized()
+        return True
+
     def _run_with_optional_minimize(
         self,
         action,
         *,
         delay_ms_when_minimized: int = 0,
     ) -> None:
-        if self._should_minimize_after_use():
-            self.showMinimized()
+        if self._minimize_self_if_configured():
             if delay_ms_when_minimized > 0:
                 QTimer.singleShot(delay_ms_when_minimized, action)
                 return

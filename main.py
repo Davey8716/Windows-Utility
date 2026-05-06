@@ -848,7 +848,7 @@ class UtilityControlApp(
             if self.actions.desktop_zen_mode_toggle(checked) is not None:
                 save_state(state)
                 if checked and getattr(self, "tray_manager", None):
-                    self.hide()
+                    self._minimize_self_if_configured()
                 return
 
             desktop_zen_btn.blockSignals(True)

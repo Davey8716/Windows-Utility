@@ -98,7 +98,9 @@ class TrayIconManager(QObject):
             if hasattr(self.app, "save_all_settings"):
                 self.app.save_all_settings()
             if enabled:
-                self.app.hide()
+                minimize_self = getattr(self.app, "_minimize_self_if_configured", None)
+                if callable(minimize_self):
+                    minimize_self()
             self.sync_zen_mode_action()
             return
 

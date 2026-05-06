@@ -1,5 +1,14 @@
 import unittest
+import sys
+from pathlib import Path
 from unittest.mock import Mock, patch
+
+TESTS_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = TESTS_DIR.parent
+for path in (PROJECT_ROOT, TESTS_DIR):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
 
 from _stubs import install_dependency_stubs
 
@@ -76,6 +85,30 @@ class TrayIconManagerTests(unittest.TestCase):
         app.prepare_for_shutdown.assert_called_once_with()
         app.close.assert_called_once_with()
         qt_app.quit.assert_called_once_with()
+
+    def test_toggle_zen_mode_uses_optional_minimize_helper_when_enabled(self):
+        app = Mock()
+        app.desktop_zen_btn = None
+        app.state = {}
+        app.actions.desktop_zen_mode_toggle.return_value = True
+        manager = tray_toggles.TrayIconManager(app)
+
+        manager.toggle_zen_mode(True)
+
+        app._minimize_self_if_configured.assert_called_once_with()
+        app.save_all_settings.assert_called_once_with()
+
+    def test_toggle_zen_mode_skips_optional_minimize_helper_when_disabled(self):
+        app = Mock()
+        app.desktop_zen_btn = None
+        app.state = {}
+        app.actions.desktop_zen_mode_toggle.return_value = True
+        manager = tray_toggles.TrayIconManager(app)
+
+        manager.toggle_zen_mode(False)
+
+        app._minimize_self_if_configured.assert_not_called()
+        app.save_all_settings.assert_called_once_with()
 
 
 if __name__ == "__main__":

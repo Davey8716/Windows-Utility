@@ -212,6 +212,9 @@ class GuiMinimizeAfterUseLiveTests(unittest.TestCase):
         self.window.actions.backup_pinned_shortcuts = Mock(
             side_effect=lambda path: self._record("backup_taskbar", path, return_value=2)
         )
+        self.window.actions.desktop_zen_mode_toggle = Mock(
+            side_effect=lambda enabled: self._record("desktop_zen_mode_toggle", enabled, return_value=enabled)
+        )
         self.window.actions.open_backup_folder = Mock(
             side_effect=lambda path: self._record("open_backup_folder", path, return_value=True)
         )
@@ -374,6 +377,13 @@ class GuiMinimizeAfterUseLiveTests(unittest.TestCase):
         self.assertEqual(toggle.isChecked(), enabled)
         self.assertEqual(self.window.state["minimize_after_use_enabled"], enabled)
 
+    def _set_zen_mode(self, enabled):
+        toggle = self._find_button_prefix("Zen Mode")
+        if toggle.isChecked() != enabled:
+            self._click_button(toggle)
+        self.assertEqual(toggle.isChecked(), enabled)
+        self.assertEqual(self.window.state["desktop_zen_mode_enabled"], enabled)
+
     def _assert_action(self, label, trigger, *, expected_app, expected_panel, wait_ms=80, after=None):
         before_app = self.app_minimize.call_count
         before_panel = self.panel_minimize.call_count
@@ -425,6 +435,19 @@ class GuiMinimizeAfterUseLiveTests(unittest.TestCase):
 
         for label, enabled, expected_app_minimize, expected_panel_minimize in scenarios:
             self._set_minimize_after_use(enabled)
+
+            self._assert_action(
+                f"{label}: Zen Mode On",
+                lambda: self._set_zen_mode(True),
+                expected_app=expected_app_minimize,
+                expected_panel=0,
+            )
+            self._assert_action(
+                f"{label}: Zen Mode Off",
+                lambda: self._set_zen_mode(False),
+                expected_app=0,
+                expected_panel=0,
+            )
 
             self._assert_action(
                 f"{label}: Desktop Screenshot",

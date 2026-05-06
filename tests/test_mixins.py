@@ -5,8 +5,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+TESTS_DIR = Path(__file__).resolve().parent
+for path in (PROJECT_ROOT, TESTS_DIR):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
 
 from _stubs import install_dependency_stubs
 
@@ -129,6 +132,25 @@ class WindowMessageMixinTests(unittest.TestCase):
 
         self.assertIsNone(result)
         on_close.assert_called_once_with()
+
+
+class DesktopOperationsMixinTests(unittest.TestCase):
+    def test_minimize_self_if_configured_minimizes_when_enabled(self):
+        app = _DesktopApp()
+
+        minimized = app._minimize_self_if_configured()
+
+        self.assertTrue(minimized)
+        app.showMinimized.assert_called_once_with()
+
+    def test_minimize_self_if_configured_skips_when_disabled(self):
+        app = _DesktopApp()
+        app.state["minimize_after_use_enabled"] = False
+
+        minimized = app._minimize_self_if_configured()
+
+        self.assertFalse(minimized)
+        app.showMinimized.assert_not_called()
 
 
 class ExternalDriveMixinTests(unittest.TestCase):
