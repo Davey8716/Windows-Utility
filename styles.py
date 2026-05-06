@@ -602,42 +602,6 @@ def organizing_combo_style(font_size: int) -> str:
         }}
     """
 
-
-def recycle_bin_age_rule_combo_style(font_size: int) -> str:
-    disabled_bg = QColor(96, 96, 96) if THEME_IS_DARK else QColor(168, 168, 168)
-    disabled_drop_bg = QColor(78, 78, 78) if THEME_IS_DARK else QColor(146, 146, 146)
-    disabled_text = QColor(214, 214, 214) if THEME_IS_DARK else QColor(92, 92, 92)
-    disabled_border = QColor(132, 132, 132) if THEME_IS_DARK else QColor(126, 126, 126)
-    disabled_arrow = QColor(184, 184, 184) if THEME_IS_DARK else QColor(88, 88, 88)
-
-    return organizing_combo_style(font_size) + f"""
-        QComboBox:disabled {{
-            background-color: {qcolor_css(disabled_bg)};
-            color: {qcolor_css(disabled_text)};
-            border: 1px solid {qcolor_css(disabled_border)};
-        }}
-        QComboBox:disabled:hover {{
-            background-color: {qcolor_css(disabled_bg)};
-        }}
-        QComboBox:disabled::drop-down {{
-            background-color: {qcolor_css(disabled_drop_bg)};
-            border-left: 1px solid {qcolor_css(disabled_border)};
-            border-top-right-radius: 3px;
-            border-bottom-right-radius: 3px;
-            subcontrol-origin: padding;
-            subcontrol-position: top right;
-            width: 24px;
-        }}
-        QComboBox:disabled::down-arrow {{
-            image: none;
-            width: 0px;
-            height: 0px;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-top: 7px solid {qcolor_css(disabled_arrow)};
-        }}
-    """
-
 def apply_default_button_size(
     button,
     width: int = DEFAULT_BUTTON_WIDTH,

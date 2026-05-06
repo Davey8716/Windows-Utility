@@ -1170,21 +1170,6 @@ class UtilityControlApp(
             age_rule_values,
             current_age_rule_text,
         )
-        recycle_bin_age_rule_combo.setProperty("recycleBinAgeRuleStyle", True)
-        recycle_bin_age_rule_combo.setEnabled(recycle_bin_auto_clean_enabled)
-
-        def refresh_recycle_bin_age_rule_combo_style() -> None:
-            font_size = int(recycle_bin_age_rule_combo.property("styleFontSize") or 14)
-            if recycle_bin_age_rule_combo.isEnabled():
-                recycle_bin_age_rule_combo.setStyleSheet(
-                    styles.organizing_combo_style(font_size)
-                )
-            else:
-                recycle_bin_age_rule_combo.setStyleSheet(
-                    styles.recycle_bin_age_rule_combo_style(font_size)
-                )
-
-        refresh_recycle_bin_age_rule_combo_style()
         self.register_tooltip(
             recycle_bin_age_rule_combo,
             tooltip_text("recycle_bin_age_rule"),
@@ -1192,16 +1177,24 @@ class UtilityControlApp(
 
         cleanup_rule_label = QLabel("Delete items older than:")
         cleanup_rule_label.setStyleSheet(styles.label_style(font_size=14))
-        recycle_bin_controls_layout.addWidget(cleanup_rule_label, 1, 0)
-        recycle_bin_controls_layout.addWidget(recycle_bin_age_rule_combo, 1, 1)
+        recycle_bin_age_rule_row = QWidget()
+        recycle_bin_age_rule_row_layout = QGridLayout(recycle_bin_age_rule_row)
+        recycle_bin_age_rule_row_layout.setContentsMargins(0, 0, 0, 0)
+        recycle_bin_age_rule_row_layout.setHorizontalSpacing(10)
+        recycle_bin_age_rule_row_layout.setVerticalSpacing(0)
+        recycle_bin_age_rule_row_layout.addWidget(cleanup_rule_label, 0, 0)
+        recycle_bin_age_rule_row_layout.addWidget(recycle_bin_age_rule_combo, 0, 1)
+        recycle_bin_age_rule_row_layout.setColumnStretch(0, 1)
+        recycle_bin_age_rule_row_layout.setColumnStretch(1, 1)
+        recycle_bin_age_rule_row.setVisible(recycle_bin_auto_clean_enabled)
+        recycle_bin_controls_layout.addWidget(recycle_bin_age_rule_row, 1, 0, 1, 2)
         recycle_bin_controls_layout.setColumnStretch(0, 1)
         recycle_bin_controls_layout.setColumnStretch(1, 1)
         recycle_bin_layout.addWidget(recycle_bin_controls)
 
         def on_recycle_bin_auto_clean_changed(checked: bool):
             state["recycle_bin_auto_clean_enabled"] = checked
-            recycle_bin_age_rule_combo.setEnabled(checked)
-            refresh_recycle_bin_age_rule_combo_style()
+            recycle_bin_age_rule_row.setVisible(checked)
             save_state(state)
 
         def on_recycle_bin_age_rule_changed(text: str):
@@ -1420,15 +1413,6 @@ class UtilityControlApp(
                 self._apply_power_action_dropdown_style(combo)
             elif combo.property("surfaceFieldStyle"):
                 combo.setStyleSheet(styles.surfaced_combo_style(font_size=font_size))
-            elif combo.property("recycleBinAgeRuleStyle"):
-                if combo.isEnabled():
-                    combo.setStyleSheet(
-                        styles.organizing_combo_style(font_size=font_size)
-                    )
-                else:
-                    combo.setStyleSheet(
-                        styles.recycle_bin_age_rule_combo_style(font_size=font_size)
-                    )
             else:
                 combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
 

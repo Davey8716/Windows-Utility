@@ -1,8 +1,6 @@
-Fix regression that wiped out the bundling of exe icon to be the tray icon
-
 Change the size of the master toggles left right and panel opener
 
-Fix the ugly af grey shit for the 
+Fix the ugly af grey shit for the Recycle bin actions disabled day dropdown
 
 Threading/lag
 
