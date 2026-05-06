@@ -1196,9 +1196,9 @@ class UtilityControlApp(
         cleanup_actions_combo = make_action_dropdown(
             " Cleanup Actions ",
             {
-                "Empty Recycle Bin": self.empty_recycle_bin,
                 "Open Recycle Bin": self.open_recycle_bin,
-                "Clean Older Items": self.run_recycle_bin_cleanup_now,
+                "Run Auto-Clean Now": self.run_recycle_bin_cleanup_now,
+                "Empty Recycle Bin": self.empty_recycle_bin,
             },
         )
         recycle_bin_controls_layout.addWidget(cleanup_actions_combo, 0, 0)
