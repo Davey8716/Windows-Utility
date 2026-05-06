@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 
 TEXT_LIGHT = QColor(255, 255, 255)
@@ -28,12 +29,66 @@ ORGANIZE_BUTTON_BORDER = QColor(102, 182, 120)
 
 DEFAULT_BUTTON_WIDTH = 180
 DEFAULT_BUTTON_HEIGHT = 30
-ICON_BUTTON_WIDTH = 32
-ICON_BUTTON_HEIGHT = 28
-SECTION_TOGGLE_WIDTH = 28
-SECTION_TOGGLE_HEIGHT = 20
 LEFT_SECTION_MAX_WIDTH = 420
 RIGHT_SECTION_MAX_WIDTH = 492
+
+
+def arrow_glyph(arrow_type: Qt.ArrowType) -> str:
+    return {
+        Qt.ArrowType.LeftArrow: "◀",
+        Qt.ArrowType.RightArrow: "▶",
+        Qt.ArrowType.UpArrow: "▲",
+        Qt.ArrowType.DownArrow: "▼",
+    }.get(arrow_type, "")
+
+
+def side_panel_toggle_slot_size() -> tuple[int, int]:
+    return 40, 28
+
+
+def left_master_toggle_slot_size() -> tuple[int, int]:
+    return 28, 20
+
+
+def right_master_toggle_slot_size() -> tuple[int, int]:
+    return 28, 20
+
+
+def section_toggle_slot_size() -> tuple[int, int]:
+    return 28, 20
+
+
+def _toggle_glyph_style(
+    text_color: QColor,
+    font_size: int,
+) -> str:
+    return f"""
+        QPushButton, QToolButton {{
+            color: {qcolor_css(text_color)};
+            background: transparent;
+            border: none;
+            padding: 0px;
+            font-size: {font_size}px;
+            font-weight: bold;
+            text-align: center;
+        }}
+    """
+
+
+def side_panel_toggle_style(text_color: QColor, hover_color: QColor) -> str:
+    return _toggle_glyph_style(text_color, 25)
+
+
+def left_master_toggle_style(text_color: QColor, hover_color: QColor) -> str:
+    return _toggle_glyph_style(text_color, 20)
+
+
+def right_master_toggle_style(text_color: QColor, hover_color: QColor) -> str:
+    return _toggle_glyph_style(text_color, 18)
+
+
+def section_toggle_style(text_color: QColor, hover_color: QColor) -> str:
+    return _toggle_glyph_style(text_color, 18)
 
 
 def set_theme(is_dark: bool) -> None:
@@ -118,6 +173,7 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
             background: transparent;
             border: none;
             padding: 0px;
+            font-size: {font_size}px;
             font-weight: bold;
             text-align: center;
         }}

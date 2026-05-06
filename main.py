@@ -365,14 +365,22 @@ class UtilityControlApp(
         self.advanced_settings_panel.hide()
 
         self.advanced_settings_toggle = QToolButton(self.root_container)
-        self.advanced_settings_toggle.setFixedSize(
-            styles.ICON_BUTTON_WIDTH,
-            styles.ICON_BUTTON_HEIGHT
-        )
+        self.advanced_settings_toggle.setProperty("sidePanelToggleButton", True)
         self.advanced_settings_toggle.setCursor(Qt.CursorShape.ArrowCursor)
-        self.advanced_settings_toggle.setArrowType(Qt.ArrowType.RightArrow)
+        self.advanced_settings_toggle.setArrowType(Qt.ArrowType.NoArrow)
+        self.advanced_settings_toggle.setText(">")
         self.advanced_settings_toggle.setStyleSheet(
-            styles.arrow_button_style(styles.theme_text_color(), styles.SURFACE_DARK)
+            styles.side_panel_toggle_style(
+                styles.theme_text_color(),
+                styles.SURFACE_DARK,
+            )
+        )
+        side_panel_slot_width, side_panel_slot_height = (
+            styles.side_panel_toggle_slot_size()
+        )
+        self.advanced_settings_toggle.setFixedSize(
+            side_panel_slot_width,
+            side_panel_slot_height,
         )
         self.advanced_settings_toggle.clicked.connect(
             self.toggle_advanced_settings_panel
@@ -413,27 +421,31 @@ class UtilityControlApp(
         title.setStyleSheet(styles.label_style(font_size=20))
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        header_spacer = QWidget(header)
-        header_spacer.setFixedSize(
-            styles.SECTION_TOGGLE_WIDTH,
-            styles.SECTION_TOGGLE_HEIGHT,
-        )
-
         master_btn = QToolButton(header)
-        master_btn.setFixedSize(
-            styles.SECTION_TOGGLE_WIDTH,
-            styles.SECTION_TOGGLE_HEIGHT,
-        )
+        master_btn.setProperty("leftMasterToggleButton", True)
         master_btn.setCursor(Qt.CursorShape.ArrowCursor)
-        master_btn.setArrowType(Qt.ArrowType.DownArrow)
+        master_btn.setArrowType(Qt.ArrowType.NoArrow)
+        master_btn.setText(styles.arrow_glyph(Qt.ArrowType.DownArrow))
         master_btn.setStyleSheet(
-            styles.arrow_button_style(
+            styles.left_master_toggle_style(
                 styles.theme_text_color(),
                 styles.SURFACE_DARK,
-                font_size=16,
             )
         )
+        left_master_slot_width, left_master_slot_height = (
+            styles.left_master_toggle_slot_size()
+        )
+        master_btn.setFixedSize(
+            left_master_slot_width,
+            left_master_slot_height,
+        )
         self.master_collapse_btn_left = master_btn
+
+        header_spacer = QWidget(header)
+        header_spacer.setFixedSize(
+            left_master_slot_width,
+            left_master_slot_height,
+        )
 
         header_layout.addWidget(header_spacer)
         header_layout.addStretch()
@@ -488,24 +500,30 @@ class UtilityControlApp(
             sec_title = QLabel(title_text, sec_header)
             sec_title.setStyleSheet(styles.label_style(font_size=15))
 
-            title_spacer = QWidget(sec_header)
-            title_spacer.setFixedSize(
-                styles.SECTION_TOGGLE_WIDTH,
-                styles.SECTION_TOGGLE_HEIGHT,
-            )
-
             toggle = QToolButton(sec_header)
-            toggle.setFixedSize(styles.SECTION_TOGGLE_WIDTH, styles.SECTION_TOGGLE_HEIGHT)
             toggle.setCursor(Qt.CursorShape.ArrowCursor)
-            toggle.setArrowType(Qt.ArrowType.DownArrow)
+            toggle.setArrowType(Qt.ArrowType.NoArrow)
+            toggle.setText(styles.arrow_glyph(Qt.ArrowType.DownArrow))
             toggle.setStyleSheet(
-                styles.arrow_button_style(
+                styles.section_toggle_style(
                     styles.theme_text_color(),
                     styles.SURFACE_DARK,
-                    font_size=16,
                 )
             )
+            section_toggle_slot_width, section_toggle_slot_height = (
+                styles.section_toggle_slot_size()
+            )
+            toggle.setFixedSize(
+                section_toggle_slot_width,
+                section_toggle_slot_height,
+            )
             section.toggle_btn = toggle
+
+            title_spacer = QWidget(sec_header)
+            title_spacer.setFixedSize(
+                section_toggle_slot_width,
+                section_toggle_slot_height,
+            )
 
             sec_header_layout.addWidget(title_spacer)
             sec_header_layout.addStretch()
@@ -551,8 +569,10 @@ class UtilityControlApp(
                 self.save_all_settings()
 
             toggle.clicked.connect(toggle_section)
-            toggle.setArrowType(
-                Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
+            toggle.setText(
+                styles.arrow_glyph(
+                    Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
+                )
             )
 
             return section, content_layout
@@ -1234,8 +1254,10 @@ class UtilityControlApp(
             self.master_toggle_left_state = new_state
             self.state["master_toggle_left"] = new_state
 
-            master_btn.setArrowType(
-                Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
+            master_btn.setText(
+                styles.arrow_glyph(
+                    Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
+                )
             )
 
             for section in self.left_sections:
@@ -1244,15 +1266,19 @@ class UtilityControlApp(
             self.save_all_settings()
             
         master_btn.clicked.connect(toggle_all)
-        master_btn.setArrowType(
-            Qt.ArrowType.DownArrow if self.master_toggle_left_state else Qt.ArrowType.UpArrow
+        master_btn.setText(
+            styles.arrow_glyph(
+                Qt.ArrowType.DownArrow
+                if self.master_toggle_left_state
+                else Qt.ArrowType.UpArrow
+            )
         )
 
         if self.advanced_settings_open:
             self.WINDOW_WIDTH = self.EXPANDED_WIDTH
             self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
             self.advanced_settings_panel.show()
-            self.advanced_settings_toggle.setArrowType(Qt.ArrowType.LeftArrow)
+            self.advanced_settings_toggle.setText("<")
 
         self._update_panel_geometries()
         self._position_advanced_settings_toggle()
@@ -1264,11 +1290,11 @@ class UtilityControlApp(
         if self.advanced_settings_open:
             self.WINDOW_WIDTH = self.EXPANDED_WIDTH
             self.advanced_settings_panel.show()
-            self.advanced_settings_toggle.setArrowType(Qt.ArrowType.LeftArrow)
+            self.advanced_settings_toggle.setText("<")
         else:
             self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
             self.advanced_settings_panel.hide()
-            self.advanced_settings_toggle.setArrowType(Qt.ArrowType.RightArrow)
+            self.advanced_settings_toggle.setText(">")
 
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         self._update_panel_geometries()
@@ -1296,8 +1322,10 @@ class UtilityControlApp(
         if hasattr(section, "frame"):
             section.frame.setVisible(is_open)
         if hasattr(section, "toggle_btn"):
-            section.toggle_btn.setArrowType(
-                Qt.ArrowType.DownArrow if is_open else Qt.ArrowType.UpArrow
+            section.toggle_btn.setText(
+                styles.arrow_glyph(
+                    Qt.ArrowType.DownArrow if is_open else Qt.ArrowType.UpArrow
+                )
             )
         self._sync_left_section_spacing(section)
 
@@ -1433,23 +1461,36 @@ class UtilityControlApp(
 
     def update_collapsible_arrow_colours(self):
         colors = self._get_arrow_colors()
-        tool_button_styles = {
-            (styles.ICON_BUTTON_WIDTH, styles.ICON_BUTTON_HEIGHT): styles.arrow_button_style(
-                colors["text"], colors["hover"], font_size=18
-            ),
-            (styles.SECTION_TOGGLE_WIDTH, styles.SECTION_TOGGLE_HEIGHT): styles.arrow_button_style(
-                colors["text"], colors["hover"], font_size=16
-            ),
-        }
 
         for btn in self.findChildren(QToolButton):
-            size_key = (btn.width(), btn.height())
-            btn.setStyleSheet(
-                tool_button_styles.get(
-                    size_key,
-                    styles.arrow_button_style(colors["text"], colors["hover"], font_size=18),
+            if btn.property("leftMasterToggleButton"):
+                btn.setStyleSheet(
+                    styles.left_master_toggle_style(
+                        colors["text"],
+                        colors["hover"],
+                    )
                 )
-            )
+            elif btn.property("rightMasterToggleButton"):
+                btn.setStyleSheet(
+                    styles.right_master_toggle_style(
+                        colors["text"],
+                        colors["hover"],
+                    )
+                )
+            elif btn.property("sidePanelToggleButton"):
+                btn.setStyleSheet(
+                    styles.side_panel_toggle_style(
+                        colors["text"],
+                        colors["hover"],
+                    )
+                )
+            else:
+                btn.setStyleSheet(
+                    styles.section_toggle_style(
+                        colors["text"],
+                        colors["hover"],
+                    )
+                )
 
     def register_tooltip(self, widget: QWidget, text: str, delay: int = 10):
         manager = QtTooltipManager(widget, text, delay=delay)
@@ -1486,14 +1527,22 @@ class UtilityControlApp(
 
     def _refresh_master_toggle_buttons(self):
         if hasattr(self, "master_collapse_btn_left"):
-            self.master_collapse_btn_left.setArrowType(
-                Qt.ArrowType.DownArrow if self.state.get("master_toggle_left", True) else Qt.ArrowType.UpArrow
+            self.master_collapse_btn_left.setText(
+                styles.arrow_glyph(
+                    Qt.ArrowType.DownArrow
+                    if self.state.get("master_toggle_left", True)
+                    else Qt.ArrowType.UpArrow
+                )
             )
 
         right_button = getattr(self, "right_tools_panel", None)
         if right_button and hasattr(right_button, "master_collapse_btn_right"):
-            right_button.master_collapse_btn_right.setArrowType(
-                Qt.ArrowType.DownArrow if self.state.get("master_toggle_right", False) else Qt.ArrowType.UpArrow
+            right_button.master_collapse_btn_right.setText(
+                styles.arrow_glyph(
+                    Qt.ArrowType.DownArrow
+                    if self.state.get("master_toggle_right", False)
+                    else Qt.ArrowType.UpArrow
+                )
             )
 
     def save_all_settings(self):

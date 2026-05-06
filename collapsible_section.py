@@ -35,36 +35,38 @@ class CollapsibleSection(QWidget):
         self.label = QLabel(title_text, self.header)
         self.label.setStyleSheet(styles.label_style(font_size=15))
 
-        title_spacer = QWidget(self.header)
-        title_spacer.setFixedSize(
-            styles.SECTION_TOGGLE_WIDTH,
-            styles.SECTION_TOGGLE_HEIGHT,
-        )
-
-        self.header_layout.addWidget(title_spacer)
-        self.header_layout.addStretch()
-        self.header_layout.addWidget(self.label)
-
-        self.header_layout.addStretch()
-
         self.toggle_btn = QToolButton(self.header)
-        self.toggle_btn.setFixedSize(
-            styles.SECTION_TOGGLE_WIDTH,
-            styles.SECTION_TOGGLE_HEIGHT
-        )
         self.toggle_btn.setAutoRaise(True)
-        self.toggle_btn.setArrowType(
-            Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
+        self.toggle_btn.setArrowType(Qt.ArrowType.NoArrow)
+        self.toggle_btn.setText(
+            styles.arrow_glyph(
+                Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
+            )
         )
         self.toggle_btn.setStyleSheet(
-            styles.arrow_button_style(
+            styles.section_toggle_style(
                 styles.theme_text_color(),
                 styles.SURFACE_DARK,
-                font_size=16,
             )
+        )
+        section_toggle_slot_width, section_toggle_slot_height = (
+            styles.section_toggle_slot_size()
+        )
+        self.toggle_btn.setFixedSize(
+            section_toggle_slot_width,
+            section_toggle_slot_height,
         )
         self.toggle_btn.clicked.connect(self.toggle)
 
+        title_spacer = QWidget(self.header)
+        title_spacer.setFixedSize(
+            section_toggle_slot_width,
+            section_toggle_slot_height,
+        )
+        self.header_layout.addWidget(title_spacer)
+        self.header_layout.addStretch()
+        self.header_layout.addWidget(self.label)
+        self.header_layout.addStretch()
         self.header_layout.addWidget(self.toggle_btn)
         self.main_layout.addWidget(self.header)
 
@@ -108,8 +110,10 @@ class CollapsibleSection(QWidget):
         self.open = not self.open
         self.container.setVisible(self.open)
         self.content.setVisible(self.open)
-        self.toggle_btn.setArrowType(
-            Qt.ArrowType.DownArrow if self.open else Qt.ArrowType.UpArrow
+        self.toggle_btn.setText(
+            styles.arrow_glyph(
+                Qt.ArrowType.DownArrow if self.open else Qt.ArrowType.UpArrow
+            )
         )
 
         # Resize window if supported
