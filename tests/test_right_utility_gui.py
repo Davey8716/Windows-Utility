@@ -297,6 +297,16 @@ class RightUtilityGuiTests(unittest.TestCase):
         self.assertEqual(panel.sidebar_output.text, "Running: ipconfig /flushdns\n")
         self.assertEqual(_FakeQProcess.instances[-1].start_command, "ipconfig /flushdns")
 
+    def test_restart_explorer_uses_shell_execution(self):
+        panel = self.make_panel()
+        with patch.object(panel, "_run_and_output") as run_and_output:
+            panel.restart_explorer()
+
+        run_and_output.assert_called_once_with(
+            "taskkill /f /im explorer.exe && start explorer",
+            shell=True,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

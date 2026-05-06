@@ -893,7 +893,10 @@ class AdvancedToolsPanel(QWidget):
         self._run_and_output("ipconfig")
 
     def restart_explorer(self):
-        self._run_and_output("taskkill /f /im explorer.exe && start explorer")
+        self._run_and_output(
+            "taskkill /f /im explorer.exe && start explorer",
+            shell=True,
+        )
 
     def restart_bluetooth(self):
         self._run_and_output("powershell Restart-Service bthserv -Force")
