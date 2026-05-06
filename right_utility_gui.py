@@ -73,7 +73,6 @@ def _hidden_startupinfo():
     startupinfo.wShowWindow = 0
     return startupinfo
 
-
 def get_drive_info():
     usb_drives = get_usb_drive_letters()
     drives = []
@@ -102,7 +101,6 @@ def get_drive_info():
             }
         )
     return drives
-
 
 class AdvancedToolsPanel(QWidget):
     OUTER_SIDE_PADDING = 14
