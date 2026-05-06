@@ -586,11 +586,18 @@ class AdvancedToolsPanel(QWidget):
             self.showMinimized()
         action()
 
+    def _run_without_minimize(self, action):
+        def wrapper():
+            action()
+
+        wrapper.skip_minimize_after_use = True
+        return wrapper
+
     def _network_utilities(self):
         return {
             "Network Connections": self.open_network_connections,
             "Firewall": self.open_firewall,
-            "IP Configuration": lambda: subprocess.Popen(["cmd", "/k", "ipconfig"]),
+            "IP Configuration": self._run_without_minimize(self.show_ip_config),
             "Router Login": self.app.actions.open_router_page,
         }
 
@@ -632,7 +639,10 @@ class AdvancedToolsPanel(QWidget):
                 return
             action = actions_map.get(text)
             if action:
-                self._minimize_and_run(action)
+                if getattr(action, "skip_minimize_after_use", False):
+                    action()
+                else:
+                    self._minimize_and_run(action)
             combo.setCurrentText(placeholder)
 
         combo.currentTextChanged.connect(runner)
@@ -642,7 +652,6 @@ class AdvancedToolsPanel(QWidget):
         return {
             "Flush DNS": self.flush_dns,
             "Renew DHCP Lease": self.renew_ip,
-            "IP Config": self.show_ip_config,
             "Restart Explorer": self.restart_explorer,
             "Restart Bluetooth Service": self.restart_bluetooth,
         }

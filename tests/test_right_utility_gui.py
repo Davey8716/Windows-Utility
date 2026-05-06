@@ -122,6 +122,7 @@ class RightUtilityGuiTests(unittest.TestCase):
         panel = self.make_panel()
         with patch.object(panel, "open_network_connections") as open_network_connections, \
              patch.object(panel, "open_firewall") as open_firewall, \
+             patch.object(panel, "show_ip_config") as show_ip_config, \
              patch.object(right_utility_gui.subprocess, "Popen") as popen:
             actions = panel._network_utilities()
 
@@ -132,8 +133,16 @@ class RightUtilityGuiTests(unittest.TestCase):
 
         open_network_connections.assert_called_once_with()
         open_firewall.assert_called_once_with()
-        self.assertEqual(popen.call_args_list, [unittest.mock.call(["cmd", "/k", "ipconfig"])])
+        show_ip_config.assert_called_once_with()
+        self.assertEqual(popen.call_args_list, [])
         panel.app.actions.open_router_page.assert_called_once_with()
+
+    def test_network_ip_configuration_action_skips_minimize_flag(self):
+        panel = self.make_panel()
+
+        actions = panel._network_utilities()
+
+        self.assertTrue(getattr(actions["IP Configuration"], "skip_minimize_after_use", False))
 
     def test_startup_power_utilities_actions_use_expected_launchers(self):
         panel = self.make_panel()
@@ -156,6 +165,7 @@ class RightUtilityGuiTests(unittest.TestCase):
         self.assertIs(actions["Renew DHCP Lease"].__self__, panel)
         self.assertIs(actions["Renew DHCP Lease"].__func__, panel.renew_ip.__func__)
         self.assertNotIn("Renew IP", actions)
+        self.assertNotIn("IP Config", actions)
 
     def test_shell_open_uses_shell_execute_without_parameters(self):
         panel = self.make_panel()
