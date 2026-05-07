@@ -469,7 +469,7 @@ def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") 
                 font_family=font_family,
             )}
             background-color: {qcolor_css(themed_surface_field_bg())};
-            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            border: none;
             border-radius: 6px;
             padding: 4px 24px 4px 6px;
         }}
@@ -533,16 +533,15 @@ def power_combo_style(font_size: int) -> str:
 
 def emphasized_surface_line_edit_style(font_size: int) -> str:
     active_bg = PANEL_HOVER if THEME_IS_DARK else QColor(214, 226, 242)
-    active_border = PANEL_BORDER if THEME_IS_DARK else QColor(58, 72, 96)
     return f"""
         QLineEdit {{
             {label_style(
                 font_size=font_size,
                 bold=True,
                 color=themed_surface_field_text(),
-            )}
+            )}            
             background-color: {qcolor_css(active_bg)};
-            border: 2px solid {qcolor_css(active_border)};
+            border: none;
             border-radius: 6px;
             padding: 4px 8px;
             selection-background-color: {qcolor_css(PANEL_BG)};
