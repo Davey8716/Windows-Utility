@@ -140,7 +140,7 @@ class AdvancedToolsPanel(QWidget):
     SIDEBAR_DROPDOWN_TOOLTIP_KEYS = {
         "Network / Sys Quick Fix": "sidebar_dropdown_network_fix",
         "Cleanup / Quick Actions": "sidebar_dropdown_cleanup",
-        "Quick Open": "sidebar_dropdown_quick_open",
+        "Display And Sound": "sidebar_dropdown_quick_open",
         "Sys Integrity & Disk Health": "sidebar_dropdown_integrity",
     }
     SIDE_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH + (OUTER_SIDE_PADDING * 2)
@@ -720,7 +720,6 @@ class AdvancedToolsPanel(QWidget):
 
     def _hardware_utilities(self):
         return {
-            "Advanced Display Settings": self.open_advanced_display_settings,
             "Device Manager": self.open_device_manager,
             "Disk Cleanup": self.open_disk_cleanup,
             "Disk Management": self.open_disk_management,
@@ -975,6 +974,9 @@ class AdvancedToolsPanel(QWidget):
 
     def _sidebar_quick_open_actions(self):
         actions = {
+            "Advanced Display Settings": lambda: self._minimize_and_run(
+                self.open_advanced_display_settings
+            ),
             "Display Settings": lambda: self._minimize_and_run(
                 self.open_display_settings
             ),
@@ -1015,7 +1017,7 @@ class AdvancedToolsPanel(QWidget):
             grid_layout,
             1,
             0,
-            "Quick Open",
+            "Display And Sound",
             self._sidebar_quick_open_actions(),
         )
         self._add_sidebar_dropdown(
