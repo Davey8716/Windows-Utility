@@ -15,6 +15,7 @@ from utility_toggles import STORAGE_SENSE_WINDOW_TITLES
 from universal_bookmarks_export import BraveBookmarksExporter
 import win32file
 from PySide6.QtCore import QEvent, QPoint, QSize, Qt, QTimer, QProcess
+from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -306,9 +307,15 @@ class AdvancedToolsPanel(QWidget):
         self._sidebar_output_last_action_label = None
 
         self.sidebar_output_clear_btn = QToolButton(self.sidebar_output.viewport())
-        self.sidebar_output_clear_btn.setText("x")
+        self.sidebar_output_clear_btn.setText("")
         self.sidebar_output_clear_btn.setCursor(Qt.CursorShape.ArrowCursor)
         self.sidebar_output_clear_btn.setFixedSize(
+            QSize(
+                self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
+                self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
+            )
+        )
+        self.sidebar_output_clear_btn.setIconSize(
             QSize(
                 self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
                 self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
@@ -398,10 +405,29 @@ class AdvancedToolsPanel(QWidget):
             }
             """
         )
+        self._update_sidebar_output_clear_button_icon()
         self.sidebar_output_clear_btn.setStyleSheet(
-            styles.sidebar_output_clear_button_style(12)
+            styles.sidebar_output_clear_button_style()
         )
         self._position_sidebar_output_clear_button()
+
+    def _update_sidebar_output_clear_button_icon(self):
+        icon_size = self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE
+        pixmap = QPixmap(icon_size, icon_size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        pen = QPen(styles.theme_text_color())
+        pen.setWidth(2)
+        painter.setPen(pen)
+
+        margin = 5
+        painter.drawLine(margin, margin, icon_size - margin, icon_size - margin)
+        painter.drawLine(margin, icon_size - margin, icon_size - margin, margin)
+        painter.end()
+
+        self.sidebar_output_clear_btn.setIcon(QIcon(pixmap))
 
     def _position_sidebar_output_clear_button(self):
         viewport = self.sidebar_output.viewport()
