@@ -2,13 +2,10 @@ Threading/lag
 
 Do icons for the last list made in codex, plus do proper icons for the arrow < collapsible section/panel buttons
 
-Fix light mode black colour (too dark)
 
 Make light and dark mode versions of the icons that where made
 
 Button Sizes in general, colours relative to state
-
-Outer spacing for both panels dosnt match
 
 Fix mover arrows so if any app is at the far ends and cant go farther then the arrows in that direction dissapear + animate these
 Fix location of the mmb clicker relative to tabs etc
