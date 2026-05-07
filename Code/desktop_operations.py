@@ -396,7 +396,7 @@ class DesktopOperationsMixin:
             try:
                 if new_path.exists():
                     self._show_organizing_timed_message(
-                        self._message_box_icon("Warning"),
+                        self._message_box_icon("NoIcon"),
                         "Folder to Desktop",
                         "A folder with that name already exists on Desktop.",
                         show_close_now_button=True,
@@ -419,7 +419,7 @@ class DesktopOperationsMixin:
 
             except Exception as exc:
                 self._show_organizing_timed_message(
-                    self._message_box_icon("Warning"),
+                    self._message_box_icon("NoIcon"),
                     "Folder to Desktop",
                     f"Could not create folder:\n{exc}",
                     show_close_now_button=True,
