@@ -803,9 +803,9 @@ class AdvancedToolsPanel(QWidget):
         )
 
     def open_control_panel(self):
-        self.app.actions.open_or_focus_window_titles(
-            ["Control Panel"],
-            lambda: self._shell_execute(self._control_exe_path()),
+        self.app.actions.open_or_focus_explorer_title(
+            "Control Panel",
+            lambda: self._shell_execute("explorer.exe", "shell:ControlPanelFolder"),
         )
 
     def open_credential_manager(self):

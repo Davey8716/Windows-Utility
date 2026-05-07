@@ -76,7 +76,12 @@ class RightUtilityGuiTests(unittest.TestCase):
         )
         panel.app = SimpleNamespace(
             showMinimized=Mock(),
-            actions=SimpleNamespace(open_router_page=Mock()),
+            actions=SimpleNamespace(
+                open_router_page=Mock(),
+                open_or_focus_explorer_title=Mock(
+                    side_effect=lambda _title, launcher: launcher()
+                ),
+            ),
             state={"minimize_after_use_enabled": True},
             _show_modal_message=Mock(),
             _message_box_button=lambda name: {"Yes": 1, "No": 2, "Cancel": 3}.get(name, 0),
@@ -89,6 +94,7 @@ class RightUtilityGuiTests(unittest.TestCase):
         panel = self.make_panel()
         open_or_focus_window_titles = Mock(side_effect=lambda _titles, launcher: launcher())
         panel.app.actions.open_or_focus_window_titles = open_or_focus_window_titles
+        open_or_focus_explorer_title = panel.app.actions.open_or_focus_explorer_title
         with patch.object(panel, "open_system_settings") as open_settings, \
              patch.object(panel, "_shell_execute") as shell_execute, \
              patch.object(right_utility_gui.subprocess, "Popen") as popen:
@@ -101,11 +107,15 @@ class RightUtilityGuiTests(unittest.TestCase):
             actions["System Information"]()
 
         open_settings.assert_called_once_with()
-        self.assertEqual(open_or_focus_window_titles.call_count, 4)
+        open_or_focus_explorer_title.assert_called_once()
+        self.assertEqual(open_or_focus_window_titles.call_count, 3)
         self.assertEqual(
             shell_execute.call_args_list,
             [
-                unittest.mock.call(panel._control_exe_path()),
+                unittest.mock.call(
+                    "explorer.exe",
+                    "shell:ControlPanelFolder",
+                ),
                 unittest.mock.call("lusrmgr.msc"),
                 unittest.mock.call("rstrui.exe"),
             ],
