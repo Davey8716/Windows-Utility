@@ -420,24 +420,42 @@ class UtilityActionsManager:
         return close_window_handles(find_explorer_windows_by_title("This PC"))
 
     def get_storage_sense_window_state(self) -> str:
+        tracked_hwnd = self._get_tracked_storage_sense_handle()
+        if tracked_hwnd:
+            tracked_state = get_window_state_for_handles([tracked_hwnd])
+            if tracked_state != "closed":
+                return tracked_state
         return get_window_state_for_handles(self._find_storage_sense_handles())
 
     def focus_storage_sense(self) -> bool:
-        return focus_window_handles(self._find_storage_sense_handles())
+        return focus_window_handles(self._ordered_storage_sense_handles())
 
     def close_storage_sense(self) -> bool:
-        return close_window_handles(self._find_storage_sense_handles())
+        return close_window_handles(self._ordered_storage_sense_handles())
 
-    def _find_storage_sense_handles(self) -> list[int]:
-        handles: list[int] = []
+    def _get_tracked_storage_sense_handle(self) -> int:
         tracked_hwnd = int(
             getattr(self.app, "_tracked_storage_sense_hwnd", 0) or 0
         )
+        if tracked_hwnd and _is_top_level_window(tracked_hwnd):
+            return tracked_hwnd
+        return 0
+
+    def _ordered_storage_sense_handles(self) -> list[int]:
+        handles = self._find_storage_sense_handles()
+        tracked_hwnd = self._get_tracked_storage_sense_handle()
+        if not tracked_hwnd or tracked_hwnd not in handles:
+            return handles
+        return [tracked_hwnd, *[hwnd for hwnd in handles if hwnd != tracked_hwnd]]
+
+    def _find_storage_sense_handles(self) -> list[int]:
+        handles: list[int] = []
+        tracked_hwnd = self._get_tracked_storage_sense_handle()
         tracked_pid = int(
             getattr(self.app, "_tracked_storage_sense_pid", 0) or 0
         )
 
-        if tracked_hwnd and _is_top_level_window(tracked_hwnd):
+        if tracked_hwnd:
             handles.append(tracked_hwnd)
 
         for hwnd in find_windows_for_pid(tracked_pid):

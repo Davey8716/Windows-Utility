@@ -176,6 +176,46 @@ class UtilityTogglesTests(unittest.TestCase):
         self.assertTrue(closed)
         post_message.assert_called_once_with(101, utility_toggles.win32con.WM_CLOSE, 0, 0)
 
+    def test_get_storage_sense_window_state_prefers_tracked_handle_state(self):
+        app = SimpleNamespace(_tracked_storage_sense_hwnd=101)
+        manager = utility_toggles.UtilityActionsManager(app)
+
+        with patch.object(manager, "_get_tracked_storage_sense_handle", return_value=101), \
+             patch.object(manager, "_find_storage_sense_handles", return_value=[101, 202]), \
+             patch.object(
+                 utility_toggles,
+                 "get_window_state_for_handles",
+                 side_effect=["minimized", "open"],
+             ) as state_mock:
+            state = manager.get_storage_sense_window_state()
+
+        self.assertEqual(state, "minimized")
+        state_mock.assert_called_once_with([101])
+
+    def test_focus_storage_sense_prefers_tracked_handle_first(self):
+        app = SimpleNamespace(_tracked_storage_sense_hwnd=101)
+        manager = utility_toggles.UtilityActionsManager(app)
+
+        with patch.object(manager, "_get_tracked_storage_sense_handle", return_value=101), \
+             patch.object(manager, "_find_storage_sense_handles", return_value=[202, 101, 303]), \
+             patch.object(utility_toggles, "focus_window_handles", return_value=True) as focus_mock:
+            focused = manager.focus_storage_sense()
+
+        self.assertTrue(focused)
+        focus_mock.assert_called_once_with([101, 202, 303])
+
+    def test_close_storage_sense_prefers_tracked_handle_first(self):
+        app = SimpleNamespace(_tracked_storage_sense_hwnd=101)
+        manager = utility_toggles.UtilityActionsManager(app)
+
+        with patch.object(manager, "_get_tracked_storage_sense_handle", return_value=101), \
+             patch.object(manager, "_find_storage_sense_handles", return_value=[202, 101, 303]), \
+             patch.object(utility_toggles, "close_window_handles", return_value=True) as close_mock:
+            closed = manager.close_storage_sense()
+
+        self.assertTrue(closed)
+        close_mock.assert_called_once_with([101, 202, 303])
+
     def test_capture_desktop_layout_updates_saved_path(self):
         app = SimpleNamespace(saved_state={}, save_all_settings=lambda: setattr(app, "saved", True))
         app.saved = False
