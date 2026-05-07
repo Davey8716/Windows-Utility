@@ -133,7 +133,9 @@ class AdvancedToolsPanel(QWidget):
     }
     WINDOWS_DROPDOWN_TOOLTIP_KEYS = {
         "System": "windows_dropdown_system",
-        "Hardware": "windows_dropdown_hardware",
+        "Monitoring & Security": "windows_dropdown_monitoring_security",
+        "Devices & Storage": "windows_dropdown_devices_storage",
+        "Services & Logs": "windows_dropdown_services_logs",
         "Network": "windows_dropdown_network",
         "Startup & Power": "windows_dropdown_startup_power",
     }
@@ -368,7 +370,15 @@ class AdvancedToolsPanel(QWidget):
             left_drop_layout, "System", self._system_utilities()
         )
         self._add_windows_dropdown(
-            left_drop_layout, "Hardware", self._hardware_utilities()
+            left_drop_layout, "Devices & Storage", self._devices_storage_utilities()
+        )
+        self._add_windows_dropdown(
+            left_drop_layout, "Services & Logs", self._services_logs_utilities()
+        )
+        self._add_windows_dropdown(
+            right_drop_layout,
+            "Monitoring & Security",
+            self._monitoring_security_utilities(),
         )
         self._add_windows_dropdown(
             right_drop_layout, "Network", self._network_utilities()
@@ -710,19 +720,27 @@ class AdvancedToolsPanel(QWidget):
         return {
             "Control Panel": self.open_control_panel,
             "Credential Manager": self.open_credential_manager,
-            "Reliability Monitor": self.open_reliability_monitor,
-            "Resource Monitor": self.open_resource_monitor,
             "System Settings": self.open_system_settings,
             "System Information": self.open_system_information,
+        }
+
+    def _monitoring_security_utilities(self):
+        return {
+            "Reliability Monitor": self.open_reliability_monitor,
+            "Resource Monitor": self.open_resource_monitor,
             "Task Manager": self.open_task_manager,
             "Windows Defender / Virus & Threat Protection": self.open_windows_security,
         }
 
-    def _hardware_utilities(self):
+    def _devices_storage_utilities(self):
         return {
             "Device Manager": self.open_device_manager,
             "Disk Cleanup": self.open_disk_cleanup,
             "Disk Management": self.open_disk_management,
+        }
+
+    def _services_logs_utilities(self):
+        return {
             "Services": self.open_services,
             "Event Viewer": self.open_event_viewer,
         }
