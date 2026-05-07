@@ -95,12 +95,21 @@ class RightUtilityGuiTests(unittest.TestCase):
             actions = panel._system_utilities()
 
             actions["Control Panel"]()
+            actions["Local Users and Groups"]()
+            actions["System Restore"]()
             actions["System Settings"]()
             actions["System Information"]()
 
         open_settings.assert_called_once_with()
-        self.assertEqual(open_or_focus_window_titles.call_count, 2)
-        shell_execute.assert_called_once_with(panel._control_exe_path())
+        self.assertEqual(open_or_focus_window_titles.call_count, 4)
+        self.assertEqual(
+            shell_execute.call_args_list,
+            [
+                unittest.mock.call(panel._control_exe_path()),
+                unittest.mock.call("lusrmgr.msc"),
+                unittest.mock.call("rstrui.exe"),
+            ],
+        )
         self.assertEqual(
             popen.call_args_list,
             [

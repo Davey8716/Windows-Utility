@@ -733,6 +733,8 @@ class AdvancedToolsPanel(QWidget):
         return {
             "Control Panel": self.open_control_panel,
             "Credential Manager": self.open_credential_manager,
+            "Local Users and Groups": self.open_local_users_and_groups,
+            "System Restore": self.open_system_restore,
             "System Settings": self.open_system_settings,
             "System Information": self.open_system_information,
         }
@@ -819,6 +821,18 @@ class AdvancedToolsPanel(QWidget):
         self.app.actions.open_or_focus_window_titles(
             ["System Information"],
             lambda: subprocess.Popen(["msinfo32"]),
+        )
+
+    def open_system_restore(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["System Restore", "System Restore Properties"],
+            lambda: self._shell_execute("rstrui.exe"),
+        )
+
+    def open_local_users_and_groups(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Local Users and Groups", "lusrmgr"],
+            lambda: self._shell_execute("lusrmgr.msc"),
         )
 
     def open_reliability_monitor(self):
