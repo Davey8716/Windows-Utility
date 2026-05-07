@@ -109,10 +109,6 @@ class AdvancedToolsPanel(QWidget):
     WINDOWS_UTILITIES_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH
     WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 8
     WINDOWS_UTILITIES_CONTENT_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH - 8
-    WINDOWS_UTILITIES_ROW_WIDTH = WINDOWS_UTILITIES_CONTENT_WIDTH - 20
-    WINDOWS_UTILITIES_COLUMN_WIDTH = (
-        WINDOWS_UTILITIES_ROW_WIDTH - 10
-    ) // 2
     WINDOWS_DROPDOWN_TOOLTIP_KEYS = {
         "System": "windows_dropdown_system",
         "Hardware": "windows_dropdown_hardware",
@@ -125,6 +121,7 @@ class AdvancedToolsPanel(QWidget):
         "Quick Open": "sidebar_dropdown_quick_open",
         "Sys Integrity & Disk Health": "sidebar_dropdown_integrity",
     }
+    SIDE_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH + (OUTER_SIDE_PADDING * 2)
 
     def __init__(self, app):
         super().__init__(app)
@@ -147,11 +144,8 @@ class AdvancedToolsPanel(QWidget):
         root_layout.addWidget(self.scroll)
 
         self.side_frame = QWidget()
-        self.side_frame.setMinimumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
-        self.side_frame.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
+        self.side_frame.setFixedWidth(self.SIDE_FRAME_WIDTH)
+        self.side_frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.scroll.setWidget(self.side_frame)
 
         self.side_layout = QVBoxLayout(self.side_frame)
@@ -296,21 +290,20 @@ class AdvancedToolsPanel(QWidget):
         parent_layout = self.windows_utility_section.content_layout
 
         row = QWidget()
-        row.setFixedWidth(self.WINDOWS_UTILITIES_ROW_WIDTH)
-        row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(10)
         parent_layout.addWidget(row)
 
         left_drop_col = QWidget()
-        left_drop_col.setFixedWidth(self.WINDOWS_UTILITIES_COLUMN_WIDTH)
+        left_drop_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         left_drop_layout = QVBoxLayout(left_drop_col)
         left_drop_layout.setContentsMargins(0, 0, 0, 0)
         left_drop_layout.setSpacing(10)
 
         right_drop_col = QWidget()
-        right_drop_col.setFixedWidth(self.WINDOWS_UTILITIES_COLUMN_WIDTH)
+        right_drop_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         right_drop_layout = QVBoxLayout(right_drop_col)
         right_drop_layout.setContentsMargins(0, 0, 0, 0)
         right_drop_layout.setSpacing(10)
@@ -674,10 +667,16 @@ class AdvancedToolsPanel(QWidget):
     def build_sidebar_utilities(self):
         parent_layout = self.sidebar_utils_section.content_layout
         dropdown_grid = QWidget()
+        dropdown_grid.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         grid_layout = QGridLayout(dropdown_grid)
         grid_layout.setContentsMargins(0, 0, 0, 0)
         grid_layout.setHorizontalSpacing(10)
         grid_layout.setVerticalSpacing(10)
+        grid_layout.setColumnStretch(0, 1)
+        grid_layout.setColumnStretch(1, 1)
         parent_layout.addWidget(dropdown_grid)
 
         self._add_sidebar_dropdown(
