@@ -1336,6 +1336,10 @@ class UtilityControlApp(
         cleanup_rule_label = QLabel("Delete items older than:")
         cleanup_rule_label.setStyleSheet(styles.label_style(font_size=14))
         recycle_bin_age_rule_row = QWidget()
+        recycle_bin_age_rule_row.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         recycle_bin_age_rule_row_layout = QGridLayout(recycle_bin_age_rule_row)
         recycle_bin_age_rule_row_layout.setContentsMargins(0, 0, 0, 0)
         recycle_bin_age_rule_row_layout.setHorizontalSpacing(10)
@@ -1344,7 +1348,19 @@ class UtilityControlApp(
         recycle_bin_age_rule_row_layout.addWidget(recycle_bin_age_rule_combo, 0, 1)
         recycle_bin_age_rule_row_layout.setColumnStretch(0, 1)
         recycle_bin_age_rule_row_layout.setColumnStretch(1, 1)
-        recycle_bin_age_rule_row.setVisible(recycle_bin_auto_clean_enabled)
+        recycle_bin_age_rule_row_height = recycle_bin_age_rule_row.sizeHint().height()
+
+        def set_recycle_bin_age_rule_row_visible(is_visible: bool):
+            recycle_bin_age_rule_row.setMinimumHeight(
+                recycle_bin_age_rule_row_height if is_visible else 0
+            )
+            recycle_bin_age_rule_row.setMaximumHeight(
+                recycle_bin_age_rule_row_height if is_visible else 0
+            )
+            recycle_bin_age_rule_row.setVisible(is_visible)
+            recycle_bin_controls_layout.activate()
+
+        set_recycle_bin_age_rule_row_visible(recycle_bin_auto_clean_enabled)
         recycle_bin_controls_layout.addWidget(recycle_bin_age_rule_row, 1, 0, 1, 2)
         recycle_bin_controls_layout.setColumnStretch(0, 1)
         recycle_bin_controls_layout.setColumnStretch(1, 1)
@@ -1352,7 +1368,7 @@ class UtilityControlApp(
 
         def on_recycle_bin_auto_clean_changed(checked: bool):
             state["recycle_bin_auto_clean_enabled"] = checked
-            recycle_bin_age_rule_row.setVisible(checked)
+            set_recycle_bin_age_rule_row_visible(checked)
             save_state(state)
 
         def on_recycle_bin_age_rule_changed(text: str):
