@@ -6,7 +6,7 @@ from screen_mover import SCREEN_MOVER
 from state_manager import save_state
 from tooltips import left_section_toggle_tooltip, tooltip_text
 from PySide6.QtCore import Qt, QTimer, QSize
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -307,16 +307,19 @@ class LeftPanelBuilder:
         update_state(button.isChecked())
         button.toggled.connect(update_state)
 
+    def _coerce_icon(self, icon_source: Path | QIcon) -> QIcon:
+        return icon_source if isinstance(icon_source, QIcon) else QIcon(str(icon_source))
+
     def _bind_toggle_icon_only(
         self,
         button: QPushButton,
         *,
-        checked_icon_path: Path,
-        unchecked_icon_path: Path,
+        checked_icon_source: Path | QIcon,
+        unchecked_icon_source: Path | QIcon,
         icon_size: int = 18,
     ) -> None:
-        checked_icon = QIcon(str(checked_icon_path))
-        unchecked_icon = QIcon(str(unchecked_icon_path))
+        checked_icon = self._coerce_icon(checked_icon_source)
+        unchecked_icon = self._coerce_icon(unchecked_icon_source)
         button.setIconSize(QSize(icon_size, icon_size))
 
         def update_state(checked: bool) -> None:
@@ -325,6 +328,51 @@ class LeftPanelBuilder:
 
         update_state(button.isChecked())
         button.toggled.connect(update_state)
+
+    def _create_theme_toggle_icon(self, mode: str, icon_size: int = 18) -> QIcon:
+        pixmap = QPixmap(icon_size, icon_size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
+        if mode == "dark":
+            moon_color = QColor(191, 205, 224)
+            cutout_color = QColor(0, 0, 0, 0)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(moon_color)
+            painter.drawEllipse(3, 2, icon_size - 6, icon_size - 6)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+            painter.setBrush(cutout_color)
+            painter.drawEllipse(7, 2, icon_size - 6, icon_size - 6)
+        else:
+            sun_color = QColor(0, 0, 0)
+            pen = QPen(sun_color)
+            pen.setWidth(2)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            painter.setPen(pen)
+            painter.setBrush(sun_color)
+
+            center = icon_size / 2
+            ray_inner = 6
+            ray_outer = 8
+            painter.drawEllipse(5, 5, icon_size - 10, icon_size - 10)
+            painter.drawLine(int(center), ray_outer - 6, int(center), ray_outer - 2)
+            painter.drawLine(int(center), icon_size - (ray_outer - 6), int(center), icon_size - (ray_outer - 2))
+            painter.drawLine(ray_outer - 6, int(center), ray_outer - 2, int(center))
+            painter.drawLine(icon_size - (ray_outer - 6), int(center), icon_size - (ray_outer - 2), int(center))
+            painter.drawLine(ray_inner - 2, ray_inner - 2, ray_outer - 1, ray_outer - 1)
+            painter.drawLine(icon_size - (ray_inner - 2), ray_inner - 2, icon_size - (ray_outer - 1), ray_outer - 1)
+            painter.drawLine(ray_inner - 2, icon_size - (ray_inner - 2), ray_outer - 1, icon_size - (ray_outer - 1))
+            painter.drawLine(
+                icon_size - (ray_inner - 2),
+                icon_size - (ray_inner - 2),
+                icon_size - (ray_outer - 1),
+                icon_size - (ray_outer - 1),
+            )
+
+        painter.end()
+        return QIcon(pixmap)
 
     def _bind_combo_placeholder_icon(
         self,
@@ -435,8 +483,8 @@ class LeftPanelBuilder:
         )
         self._bind_toggle_icon_only(
             dark_mode_btn,
-            checked_icon_path=self.icons_root / "Dark Theme" / "Dark Mode.png",
-            unchecked_icon_path=self.icons_root / "Dark Theme" / "Light Mode.png",
+            checked_icon_source=self._create_theme_toggle_icon("dark"),
+            unchecked_icon_source=self._create_theme_toggle_icon("light"),
             icon_size=18,
         )
         ui_top_row_layout.addWidget(dark_mode_btn)
