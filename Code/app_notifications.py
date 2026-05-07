@@ -93,8 +93,21 @@ class WindowMessageMixin:
         self._balance_message_box_text_padding(message_box)
         self._apply_message_box_accessory(message_box)
         self._center_message_box_text_block(message_box)
-        if message_box.standardButtons() != self._message_box_button("NoButton"):
-            self._center_message_box_buttons(message_box)
+        self._ensure_timed_close_button(message_box)
+        self._center_message_box_buttons(message_box)
+
+    def _ensure_timed_close_button(self, message_box: QMessageBox) -> None:
+        if not getattr(message_box, "_show_close_now_button", False):
+            return
+
+        if getattr(message_box, "_close_now_button", None) is not None:
+            return
+
+        close_button = message_box.addButton(
+            "Close now",
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+        message_box._close_now_button = close_button
 
     def _center_message_box_buttons(self, message_box: QMessageBox) -> None:
         button_box = message_box.findChild(QDialogButtonBox)
@@ -304,6 +317,7 @@ class WindowMessageMixin:
             message_box._minimum_popup_width = minimum_popup_width or 420
             message_box._text_minimum_width = text_minimum_width or 280
         message_box._center_text_block = center_text_block
+        message_box._show_close_now_button = False
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(buttons)
@@ -329,6 +343,7 @@ class WindowMessageMixin:
         text_minimum_width: int | None = None,
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
+        show_close_now_button: bool = False,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
         grouped_boxes = self._get_grouped_timed_message_boxes()
@@ -373,6 +388,7 @@ class WindowMessageMixin:
             message_box._minimum_popup_width = minimum_popup_width or 420
             message_box._text_minimum_width = text_minimum_width or 280
         message_box._center_text_block = center_text_block
+        message_box._show_close_now_button = show_close_now_button
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(self._message_box_button("NoButton"))
@@ -434,6 +450,7 @@ class WindowMessageMixin:
             message_box._minimum_popup_width = minimum_popup_width or 420
             message_box._text_minimum_width = text_minimum_width or 280
         message_box._center_text_block = center_text_block
+        message_box._show_close_now_button = False
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(self._message_box_button("Ok"))

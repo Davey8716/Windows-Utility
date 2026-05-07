@@ -48,6 +48,7 @@ class DesktopOperationsMixin:
         title: str,
         text: str,
         timeout_ms: int = 10_000,
+        show_close_now_button: bool = False,
     ):
         show_timed_message = self._show_timed_message
         try:
@@ -63,6 +64,7 @@ class DesktopOperationsMixin:
                 timeout_ms=timeout_ms,
                 merge_group="organizing_utilities",
                 merge_title="Organising Utilities",
+                show_close_now_button=show_close_now_button,
             )
 
         return show_timed_message(
@@ -70,6 +72,7 @@ class DesktopOperationsMixin:
             title,
             text,
             timeout_ms=timeout_ms,
+            show_close_now_button=show_close_now_button,
         )
 
     def _get_app_module_attr(self, name: str, default):
@@ -107,6 +110,7 @@ class DesktopOperationsMixin:
                 "Desktop Screenshot",
                 f"Desktop screenshot saved to:\n{save_path}",
                 timeout_ms=5_000,
+                show_close_now_button=True,
             )
 
         except Exception as exc:
@@ -116,6 +120,7 @@ class DesktopOperationsMixin:
                 "Desktop Screenshot",
                 f"Could not save desktop screenshot:\n{exc}",
                 timeout_ms=5_000,
+                show_close_now_button=True,
             )
 
     def backup_taskbar_apps(self):
@@ -128,6 +133,7 @@ class DesktopOperationsMixin:
                     self._message_box_icon("Information"),
                     "Backup Taskbar",
                     f"Backed up {count} taskbar shortcut(s) to:\n{backup_dir}",
+                    show_close_now_button=True,
                 )
                 return
 
@@ -135,6 +141,7 @@ class DesktopOperationsMixin:
                 self._message_box_icon("Warning"),
                 "Backup Taskbar",
                 "No taskbar shortcuts were backed up.",
+                show_close_now_button=True,
             )
 
         self._run_with_optional_minimize(action)
@@ -185,6 +192,7 @@ class DesktopOperationsMixin:
                     self._message_box_icon("Information"),
                     "Desktop Layout",
                     f"Captured desktop layout with {count} icon position(s) saved to:\n{out_path}",
+                    show_close_now_button=True,
                 )
                 return
 
@@ -192,6 +200,7 @@ class DesktopOperationsMixin:
                 self._message_box_icon("Warning"),
                 "Desktop Layout",
                 f"Could not capture desktop layout to:\n{out_path}",
+                show_close_now_button=True,
             )
 
         self._run_with_optional_minimize(action)
@@ -206,6 +215,7 @@ class DesktopOperationsMixin:
                     self._message_box_icon("Information"),
                     "Desktop Layout",
                     f"Desktop icons restored from:\n{layout_path}",
+                    show_close_now_button=True,
                 )
                 return
 
@@ -213,6 +223,7 @@ class DesktopOperationsMixin:
                 self._message_box_icon("Warning"),
                 "Desktop Layout",
                 f"Could not restore desktop layout from:\n{layout_path}",
+                show_close_now_button=True,
             )
 
         self._run_with_optional_minimize(action)
@@ -272,6 +283,7 @@ class DesktopOperationsMixin:
                         self._message_box_icon("Information"),
                         "Recycle Bin",
                         "Recycle Bin emptied.",
+                        show_close_now_button=True,
                     )
                     return
 
@@ -279,6 +291,7 @@ class DesktopOperationsMixin:
                     self._message_box_icon("Warning"),
                     "Recycle Bin",
                     "Could not empty Recycle Bin.",
+                    show_close_now_button=True,
                 )
             finally:
                 close_recycle_bin = getattr(self.actions, "close_recycle_bin", None)
@@ -332,6 +345,7 @@ class DesktopOperationsMixin:
                             self._message_box_icon("Information"),
                             title,
                             f"Deleted {deleted_count} Recycle Bin item(s) older than {days} days.",
+                            show_close_now_button=True,
                         )
                     if automatic and should_show_automatic_popup:
                         self.state["recycle_bin_last_auto_clean_popup_days"] = days
@@ -344,6 +358,7 @@ class DesktopOperationsMixin:
                             self._message_box_icon("Information"),
                             "Recycle Bin Auto-Clean",
                             f"No Recycle Bin items older than {days} days were found.",
+                            show_close_now_button=True,
                         )
                         self.state["recycle_bin_last_auto_clean_popup_days"] = days
                         self._save_state_safely(self.state)
@@ -353,6 +368,7 @@ class DesktopOperationsMixin:
                     self._message_box_icon("Information"),
                     "Recycle Bin Cleanup",
                     f"No Recycle Bin items older than {days} days were found.",
+                    show_close_now_button=True,
                 )
             finally:
                 if not automatic:
@@ -383,6 +399,7 @@ class DesktopOperationsMixin:
                         self._message_box_icon("Warning"),
                         "Folder to Desktop",
                         "A folder with that name already exists on Desktop.",
+                        show_close_now_button=True,
                     )
                     return
 
@@ -397,6 +414,7 @@ class DesktopOperationsMixin:
                     self._message_box_icon("Information"),
                     "Folder to Desktop",
                     f"Created desktop folder:\n{new_path}",
+                    show_close_now_button=True,
                 )
 
             except Exception as exc:
@@ -404,6 +422,7 @@ class DesktopOperationsMixin:
                     self._message_box_icon("Warning"),
                     "Folder to Desktop",
                     f"Could not create folder:\n{exc}",
+                    show_close_now_button=True,
                 )
 
         self._run_with_optional_minimize(action)
