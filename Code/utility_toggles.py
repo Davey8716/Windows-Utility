@@ -1,5 +1,6 @@
 import ctypes
 import os
+import psutil
 import shutil
 import subprocess
 import webbrowser
@@ -18,6 +19,20 @@ from desktop_icon_layout import save_desktop_icon_layout
 from desktop_icon_layout import restore_desktop_icon_layout
 from desktop_icon_layout import desktop_icons_visible
 from desktop_icon_layout import set_desktop_icons_visible
+
+STORAGE_SENSE_WINDOW_TITLES = [
+    "Storage Sense",
+    "Storage",
+    "Settings",
+]
+STORAGE_SENSE_PROCESS_NAMES = {
+    "systemsettings.exe",
+    "applicationframehost.exe",
+}
+STORAGE_SENSE_WINDOW_CLASSES = {
+    "ApplicationFrameWindow",
+    "Windows.UI.Core.CoreWindow",
+}
 
 
 class UtilityActionsManager:
@@ -395,20 +410,51 @@ class UtilityActionsManager:
     def is_this_pc_open(self) -> bool:
         return bool(find_explorer_windows_by_title("This PC"))
 
+    def get_this_pc_window_state(self) -> str:
+        return get_window_state_for_handles(find_explorer_windows_by_title("This PC"))
+
     def focus_this_pc(self) -> bool:
         return focus_window_handles(find_explorer_windows_by_title("This PC"))
 
     def close_this_pc(self) -> bool:
-        handles = find_explorer_windows_by_title("This PC")
-        closed_any = False
-        for hwnd in handles:
-            try:
-                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-                closed_any = True
-            except Exception as e:
-                print(f"[DEBUG] close_this_pc failed for hwnd {hwnd}: {e}")
+        return close_window_handles(find_explorer_windows_by_title("This PC"))
 
-        return closed_any
+    def get_storage_sense_window_state(self) -> str:
+        return get_window_state_for_handles(self._find_storage_sense_handles())
+
+    def focus_storage_sense(self) -> bool:
+        return focus_window_handles(self._find_storage_sense_handles())
+
+    def close_storage_sense(self) -> bool:
+        return close_window_handles(self._find_storage_sense_handles())
+
+    def _find_storage_sense_handles(self) -> list[int]:
+        handles: list[int] = []
+        tracked_hwnd = int(
+            getattr(self.app, "_tracked_storage_sense_hwnd", 0) or 0
+        )
+        tracked_pid = int(
+            getattr(self.app, "_tracked_storage_sense_pid", 0) or 0
+        )
+
+        if tracked_hwnd and _is_top_level_window(tracked_hwnd):
+            handles.append(tracked_hwnd)
+
+        for hwnd in find_windows_for_pid(tracked_pid):
+            if hwnd not in handles:
+                handles.append(hwnd)
+
+        for hwnd in find_storage_sense_windows():
+            if hwnd not in handles:
+                handles.append(hwnd)
+
+        if self.app is not None:
+            self.app._tracked_storage_sense_hwnd = handles[0] if handles else 0
+            self.app._tracked_storage_sense_pid = (
+                _get_window_pid(handles[0]) if handles else 0
+            )
+
+        return handles
 
     def capture_desktop_layout(self, out_path: str | None = None) -> int:
         if not out_path and self.app:
@@ -795,7 +841,7 @@ def focus_window_handles(handles: list[int]) -> bool:
     focused_any = False
     for hwnd in handles:
         try:
-            if win32gui.IsIconic(hwnd):
+            if _is_window_minimized(hwnd):
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             else:
                 win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
@@ -806,6 +852,53 @@ def focus_window_handles(handles: list[int]) -> bool:
             print(f"[DEBUG] focus_window_handles failed for hwnd {hwnd}: {e}")
 
     return focused_any
+
+
+def close_window_handles(handles: list[int]) -> bool:
+    closed_any = False
+    for hwnd in handles:
+        try:
+            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+            closed_any = True
+        except Exception as e:
+            print(f"[DEBUG] close_window_handles failed for hwnd {hwnd}: {e}")
+
+    return closed_any
+
+
+def get_window_state_for_handles(handles: list[int]) -> str:
+    if not handles:
+        return "closed"
+
+    top_level_handles = [hwnd for hwnd in handles if _is_top_level_window(hwnd)]
+    if not top_level_handles:
+        return "closed"
+
+    minimized_found = False
+    for hwnd in top_level_handles:
+        try:
+            if not _is_window_minimized(hwnd):
+                return "open"
+            minimized_found = True
+        except Exception:
+            continue
+
+    return "minimized" if minimized_found else "closed"
+
+
+def _is_window_minimized(hwnd: int) -> bool:
+    try:
+        if win32gui.IsIconic(hwnd):
+            return True
+    except Exception:
+        pass
+
+    try:
+        placement = win32gui.GetWindowPlacement(hwnd)
+        show_cmd = placement[1]
+        return show_cmd == win32con.SW_SHOWMINIMIZED
+    except Exception:
+        return False
 
 
 def find_windows_by_title_candidates(
@@ -822,7 +915,7 @@ def find_windows_by_title_candidates(
     handles: list[int] = []
 
     def enum_handler(hwnd, _):
-        if _is_visible_top_level_window(hwnd):
+        if _is_top_level_window(hwnd):
             title = _get_window_title(hwnd)
             if title and _title_matches_any_candidate(title, normalized_candidates):
                 handles.append(hwnd)
@@ -835,15 +928,109 @@ def find_windows_by_title_candidates(
     return handles
 
 
-def _is_visible_top_level_window(hwnd: int) -> bool:
+def find_storage_sense_windows() -> list[int]:
+    handles: list[int] = []
+    normalized_titles = [
+        candidate.strip().casefold()
+        for candidate in STORAGE_SENSE_WINDOW_TITLES
+        if candidate and candidate.strip()
+    ]
+
+    def enum_handler(hwnd, _):
+        if not _is_top_level_window(hwnd):
+            return
+
+        process_name = _get_window_process_name(hwnd)
+        if process_name not in STORAGE_SENSE_PROCESS_NAMES:
+            return
+
+        title = _get_window_title(hwnd)
+        class_name = _get_window_class_name(hwnd)
+        normalized_title = title.casefold()
+
+        if (
+            class_name in STORAGE_SENSE_WINDOW_CLASSES
+            or _title_matches_any_candidate(title, normalized_titles)
+            or normalized_title.startswith("settings")
+        ):
+            handles.append(hwnd)
+
     try:
-        if not win32gui.IsWindowVisible(hwnd):
+        win32gui.EnumWindows(enum_handler, None)
+    except Exception as e:
+        print(f"[DEBUG] find_storage_sense_windows failed: {e}")
+
+    return handles
+
+
+def find_windows_for_pid(pid: int) -> list[int]:
+    if pid <= 0:
+        return []
+
+    handles: list[int] = []
+
+    def enum_handler(hwnd, _):
+        if not _is_top_level_window(hwnd):
+            return
+        if _get_window_pid(hwnd) == pid:
+            handles.append(hwnd)
+
+    try:
+        win32gui.EnumWindows(enum_handler, None)
+    except Exception as e:
+        print(f"[DEBUG] find_windows_for_pid failed for {pid}: {e}")
+
+    return handles
+
+
+def _is_top_level_window(hwnd: int) -> bool:
+    try:
+        if not win32gui.IsWindow(hwnd):
             return False
     except Exception:
         return False
 
     try:
         if win32gui.GetParent(hwnd) != 0:
+            return False
+    except Exception:
+        return False
+
+    return True
+
+
+def _get_window_pid(hwnd: int) -> int:
+    try:
+        _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
+        return int(pid)
+    except Exception:
+        return 0
+
+
+def _get_window_process_name(hwnd: int) -> str:
+    pid = _get_window_pid(hwnd)
+    if pid <= 0:
+        return ""
+
+    try:
+        return psutil.Process(pid).name().casefold()
+    except Exception:
+        return ""
+
+
+def _get_window_class_name(hwnd: int) -> str:
+    try:
+        return win32gui.GetClassName(hwnd).strip()
+    except Exception:
+        return ""
+
+
+def _is_visible_top_level_window(hwnd: int) -> bool:
+    if not _is_top_level_window(hwnd):
+        return False
+
+    try:
+        if not win32gui.IsWindowVisible(hwnd):
             return False
     except Exception:
         return False
