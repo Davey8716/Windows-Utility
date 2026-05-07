@@ -325,6 +325,9 @@ class UtilityActionsManager:
             print("[DEBUG] open_backup_folder: no path resolved")
             return False
 
+        if self.focus_backup_folder(path):
+            return True
+
         try:
             os.makedirs(path, exist_ok=True)
             os.startfile(path)
@@ -332,6 +335,14 @@ class UtilityActionsManager:
         except Exception as e:
             print(f"[DEBUG] open_backup_folder failed: {e}")
             return False
+
+    def focus_backup_folder(self, path: str | None = None) -> bool:
+        resolved_path = _resolve_backup_folder_path(path, self.app)
+        if not resolved_path:
+            return False
+
+        handles = find_explorer_windows_for_folder(resolved_path)
+        return focus_window_handles(handles)
 
     def is_backup_folder_open(self, path: str | None = None) -> bool:
         resolved_path = _resolve_backup_folder_path(path, self.app)
@@ -358,6 +369,9 @@ class UtilityActionsManager:
 
     def is_this_pc_open(self) -> bool:
         return bool(find_explorer_windows_by_title("This PC"))
+
+    def focus_this_pc(self) -> bool:
+        return focus_window_handles(find_explorer_windows_by_title("This PC"))
 
     def close_this_pc(self) -> bool:
         handles = find_explorer_windows_by_title("This PC")
@@ -468,6 +482,39 @@ class UtilityActionsManager:
         except Exception as e:
             print("[DESKTOP ICONS] Visibility read failed:", e)
             return None
+
+    def open_or_focus_explorer_title(
+        self,
+        title: str,
+        launch,
+    ) -> bool:
+        if focus_window_handles(find_explorer_windows_by_title(title)):
+            return True
+
+        try:
+            launch()
+            return True
+        except Exception as e:
+            print(f"[DEBUG] open_or_focus_explorer_title failed for {title}: {e}")
+            return False
+
+    def open_or_focus_window_titles(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+        launch,
+    ) -> bool:
+        if focus_window_handles(find_windows_by_title_candidates(title_candidates)):
+            return True
+
+        try:
+            launch()
+            return True
+        except Exception as e:
+            print(
+                "[DEBUG] open_or_focus_window_titles failed for "
+                f"{title_candidates}: {e}"
+            )
+            return False
 
 
 def _iter_recycle_bin_metadata_files():
@@ -683,6 +730,86 @@ def find_explorer_windows_by_title(title: str) -> list[int]:
         print(f"[DEBUG] find_explorer_windows_by_title failed: {e}")
 
     return handles
+
+
+def focus_window_handles(handles: list[int]) -> bool:
+    focused_any = False
+    for hwnd in handles:
+        try:
+            if win32gui.IsIconic(hwnd):
+                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            else:
+                win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+            win32gui.SetForegroundWindow(hwnd)
+            focused_any = True
+            break
+        except Exception as e:
+            print(f"[DEBUG] focus_window_handles failed for hwnd {hwnd}: {e}")
+
+    return focused_any
+
+
+def find_windows_by_title_candidates(
+    title_candidates: list[str] | tuple[str, ...],
+) -> list[int]:
+    normalized_candidates = [
+        candidate.strip().casefold()
+        for candidate in title_candidates
+        if candidate and candidate.strip()
+    ]
+    if not normalized_candidates:
+        return []
+
+    handles: list[int] = []
+
+    def enum_handler(hwnd, _):
+        if _is_visible_top_level_window(hwnd):
+            title = _get_window_title(hwnd)
+            if title and _title_matches_any_candidate(title, normalized_candidates):
+                handles.append(hwnd)
+
+    try:
+        win32gui.EnumWindows(enum_handler, None)
+    except Exception as e:
+        print(f"[DEBUG] find_windows_by_title_candidates failed: {e}")
+
+    return handles
+
+
+def _is_visible_top_level_window(hwnd: int) -> bool:
+    try:
+        if not win32gui.IsWindowVisible(hwnd):
+            return False
+    except Exception:
+        return False
+
+    try:
+        if win32gui.GetParent(hwnd) != 0:
+            return False
+    except Exception:
+        return False
+
+    return True
+
+
+def _get_window_title(hwnd: int) -> str:
+    try:
+        return win32gui.GetWindowText(hwnd).strip()
+    except Exception:
+        return ""
+
+
+def _title_matches_any_candidate(
+    title: str,
+    normalized_candidates: list[str],
+) -> bool:
+    normalized_title = title.casefold()
+    return any(
+        normalized_title == candidate
+        or normalized_title.endswith(f" - {candidate}")
+        or candidate in normalized_title
+        for candidate in normalized_candidates
+    )
 
 
 RECYCLE_BIN_CLSID = "{645FF040-5081-101B-9F08-00AA002F954E}"

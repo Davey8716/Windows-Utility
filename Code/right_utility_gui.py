@@ -532,10 +532,10 @@ class AdvancedToolsPanel(QWidget):
 
     def _system_utilities(self):
         return {
-            "Control Panel": lambda: subprocess.Popen(["control"]),
+            "Control Panel": self.open_control_panel,
             "System Settings": self.open_system_settings,
-            "System Information": lambda: subprocess.Popen(["msinfo32"]),
-            "Task Manager": lambda: subprocess.Popen(["taskmgr"]),
+            "System Information": self.open_system_information,
+            "Task Manager": self.open_task_manager,
         }
 
     def _hardware_utilities(self):
@@ -547,19 +547,52 @@ class AdvancedToolsPanel(QWidget):
         }
 
     def open_device_manager(self):
-        self._shell_open("devmgmt.msc")
+        self.app.actions.open_or_focus_window_titles(
+            ["Device Manager"],
+            lambda: self._shell_open("devmgmt.msc"),
+        )
 
     def open_disk_management(self):
-        self._shell_open("diskmgmt.msc")
+        self.app.actions.open_or_focus_window_titles(
+            ["Disk Management"],
+            lambda: self._shell_open("diskmgmt.msc"),
+        )
 
     def open_services(self):
-        self._shell_open("services.msc")
+        self.app.actions.open_or_focus_window_titles(
+            ["Services"],
+            lambda: self._shell_open("services.msc"),
+        )
 
     def open_event_viewer(self):
-        self._shell_open("eventvwr.msc")
+        self.app.actions.open_or_focus_window_titles(
+            ["Event Viewer"],
+            lambda: self._shell_open("eventvwr.msc"),
+        )
 
     def open_system_settings(self):
-        self._shell_open("ms-settings:")
+        self.app.actions.open_or_focus_window_titles(
+            ["Settings"],
+            lambda: self._shell_open("ms-settings:"),
+        )
+
+    def open_control_panel(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Control Panel"],
+            lambda: subprocess.Popen(["control"]),
+        )
+
+    def open_system_information(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["System Information"],
+            lambda: subprocess.Popen(["msinfo32"]),
+        )
+
+    def open_task_manager(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Task Manager"],
+            lambda: subprocess.Popen(["taskmgr"]),
+        )
 
     def _shell_open(self, target: str):
         ctypes.windll.shell32.ShellExecuteW(None, "open", target, None, None, 1)
@@ -597,10 +630,16 @@ class AdvancedToolsPanel(QWidget):
         }
 
     def open_network_connections(self):
-        self._shell_execute("control.exe", "ncpa.cpl")
+        self.app.actions.open_or_focus_window_titles(
+            ["Network Connections"],
+            lambda: self._shell_execute("control.exe", "ncpa.cpl"),
+        )
 
     def open_firewall(self):
-        self._shell_open("wf.msc")
+        self.app.actions.open_or_focus_window_titles(
+            ["Windows Defender Firewall", "Firewall"],
+            lambda: self._shell_open("wf.msc"),
+        )
 
     def _startup_power_utilities(self):
         return {
@@ -609,10 +648,16 @@ class AdvancedToolsPanel(QWidget):
         }
 
     def open_startup_apps(self):
-        self._shell_open("ms-settings:startupapps")
+        self.app.actions.open_or_focus_window_titles(
+            ["Settings"],
+            lambda: self._shell_open("ms-settings:startupapps"),
+        )
 
     def open_power_options(self):
-        self._shell_execute("control.exe", "/name Microsoft.PowerOptions")
+        self.app.actions.open_or_focus_window_titles(
+            ["Power Options"],
+            lambda: self._shell_execute("control.exe", "/name Microsoft.PowerOptions"),
+        )
 
     def _add_windows_dropdown(self, parent_layout, label, actions_map):
         placeholder = f" {label} "
@@ -1006,13 +1051,25 @@ class AdvancedToolsPanel(QWidget):
 
     def open_downloads(self):
         self.sidebar_output.clear()
-        subprocess.Popen(["explorer", "shell:downloads"])
-        self.sidebar_output.append("Opened Downloads folder.")
+        opened = self.app.actions.open_or_focus_explorer_title(
+            "Downloads",
+            lambda: subprocess.Popen(["explorer", "shell:downloads"]),
+        )
+        if opened:
+            self.sidebar_output.append("Opened Downloads folder.")
+        else:
+            self.sidebar_output.append("Could not open Downloads folder.")
 
     def open_startup_folder(self):
         self.sidebar_output.clear()
-        subprocess.Popen(["explorer", "shell:startup"])
-        self.sidebar_output.append("Opened Startup folder.")
+        opened = self.app.actions.open_or_focus_explorer_title(
+            "Startup",
+            lambda: subprocess.Popen(["explorer", "shell:startup"]),
+        )
+        if opened:
+            self.sidebar_output.append("Opened Startup folder.")
+        else:
+            self.sidebar_output.append("Could not open Startup folder.")
 
     def open_clipboard_history(self):
         self.sidebar_output.clear()
