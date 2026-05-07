@@ -1341,11 +1341,12 @@ class UtilityControlApp(
 
         cleanup_rule_label = QLabel("Delete items older than:")
         cleanup_rule_label.setStyleSheet(styles.label_style(font_size=14))
-        recycle_bin_age_rule_row = QWidget()
-        recycle_bin_age_rule_row.setSizePolicy(
+        recycle_bin_age_rule_slot = QWidget()
+        recycle_bin_age_rule_slot.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,
         )
+        recycle_bin_age_rule_row = QWidget()
         recycle_bin_age_rule_row_layout = QGridLayout(recycle_bin_age_rule_row)
         recycle_bin_age_rule_row_layout.setContentsMargins(0, 0, 0, 0)
         recycle_bin_age_rule_row_layout.setHorizontalSpacing(10)
@@ -1355,19 +1356,17 @@ class UtilityControlApp(
         recycle_bin_age_rule_row_layout.setColumnStretch(0, 1)
         recycle_bin_age_rule_row_layout.setColumnStretch(1, 1)
         recycle_bin_age_rule_row_height = recycle_bin_age_rule_row.sizeHint().height()
+        recycle_bin_age_rule_slot.setFixedHeight(recycle_bin_age_rule_row_height)
+        recycle_bin_age_rule_slot_layout = QVBoxLayout(recycle_bin_age_rule_slot)
+        recycle_bin_age_rule_slot_layout.setContentsMargins(0, 0, 0, 0)
+        recycle_bin_age_rule_slot_layout.setSpacing(0)
+        recycle_bin_age_rule_slot_layout.addWidget(recycle_bin_age_rule_row)
+        recycle_bin_controls_layout.addWidget(recycle_bin_age_rule_slot, 1, 0, 1, 2)
 
         def set_recycle_bin_age_rule_row_visible(is_visible: bool):
-            recycle_bin_age_rule_row.setMinimumHeight(
-                recycle_bin_age_rule_row_height if is_visible else 0
-            )
-            recycle_bin_age_rule_row.setMaximumHeight(
-                recycle_bin_age_rule_row_height if is_visible else 0
-            )
             recycle_bin_age_rule_row.setVisible(is_visible)
-            recycle_bin_controls_layout.activate()
 
         set_recycle_bin_age_rule_row_visible(recycle_bin_auto_clean_enabled)
-        recycle_bin_controls_layout.addWidget(recycle_bin_age_rule_row, 1, 0, 1, 2)
         recycle_bin_controls_layout.setColumnStretch(0, 1)
         recycle_bin_controls_layout.setColumnStretch(1, 1)
         recycle_bin_layout.addWidget(recycle_bin_controls)
