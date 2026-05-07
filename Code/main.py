@@ -1264,8 +1264,8 @@ class UtilityControlApp(
         self.backup_path_input.setText(self._get_master_backup_dir())
         self.backup_path_input.setReadOnly(True)
         self.backup_path_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        self.backup_path_input.setProperty("surfaceFieldStyle", True)
-        self.backup_path_input.setStyleSheet(styles.surfaced_line_edit_style(15))
+        self.backup_path_input.setProperty("plainThemeFieldStyle", True)
+        self.backup_path_input.setStyleSheet(styles.plain_theme_line_edit_style(15))
         master_backup_row_layout.addWidget(self.backup_path_input)
         self.register_tooltip(self.backup_path_input, tooltip_text("backup_path_input"))
 
@@ -1584,6 +1584,8 @@ class UtilityControlApp(
         for line_edit in self.findChildren(QLineEdit):
             if line_edit.property("emphasizedSurfaceFieldStyle"):
                 line_edit.setStyleSheet(styles.emphasized_surface_line_edit_style(15))
+            elif line_edit.property("plainThemeFieldStyle"):
+                line_edit.setStyleSheet(styles.plain_theme_line_edit_style(15))
             elif line_edit.property("surfaceFieldStyle"):
                 line_edit.setStyleSheet(styles.surfaced_line_edit_style(15))
             else:
