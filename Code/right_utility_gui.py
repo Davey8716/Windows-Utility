@@ -1003,15 +1003,15 @@ class AdvancedToolsPanel(QWidget):
             grid_layout,
             0,
             0,
-            "Network / Sys Quick Fix",
-            self._sidebar_network_actions(),
+            "Cleanup / Quick Actions",
+            self._sidebar_cleanup_actions(),
         )
         self._add_sidebar_dropdown(
             grid_layout,
             0,
             1,
-            "Cleanup / Quick Actions",
-            self._sidebar_cleanup_actions(),
+            "Network / Sys Quick Fix",
+            self._sidebar_network_actions(),
         )
         self._add_sidebar_dropdown(
             grid_layout,
