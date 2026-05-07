@@ -400,6 +400,29 @@ def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
         }}
     """
 
+
+def sidebar_output_clear_button_style(font_size: int = 12) -> str:
+    background = STATUS_ACCENT if THEME_IS_DARK else QColor(212, 212, 212)
+    hover = PANEL_HOVER if THEME_IS_DARK else QColor(196, 196, 196)
+    pressed = QColor(32, 96, 170) if THEME_IS_DARK else QColor(176, 176, 176)
+    return f"""
+        QToolButton {{
+            color: {qcolor_css(theme_text_color())};
+            background-color: {qcolor_css(background)};
+            border: none;
+            border-radius: 3px;
+            padding: 0px;
+            font-size: {font_size}px;
+            font-weight: bold;
+        }}
+        QToolButton:hover {{
+            background-color: {qcolor_css(hover)};
+        }}
+        QToolButton:pressed {{
+            background-color: {qcolor_css(pressed)};
+        }}
+    """
+
 def button_text_style(font_size: int) -> str:
     return organizing_button_style(font_size=font_size)
 

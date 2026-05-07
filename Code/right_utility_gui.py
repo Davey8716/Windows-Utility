@@ -14,7 +14,7 @@ from tooltips import format_tooltip_text, tooltip_text
 from utility_toggles import STORAGE_SENSE_WINDOW_TITLES
 from universal_bookmarks_export import BraveBookmarksExporter
 import win32file
-from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
+from PySide6.QtCore import QEvent, QPoint, QSize, Qt, QTimer, QProcess
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -106,10 +106,31 @@ def get_drive_info():
     return drives
 
 class AdvancedToolsPanel(QWidget):
+    SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE = 18
+    SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET = 6
     OUTER_SIDE_PADDING = 14
     WINDOWS_UTILITIES_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH
     WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 8
     WINDOWS_UTILITIES_CONTENT_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH - 8
+    SIDEBAR_OUTPUT_CLEAR_MESSAGES = {
+        "IP Configuration": "IP configuration output log cleared.",
+        "Flush DNS": "Dns output log cleared.",
+        "Renew DHCP Lease": "Dhcp lease output log cleared.",
+        "Restart Explorer": "Explorer output log cleared.",
+        "Restart Bluetooth Service": "Bluetooth service output log cleared.",
+        "Clear Temp Files": "Temp files output log cleared.",
+        "Clear Clipboard": "Clipboard output log cleared.",
+        "Open Prefetch Folder": "Prefetch folder output log cleared.",
+        "Open Temp Folder": "Temp folder output log cleared.",
+        "Display Settings": "Display settings output log cleared.",
+        "Clipboard History": "Clipboard history output log cleared.",
+        "Open Downloads Folder": "Downloads folder output log cleared.",
+        "Open Startup Folder": "Startup folder output log cleared.",
+        "Sound Devices": "Sound devices output log cleared.",
+        "Run DISM Repair": "Dism repair output log cleared.",
+        "Run System File Checker (SFC)": "System file checker output log cleared.",
+        "Run Check Disk (CHKDSK)": "Check disk output log cleared.",
+    }
     WINDOWS_DROPDOWN_TOOLTIP_KEYS = {
         "System": "windows_dropdown_system",
         "Hardware": "windows_dropdown_hardware",
@@ -249,8 +270,17 @@ class AdvancedToolsPanel(QWidget):
             tooltip_text("maintenance_quick_actions_toggle"),
         )
 
+        self.sidebar_output_container = QWidget()
+        self.sidebar_output_container.setFixedHeight(285)
+        self.sidebar_output_container.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        sidebar_output_layout = QGridLayout(self.sidebar_output_container)
+        sidebar_output_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_output_layout.setSpacing(0)
+
         self.sidebar_output = QTextEdit()
-        self.sidebar_output.setFixedHeight(285)
         self.sidebar_output.setReadOnly(True)
         self.sidebar_output.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
@@ -259,16 +289,34 @@ class AdvancedToolsPanel(QWidget):
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
         self.sidebar_output.setProperty("surfaceFieldStyle", True)
-        self.sidebar_output.document().setDocumentMargin(6)
-        self.sidebar_output.setStyleSheet(
-            styles.surfaced_text_edit_style("Consolas", 15)
-            + """
-            QTextEdit {
-                padding: 6px;
-            }
-            """
+        self.sidebar_output.setViewportMargins(
+            0,
+            self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE
+            + (self.SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET * 2),
+            self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE
+            + (self.SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET * 2),
+            0,
         )
-        self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output)
+        self.sidebar_output.document().setDocumentMargin(6)
+        sidebar_output_layout.addWidget(self.sidebar_output, 0, 0)
+        self._sidebar_output_last_action_label = None
+
+        self.sidebar_output_clear_btn = QToolButton(self.sidebar_output.viewport())
+        self.sidebar_output_clear_btn.setText("x")
+        self.sidebar_output_clear_btn.setCursor(Qt.CursorShape.ArrowCursor)
+        self.sidebar_output_clear_btn.setFixedSize(
+            QSize(
+                self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
+                self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
+            )
+        )
+        self.sidebar_output_clear_btn.setProperty("sidebarOutputClearButton", True)
+        self.sidebar_output_clear_btn.clicked.connect(self._clear_sidebar_output)
+        self.sidebar_output.viewport().installEventFilter(self)
+        self.sidebar_output_clear_btn.raise_()
+        self._position_sidebar_output_clear_button()
+        self._apply_sidebar_output_theme()
+        self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output_container)
 
         self.display_space_section = CollapsibleSection(
             parent=self.side_frame,
@@ -328,6 +376,44 @@ class AdvancedToolsPanel(QWidget):
         self._add_windows_dropdown(
             right_drop_layout, "Startup & Power", self._startup_power_utilities()
         )
+
+    def _apply_sidebar_output_theme(self):
+        self.sidebar_output.setStyleSheet(
+            styles.surfaced_text_edit_style("Consolas", 15)
+            + """
+            QTextEdit {
+                padding: 6px;
+            }
+            """
+        )
+        self.sidebar_output_clear_btn.setStyleSheet(
+            styles.sidebar_output_clear_button_style(12)
+        )
+        self._position_sidebar_output_clear_button()
+
+    def _position_sidebar_output_clear_button(self):
+        viewport = self.sidebar_output.viewport()
+        inset = self.SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET
+        x_pos = viewport.width() - self.sidebar_output_clear_btn.width() - inset
+        y_pos = inset
+        self.sidebar_output_clear_btn.move(max(inset, x_pos), y_pos)
+
+    def _set_sidebar_output_context(self, action_label: str):
+        if action_label in self.SIDEBAR_OUTPUT_CLEAR_MESSAGES:
+            self._sidebar_output_last_action_label = action_label
+
+    def _clear_sidebar_output(self):
+        self.sidebar_output.clear()
+        message = self.SIDEBAR_OUTPUT_CLEAR_MESSAGES.get(
+            self._sidebar_output_last_action_label,
+            "Output log cleared.",
+        )
+        self.sidebar_output.setPlainText(message)
+
+    def eventFilter(self, obj, event):
+        if obj is self.sidebar_output.viewport() and event.type() == QEvent.Type.Resize:
+            self._position_sidebar_output_clear_button()
+        return super().eventFilter(obj, event)
 
     def _build_drive_space_display(self):
         drive_parent = self.display_space_section.content_layout
@@ -707,8 +793,12 @@ class AdvancedToolsPanel(QWidget):
 
     def open_reliability_monitor(self):
         self.app.actions.open_or_focus_window_titles(
-            ["Reliability Monitor"],
-            lambda: subprocess.Popen(["perfmon", "/rel"]),
+            [
+                "Reliability Monitor",
+                "View reliability history",
+                "Performance Monitor",
+            ],
+            lambda: self._shell_execute("perfmon.exe", "/rel"),
         )
 
     def open_resource_monitor(self):
@@ -845,6 +935,7 @@ class AdvancedToolsPanel(QWidget):
                 return
             action = actions_map.get(text)
             if action:
+                self._set_sidebar_output_context(text)
                 if getattr(action, "skip_minimize_after_use", False):
                     action()
                 else:
@@ -1348,6 +1439,7 @@ class AdvancedToolsPanel(QWidget):
                 return
             action = actions_map.get(text)
             if action:
+                self._set_sidebar_output_context(text)
                 action()
             combo.setCurrentText(placeholder)
 

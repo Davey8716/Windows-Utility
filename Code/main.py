@@ -1627,14 +1627,7 @@ class UtilityControlApp(
 
         if hasattr(self, "right_tools_panel"):
             if hasattr(self.right_tools_panel, "sidebar_output"):
-                if self.right_tools_panel.sidebar_output.property("surfaceFieldStyle"):
-                    self.right_tools_panel.sidebar_output.setStyleSheet(
-                        styles.surfaced_text_edit_style("Consolas", 15)
-                    )
-                else:
-                    self.right_tools_panel.sidebar_output.setStyleSheet(
-                        styles.text_edit_style("Consolas", 15)
-                    )
+                self.right_tools_panel._apply_sidebar_output_theme()
             if hasattr(self.right_tools_panel, "drive_space_list"):
                 self.right_tools_panel._apply_drive_space_list_style()
 
