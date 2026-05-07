@@ -11,7 +11,6 @@ import styles
 from collapsible_section import CollapsibleSection
 from state_manager import save_state
 from tooltips import format_tooltip_text, tooltip_text
-from utility_toggles import STORAGE_SENSE_WINDOW_TITLES
 from universal_bookmarks_export import BraveBookmarksExporter
 import win32file
 from PySide6.QtCore import QEvent, QPoint, QSize, Qt, QTimer, QProcess
@@ -1047,8 +1046,7 @@ class AdvancedToolsPanel(QWidget):
         )
 
     def open_storage_sense(self):
-        return self.app.actions.open_or_focus_window_titles(
-            STORAGE_SENSE_WINDOW_TITLES,
+        return self.app.actions.open_or_focus_storage_sense(
             lambda: self._shell_open("ms-settings:storagesense"),
         )
 

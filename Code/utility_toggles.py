@@ -605,6 +605,17 @@ class UtilityActionsManager:
             )
             return False
 
+    def open_or_focus_storage_sense(self, launch) -> bool:
+        if self.focus_storage_sense():
+            return True
+
+        try:
+            launch()
+            return True
+        except Exception as e:
+            print(f"[DEBUG] open_or_focus_storage_sense failed: {e}")
+            return False
+
 
 def _iter_recycle_bin_metadata_files():
     for drive_root in _iter_windows_drive_roots():

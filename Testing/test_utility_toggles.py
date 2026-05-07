@@ -216,6 +216,28 @@ class UtilityTogglesTests(unittest.TestCase):
         self.assertTrue(closed)
         close_mock.assert_called_once_with([101, 202, 303])
 
+    def test_open_or_focus_storage_sense_focuses_existing_window(self):
+        manager = utility_toggles.UtilityActionsManager()
+        launch = Mock()
+
+        with patch.object(manager, "focus_storage_sense", return_value=True):
+            opened = manager.open_or_focus_storage_sense(launch)
+
+        self.assertTrue(opened)
+        launch.assert_not_called()
+
+    def test_open_or_focus_storage_sense_launches_when_no_window_exists(self):
+        manager = utility_toggles.UtilityActionsManager()
+        launch = Mock()
+
+        with patch.object(manager, "focus_storage_sense", return_value=False), \
+             patch.object(utility_toggles, "find_windows_by_title_candidates") as title_search:
+            opened = manager.open_or_focus_storage_sense(launch)
+
+        self.assertTrue(opened)
+        launch.assert_called_once_with()
+        title_search.assert_not_called()
+
     def test_capture_desktop_layout_updates_saved_path(self):
         app = SimpleNamespace(saved_state={}, save_all_settings=lambda: setattr(app, "saved", True))
         app.saved = False
