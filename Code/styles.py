@@ -31,6 +31,8 @@ DEFAULT_BUTTON_WIDTH = 180
 DEFAULT_BUTTON_HEIGHT = 30
 LEFT_SECTION_MAX_WIDTH = 420
 RIGHT_SECTION_MAX_WIDTH = 492
+POPUP_CORNER_RADIUS = 0
+POPUP_BORDER_WIDTH = 2
 
 
 def arrow_glyph(arrow_type: Qt.ArrowType) -> str:
@@ -191,6 +193,7 @@ def collapsible_section_frame_style(border_color: QColor | None = None, radius: 
 
 
 def message_box_style(radius: int = 10) -> str:
+    radius = POPUP_CORNER_RADIUS
     border = qcolor_css(SURFACE_BORDER)
     background = qcolor_css(SURFACE_BG)
     hover = qcolor_css(SURFACE_HOVER)
@@ -199,8 +202,8 @@ def message_box_style(radius: int = 10) -> str:
         QMessageBox {{
             background-color: {background};
             color: {text};
-            border: 2px solid {border};
-            border-radius: {radius}px;
+            border: {POPUP_BORDER_WIDTH}px solid {border};
+            border-radius: 0px;
         }}
         QMessageBox QLabel {{
             background: transparent;
@@ -212,7 +215,7 @@ def message_box_style(radius: int = 10) -> str:
             background-color: {background};
             color: {text};
             border: 2px solid {border};
-            border-radius: 6px;
+            border-radius: 0px;
             padding: 5px 12px;
             min-width: 72px;
             font-weight: bold;
@@ -227,6 +230,7 @@ def message_box_style(radius: int = 10) -> str:
 
 
 def message_popup_menu_style(radius: int = 10) -> str:
+    radius = POPUP_CORNER_RADIUS
     border = qcolor_css(SURFACE_BORDER)
     background = qcolor_css(SURFACE_BG)
     hover = qcolor_css(SURFACE_HOVER)
@@ -235,15 +239,15 @@ def message_popup_menu_style(radius: int = 10) -> str:
         QMenu {{
             background-color: {background};
             color: {text};
-            border: 2px solid {border};
-            border-radius: {radius}px;
+            border: {POPUP_BORDER_WIDTH}px solid {border};
+            border-radius: 0px;
             padding: 6px;
         }}
         QMenu::item {{
             background-color: transparent;
             color: {text};
             padding: 7px 12px;
-            border-radius: 6px;
+            border-radius: 0px;
             margin: 1px 0px;
             font-weight: bold;
         }}
@@ -257,6 +261,11 @@ def message_popup_menu_style(radius: int = 10) -> str:
             background: {border};
         }}
     """
+
+
+def apply_popup_menu_style(menu) -> None:
+    if hasattr(menu, "setStyleSheet"):
+        menu.setStyleSheet(message_popup_menu_style())
 
 
 def window_style() -> str:
@@ -297,8 +306,8 @@ def tooltip_style() -> str:
         QToolTip {{
             background-color: {qcolor_css(tooltip_bg())};
             color: {qcolor_css(tooltip_text_color())};
-            border: 1px solid {qcolor_css(tooltip_border())};
-            border-radius: 6px;
+            border: {POPUP_BORDER_WIDTH}px solid {qcolor_css(tooltip_border())};
+            border-radius: {POPUP_CORNER_RADIUS}px;
             padding: 0px;
             font-weight: 700;
         }}
@@ -386,7 +395,7 @@ def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
             )}
             background-color: {qcolor_css(themed_surface_field_bg())};
             border: 2px solid {qcolor_css(themed_surface_field_border())};
-            border-radius: 6px;
+            border-radius: 0px;
             selection-background-color: {qcolor_css(PANEL_HOVER)};
         }}
     """
@@ -631,7 +640,7 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
             background-color: %s;
             color: %s;
             border: 2px solid %s;
-            border-radius: 6px;
+            border-radius: 0px;
             padding: 6px;
         }
         QListWidget::item {

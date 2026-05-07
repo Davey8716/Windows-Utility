@@ -247,6 +247,10 @@ class WindowMessageMixin:
             message_box.setMinimumWidth(minimum_width)
 
     def _apply_rounded_window_mask(self, widget: QWidget, radius: int = 10) -> None:
+        radius = int(getattr(styles, "POPUP_CORNER_RADIUS", radius))
+        if radius <= 0:
+            widget.clearMask()
+            return
         rect = QRectF(widget.rect())
         if rect.isEmpty():
             return

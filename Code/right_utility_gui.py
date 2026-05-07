@@ -414,7 +414,7 @@ class AdvancedToolsPanel(QWidget):
             return
 
         menu = QMenu(self.drive_space_list)
-        menu.setStyleSheet(styles.message_popup_menu_style())
+        styles.apply_popup_menu_style(menu)
         remove_action = menu.addAction(f"Safely Remove {drive_path}")
         selected_action = menu.exec(self.drive_space_list.mapToGlobal(pos))
         if selected_action is remove_action:

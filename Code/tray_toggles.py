@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import styles
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import QObject
@@ -39,6 +40,7 @@ class TrayIconManager(QObject):
         self.tray.setToolTip("Utility Suite")
 
         menu = QMenu()
+        styles.apply_popup_menu_style(menu)
 
         self.zen_mode_action = QAction("Zen Mode", self.app)
         self.zen_mode_action.setCheckable(True)
