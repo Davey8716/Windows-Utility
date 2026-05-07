@@ -1204,8 +1204,8 @@ class UtilityControlApp(
         folder_input.setText(state.get("folder_to_desktop_name", ""))
         folder_input.setReadOnly(False)
         folder_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        folder_input.setProperty("emphasizedSurfaceFieldStyle", True)
-        folder_input.setStyleSheet(styles.emphasized_surface_line_edit_style(15))
+        folder_input.setProperty("framelessSurfaceFieldStyle", True)
+        folder_input.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
         self.register_tooltip(folder_input, tooltip_text("folder_name_input"))
 
         folder_row_layout.addWidget(folder_btn)
@@ -1584,6 +1584,8 @@ class UtilityControlApp(
         for line_edit in self.findChildren(QLineEdit):
             if line_edit.property("emphasizedSurfaceFieldStyle"):
                 line_edit.setStyleSheet(styles.emphasized_surface_line_edit_style(15))
+            elif line_edit.property("framelessSurfaceFieldStyle"):
+                line_edit.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
             elif line_edit.property("plainThemeFieldStyle"):
                 line_edit.setStyleSheet(styles.plain_theme_line_edit_style(15))
             elif line_edit.property("surfaceFieldStyle"):
