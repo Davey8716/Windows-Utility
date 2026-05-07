@@ -649,7 +649,7 @@ class AdvancedToolsPanel(QWidget):
 
     def open_startup_apps(self):
         self.app.actions.open_or_focus_window_titles(
-            ["Settings"],
+            ["Startup apps"],
             lambda: self._shell_open("ms-settings:startupapps"),
         )
 
