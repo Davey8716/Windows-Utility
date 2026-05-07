@@ -533,14 +533,20 @@ class AdvancedToolsPanel(QWidget):
     def _system_utilities(self):
         return {
             "Control Panel": self.open_control_panel,
+            "Credential Manager": self.open_credential_manager,
+            "Reliability Monitor": self.open_reliability_monitor,
+            "Resource Monitor": self.open_resource_monitor,
             "System Settings": self.open_system_settings,
             "System Information": self.open_system_information,
             "Task Manager": self.open_task_manager,
+            "Windows Defender / Virus & Threat Protection": self.open_windows_security,
         }
 
     def _hardware_utilities(self):
         return {
+            "Advanced Display Settings": self.open_advanced_display_settings,
             "Device Manager": self.open_device_manager,
+            "Disk Cleanup": self.open_disk_cleanup,
             "Disk Management": self.open_disk_management,
             "Services": self.open_services,
             "Event Viewer": self.open_event_viewer,
@@ -570,6 +576,18 @@ class AdvancedToolsPanel(QWidget):
             lambda: self._shell_open("eventvwr.msc"),
         )
 
+    def open_advanced_display_settings(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Advanced display"],
+            lambda: self._shell_open("ms-settings:display-advanced"),
+        )
+
+    def open_disk_cleanup(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Disk Cleanup"],
+            lambda: subprocess.Popen(["cleanmgr"]),
+        )
+
     def open_system_settings(self):
         self.app.actions.open_or_focus_window_titles(
             ["Settings"],
@@ -582,16 +600,43 @@ class AdvancedToolsPanel(QWidget):
             lambda: subprocess.Popen(["control"]),
         )
 
+    def open_credential_manager(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Credential Manager"],
+            lambda: self._shell_execute(
+                "control.exe",
+                "/name Microsoft.CredentialManager",
+            ),
+        )
+
     def open_system_information(self):
         self.app.actions.open_or_focus_window_titles(
             ["System Information"],
             lambda: subprocess.Popen(["msinfo32"]),
         )
 
+    def open_reliability_monitor(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Reliability Monitor"],
+            lambda: subprocess.Popen(["perfmon", "/rel"]),
+        )
+
+    def open_resource_monitor(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Resource Monitor"],
+            lambda: subprocess.Popen(["resmon"]),
+        )
+
     def open_task_manager(self):
         self.app.actions.open_or_focus_window_titles(
             ["Task Manager"],
             lambda: subprocess.Popen(["taskmgr"]),
+        )
+
+    def open_windows_security(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Virus & threat protection", "Windows Security"],
+            lambda: self._shell_open("windowsdefender://threat"),
         )
 
     def _shell_open(self, target: str):
@@ -643,8 +688,12 @@ class AdvancedToolsPanel(QWidget):
 
     def _startup_power_utilities(self):
         return {
+            "AutoPlay Settings": self.open_autoplay_settings,
+            "Common Startup Folder": self.open_common_startup_folder,
+            "Installed Programs": self.open_installed_programs,
             "Startup Apps": self.open_startup_apps,
             "Power Options": self.open_power_options,
+            "Storage Sense / Cleanup Recommendations": self.open_storage_sense,
         }
 
     def open_startup_apps(self):
@@ -653,10 +702,38 @@ class AdvancedToolsPanel(QWidget):
             lambda: self._shell_open("ms-settings:startupapps"),
         )
 
+    def open_autoplay_settings(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["AutoPlay"],
+            lambda: self._shell_execute(
+                "control.exe",
+                "/name Microsoft.AutoPlay",
+            ),
+        )
+
+    def open_common_startup_folder(self):
+        common_startup_path = os.path.join(
+            os.environ.get("ProgramData", ""),
+            r"Microsoft\Windows\Start Menu\Programs\Startup",
+        )
+        self.app.actions.open_or_focus_folder_path(common_startup_path)
+
+    def open_installed_programs(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Programs and Features", "Installed Programs"],
+            lambda: self._shell_execute("control.exe", "appwiz.cpl"),
+        )
+
     def open_power_options(self):
         self.app.actions.open_or_focus_window_titles(
             ["Power Options"],
             lambda: self._shell_execute("control.exe", "/name Microsoft.PowerOptions"),
+        )
+
+    def open_storage_sense(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Storage", "Storage Sense"],
+            lambda: self._shell_open("ms-settings:storagesense"),
         )
 
     def _add_windows_dropdown(self, parent_layout, label, actions_map):
@@ -700,13 +777,25 @@ class AdvancedToolsPanel(QWidget):
         return {
             "Clear Temp Files": self.clear_temp,
             "Clear Clipboard": self.clear_clipboard,
+            "Open Prefetch Folder": lambda: self._minimize_and_run(
+                self.open_prefetch_folder
+            ),
+            "Open Temp Folder": lambda: self._minimize_and_run(
+                self.open_temp_folder
+            ),
         }
 
     def _sidebar_quick_open_actions(self):
         return {
+            "Display Settings": lambda: self._minimize_and_run(
+                self.open_display_settings
+            ),
+            "Clipboard History": lambda: self._minimize_and_run(
+                self.open_clipboard_history
+            ),
             "Open Downloads Folder": lambda: self._minimize_and_run(self.open_downloads),
             "Open Startup Folder": lambda: self._minimize_and_run(self.open_startup_folder),
-            "Clipboard History": lambda: self._minimize_and_run(self.open_clipboard_history),
+            "Sound Devices": lambda: self._minimize_and_run(self.open_sound_settings),
         }
 
     def build_sidebar_utilities(self):
@@ -755,6 +844,7 @@ class AdvancedToolsPanel(QWidget):
 
     def _sidebar_system_integrity_actions(self):
         return {
+            "Run DISM Repair": self.run_dism_restorehealth,
             "Run System File Checker (SFC)": self.run_sfc_scannow,
             "Run Check Disk (CHKDSK)": self.run_chkdsk,
         }
@@ -1049,6 +1139,11 @@ class AdvancedToolsPanel(QWidget):
     def clear_clipboard(self):
         self._run_and_output("cmd /c echo off | clip")
 
+    def open_display_settings(self):
+        self.sidebar_output.clear()
+        self._shell_open("ms-settings:display")
+        self.sidebar_output.append("Opened Display Settings.")
+
     def open_downloads(self):
         self.sidebar_output.clear()
         opened = self.app.actions.open_or_focus_explorer_title(
@@ -1075,10 +1170,56 @@ class AdvancedToolsPanel(QWidget):
         else:
             self.sidebar_output.append("Could not open Startup folder.")
 
+    def open_sound_settings(self):
+        self.sidebar_output.clear()
+        self._shell_open("ms-settings:sound")
+        self.sidebar_output.append("Opened Sound Settings.")
+
+    def open_temp_folder(self):
+        self.sidebar_output.clear()
+        temp_path = tempfile.gettempdir()
+        opened = self.app.actions.open_or_focus_folder_path(
+            temp_path,
+            lambda: os.startfile(temp_path),
+        )
+        if opened:
+            self.sidebar_output.append("Opened Temp folder.")
+        else:
+            self.sidebar_output.append("Could not open Temp folder.")
+
+    def open_prefetch_folder(self):
+        self.sidebar_output.clear()
+        prefetch_path = os.path.join(
+            os.environ.get("SystemRoot", r"C:\Windows"),
+            "Prefetch",
+        )
+        opened = self.app.actions.open_or_focus_folder_path(
+            prefetch_path,
+            lambda: os.startfile(prefetch_path),
+        )
+        if opened:
+            self.sidebar_output.append("Opened Prefetch folder.")
+        else:
+            self.sidebar_output.append("Could not open Prefetch folder.")
+
     def open_clipboard_history(self):
         self.sidebar_output.clear()
         self._shell_open("ms-settings:clipboard")
         self.sidebar_output.append("Opened Clipboard History.")
+
+    def run_dism_restorehealth(self):
+        command = [
+            "DISM",
+            "/Online",
+            "/Cleanup-Image",
+            "/RestoreHealth",
+        ]
+
+        if self._is_admin():
+            self._run_and_output(command)
+            return
+
+        self._run_elevated_and_output(command)
 
     def run_sfc_scannow(self):
         if self._is_admin():
