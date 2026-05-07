@@ -1495,21 +1495,11 @@ class UtilityControlApp(
 
         section_layout = getattr(section, "section_layout", None)
         if section_layout is not None:
-            top_margin = (
-                self.LEFT_SECTION_TOP_MARGIN
-                if is_open
-                else self.LEFT_SECTION_COLLAPSED_TOP_MARGIN
-            )
-            bottom_margin = (
-                self.LEFT_SECTION_BOTTOM_MARGIN
-                if is_open
-                else self.LEFT_SECTION_COLLAPSED_BOTTOM_MARGIN
-            )
             section_layout.setContentsMargins(
                 self.MAIN_SECTION_SIDE_PADDING,
-                top_margin,
+                self.LEFT_SECTION_TOP_MARGIN,
                 self.MAIN_SECTION_SIDE_PADDING,
-                bottom_margin,
+                self.LEFT_SECTION_BOTTOM_MARGIN,
             )
 
         main_layout = getattr(self, "main_layout", None)

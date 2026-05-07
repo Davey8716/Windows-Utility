@@ -1,18 +1,22 @@
 Threading/lag
 
-Button Sizes in general, colours relative to state
+Fix jumping of left hand panel button titles etc on section collapse
 
-Button Icons etc especially for USB reminder Dialogue etc
+Do icons for the last list made in codex, plus do proper icons for the arrow < collapsible section/panel buttons
+
+Fix light mode black colour (too dark)
+
+Make light and dark mode versions of the icons that where made
+
+Button Sizes in general, colours relative to state
 
 Outer spacing for both panels dosnt match
 
-General Colour changes?
-
 Fix mover arrows so if any app is at the far ends and cant go farther then the arrows in that direction dissapear + animate these
-
 Fix location of the mmb clicker relative to tabs etc
+Give proper icons to the mover gui!!!!!!!!!!!
 
-Fix all maintenance and quick actions 
+Fix sfc scannow and chkdsk
 
 A hook for workspace builder ?
 
