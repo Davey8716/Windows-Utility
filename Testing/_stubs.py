@@ -115,6 +115,9 @@ class _DummyApplication(_BaseWidget):
 
 
 class _DummyIcon:
+    def __init__(self, *_args, **_kwargs):
+        pass
+
     @staticmethod
     def fromTheme(_name):
         return _DummyIcon()
@@ -239,6 +242,7 @@ def install_dependency_stubs():
         qtcore = types.ModuleType("PySide6.QtCore")
         qtwidgets = types.ModuleType("PySide6.QtWidgets")
         qtgui = types.ModuleType("PySide6.QtGui")
+        qttest = types.ModuleType("PySide6.QtTest")
 
         qtcore.Qt = _DummyQt
         qtcore.QTimer = _DummyQTimer
@@ -282,17 +286,21 @@ def install_dependency_stubs():
         qtgui.QFontMetrics = _DummyFontMetrics
         qtgui.QPainter = _BaseWidget
         qtgui.QPainterPath = _BaseWidget
+        qtgui.QPen = _BaseWidget
         qtgui.QPixmap = _BaseWidget
         qtgui.QRegion = _BaseWidget
+        qttest.QTest = _BaseWidget
 
         pyside6.QtCore = qtcore
         pyside6.QtWidgets = qtwidgets
         pyside6.QtGui = qtgui
+        pyside6.QtTest = qttest
 
         sys.modules["PySide6"] = pyside6
         sys.modules["PySide6.QtCore"] = qtcore
         sys.modules["PySide6.QtWidgets"] = qtwidgets
         sys.modules["PySide6.QtGui"] = qtgui
+        sys.modules["PySide6.QtTest"] = qttest
 
     if "win32gui" not in sys.modules:
         win32gui = types.ModuleType("win32gui")
