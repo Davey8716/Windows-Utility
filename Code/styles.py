@@ -456,6 +456,22 @@ def plain_theme_line_edit_style(font_size: int) -> str:
         }}
     """
 
+
+def plain_theme_label_style(font_size: int) -> str:
+    return f"""
+        QLabel {{
+            {label_style(
+                font_size=font_size,
+                bold=True,
+                color=theme_text_color(),
+            )}
+            background-color: {qcolor_css(WINDOW_BG)};
+            border: none;
+            border-radius: 6px;
+            padding: 4px 8px;
+        }}
+    """
+
 def surfaced_combo_style(font_size: int) -> str:
     return f"""
         QComboBox {{

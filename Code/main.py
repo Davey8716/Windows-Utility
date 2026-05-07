@@ -1259,23 +1259,19 @@ class UtilityControlApp(
         master_backup_row_layout.addWidget(master_backup_btn)
         self.register_tooltip(master_backup_btn, tooltip_text("master_backup_path"))
 
-        self.backup_path_input = QLineEdit()
-        self.backup_path_input.setPlaceholderText("Backup output folder path")
-        self.backup_path_input.setText(self._get_master_backup_dir())
-        self.backup_path_input.setReadOnly(True)
+        self.backup_path_input = QLabel()
         self.backup_path_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        self.backup_path_input.setProperty("plainThemeFieldStyle", True)
-        self.backup_path_input.setStyleSheet(styles.plain_theme_line_edit_style(15))
+        self.backup_path_input.setProperty("plainThemeLabelStyle", True)
+        self.backup_path_input.setStyleSheet(styles.plain_theme_label_style(15))
+        self.backup_path_input.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
         master_backup_row_layout.addWidget(self.backup_path_input)
-        self.register_tooltip(self.backup_path_input, tooltip_text("backup_path_input"))
+        self._refresh_master_backup_path_display()
 
         org_layout.addWidget(master_backup_row)
 
-        def on_master_backup_path_changed(text: str):
-            self._set_master_backup_dir(text)
-
         master_backup_btn.clicked.connect(self._choose_master_backup_dir)
-        self.backup_path_input.textChanged.connect(on_master_backup_path_changed)
         self._taskbar_backup_folder_timer = QTimer(self)
         self._taskbar_backup_folder_timer.timeout.connect(
             self._refresh_taskbar_backup_folder_button
@@ -1535,6 +1531,7 @@ class UtilityControlApp(
     def resizeEvent(self, event):
         self._update_panel_geometries()
         self._position_advanced_settings_toggle()
+        self._refresh_master_backup_path_display()
         super().resizeEvent(event)
 
     def _get_arrow_colors(self):
@@ -1592,6 +1589,15 @@ class UtilityControlApp(
                 line_edit.setStyleSheet(styles.surfaced_line_edit_style(15))
             else:
                 line_edit.setStyleSheet(styles.line_edit_style(15))
+
+        backup_path_label = getattr(self, "backup_path_input", None)
+        if (
+            backup_path_label is not None
+            and backup_path_label.property("plainThemeLabelStyle")
+        ):
+            backup_path_label.setStyleSheet(styles.plain_theme_label_style(15))
+
+        self._refresh_master_backup_path_display()
 
         for button in self.findChildren(QPushButton):
             font_size = int(button.property("styleFontSize") or 14)

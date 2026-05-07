@@ -1,12 +1,17 @@
 import sys
 from pathlib import Path
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QFileDialog
 
 from state_manager import save_state
+from tooltips import format_tooltip_text
 
 
 class MasterBackupPathsMixin:
+    MASTER_BACKUP_PATH_TOOLTIP_PREFIX = "Master backup folder:"
+
     def _get_app_module_attr(self, name: str, default):
         module = sys.modules.get(self.__class__.__module__)
         return getattr(module, name, default)
@@ -49,14 +54,55 @@ class MasterBackupPathsMixin:
         self.state["backup_output_path"] = clean_path
         self.state["backup_folder_path"] = clean_path
 
-        if (
-            hasattr(self, "backup_path_input")
-            and self.backup_path_input.text() != clean_path
-        ):
-            self.backup_path_input.setText(clean_path)
+        self._refresh_master_backup_path_display()
 
         save_state_fn = self._get_app_module_attr("save_state", save_state)
         save_state_fn(self.state)
+
+    def _get_master_backup_path_tooltip_text(self) -> str:
+        full_path = self._get_master_backup_dir().strip()
+        if not full_path:
+            return ""
+        return format_tooltip_text(
+            f"{self.MASTER_BACKUP_PATH_TOOLTIP_PREFIX}\n{full_path}",
+            wrap_width=160,
+        )
+
+    def _get_master_backup_path_display_text(self) -> str:
+        full_path = self._get_master_backup_dir().strip()
+        if not full_path:
+            return ""
+
+        display_widget = getattr(self, "backup_path_input", None)
+        if display_widget is None:
+            return full_path
+
+        available_width = max(0, display_widget.width() - 24)
+        if available_width <= 0:
+            return full_path
+
+        metrics = QFontMetrics(display_widget.font())
+        if metrics.horizontalAdvance(full_path) <= available_width:
+            return full_path
+
+        return metrics.elidedText(
+            full_path,
+            Qt.TextElideMode.ElideRight,
+            available_width,
+        )
+
+    def _refresh_master_backup_path_display(self) -> None:
+        display_widget = getattr(self, "backup_path_input", None)
+        if display_widget is None:
+            return
+
+        display_text = self._get_master_backup_path_display_text()
+        if display_widget.text() != display_text:
+            display_widget.setText(display_text)
+
+        tooltip_text = self._get_master_backup_path_tooltip_text()
+        if display_widget.toolTip() != tooltip_text:
+            display_widget.setToolTip(tooltip_text)
 
     def _build_master_output_path(self, filename: str) -> str:
         path_type = self._get_app_module_attr("Path", Path)
