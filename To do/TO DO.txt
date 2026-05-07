@@ -1,7 +1,5 @@
 Threading/lag
 
-Fix jumping of left hand panel button titles etc on section collapse
-
 Do icons for the last list made in codex, plus do proper icons for the arrow < collapsible section/panel buttons
 
 Fix light mode black colour (too dark)

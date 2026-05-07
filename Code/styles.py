@@ -304,6 +304,26 @@ def tooltip_style() -> str:
         }}
     """
 
+
+def themed_button_bg() -> QColor:
+    return ORGANIZE_BUTTON_BG if THEME_IS_DARK else QColor(228, 228, 228)
+
+
+def themed_button_hover() -> QColor:
+    return ORGANIZE_BUTTON_HOVER if THEME_IS_DARK else QColor(212, 212, 212)
+
+
+def themed_button_pressed() -> QColor:
+    return ORGANIZE_BUTTON_PRESSED if THEME_IS_DARK else QColor(184, 184, 184)
+
+
+def themed_button_pressed_hover() -> QColor:
+    return ORGANIZE_BUTTON_PRESSED_HOVER if THEME_IS_DARK else QColor(170, 170, 170)
+
+
+def themed_button_border() -> QColor:
+    return ORGANIZE_BUTTON_BORDER if THEME_IS_DARK else QColor(120, 120, 120)
+
 def organizing_button_style(font_size: int | None = None) -> str:
     font_rule = f"font-size: {font_size}px;" if font_size is not None else ""
     return f"""
@@ -313,26 +333,26 @@ def organizing_button_style(font_size: int | None = None) -> str:
             {font_rule}
             font-weight: bold;
             color: {qcolor_css(theme_text_color())};
-            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+            border: 1px solid {qcolor_css(themed_button_border())};
             border-radius: 3px;
-            background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
+            background-color: {qcolor_css(themed_button_bg())};
         }}
         QPushButton:hover {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            background-color: {qcolor_css(themed_button_hover())};
         }}
         QPushButton:checked:hover {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED_HOVER)};
+            background-color: {qcolor_css(themed_button_pressed_hover())};
         }}
         QPushButton:pressed,
         QPushButton[flashActive="true"],
         QPushButton:checked {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
-            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+            background-color: {qcolor_css(themed_button_pressed())};
+            border: 1px solid {qcolor_css(themed_button_border())};
         }}
         QPushButton:disabled {{
             color: {qcolor_css(theme_text_color())};
-            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
-            background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
+            border: 1px solid {qcolor_css(themed_button_border())};
+            background-color: {qcolor_css(themed_button_bg())};
         }}
     """
 
@@ -616,13 +636,13 @@ def organizing_combo_style(font_size: int) -> str:
     return f"""
         QComboBox {{
             {label_style(font_size=font_size, bold=True, color=theme_text_color())}
-            background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
-            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+            background-color: {qcolor_css(themed_button_bg())};
+            border: 1px solid {qcolor_css(themed_button_border())};
             border-radius: 3px;
             padding: 4px 8px;
         }}
         QComboBox:hover {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            background-color: {qcolor_css(themed_button_hover())};
         }}
         QComboBox:disabled {{
             background-color: {qcolor_css(themed_surface_field_bg())};
@@ -630,17 +650,17 @@ def organizing_combo_style(font_size: int) -> str:
             border: 1px solid {qcolor_css(themed_surface_field_border())};
         }}
         QComboBox:on {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
+            background-color: {qcolor_css(themed_button_pressed())};
         }}
         QComboBox[persistPressed="true"] {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
+            background-color: {qcolor_css(themed_button_pressed())};
         }}
         QComboBox QAbstractItemView {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_BG)};
+            background-color: {qcolor_css(themed_button_bg())};
             color: {qcolor_css(theme_text_color())};
-            selection-background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            selection-background-color: {qcolor_css(themed_button_hover())};
             selection-color: {qcolor_css(theme_text_color())};
-            border: 1px solid {qcolor_css(ORGANIZE_BUTTON_BORDER)};
+            border: 1px solid {qcolor_css(themed_button_border())};
             outline: 0;
         }}
         QComboBox QAbstractItemView::item {{
@@ -648,12 +668,12 @@ def organizing_combo_style(font_size: int) -> str:
             border: none;
         }}
         QComboBox QAbstractItemView::item:selected {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            background-color: {qcolor_css(themed_button_hover())};
             color: {qcolor_css(theme_text_color())};
-            border-left: 3px solid {qcolor_css(ORGANIZE_BUTTON_PRESSED)};
+            border-left: 3px solid {qcolor_css(themed_button_pressed())};
         }}
         QComboBox QAbstractItemView::item:hover {{
-            background-color: {qcolor_css(ORGANIZE_BUTTON_HOVER)};
+            background-color: {qcolor_css(themed_button_hover())};
             color: {qcolor_css(theme_text_color())};
         }}
     """
