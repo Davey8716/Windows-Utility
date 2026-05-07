@@ -174,7 +174,7 @@ class AdvancedToolsPanel(QWidget):
 
         self.side_layout = QVBoxLayout(self.side_frame)
         self.side_layout.setContentsMargins(self.OUTER_SIDE_PADDING, 0, self.OUTER_SIDE_PADDING, 5)
-        self.side_layout.setSpacing(6)
+        self.side_layout.setSpacing(2)
         self.side_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         title_row = QWidget()

@@ -18,7 +18,7 @@ class CollapsibleSection(QWidget):
         # Main vertical layout
         # ===============================
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(0, 10, 0, 0)
+        self.main_layout.setContentsMargins(0, 4, 0, 0)
         self.main_layout.setSpacing(4)
         self.setMaximumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
