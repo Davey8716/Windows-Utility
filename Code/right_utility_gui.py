@@ -954,27 +954,30 @@ class AdvancedToolsPanel(QWidget):
         }
 
     def _sidebar_cleanup_actions(self):
-        return {
+        actions = {
             "Clear Temp Files": self.clear_temp,
             "Clear Clipboard": self.clear_clipboard,
+            "Clipboard History": lambda: self._minimize_and_run(
+                self.open_clipboard_history
+            ),
+            "Open Downloads Folder": lambda: self._minimize_and_run(self.open_downloads),
             "Open Prefetch Folder": lambda: self._minimize_and_run(
                 self.open_prefetch_folder
+            ),
+            "Open Startup Folder": lambda: self._minimize_and_run(
+                self.open_startup_folder
             ),
             "Open Temp Folder": lambda: self._minimize_and_run(
                 self.open_temp_folder
             ),
         }
+        return dict(sorted(actions.items(), key=lambda item: item[0].casefold()))
 
     def _sidebar_quick_open_actions(self):
         actions = {
             "Display Settings": lambda: self._minimize_and_run(
                 self.open_display_settings
             ),
-            "Clipboard History": lambda: self._minimize_and_run(
-                self.open_clipboard_history
-            ),
-            "Open Downloads Folder": lambda: self._minimize_and_run(self.open_downloads),
-            "Open Startup Folder": lambda: self._minimize_and_run(self.open_startup_folder),
             "Sound Devices": lambda: self._minimize_and_run(self.open_sound_settings),
         }
         return dict(sorted(actions.items(), key=lambda item: item[0].casefold()))
