@@ -363,12 +363,16 @@ class ExternalDriveMixin:
                 "Drive Connected",
                 f"External {drive_label} connected:\n" + "\n".join(added_drives),
                 timeout_ms=10_000,
+                merge_group="external_drive_changes",
+                merge_title="External Drives",
                 accessory_icon_path=self._usb_popup_icon_path(),
                 accessory_icon_size=self.USB_POPUP_ICON_SIZE,
                 minimum_popup_width=460,
                 text_minimum_width=320,
                 center_text_block=True,
                 accessory_leading_spacer_width=34,
+                show_close_now_button=True,
+                replace_grouped_entries=True,
             )
 
         if removed_drives:
@@ -378,10 +382,14 @@ class ExternalDriveMixin:
                 "Drive Removed",
                 f"External {drive_label} removed:\n" + "\n".join(removed_drives),
                 timeout_ms=10_000,
+                merge_group="external_drive_changes",
+                merge_title="External Drives",
                 accessory_icon_path=self._usb_popup_icon_path(),
                 accessory_icon_size=self.USB_POPUP_ICON_SIZE,
                 minimum_popup_width=460,
                 text_minimum_width=320,
                 center_text_block=True,
                 accessory_leading_spacer_width=34,
+                show_close_now_button=True,
+                replace_grouped_entries=True,
             )

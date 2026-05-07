@@ -364,13 +364,17 @@ class WindowMessageMixin:
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
         show_close_now_button: bool = False,
+        replace_grouped_entries: bool = False,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
         grouped_boxes = self._get_grouped_timed_message_boxes()
         if merge_group:
             active_grouped_box = grouped_boxes.get(merge_group)
             if active_grouped_box is not None:
-                active_grouped_box._grouped_entries.append((title, text))
+                if replace_grouped_entries:
+                    active_grouped_box._grouped_entries = [(title, text)]
+                else:
+                    active_grouped_box._grouped_entries.append((title, text))
                 if icon == self._message_box_icon("Warning"):
                     active_grouped_box.setIcon(icon)
                 self._refresh_grouped_timed_message(
