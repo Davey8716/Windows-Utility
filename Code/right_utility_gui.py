@@ -875,7 +875,7 @@ class AdvancedToolsPanel(QWidget):
         }
 
     def _sidebar_quick_open_actions(self):
-        return {
+        actions = {
             "Display Settings": lambda: self._minimize_and_run(
                 self.open_display_settings
             ),
@@ -886,6 +886,7 @@ class AdvancedToolsPanel(QWidget):
             "Open Startup Folder": lambda: self._minimize_and_run(self.open_startup_folder),
             "Sound Devices": lambda: self._minimize_and_run(self.open_sound_settings),
         }
+        return dict(sorted(actions.items(), key=lambda item: item[0].casefold()))
 
     def build_sidebar_utilities(self):
         parent_layout = self.sidebar_utils_section.content_layout
