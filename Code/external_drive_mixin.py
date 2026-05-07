@@ -106,6 +106,8 @@ class ExternalDriveMixin:
         if not hasattr(self, "connected_drives_field"):
             return
 
+        empty_label = getattr(self, "connected_drives_empty_label", None)
+
         if drives is None:
             drives = tuple(sorted(self._current_external_drives()))
         elif not isinstance(drives, tuple):
@@ -118,14 +120,21 @@ class ExternalDriveMixin:
             for drive_path, display_text in zip(drives, display_drives):
                 self.connected_drives_field.addItem(display_text, drive_path)
             self.connected_drives_field.setCurrentIndex(0)
+            self.connected_drives_field.show()
+            if empty_label is not None:
+                empty_label.hide()
             self.connected_drives_field.setToolTip(
                 format_tooltip_text(
                     "Connected drives:\n" + "\n".join(display_drives)
                 )
             )
         else:
-            self.connected_drives_field.setPlaceholderText("No Drives Connected")
+            self.connected_drives_field.setPlaceholderText("")
             self.connected_drives_field.setCurrentIndex(-1)
+            self.connected_drives_field.hide()
+            if empty_label is not None:
+                empty_label.show()
+                empty_label.setToolTip(format_tooltip_text("No Drives Connected"))
             self.connected_drives_field.setToolTip(
                 format_tooltip_text("No Drives Connected")
             )

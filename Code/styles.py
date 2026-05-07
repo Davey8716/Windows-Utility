@@ -468,14 +468,14 @@ def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") 
                 color=themed_surface_field_text(),
                 font_family=font_family,
             )}
-            background-color: {qcolor_css(themed_surface_field_bg())};
+            background-color: {qcolor_css(WINDOW_BG)};
             border: none;
             border-radius: 6px;
             padding: 4px 24px 4px 6px;
         }}
         QComboBox:hover,
         QComboBox:on {{
-            background-color: {qcolor_css(themed_surface_field_bg())};
+            background-color: {qcolor_css(WINDOW_BG)};
         }}
         QComboBox::drop-down {{
             border: none;
@@ -483,11 +483,11 @@ def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") 
             width: 18px;
         }}
         QComboBox QAbstractItemView {{
-            background-color: {qcolor_css(themed_surface_field_bg())};
+            background-color: {qcolor_css(WINDOW_BG)};
             color: {qcolor_css(themed_surface_field_text())};
             selection-background-color: {qcolor_css(PANEL_HOVER)};
             selection-color: {qcolor_css(themed_surface_field_text())};
-            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            border: none;
             outline: 0;
         }}
         QComboBox QAbstractItemView::item {{

@@ -1124,7 +1124,17 @@ class UtilityControlApp(
         self.connected_drives_field.customContextMenuRequested.connect(
             self._show_connected_drives_context_menu
         )
+        self.connected_drives_empty_label = QLabel("No Drives Connected")
+        self.connected_drives_empty_label.setStyleSheet(
+            styles.label_style(font_size=14, color=styles.theme_text_color())
+        )
+        self.connected_drives_empty_label.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
+        self.connected_drives_empty_label.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        self.connected_drives_empty_label.hide()
         leave_reminder_row_layout.addWidget(self.connected_drives_field)
+        leave_reminder_row_layout.addWidget(self.connected_drives_empty_label)
         usb_layout.addWidget(leave_reminder_row)
         self._refresh_connected_drive_status_label()
 
@@ -1593,6 +1603,12 @@ class UtilityControlApp(
                 combo.setStyleSheet(styles.surfaced_combo_style(font_size=font_size))
             else:
                 combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
+
+        empty_label = getattr(self, "connected_drives_empty_label", None)
+        if empty_label is not None:
+            empty_label.setStyleSheet(
+                styles.label_style(font_size=14, color=styles.theme_text_color())
+            )
 
         if hasattr(self, "right_tools_panel"):
             if hasattr(self.right_tools_panel, "sidebar_output"):
