@@ -33,13 +33,16 @@ class WindowMessageMixin:
 
     def _apply_message_box_icon(self, message_box: QMessageBox, icon) -> None:
         if icon == self._message_box_icon("NoIcon"):
+            message_box._suppress_standard_icon = True
             message_box.setIcon(icon)
             message_box.setIconPixmap(QPixmap())
             return
         if icon == self._message_box_icon("Information"):
+            message_box._suppress_standard_icon = True
             message_box.setIcon(self._message_box_icon("NoIcon"))
             message_box.setIconPixmap(QPixmap())
             return
+        message_box._suppress_standard_icon = False
         message_box.setIcon(icon)
 
     def _compose_timed_message_text(self, text: str, timeout_seconds: int) -> str:
@@ -90,11 +93,28 @@ class WindowMessageMixin:
         return message_box
 
     def _prepare_message_box_layout(self, message_box: QMessageBox) -> None:
+        self._suppress_message_box_icon_label(message_box)
         self._balance_message_box_text_padding(message_box)
         self._apply_message_box_accessory(message_box)
         self._center_message_box_text_block(message_box)
         self._ensure_timed_close_button(message_box)
         self._center_message_box_buttons(message_box)
+
+    def _suppress_message_box_icon_label(self, message_box: QMessageBox) -> None:
+        if not getattr(message_box, "_suppress_standard_icon", False):
+            return
+
+        layout = message_box.layout()
+        if not isinstance(layout, QGridLayout):
+            return
+
+        for object_name in ("qt_msgboxex_icon_label", "qt_msgbox_icon_label"):
+            icon_label = message_box.findChild(QLabel, object_name)
+            if icon_label is None:
+                continue
+            layout.removeWidget(icon_label)
+            icon_label.clear()
+            icon_label.hide()
 
     def _ensure_timed_close_button(self, message_box: QMessageBox) -> None:
         if not getattr(message_box, "_show_close_now_button", False):

@@ -288,7 +288,7 @@ class DesktopOperationsMixin:
                     return
 
                 self._show_timed_message(
-                    self._message_box_icon("Warning"),
+                    self._message_box_icon("NoIcon"),
                     "Recycle Bin",
                     "Could not empty Recycle Bin.",
                     show_close_now_button=True,
