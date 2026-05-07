@@ -141,6 +141,7 @@ class UtilityControlApp(
     MAIN_PANEL_WIDTH = 450
     RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 65
     MAIN_SECTION_SIDE_PADDING = 14
+    LEFT_TOGGLE_RIGHT_INSET = 14
     LEFT_SECTION_TOP_MARGIN = 5
     LEFT_SECTION_BOTTOM_MARGIN = 12
     LEFT_SECTION_COLLAPSED_TOP_MARGIN = 10
@@ -421,7 +422,7 @@ class UtilityControlApp(
             10,
             self.MAIN_SECTION_SIDE_PADDING + (
                 self.MAIN_SECTION_FRAME_WIDTH - self.LEFT_SECTION_VISIBLE_FRAME_WIDTH
-            ),
+            ) + self.LEFT_TOGGLE_RIGHT_INSET,
             10,
         )
 
@@ -504,7 +505,12 @@ class UtilityControlApp(
                 QSizePolicy.Policy.Fixed,
             )
             sec_header_layout = QHBoxLayout(sec_header)
-            sec_header_layout.setContentsMargins(0, 0, 0, 0)
+            sec_header_layout.setContentsMargins(
+                0,
+                0,
+                self.LEFT_TOGGLE_RIGHT_INSET,
+                0,
+            )
 
             sec_title = QLabel(title_text, sec_header)
             sec_title.setStyleSheet(styles.label_style(font_size=15))
