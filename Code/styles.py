@@ -402,24 +402,29 @@ def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
 
 
 def sidebar_output_clear_button_style(font_size: int = 12) -> str:
-    background = STATUS_ACCENT if THEME_IS_DARK else QColor(212, 212, 212)
-    hover = PANEL_HOVER if THEME_IS_DARK else QColor(196, 196, 196)
-    pressed = QColor(32, 96, 170) if THEME_IS_DARK else QColor(176, 176, 176)
+    text_color = TEXT_LIGHT if THEME_IS_DARK else TEXT_DARK
+    hover = QColor(220, 220, 220, 80) if THEME_IS_DARK else QColor(32, 32, 32, 35)
+    pressed = QColor(220, 220, 220, 120) if THEME_IS_DARK else QColor(32, 32, 32, 60)
     return f"""
-        QToolButton {{
-            color: {qcolor_css(theme_text_color())};
-            background-color: {qcolor_css(background)};
+        QToolButton[sidebarOutputClearButton="true"] {{
+            color: {qcolor_css(text_color)};
+            background-color: transparent;
             border: none;
-            border-radius: 3px;
+            border-radius: 0px;
             padding: 0px;
             font-size: {font_size}px;
             font-weight: bold;
+            outline: none;
         }}
-        QToolButton:hover {{
+        QToolButton[sidebarOutputClearButton="true"]:hover {{
             background-color: {qcolor_css(hover)};
         }}
-        QToolButton:pressed {{
+        QToolButton[sidebarOutputClearButton="true"]:pressed {{
             background-color: {qcolor_css(pressed)};
+        }}
+        QToolButton[sidebarOutputClearButton="true"]:focus {{
+            border: none;
+            outline: none;
         }}
     """
 

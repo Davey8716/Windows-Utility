@@ -108,6 +108,8 @@ def get_drive_info():
 class AdvancedToolsPanel(QWidget):
     SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE = 18
     SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET = 6
+    SIDEBAR_OUTPUT_CLEAR_BUTTON_RIGHT_OFFSET = 20
+    SIDEBAR_OUTPUT_CLEAR_BUTTON_UP_OFFSET = 20
     OUTER_SIDE_PADDING = 14
     WINDOWS_UTILITIES_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH
     WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 8
@@ -404,9 +406,15 @@ class AdvancedToolsPanel(QWidget):
     def _position_sidebar_output_clear_button(self):
         viewport = self.sidebar_output.viewport()
         inset = self.SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET
-        x_pos = viewport.width() - self.sidebar_output_clear_btn.width() - inset
-        y_pos = inset
-        self.sidebar_output_clear_btn.move(max(inset, x_pos), y_pos)
+        x_pos = (
+            viewport.width()
+            - self.sidebar_output_clear_btn.width()
+            - inset
+            + self.SIDEBAR_OUTPUT_CLEAR_BUTTON_RIGHT_OFFSET
+        )
+        y_pos = inset - self.SIDEBAR_OUTPUT_CLEAR_BUTTON_UP_OFFSET
+        max_x = max(0, viewport.width() - self.sidebar_output_clear_btn.width())
+        self.sidebar_output_clear_btn.move(max(0, min(max_x, x_pos)), max(0, y_pos))
 
     def _set_sidebar_output_context(self, action_label: str):
         if action_label in self.SIDEBAR_OUTPUT_CLEAR_MESSAGES:
