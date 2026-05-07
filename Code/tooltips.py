@@ -5,7 +5,6 @@ from PySide6.QtCore import QObject, QTimer, QPoint, QEvent
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QToolTip
 
-
 TOOLTIP_TEXT = {
     "dark_mode": "Switches the app between dark and light appearance.",
     "always_on_top": "Keeps the main window above other windows.",
@@ -51,14 +50,12 @@ TOOLTIP_TEXT = {
     "sidebar_dropdown_integrity": "Runs system integrity and disk health tools such as SFC and CHKDSK.",
 }
 
-
 def tooltip_text(key: str) -> str:
     return TOOLTIP_TEXT[key]
 
 
 def left_section_toggle_tooltip(title: str) -> str:
     return f"Shows or hides the {title} section."
-
 
 def format_tooltip_text(text: str, wrap_width: int = 62) -> str:
     paragraphs: list[str] = []
@@ -82,7 +79,6 @@ def format_tooltip_text(text: str, wrap_width: int = 62) -> str:
         f"{wrapped_html}"
         "</div>"
     )
-
 
 class QtTooltipManager(QObject):
     def __init__(self, widget, text, delay=250):
