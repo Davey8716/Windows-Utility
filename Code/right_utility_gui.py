@@ -1062,9 +1062,13 @@ class AdvancedToolsPanel(QWidget):
 
     def open_startup_folder(self):
         self.sidebar_output.clear()
-        opened = self.app.actions.open_or_focus_explorer_title(
-            "Startup",
-            lambda: subprocess.Popen(["explorer", "shell:startup"]),
+        startup_path = os.path.join(
+            os.environ.get("APPDATA", ""),
+            r"Microsoft\Windows\Start Menu\Programs\Startup",
+        )
+        opened = self.app.actions.open_or_focus_folder_path(
+            startup_path,
+            lambda: os.startfile(startup_path),
         )
         if opened:
             self.sidebar_output.append("Opened Startup folder.")

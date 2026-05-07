@@ -344,6 +344,31 @@ class UtilityActionsManager:
         handles = find_explorer_windows_for_folder(resolved_path)
         return focus_window_handles(handles)
 
+    def open_or_focus_folder_path(
+        self,
+        path: str,
+        launch=None,
+    ) -> bool:
+        normalized_path = _normalize_folder_path(path)
+        if not normalized_path:
+            return False
+
+        if focus_window_handles(find_explorer_windows_for_folder(normalized_path)):
+            return True
+
+        try:
+            if launch is not None:
+                launch()
+            else:
+                os.startfile(normalized_path)
+            return True
+        except Exception as e:
+            print(
+                "[DEBUG] open_or_focus_folder_path failed for "
+                f"{normalized_path}: {e}"
+            )
+            return False
+
     def is_backup_folder_open(self, path: str | None = None) -> bool:
         resolved_path = _resolve_backup_folder_path(path, self.app)
         if not resolved_path:
@@ -706,6 +731,40 @@ def _is_explorer_folder_window(hwnd: int, folder_name: str) -> bool:
 
 
 def find_explorer_windows_for_folder(path: str) -> list[int]:
+    normalized_target_path = _normalize_folder_path(path)
+    if not normalized_target_path:
+        return []
+
+    handles: list[int] = []
+
+    try:
+        pythoncom.CoInitialize()
+    except Exception:
+        pass
+
+    try:
+        shell = win32com.client.Dispatch("Shell.Application")
+        shell_windows = shell.Windows()
+    except Exception as e:
+        print(f"[DEBUG] find_explorer_windows_for_folder failed: {e}")
+        shell_windows = []
+
+    for window in shell_windows:
+        try:
+            hwnd = int(window.HWND)
+        except Exception:
+            continue
+
+        window_folder_path = _get_shell_window_folder_path(window)
+        if not window_folder_path:
+            continue
+
+        if _normalize_folder_path(window_folder_path) == normalized_target_path:
+            handles.append(hwnd)
+
+    if handles:
+        return handles
+
     folder_name = Path(path).name.strip()
     if not folder_name:
         return []
@@ -810,6 +869,25 @@ def _title_matches_any_candidate(
         or candidate in normalized_title
         for candidate in normalized_candidates
     )
+
+
+def _get_shell_window_folder_path(window) -> str:
+    try:
+        folder = window.Document.Folder
+        folder_self = folder.Self
+        return str(getattr(folder_self, "Path", "") or "")
+    except Exception:
+        return ""
+
+
+def _normalize_folder_path(path: str | None) -> str:
+    if not path:
+        return ""
+
+    try:
+        return os.path.normcase(os.path.abspath(path))
+    except Exception:
+        return str(path).strip().casefold()
 
 
 RECYCLE_BIN_CLSID = "{645FF040-5081-101B-9F08-00AA002F954E}"
