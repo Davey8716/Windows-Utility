@@ -430,13 +430,19 @@ class AdvancedToolsPanel(QWidget):
         self._storage_sense_close_pending = False
 
         button_row = QWidget()
+        button_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         button_row_layout = QHBoxLayout(button_row)
         button_row_layout.setContentsMargins(0, 0, 0, 0)
         button_row_layout.setSpacing(10)
 
         btn_this_pc = QPushButton("Open This PC")
         self.btn_this_pc = btn_this_pc
-        styles.apply_default_button_size(btn_this_pc)
+        btn_this_pc.setMinimumWidth(styles.DEFAULT_BUTTON_WIDTH)
+        btn_this_pc.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        btn_this_pc.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         btn_this_pc.setProperty("styleFontSize", 14)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
@@ -446,10 +452,16 @@ class AdvancedToolsPanel(QWidget):
             tooltip_text("open_this_pc"),
         )
         button_row_layout.addWidget(btn_this_pc)
+        button_row_layout.setStretchFactor(btn_this_pc, 1)
 
         btn_storage_sense = QPushButton("Open Storage Sense")
         self.btn_storage_sense = btn_storage_sense
-        styles.apply_default_button_size(btn_storage_sense)
+        btn_storage_sense.setMinimumWidth(styles.DEFAULT_BUTTON_WIDTH)
+        btn_storage_sense.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        btn_storage_sense.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         btn_storage_sense.setProperty("styleFontSize", 14)
         btn_storage_sense.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_storage_sense)
@@ -459,6 +471,7 @@ class AdvancedToolsPanel(QWidget):
             tooltip_text("open_storage_sense"),
         )
         button_row_layout.addWidget(btn_storage_sense)
+        button_row_layout.setStretchFactor(btn_storage_sense, 1)
 
         drive_parent.addWidget(button_row)
 
@@ -790,7 +803,7 @@ class AdvancedToolsPanel(QWidget):
     def open_control_panel(self):
         self.app.actions.open_or_focus_window_titles(
             ["Control Panel"],
-            lambda: subprocess.Popen(["control"]),
+            lambda: self._shell_execute(self._control_exe_path()),
         )
 
     def open_credential_manager(self):
@@ -826,13 +839,13 @@ class AdvancedToolsPanel(QWidget):
 
     def open_task_manager(self):
         self.app.actions.open_or_focus_window_titles(
-            ["Task Manager"],
+            ["Task Manager", "Windows Task Manager"],
             lambda: subprocess.Popen(["taskmgr"]),
         )
 
     def open_windows_security(self):
         self.app.actions.open_or_focus_window_titles(
-            ["Virus & threat protection", "Windows Security"],
+            ["Virus & threat protection", "Windows Security", "Security at a glance"],
             lambda: self._shell_open("windowsdefender://threat"),
         )
 
@@ -842,6 +855,13 @@ class AdvancedToolsPanel(QWidget):
     def _shell_execute(self, target: str, parameters: str | None = None):
         ctypes.windll.shell32.ShellExecuteW(
             None, "open", target, parameters, None, 1
+        )
+
+    def _control_exe_path(self) -> str:
+        return os.path.join(
+            os.environ.get("SystemRoot", r"C:\Windows"),
+            "System32",
+            "control.exe",
         )
 
     def _should_minimize_after_use(self) -> bool:

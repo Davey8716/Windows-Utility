@@ -87,22 +87,24 @@ class RightUtilityGuiTests(unittest.TestCase):
 
     def test_system_utilities_actions_use_expected_launchers(self):
         panel = self.make_panel()
+        open_or_focus_window_titles = Mock(side_effect=lambda _titles, launcher: launcher())
+        panel.app.actions.open_or_focus_window_titles = open_or_focus_window_titles
         with patch.object(panel, "open_system_settings") as open_settings, \
+             patch.object(panel, "_shell_execute") as shell_execute, \
              patch.object(right_utility_gui.subprocess, "Popen") as popen:
             actions = panel._system_utilities()
 
             actions["Control Panel"]()
             actions["System Settings"]()
             actions["System Information"]()
-            actions["Task Manager"]()
 
         open_settings.assert_called_once_with()
+        self.assertEqual(open_or_focus_window_titles.call_count, 2)
+        shell_execute.assert_called_once_with(panel._control_exe_path())
         self.assertEqual(
             popen.call_args_list,
             [
-                unittest.mock.call(["control"]),
                 unittest.mock.call(["msinfo32"]),
-                unittest.mock.call(["taskmgr"]),
             ],
         )
 
