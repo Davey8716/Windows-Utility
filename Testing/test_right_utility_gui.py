@@ -148,17 +148,23 @@ class RightUtilityGuiTests(unittest.TestCase):
     def test_network_utilities_actions_use_expected_launchers(self):
         panel = self.make_panel()
         with patch.object(panel, "open_network_connections") as open_network_connections, \
+             patch.object(panel, "open_network_diagnostics") as open_network_diagnostics, \
+             patch.object(panel, "open_network_reset") as open_network_reset, \
              patch.object(panel, "open_firewall") as open_firewall, \
              patch.object(panel, "show_ip_config") as show_ip_config, \
              patch.object(right_utility_gui.subprocess, "Popen") as popen:
             actions = panel._network_utilities()
 
             actions["Network Connections"]()
+            actions["Network Diagnostics"]()
+            actions["Network Reset"]()
             actions["Firewall"]()
             actions["IP Configuration"]()
             actions["Router Login"]()
 
         open_network_connections.assert_called_once_with()
+        open_network_diagnostics.assert_called_once_with()
+        open_network_reset.assert_called_once_with()
         open_firewall.assert_called_once_with()
         show_ip_config.assert_called_once_with()
         self.assertEqual(popen.call_args_list, [])
@@ -170,6 +176,36 @@ class RightUtilityGuiTests(unittest.TestCase):
         actions = panel._network_utilities()
 
         self.assertTrue(getattr(actions["IP Configuration"], "skip_minimize_after_use", False))
+
+    def test_monitoring_security_utilities_actions_use_expected_launchers(self):
+        panel = self.make_panel()
+        open_or_focus_window_titles = Mock(side_effect=lambda _titles, launcher: launcher())
+        panel.app.actions.open_or_focus_window_titles = open_or_focus_window_titles
+        with patch.object(panel, "_shell_open") as shell_open, \
+             patch.object(panel, "_shell_execute") as shell_execute, \
+             patch.object(panel, "_shell_execute_elevated") as shell_execute_elevated, \
+             patch.dict(right_utility_gui.os.environ, {"SystemRoot": r"C:\Windows"}):
+            actions = panel._monitoring_security_utilities()
+
+            actions["Hosts File Editor"]()
+            actions["Windows Memory Diagnostic"]()
+            actions["Windows Defender / Virus & Threat Protection"]()
+            actions["Windows Update Troubleshooter"]()
+
+        self.assertEqual(open_or_focus_window_titles.call_count, 4)
+        shell_open.assert_has_calls(
+            [
+                unittest.mock.call("windowsdefender://threat"),
+                unittest.mock.call("ms-settings:troubleshoot"),
+            ]
+        )
+        shell_execute_elevated.assert_called_once()
+        self.assertEqual(shell_execute_elevated.call_args.args[0], "notepad.exe")
+        self.assertEqual(
+            shell_execute_elevated.call_args.args[1].lower(),
+            r"c:\windows\system32\drivers\etc\hosts",
+        )
+        shell_execute.assert_called_once_with(r"C:\Windows\System32\mdsched.exe")
 
     def test_startup_power_utilities_actions_use_expected_launchers(self):
         panel = self.make_panel()
@@ -212,6 +248,17 @@ class RightUtilityGuiTests(unittest.TestCase):
 
         shell_execute.assert_called_once_with(
             None, "open", "control.exe", "ncpa.cpl", None, 1
+        )
+
+    def test_shell_execute_elevated_passes_parameters(self):
+        panel = self.make_panel()
+        with patch.object(
+            right_utility_gui.ctypes.windll.shell32, "ShellExecuteW"
+        ) as shell_execute:
+            panel._shell_execute_elevated("notepad.exe", r"C:\Windows\System32\drivers\etc\hosts")
+
+        shell_execute.assert_called_once_with(
+            None, "runas", "notepad.exe", r"C:\Windows\System32\drivers\etc\hosts", None, 1
         )
 
     def test_minimize_and_run_minimizes_both_windows_before_action(self):

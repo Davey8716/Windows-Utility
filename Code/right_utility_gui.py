@@ -741,10 +741,13 @@ class AdvancedToolsPanel(QWidget):
 
     def _monitoring_security_utilities(self):
         return {
+            "Hosts File Editor": self.open_hosts_file_editor,
             "Reliability Monitor": self.open_reliability_monitor,
             "Resource Monitor": self.open_resource_monitor,
             "Task Manager": self.open_task_manager,
+            "Windows Memory Diagnostic": self.open_windows_memory_diagnostic,
             "Windows Defender / Virus & Threat Protection": self.open_windows_security,
+            "Windows Update Troubleshooter": self.open_windows_update_troubleshooter,
         }
 
     def _devices_storage_utilities(self):
@@ -863,12 +866,47 @@ class AdvancedToolsPanel(QWidget):
             lambda: self._shell_open("windowsdefender://threat"),
         )
 
+    def open_windows_update_troubleshooter(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Troubleshoot", "Get Help", "Windows Update"],
+            lambda: self._shell_open("ms-settings:troubleshoot"),
+        )
+
+    def open_windows_memory_diagnostic(self):
+        diagnostic_path = os.path.join(
+            os.environ.get("SystemRoot", r"C:\Windows"),
+            "System32",
+            "mdsched.exe",
+        )
+        self.app.actions.open_or_focus_window_titles(
+            ["Windows Memory Diagnostic", "Diagnosing your computer's memory problems"],
+            lambda: self._shell_execute(diagnostic_path),
+        )
+
+    def open_hosts_file_editor(self):
+        hosts_path = os.path.join(
+            os.environ.get("SystemRoot", r"C:\Windows"),
+            "System32",
+            "drivers",
+            "etc",
+            "hosts",
+        )
+        self.app.actions.open_or_focus_window_titles(
+            ["hosts - Notepad", "Notepad"],
+            lambda: self._shell_execute_elevated("notepad.exe", hosts_path),
+        )
+
     def _shell_open(self, target: str):
         ctypes.windll.shell32.ShellExecuteW(None, "open", target, None, None, 1)
 
     def _shell_execute(self, target: str, parameters: str | None = None):
         ctypes.windll.shell32.ShellExecuteW(
             None, "open", target, parameters, None, 1
+        )
+
+    def _shell_execute_elevated(self, target: str, parameters: str | None = None):
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", target, parameters, None, 1
         )
 
     def _control_exe_path(self) -> str:
@@ -900,6 +938,8 @@ class AdvancedToolsPanel(QWidget):
     def _network_utilities(self):
         return {
             "Network Connections": self.open_network_connections,
+            "Network Diagnostics": self.open_network_diagnostics,
+            "Network Reset": self.open_network_reset,
             "Firewall": self.open_firewall,
             "IP Configuration": self._run_without_minimize(self.show_ip_config),
             "Router Login": self.app.actions.open_router_page,
@@ -915,6 +955,18 @@ class AdvancedToolsPanel(QWidget):
         self.app.actions.open_or_focus_window_titles(
             ["Windows Defender Firewall", "Firewall"],
             lambda: self._shell_open("wf.msc"),
+        )
+
+    def open_network_reset(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Network reset", "Network & internet"],
+            lambda: self._shell_open("ms-settings:network-advancedsettings"),
+        )
+
+    def open_network_diagnostics(self):
+        self.app.actions.open_or_focus_window_titles(
+            ["Troubleshoot", "Get Help", "Network & internet"],
+            lambda: self._shell_open("ms-settings:network-status"),
         )
 
     def _startup_power_utilities(self):
