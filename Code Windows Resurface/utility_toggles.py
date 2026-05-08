@@ -211,8 +211,10 @@ class UtilityActionsManager:
             self.app.main_always_on_top_enabled = enabled
             self.app.right_always_on_top_enabled = enabled
 
-            # Qt window handling (preferred)
-            if hasattr(self.app, "setWindowFlag"):
+            apply_topmost = getattr(self.app, "_set_main_window_topmost_state", None)
+            if callable(apply_topmost):
+                apply_topmost(enabled)
+            elif hasattr(self.app, "setWindowFlag"):
                 self.app.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
                 self.app.show()
 
@@ -610,6 +612,20 @@ class UtilityActionsManager:
         title_candidates: list[str] | tuple[str, ...],
     ) -> bool:
         return close_window_handles(find_windows_by_title_candidates(title_candidates))
+
+    def focus_window_titles(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+    ) -> bool:
+        return focus_window_handles(find_windows_by_title_candidates(title_candidates))
+
+    def get_window_titles_state(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+    ) -> str:
+        return get_window_state_for_handles(
+            find_windows_by_title_candidates(title_candidates)
+        )
 
     def open_or_focus_storage_sense(self, launch) -> bool:
         if self.focus_storage_sense():

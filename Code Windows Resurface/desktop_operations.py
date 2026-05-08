@@ -65,7 +65,7 @@ class DesktopOperationsMixin:
                 text,
                 timeout_ms=timeout_ms,
                 merge_group="organizing_utilities",
-                merge_title="Organising Utilities",
+                merge_title="General Organising Utilities",
                 show_close_now_button=show_close_now_button,
             )
 
@@ -477,18 +477,30 @@ class DesktopOperationsMixin:
                     launch=launch,
                 )
             else:
-                closed = self.actions.close_window_titles(title_candidates)
-                if closed:
-                    return
+                window_state = self.actions.get_window_titles_state(title_candidates)
+                if window_state != "closed":
+                    closed = self.actions.close_window_titles(title_candidates)
+                    if closed:
+                        QTimer.singleShot(
+                            300,
+                            self._monitor_folder_creator_window,
+                        )
+                        return
 
+                self._begin_folder_creator_z_order_handoff(title_candidates)
                 opened = self.actions.open_or_focus_window_titles(
                     title_candidates,
                     launch,
                 )
 
+                if opened:
+                    self._focus_folder_creator_window(title_candidates)
+                    return
+
             if opened:
                 return
 
+            self._restore_folder_creator_parent_topmost()
             self._show_organizing_timed_message(
                 self._message_box_icon("Warning"),
                 "Folder Creator",
