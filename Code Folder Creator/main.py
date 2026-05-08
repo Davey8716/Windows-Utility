@@ -8,7 +8,7 @@ from nested_ui_controller import NestedUIController
 from smart_tree_widget import SmartTreeWidget
 from status_controller import StatusController
 from ui_state_controller import UIStateController
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView,
@@ -39,6 +39,23 @@ ERROR_ALREADY_EXISTS = 183
 MUTEX_NAME = "FolderCreator_SingleInstance"
 
 _single_instance_mutex = None
+
+
+class PathDisplayLabel(QLabel):
+    textChanged = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._placeholder_text = ""
+
+    def setPlaceholderText(self, text: str) -> None:
+        self._placeholder_text = text
+
+    def setText(self, text: str) -> None:
+        previous = self.text()
+        super().setText(text)
+        if text != previous:
+            self.textChanged.emit(text)
 
 
 def already_running():
@@ -373,9 +390,9 @@ class MainWindow(QMainWindow):
             main_controls_layout.addWidget(widget, 0, col)
             main_controls_layout.setColumnStretch(col, 1)
 
-        self.base_path_line = QLineEdit()
+        self.base_path_line = PathDisplayLabel()
         self.base_path_line.setPlaceholderText("Select base directory for output folder location")
-        self.template_path_line = QLineEdit()
+        self.template_path_line = PathDisplayLabel()
         self.template_path_line.setPlaceholderText("OUTPUT LOCATION FOR USER MADE TEMPLATES.")
 
         paths_layout = QHBoxLayout()
@@ -406,9 +423,9 @@ class MainWindow(QMainWindow):
         for location_line in [self.template_path_line, self.base_path_line]:
             location_line.setFixedSize(300, 40)
             location_line.setProperty("plainThemeLabelStyle", True)
-            location_line.setReadOnly(True)
             location_line.setStyleSheet(styles.plain_theme_label_style(15))
             location_line.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            location_line.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
 
         for title in [self.template_path_title, self.base_path_title]:
             title.setFixedWidth(200)

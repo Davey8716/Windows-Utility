@@ -88,6 +88,29 @@ def plain_theme_label_style(font_size: int) -> str:
     return resurface_styles.plain_theme_label_style(font_size)
 
 
+def plain_display_line_edit_style(font_size: int) -> str:
+    return f"""
+        QLineEdit {{
+            {resurface_styles.label_style(
+                font_size=font_size,
+                bold=True,
+                color=theme_text_color(),
+            )}
+            background-color: {qcolor_css(WINDOW_BG)};
+            border: none;
+            border-radius: 6px;
+            padding: 4px 8px;
+            selection-background-color: {qcolor_css(SURFACE_HOVER)};
+        }}
+        QLineEdit:hover,
+        QLineEdit:focus,
+        QLineEdit:read-only {{
+            background-color: {qcolor_css(WINDOW_BG)};
+            border: none;
+        }}
+    """
+
+
 def organizing_button_style(font_size: int = 14) -> str:
     return resurface_styles.organizing_button_style(font_size=font_size)
 
