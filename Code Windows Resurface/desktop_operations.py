@@ -477,6 +477,10 @@ class DesktopOperationsMixin:
                     launch=launch,
                 )
             else:
+                closed = self.actions.close_window_titles(title_candidates)
+                if closed:
+                    return
+
                 opened = self.actions.open_or_focus_window_titles(
                     title_candidates,
                     launch,

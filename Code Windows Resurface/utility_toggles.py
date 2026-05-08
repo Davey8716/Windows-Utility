@@ -605,6 +605,12 @@ class UtilityActionsManager:
             )
             return False
 
+    def close_window_titles(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+    ) -> bool:
+        return close_window_handles(find_windows_by_title_candidates(title_candidates))
+
     def open_or_focus_storage_sense(self, launch) -> bool:
         if self.focus_storage_sense():
             return True
