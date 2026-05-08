@@ -69,29 +69,32 @@ class ThemeController:
             }
 
             QComboBox {
-                background-color: #3a4860;
+                background-color: #1c66c4;
                 color: #ffffff;
-                border: 2px solid #ffffff;
-                border-radius: 6px;
-                padding: 4px 28px 4px 8px;
+                border: 1px solid #8ac6f6;
+                border-radius: 3px;
+                padding: 4px 8px;
                 font-family: "Segoe UI";
                 font-size: 14px;
                 font-weight: 700;
             }
 
             QComboBox:disabled {
-                background-color: #3a4860;
+                background-color: #1c66c4;
                 color: #ffffff;
-                border: 2px solid #ffffff;
+                border: 1px solid #8ac6f6;
             }
 
             QComboBox QLineEdit {
+                background: transparent;
+                border: none;
+                color: #ffffff;
                 qproperty-alignment: AlignCenter;
             }
 
             QComboBox:hover,
             QComboBox:on {
-                background-color: #3a4860;
+                background-color: #2a78da;
             }
 
             QComboBox::drop-down {
@@ -101,13 +104,29 @@ class ThemeController:
             }
 
             QComboBox QAbstractItemView {
-                background-color: #3a4860;
+                background-color: #1c66c4;
                 color: #ffffff;
-                selection-background-color: #4a6fa8;
+                selection-background-color: #2a78da;
                 selection-color: #ffffff;
-                border: 2px solid #ffffff;
+                border: 1px solid #8ac6f6;
                 padding: 4px;
                 outline: 0;
+            }
+
+            QComboBox QAbstractItemView::item {
+                padding: 4px 8px;
+                border: none;
+            }
+
+            QComboBox QAbstractItemView::item:selected {
+                background-color: #2a78da;
+                color: #ffffff;
+                border-left: 3px solid #144e9a;
+            }
+
+            QComboBox QAbstractItemView::item:hover {
+                background-color: #2a78da;
+                color: #ffffff;
             }
 
             QSpinBox {

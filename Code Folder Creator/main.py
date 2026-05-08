@@ -73,9 +73,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Folder Generator")
 
         self.window_width = 900
-        self.window_height = 1085
-        self.tree_default_height = 420
-        self.tree_expanded_height = 620
+        self.window_height = 900
+        self.tree_default_height = 360
+        self.tree_expanded_height = 500
         outer_margin = 8
         section_gap = 8
         frame_padding = 6
@@ -86,6 +86,7 @@ class MainWindow(QMainWindow):
         tree_to_controls_gap = 2
         header_gap = 1
         self.setFixedSize(self.window_width, self.window_height)
+        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -121,11 +122,19 @@ class MainWindow(QMainWindow):
         header_grid.setColumnStretch(0, 1)
         main_layout.addLayout(header_grid)
 
+        header_block_height = title_label.height() + (frame_padding * 2)
+        content_frame_height = (
+            self.window_height
+            - (outer_margin * 2)
+            - section_gap
+            - header_block_height
+        )
+
         self.smart_folder_creator_frame = QFrame()
         self.smart_folder_creator_frame.setFrameShape(QFrame.NoFrame)
         self.smart_folder_creator_frame.setStyleSheet("border: none;")
         self.smart_folder_creator_frame.setFixedWidth(875)
-        self.smart_folder_creator_frame.setFixedHeight(999)
+        self.smart_folder_creator_frame.setFixedHeight(content_frame_height)
 
         self.smart_layout = QVBoxLayout()
         self.smart_layout.setSpacing(0)
@@ -649,6 +658,39 @@ class MainWindow(QMainWindow):
         self.update_expand_button_text()
         self.ui_state.update_build_button_state()
         self.ui_state.update_nested_build_state()
+        self._apply_fixed_window_style()
+
+    def _apply_fixed_window_style(self):
+        hwnd = int(self.winId())
+        if not hwnd:
+            return
+
+        user32 = ctypes.windll.user32
+        get_window_long = user32.GetWindowLongW
+        set_window_long = user32.SetWindowLongW
+        set_window_pos = user32.SetWindowPos
+
+        GWL_STYLE = -16
+        WS_MAXIMIZEBOX = 0x00010000
+        WS_THICKFRAME = 0x00040000
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_FRAMECHANGED = 0x0020
+
+        style = get_window_long(hwnd, GWL_STYLE)
+        style &= ~WS_MAXIMIZEBOX
+        style &= ~WS_THICKFRAME
+        set_window_long(hwnd, GWL_STYLE, style)
+        set_window_pos(
+            hwnd,
+            0,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+        )
 
     def update_build_button_state(self):
         self.ui_state.update_build_button_state()
