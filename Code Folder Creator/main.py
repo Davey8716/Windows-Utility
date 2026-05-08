@@ -106,6 +106,11 @@ class MainWindow(QMainWindow):
         controls_to_tree_gap = 2
         tree_to_controls_gap = 2
         header_gap = 1
+        tree_controls_find_input_width = 230
+        tree_controls_expand_width = 120
+        tree_controls_collapse_width = 160
+        tree_controls_sort_width = 110
+        tree_controls_find_width = 80
         self.setFixedSize(self.window_width, self.window_height)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
 
@@ -394,25 +399,26 @@ class MainWindow(QMainWindow):
         self.template_path_line = PathDisplayLabel()
         self.template_path_line.setPlaceholderText("OUTPUT LOCATION FOR USER MADE TEMPLATES.")
 
-        paths_layout = QHBoxLayout()
-        paths_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
-        paths_layout.setSpacing(section_gap)
+        paths_layout = QGridLayout()
+        paths_layout.setContentsMargins(0, frame_padding, 0, frame_padding)
+        paths_layout.setHorizontalSpacing(0)
+        paths_layout.setVerticalSpacing(tight_gap)
 
         self.template_path_column = QFrame()
         self.template_path_column.setFrameShape(QFrame.NoFrame)
         self.template_path_column.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.template_path_column.setFixedWidth(360)
+        self.template_path_column.setFixedWidth(400)
         template_col_layout = QVBoxLayout()
-        template_col_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
+        template_col_layout.setContentsMargins(0, 0, 0, 0)
         template_col_layout.setSpacing(tight_gap)
         self.template_path_column.setLayout(template_col_layout)
 
         self.base_path_column = QFrame()
         self.base_path_column.setFrameShape(QFrame.NoFrame)
-        self.base_path_column.setFixedWidth(396)
-        self.base_path_column.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.base_path_column.setFixedWidth(300)
+        self.base_path_column.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         base_col_layout = QVBoxLayout()
-        base_col_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
+        base_col_layout.setContentsMargins(100, 0, 0, 0)
         base_col_layout.setSpacing(tight_gap)
         self.base_path_column.setLayout(base_col_layout)
 
@@ -420,26 +426,38 @@ class MainWindow(QMainWindow):
         self.base_path_title = QLabel("OUTPUT FOLDER LOCATION")
 
         for location_line in [self.template_path_line, self.base_path_line]:
-            location_line.setFixedSize(300, 40)
+            location_line.setFixedSize(288 if location_line is self.template_path_line else 300, 40)
             location_line.setProperty("plainThemeLabelStyle", True)
             location_line.setStyleSheet(styles.plain_theme_label_style(15))
             location_line.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
             location_line.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
 
-        for title in [self.template_path_title, self.base_path_title]:
-            title.setFixedWidth(200)
-            title.setFixedHeight(40)
-            title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            title.setAlignment(Qt.AlignCenter)
+        self.template_path_title.setFixedWidth(288)
+        self.template_path_title.setFixedHeight(40)
+        self.template_path_title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.template_path_title.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+
+        self.base_path_title.setFixedWidth(300)
+        self.base_path_title.setFixedHeight(40)
+        self.base_path_title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.base_path_title.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
 
         template_col_layout.addWidget(self.template_path_title)
         template_col_layout.addWidget(self.template_path_line)
         base_col_layout.addWidget(self.base_path_title)
         base_col_layout.addWidget(self.base_path_line)
 
-        paths_layout.addWidget(self.template_path_column)
-        paths_layout.addStretch()
-        paths_layout.addWidget(self.base_path_column)
+        paths_layout.setColumnMinimumWidth(0, tree_controls_expand_width)
+        paths_layout.setColumnMinimumWidth(1, control_gap)
+        paths_layout.setColumnMinimumWidth(2, tree_controls_collapse_width)
+        paths_layout.setColumnStretch(3, 1)
+        paths_layout.setColumnMinimumWidth(4, tree_controls_sort_width)
+        paths_layout.setColumnMinimumWidth(5, control_gap)
+        paths_layout.setColumnMinimumWidth(6, tree_controls_find_width)
+        paths_layout.setColumnMinimumWidth(7, control_gap)
+        paths_layout.setColumnMinimumWidth(8, tree_controls_find_input_width)
+        paths_layout.addWidget(self.template_path_column, 0, 0, 1, 3, alignment=Qt.AlignLeft)
+        paths_layout.addWidget(self.base_path_column, 0, 4, 1, 1, alignment=Qt.AlignLeft)
 
         self.tree.setFixedWidth(852)
         self.tree.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -492,12 +510,12 @@ class MainWindow(QMainWindow):
         self.find_output_line = QLineEdit()
         self.find_output_line.setPlaceholderText("INPUT FOR FINDING FOLDERS.")
         self.find_output_line.setEnabled(True)
-        self.find_output_line.setFixedSize(230, 40)
+        self.find_output_line.setFixedSize(tree_controls_find_input_width, 40)
 
-        self.expand_tree_btn.setFixedSize(120, styles.DEFAULT_BUTTON_HEIGHT)
-        self.expand_folders_collapse_btn.setFixedSize(160, styles.DEFAULT_BUTTON_HEIGHT)
-        self.sort_btn.setFixedSize(110, styles.DEFAULT_BUTTON_HEIGHT)
-        self.find_btn.setFixedSize(80, styles.DEFAULT_BUTTON_HEIGHT)
+        self.expand_tree_btn.setFixedSize(tree_controls_expand_width, styles.DEFAULT_BUTTON_HEIGHT)
+        self.expand_folders_collapse_btn.setFixedSize(tree_controls_collapse_width, styles.DEFAULT_BUTTON_HEIGHT)
+        self.sort_btn.setFixedSize(tree_controls_sort_width, styles.DEFAULT_BUTTON_HEIGHT)
+        self.find_btn.setFixedSize(tree_controls_find_width, styles.DEFAULT_BUTTON_HEIGHT)
 
         tree_controls_layout.addWidget(self.expand_tree_btn)
         tree_controls_layout.addWidget(self.expand_folders_collapse_btn)
@@ -514,13 +532,12 @@ class MainWindow(QMainWindow):
 
         self.bottom_info_frame = QFrame()
         self.bottom_info_frame.setFrameShape(QFrame.NoFrame)
-        self.bottom_info_frame.setFixedWidth(854)
+        self.bottom_info_frame.setFixedWidth(self.smart_folder_creator_frame.width())
         self.bottom_info_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         bottom_info_layout = QVBoxLayout()
         bottom_info_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
         bottom_info_layout.setSpacing(section_gap)
-        bottom_info_layout.setSizeConstraint(QLayout.SetFixedSize)
         self.bottom_info_frame.setLayout(bottom_info_layout)
 
         bottom_info_layout.addLayout(paths_layout)
@@ -529,7 +546,7 @@ class MainWindow(QMainWindow):
         self.smart_status_frame.setObjectName("statusFrame")
         self.smart_status_frame.setFrameShape(QFrame.NoFrame)
         self.smart_status_frame.setFixedHeight(50)
-        self.smart_status_frame.setFixedWidth(832)
+        self.smart_status_frame.setFixedWidth(self.bottom_info_frame.width() - (frame_padding * 2))
         self.smart_status_frame.setStyleSheet("border: none;")
 
         smart_status_layout = QHBoxLayout()
@@ -548,8 +565,8 @@ class MainWindow(QMainWindow):
         for frame in [self.template_path_column, self.base_path_column, self.bottom_info_frame]:
             frame.setStyleSheet("border: none;")
 
-        bottom_info_layout.addWidget(self.smart_status_frame, alignment=Qt.AlignHCenter)
-        self.smart_layout.addWidget(self.bottom_info_frame, alignment=Qt.AlignHCenter)
+        bottom_info_layout.addWidget(self.smart_status_frame, alignment=Qt.AlignLeft)
+        self.smart_layout.addWidget(self.bottom_info_frame, alignment=Qt.AlignLeft)
         main_layout.addWidget(self.smart_folder_creator_frame, alignment=Qt.AlignHCenter)
 
         self.ui_state = UIStateController(self)
@@ -570,19 +587,6 @@ class MainWindow(QMainWindow):
         self.expand_tree_btn.clicked.connect(self.tree_gui_stretch)
         self.expand_folders_collapse_btn.clicked.connect(self.toggle_tree_expand)
 
-        self.load_user_template_dropdown.enterEvent = lambda e: (
-            self.status.set(
-                "Right-click to open user templates folder."
-                "Can delete folders here if you wish.",
-                target="nested",
-                status_type="info",
-            ),
-            QComboBox.enterEvent(self.load_user_template_dropdown, e),
-        )
-        self.load_user_template_dropdown.leaveEvent = lambda e: (
-            self.status.reset("nested"),
-            QComboBox.leaveEvent(self.load_user_template_dropdown, e),
-        )
         self.load_user_template_dropdown.setContextMenuPolicy(Qt.CustomContextMenu)
         self.load_user_template_dropdown.customContextMenuRequested.connect(
             lambda pos: os.startfile(str(self.service.template_paths.user_dir))
