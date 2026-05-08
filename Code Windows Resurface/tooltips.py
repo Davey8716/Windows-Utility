@@ -18,6 +18,7 @@ TOOLTIP_TEXT = {
     "plug_unplug_notify": "Controls notifications for drive plug and unplug events.",
     "desktop_screenshot": "Captures the desktop and saves it to the master backup folder.",
     "folder_to_desktop": "Creates a desktop folder using the name entered beside it.",
+    "folder_creator_launcher": "Opens the external Folder Creator tool, or its project folder until a launch script exists.",
     "folder_name_input": "Enter the name of the folder to create on the desktop.",
     "backup_taskbar": "Backs up pinned taskbar shortcuts into the TaskBarApps folder.",
     "open_backup_folder": "Opens the TaskBarApps backup folder inside the master backup path, or closes it if already open.",

@@ -6,7 +6,7 @@ Give proper icons to the mover gui!!!!!!!!!!!
 
 Windows exe builder not making the exe icon tray icon again after build
 
-Ask if when pinned to taskbar right click can do actions other than unpin from taskbar and launch
+Add some of pinned jump lists to right click functionality of pinned exes to taskbar
 
 Fix sfc scannow and chkdsk
 

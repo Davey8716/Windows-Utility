@@ -946,7 +946,16 @@ class LeftPanelBuilder:
 
         folder_btn = QPushButton("Folder \u2192 Desktop")
         self._style_organizing_button(folder_btn)
+        styles.apply_default_button_size(folder_btn, width=122)
         app.register_tooltip(folder_btn, tooltip_text("folder_to_desktop"))
+
+        folder_creator_btn = QPushButton("Folder Creator")
+        self._style_organizing_button(folder_creator_btn)
+        styles.apply_default_button_size(folder_creator_btn, width=118)
+        app.register_tooltip(
+            folder_creator_btn,
+            tooltip_text("folder_creator_launcher"),
+        )
 
         folder_input = QLineEdit()
         folder_input.setPlaceholderText("Folder name")
@@ -958,6 +967,7 @@ class LeftPanelBuilder:
         app.register_tooltip(folder_input, tooltip_text("folder_name_input"))
 
         folder_row_layout.addWidget(folder_btn)
+        folder_row_layout.addWidget(folder_creator_btn)
         folder_row_layout.addWidget(folder_input)
         org_layout.addWidget(folder_row)
 
@@ -971,6 +981,7 @@ class LeftPanelBuilder:
 
         folder_btn.setEnabled(bool(folder_input.text().strip()))
         folder_btn.clicked.connect(on_create_folder_clicked)
+        folder_creator_btn.clicked.connect(app.open_folder_creator)
         folder_input.textChanged.connect(on_folder_name_changed)
 
         bookmarks_taskbar_row = QWidget()

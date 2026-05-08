@@ -1,3 +1,5 @@
+import os
+import subprocess
 import sys
 import inspect
 from datetime import datetime
@@ -426,3 +428,95 @@ class DesktopOperationsMixin:
                 )
 
         self._run_with_optional_minimize(action)
+
+    def open_folder_creator(self):
+        project_dir = Path(__file__).resolve().parent.parent / "Code Folder Creator"
+        title_candidates = [
+            "Folder Creator",
+            "Code Folder Creator",
+        ]
+        launch_target = self._resolve_folder_creator_launch_target(project_dir)
+
+        def launch():
+            if launch_target is None:
+                os.makedirs(project_dir, exist_ok=True)
+                os.startfile(str(project_dir))
+                return
+
+            if launch_target.suffix.lower() in {".py", ".pyw"}:
+                subprocess.Popen(
+                    [sys.executable, str(launch_target)],
+                    cwd=str(project_dir),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return
+
+            if launch_target.suffix.lower() in {".bat", ".cmd"}:
+                subprocess.Popen(
+                    [str(launch_target)],
+                    cwd=str(project_dir),
+                    shell=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return
+
+            subprocess.Popen(
+                [str(launch_target)],
+                cwd=str(project_dir),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+        def action():
+            if launch_target is None:
+                opened = self.actions.open_or_focus_folder_path(
+                    str(project_dir),
+                    launch=launch,
+                )
+            else:
+                opened = self.actions.open_or_focus_window_titles(
+                    title_candidates,
+                    launch,
+                )
+
+            if opened:
+                return
+
+            self._show_organizing_timed_message(
+                self._message_box_icon("Warning"),
+                "Folder Creator",
+                f"Could not open Folder Creator from:\n{project_dir}",
+                show_close_now_button=True,
+            )
+
+        self._run_with_optional_minimize(action)
+
+    def _resolve_folder_creator_launch_target(
+        self,
+        project_dir: Path,
+    ) -> Path | None:
+        candidate_names = (
+            "main.py",
+            "main.pyw",
+            "app.py",
+            "app.pyw",
+            "run.py",
+            "run.pyw",
+            "launcher.py",
+            "launcher.pyw",
+            "start.py",
+            "start.pyw",
+            "Folder Creator.exe",
+            "folder_creator.exe",
+            "launch.bat",
+            "start.bat",
+        )
+
+        for candidate_name in candidate_names:
+            candidate_path = project_dir / candidate_name
+            if candidate_path.exists():
+                return candidate_path
+
+        return None
