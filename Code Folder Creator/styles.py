@@ -92,6 +92,10 @@ def organizing_button_style(font_size: int = 14) -> str:
     return resurface_styles.organizing_button_style(font_size=font_size)
 
 
+def organizing_combo_style(font_size: int = 14) -> str:
+    return resurface_styles.organizing_combo_style(font_size=font_size)
+
+
 def apply_standard_button_styles(widget, font_size: int = 14) -> None:
     button_style = organizing_button_style(font_size=font_size)
     for button in widget.findChildren(QPushButton):

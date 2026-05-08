@@ -192,6 +192,7 @@ class MainWindow(QMainWindow):
         self.nested_date_config.setEnabled(False)
         self.nested_date_config.setFixedWidth(160)
         self.nested_date_config.setFixedHeight(40)
+        self.nested_date_config.setStyleSheet(styles.organizing_combo_style(14))
 
         for i in range(self.nested_date_config.count()):
             self.nested_date_config.setItemData(
@@ -261,6 +262,7 @@ class MainWindow(QMainWindow):
             ]
         )
         self.file_dropdown.setFixedSize(170, 40)
+        self.file_dropdown.setStyleSheet(styles.organizing_combo_style(14))
         file_row.addStretch()
         file_row.addWidget(self.file_dropdown)
         file_row.addStretch()
@@ -356,6 +358,7 @@ class MainWindow(QMainWindow):
 
         for dropdown in [self.load_user_template_dropdown, self.load_default_template_dropdown]:
             dropdown.setFixedSize(145, 40)
+            dropdown.setStyleSheet(styles.organizing_combo_style(14))
 
         widgets = [
             self.folder_buttons_frame,
