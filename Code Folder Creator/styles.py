@@ -48,6 +48,8 @@ BUTTON_HOVER = QColor(resurface_styles.themed_button_hover())
 BUTTON_PRESSED = QColor(resurface_styles.themed_button_pressed())
 BUTTON_BORDER = QColor(resurface_styles.themed_button_border())
 TREE_PLACEHOLDER = QColor(140, 140, 140)
+DEFAULT_BUTTON_WIDTH = resurface_styles.DEFAULT_BUTTON_WIDTH
+DEFAULT_BUTTON_HEIGHT = resurface_styles.DEFAULT_BUTTON_HEIGHT
 
 
 def qcolor_css(color: QColor) -> str:
@@ -117,6 +119,10 @@ def organizing_button_style(font_size: int = 14) -> str:
 
 def organizing_combo_style(font_size: int = 14) -> str:
     return resurface_styles.organizing_combo_style(font_size=font_size)
+
+
+def apply_default_button_size(widget, width: int = DEFAULT_BUTTON_WIDTH, height: int = DEFAULT_BUTTON_HEIGHT) -> None:
+    resurface_styles.apply_default_button_size(widget, width=width, height=height)
 
 
 def apply_standard_button_styles(widget, font_size: int = 14) -> None:

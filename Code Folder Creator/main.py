@@ -226,7 +226,7 @@ class MainWindow(QMainWindow):
 
         self.template_controls_frame = QFrame()
         self.template_controls_frame.setFrameShape(QFrame.NoFrame)
-        self.template_controls_frame.setFixedWidth(165)
+        self.template_controls_frame.setFixedWidth(styles.DEFAULT_BUTTON_WIDTH + (frame_padding * 2))
 
         template_layout = QVBoxLayout()
         template_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
@@ -316,7 +316,7 @@ class MainWindow(QMainWindow):
 
         self.build_buttons_frame = QFrame()
         self.build_buttons_frame.setFrameShape(QFrame.NoFrame)
-        self.build_buttons_frame.setFixedWidth(145)
+        self.build_buttons_frame.setFixedWidth(styles.DEFAULT_BUTTON_WIDTH + (frame_padding * 2))
 
         build_layout = QVBoxLayout()
         build_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
@@ -328,11 +328,10 @@ class MainWindow(QMainWindow):
         self.build_folders_btn = QPushButton("Build 📁")
 
         for btn in [self.load_template_btn, self.save_template_btn]:
-            btn.setFixedSize(145, 40)
+            styles.apply_default_button_size(btn)
 
         for btn in [self.default_to_desktop_btn, self.output_location_btn, self.build_folders_btn]:
-            btn.setFixedHeight(40)
-            btn.setFixedWidth(125)
+            styles.apply_default_button_size(btn)
 
         build_layout.addWidget(self.default_to_desktop_btn)
         build_layout.addWidget(self.output_location_btn)
@@ -376,7 +375,7 @@ class MainWindow(QMainWindow):
             frame.setStyleSheet("border: none;")
 
         for dropdown in [self.load_user_template_dropdown, self.load_default_template_dropdown]:
-            dropdown.setFixedSize(145, 40)
+            styles.apply_default_button_size(dropdown)
             dropdown.setStyleSheet(styles.organizing_combo_style(14))
 
         widgets = [
