@@ -102,15 +102,16 @@ class MainWindow(QMainWindow):
         header_grid.setVerticalSpacing(frame_padding)
 
         title_label = QLabel("Nested Folder Creator")
-        title_label.setFixedSize(215, 50)
+        title_label.setFixedSize(230, 50)
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet(
             """
             QLabel {
-                font-size: 13px;
+                background: transparent;
+                border: none;
+                color: #000000;
+                font-size: 20px;
                 font-weight: 1000;
-                border: 5px solid #000000;
-                border-radius: 2px;
             }
             """
         )
