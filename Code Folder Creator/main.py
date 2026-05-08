@@ -27,14 +27,6 @@ from PySide6.QtWidgets import (
     QHeaderView,
 )
 
-from pathlib import Path
-import sys
-
-styles_path = Path(__file__).resolve().parent.parent / "Code Windows Resurface"
-
-if str(styles_path) not in sys.path:
-    sys.path.insert(0, str(styles_path))
-
 import styles
 
 MAX_NESTED_FOLDER_NAME_LENGTH = 64
@@ -115,18 +107,7 @@ class MainWindow(QMainWindow):
         title_label = QLabel("Nested Folder Creator")
         title_label.setFixedSize(230, 50)
         title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet(
-            """
-            QLabel {
-                background: transparent;
-                border: none;
-                color: #ffffff;
-                font-family: "Segoe UI";
-                font-size: 20px;
-                font-weight: 1000;
-            }
-            """
-        )
+        title_label.setStyleSheet(styles.title_label_style())
 
         header_grid.addWidget(title_label, 0, 0)
         header_grid.setColumnStretch(0, 1)
@@ -644,9 +625,10 @@ class MainWindow(QMainWindow):
         self.base_path_line.textChanged.connect(self.ui_state.update_build_button_state)
 
         state = self.service.state
-        self.service.theme_controller.select_theme(-2, self.service, self)
+        styles.apply_app_theme(QApplication.instance())
 
-        self.smart_status_icon.setStyleSheet("font-weight: 700;")
+        self.smart_status_icon.setStyleSheet(styles.status_label_style())
+        self.smart_status_text.setStyleSheet(styles.status_label_style())
 
         self.restore_timestamp_state(
             self.nested_date_toggle,
@@ -671,6 +653,7 @@ class MainWindow(QMainWindow):
         self.update_expand_button_text()
         self.ui_state.update_build_button_state()
         self.ui_state.update_nested_build_state()
+        styles.apply_standard_button_styles(self)
         self._apply_fixed_window_style()
 
     def _apply_fixed_window_style(self):

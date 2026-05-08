@@ -1,12 +1,11 @@
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QTreeWidget
-from PySide6.QtGui import QKeyEvent,QFont
-from PySide6.QtGui import QPainter,QColor
-from PySide6.QtWidgets import QTreeWidget,QApplication,QAbstractItemView
-from PySide6.QtGui import QKeySequence
-from PySide6.QtCore import Qt, Signal
 import os
 from pathlib import Path
+
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont, QKeyEvent, QKeySequence, QPainter
+from PySide6.QtWidgets import QApplication, QAbstractItemView, QTreeWidget
+
+import styles
 
 
 class SmartTreeWidget(QTreeWidget):
@@ -54,7 +53,7 @@ class SmartTreeWidget(QTreeWidget):
         font.setBold(True)
         painter.setFont(font)
 
-        painter.setPen(QColor(140, 140, 140))
+        painter.setPen(styles.tree_placeholder_color())
 
         painter.drawText(
             self.viewport().rect(),

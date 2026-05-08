@@ -3,7 +3,6 @@ from template_IO_layer import TemplateService, TemplatePaths
 from state_manager import StateManager
 from pathlib import Path
 from shutil import copy
-from theme_controller import ThemeController
 
 class AppService:
 
@@ -12,7 +11,6 @@ class AppService:
         self.template_service = TemplateService()
         self.state_manager = StateManager()
         self.template_paths =  TemplatePaths()
-        self.theme_controller = ThemeController()
         self.state = self.state_manager.load_state()
 
     def add_folder(self):
@@ -55,9 +53,3 @@ class AppService:
         state[key] = value
         self.state_manager.save_state(state)
         self.state = state
-
-    def theme_count(self):
-        return self.theme_controller.theme_count()
-
-    def apply_theme(self, index):
-        return self.theme_controller.apply_theme(index)

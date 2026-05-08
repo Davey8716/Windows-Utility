@@ -19,7 +19,7 @@ The app is built with Python and PySide6. It is designed for Windows 11 workflow
 - Search for folders inside large trees
 - Set the nested build output to Desktop or any other directory
 - Add optional date stamps using ISO, UK, or US date formats
-- Choose light or dark accessible themes
+- Use the Windows Resurface-matched dark Qt theme
 - Remember app state between launches
 - Optional build actions: open output folder, minimize app, or close app after build
 
@@ -140,7 +140,7 @@ Build/
     smart_tree_widget.py        Drag/drop and keyboard-enabled tree widget
     template_IO_layer.py        Template loading and saving
     state_manager.py            Persistent app state
-    theme_controller.py         Theme loading and application
+    styles.py                   Theme loading and application
     Default Templates/          Bundled starter templates
     Icons/                      App icons
     themes/                     Theme files

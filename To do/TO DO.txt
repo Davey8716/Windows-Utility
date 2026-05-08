@@ -1,4 +1,3 @@
-Merge the .jsons together so the app_state holds both the main gui and everything for the folder creator
 
 Make the theme controller of the folder creator be called styles and match the qcolor styling of the main resurface gui
 
