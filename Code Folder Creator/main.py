@@ -115,70 +115,8 @@ class MainWindow(QMainWindow):
             """
         )
 
-        self.theme_selector_frame = QFrame()
-        self.theme_selector_frame.setFrameShape(QFrame.StyledPanel)
-        self.theme_selector_frame.setStyleSheet("border: 5px solid 4D4D4DFF;")
-
-        theme_layout = QGridLayout()
-        theme_layout.setSpacing(tight_gap)
-        theme_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
-        self.theme_selector_frame.setLayout(theme_layout)
-
-        self.theme_buttons = []
-        for i in range(2):
-            btn = QPushButton()
-            btn.setFixedSize(20, 20)
-            btn.setCursor(Qt.PointingHandCursor)
-            btn.setCheckable(True)
-
-            if i == 0:
-                btn.clicked.connect(
-                    lambda _, idx=-2: (
-                        None
-                        if self.service.theme_controller.current_index == idx
-                        else self.service.theme_controller.select_theme(idx, self.service, self)
-                    )
-                )
-                btn.setStyleSheet(
-                    """
-                    QPushButton {
-                        background-color: #e8e8e8;
-                        border: 2px solid #bdbdbd;
-                        border-radius: 6px;
-                    }
-                    QPushButton:checked {
-                        border: 3px solid black;
-                    }
-                    """
-                )
-            else:
-                btn.clicked.connect(
-                    lambda _, idx=-1: (
-                        None
-                        if self.service.theme_controller.current_index == idx
-                        else self.service.theme_controller.select_theme(idx, self.service, self)
-                    )
-                )
-                btn.setStyleSheet(
-                    """
-                    QPushButton {
-                        background-color: #1e1e1e;
-                        border: 2px solid #444;
-                        border-radius: 6px;
-                    }
-                    QPushButton:checked {
-                        border: 3px solid white;
-                    }
-                    """
-                )
-
-            theme_layout.addWidget(btn, 0, i)
-            self.theme_buttons.append(btn)
-
         header_grid.addWidget(title_label, 0, 0)
-        header_grid.addWidget(self.theme_selector_frame, 0, 1, Qt.AlignRight | Qt.AlignBottom)
         header_grid.setColumnStretch(0, 1)
-        header_grid.setColumnStretch(1, 0)
         main_layout.addLayout(header_grid)
 
         self.smart_folder_creator_frame = QFrame()
@@ -682,15 +620,7 @@ class MainWindow(QMainWindow):
         self.base_path_line.textChanged.connect(self.ui_state.update_build_button_state)
 
         state = self.service.state
-        theme_index = state.get("theme_index", -2)
-        if theme_index not in (-2, -1):
-            theme_index = -2
-
-        self.service.theme_controller.select_theme(theme_index, self.service, self)
-        for i, btn in enumerate(self.theme_buttons):
-            is_active = (theme_index == -2 and i == 0) or (theme_index == -1 and i == 1)
-            btn.setChecked(is_active)
-            btn.setCheckable(not is_active)
+        self.service.theme_controller.select_theme(-2, self.service, self)
 
         self.smart_status_icon.setStyleSheet("font-weight: 700;")
 

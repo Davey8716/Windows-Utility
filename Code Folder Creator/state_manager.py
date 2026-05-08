@@ -9,7 +9,6 @@ class StateManager:
         self.state_file = self.app_dir / "folder_creator_user_state.json"
 
         self.default_state = {
-            "theme_index": 0,
             "last_base_dir": "",
 
             # Nested creator
