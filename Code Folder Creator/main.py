@@ -96,7 +96,9 @@ class MainWindow(QMainWindow):
         self.window_width = WINDOWS_RESURFACE_EXPANDED_WIDTH
         self.window_height = WINDOWS_RESURFACE_HEIGHT
         self.tree_default_height = 360
-        self.tree_expanded_height = 500
+        self.tree_expanded_height = 485
+        self.tree_width = 925
+        self.tree_frame_padding = 2
         outer_margin = 8
         section_gap = 8
         frame_padding = 6
@@ -214,8 +216,8 @@ class MainWindow(QMainWindow):
         self.nested_date_config = QComboBox()
         self.nested_date_config.addItems(["ISO YYYY-MM-DD", "UK DD-MM-YYYY", "US MM-DD-YYYY"])
         self.nested_date_config.setEnabled(False)
-        self.nested_date_config.setFixedWidth(160)
-        self.nested_date_config.setFixedHeight(40)
+        self.nested_date_config.setFixedWidth(180)
+        self.nested_date_config.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
         self.nested_date_config.setStyleSheet(styles.organizing_combo_style(14))
 
         for i in range(self.nested_date_config.count()):
@@ -254,8 +256,8 @@ class MainWindow(QMainWindow):
 
         top_row = QHBoxLayout()
         top_row.setSpacing(control_gap)
-        self.add_folder_btn.setFixedSize(80, 40)
-        self.add_subfolder_btn.setFixedSize(80, 40)
+        self.add_folder_btn.setFixedSize(80, styles.DEFAULT_BUTTON_HEIGHT)
+        self.add_subfolder_btn.setFixedSize(80, styles.DEFAULT_BUTTON_HEIGHT)
         top_row.addStretch()
         top_row.addWidget(self.add_folder_btn)
         top_row.addWidget(self.add_subfolder_btn)
@@ -345,20 +347,23 @@ class MainWindow(QMainWindow):
 
         self.post_build_frame = QFrame()
         self.post_build_frame.setFrameShape(QFrame.NoFrame)
-        self.post_build_frame.setFixedWidth(140)
+        self.post_build_frame.setFixedWidth(200)
 
-        self.open_folder_build_toggle = QPushButton("OPEN OUTPUT\nDIR AFTER\n BUILD")
-        self.minimize_after_build_toggle = QPushButton("▬ APP\nAFTER BUILD")
-        self.close_app_after_build_toggle = QPushButton("❌ APP\nAFTER BUILD")
+        self.open_folder_build_toggle = QPushButton("OPEN DIR AFTER BUILD")
+        self.minimize_after_build_toggle = QPushButton("▬ AFTER BUILD")
+        self.close_app_after_build_toggle = QPushButton("❌ AFTER BUILD")
 
         for btn in [
             self.open_folder_build_toggle,
             self.minimize_after_build_toggle,
             self.close_app_after_build_toggle,
         ]:
-            btn.setFixedWidth(120)
-            btn.setMinimumHeight(60)
+            btn.setFixedWidth(180)
             btn.setCheckable(True)
+
+        self.open_folder_build_toggle.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        self.minimize_after_build_toggle.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        self.close_app_after_build_toggle.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
 
         self.post_build_layout = QVBoxLayout()
         self.post_build_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
@@ -459,9 +464,25 @@ class MainWindow(QMainWindow):
         paths_layout.addWidget(self.template_path_column, 0, 0, 1, 3, alignment=Qt.AlignLeft)
         paths_layout.addWidget(self.base_path_column, 0, 4, 1, 1, alignment=Qt.AlignLeft)
 
-        self.tree.setFixedWidth(852)
+        self.tree_frame = QFrame()
+        self.tree_frame.setFrameShape(QFrame.NoFrame)
+        self.tree_frame.setFixedWidth(self.tree_width + (self.tree_frame_padding * 2))
+        self.tree_frame.setStyleSheet(styles.tree_outer_frame_style())
+
+        tree_frame_layout = QVBoxLayout()
+        tree_frame_layout.setContentsMargins(
+            self.tree_frame_padding,
+            self.tree_frame_padding,
+            self.tree_frame_padding,
+            self.tree_frame_padding,
+        )
+        tree_frame_layout.setSpacing(0)
+        self.tree_frame.setLayout(tree_frame_layout)
+
+        self.tree.setFixedWidth(self.tree_width)
         self.tree.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.tree.setFixedHeight(self.tree_default_height)
+        self.tree.setStyleSheet(styles.surfaced_tree_widget_style())
         self.tree.setPlaceholderText(
             (
                 "Files can either be drag drop loaded in here."
@@ -496,7 +517,9 @@ class MainWindow(QMainWindow):
             ),
             bold=True,
         )
-        self.smart_layout.addWidget(self.tree, alignment=Qt.AlignHCenter)
+        tree_frame_layout.addWidget(self.tree)
+        self._set_tree_frame_height(self.tree_default_height)
+        self.smart_layout.addWidget(self.tree_frame, alignment=Qt.AlignHCenter)
         self.smart_layout.addSpacing(tree_to_controls_gap)
 
         tree_controls_layout = QHBoxLayout()
@@ -682,6 +705,9 @@ class MainWindow(QMainWindow):
         self.ui_state.update_build_button_state()
         self.ui_state.update_nested_build_state()
         styles.apply_standard_button_styles(self)
+        self.open_folder_build_toggle.setStyleSheet(styles.organizing_button_style(font_size=11))
+        self.minimize_after_build_toggle.setStyleSheet(styles.organizing_button_style(font_size=11))
+        self.close_app_after_build_toggle.setStyleSheet(styles.organizing_button_style(font_size=11))
         self._apply_fixed_window_style()
 
     def _apply_fixed_window_style(self):
@@ -749,6 +775,9 @@ class MainWindow(QMainWindow):
             self.tree.collapseAll()
         self.update_expand_button_text()
 
+    def _set_tree_frame_height(self, tree_height):
+        self.tree_frame.setFixedHeight(tree_height + (self.tree_frame_padding * 2))
+
     def tree_gui_stretch(self):
         is_visible = self.bottom_info_frame.isVisible()
         targets = [self.bottom_info_frame]
@@ -757,11 +786,13 @@ class MainWindow(QMainWindow):
             for widget in targets:
                 widget.hide()
             self.tree.setFixedHeight(self.tree_expanded_height)
+            self._set_tree_frame_height(self.tree_expanded_height)
             self.expand_tree_btn.setText("COLLAPSE 🌳")
         else:
             for widget in targets:
                 widget.show()
             self.tree.setFixedHeight(self.tree_default_height)
+            self._set_tree_frame_height(self.tree_default_height)
             self.expand_tree_btn.setText("EXPAND 🌳")
 
         QTimer.singleShot(0, self.ui_state.update_build_button_state)

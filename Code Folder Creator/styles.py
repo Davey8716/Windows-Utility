@@ -117,6 +117,49 @@ def frameless_surfaced_line_edit_style(font_size: int) -> str:
     return resurface_styles.frameless_surfaced_line_edit_style(font_size)
 
 
+def tree_outer_frame_style() -> str:
+    return """
+        QFrame {
+            background-color: #ffffff;
+            border: 1px solid #ffffff;
+            border-radius: 2px;
+        }
+    """
+
+
+def surfaced_tree_widget_style(font_size: int = 14) -> str:
+    surface_bg = qcolor_css(QColor(resurface_styles.themed_surface_field_bg()))
+    surface_text = qcolor_css(QColor(resurface_styles.themed_surface_field_text()))
+    selection_bg = qcolor_css(QColor(resurface_styles.PANEL_HOVER))
+
+    return f"""
+        QTreeWidget {{
+            {resurface_styles.label_style(font_size=font_size, bold=True, color=QColor(resurface_styles.themed_surface_field_text()), font_family="Segoe UI")}
+            background-color: {surface_bg};
+            color: {surface_text};
+            border: none;
+            border-radius: 0px;
+            padding: 6px;
+            selection-background-color: {selection_bg};
+        }}
+
+        QTreeWidget::item:selected {{
+            background-color: {selection_bg};
+            color: {surface_text};
+        }}
+
+        QTreeWidget::item:selected:active {{
+            background-color: {selection_bg};
+            color: {surface_text};
+        }}
+
+        QTreeWidget::item:selected:!active {{
+            background-color: {selection_bg};
+            color: {surface_text};
+        }}
+    """
+
+
 def organizing_button_style(font_size: int = 14) -> str:
     return resurface_styles.organizing_button_style(font_size=font_size)
 
