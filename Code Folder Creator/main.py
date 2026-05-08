@@ -90,6 +90,7 @@ class MainWindow(QMainWindow):
         self.tree.header().setSectionResizeMode(QHeaderView.ResizeToContents)
 
         self.service = AppService(self.tree)
+        styles.set_theme(bool(self.service.state.get("theme_dark", True)))
         self.status = StatusController(self, self.service)
         self.setWindowTitle("Folder Generator")
 

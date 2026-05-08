@@ -35,21 +35,41 @@ def _load_resurface_styles():
 
 
 resurface_styles = _load_resurface_styles()
-resurface_styles.set_theme(True)
-
-
-WINDOW_BG = QColor(resurface_styles.WINDOW_BG)
-SURFACE_BG = QColor(resurface_styles.SURFACE_BG)
-SURFACE_HOVER = QColor(resurface_styles.SURFACE_HOVER)
-SURFACE_BORDER = QColor(resurface_styles.SURFACE_BORDER)
-TEXT_COLOR = QColor(resurface_styles.theme_text_color())
-BUTTON_BG = QColor(resurface_styles.themed_button_bg())
-BUTTON_HOVER = QColor(resurface_styles.themed_button_hover())
-BUTTON_PRESSED = QColor(resurface_styles.themed_button_pressed())
-BUTTON_BORDER = QColor(resurface_styles.themed_button_border())
+WINDOW_BG = QColor()
+SURFACE_BG = QColor()
+SURFACE_HOVER = QColor()
+SURFACE_BORDER = QColor()
+TEXT_COLOR = QColor()
+BUTTON_BG = QColor()
+BUTTON_HOVER = QColor()
+BUTTON_PRESSED = QColor()
+BUTTON_BORDER = QColor()
 TREE_PLACEHOLDER = QColor(140, 140, 140)
 DEFAULT_BUTTON_WIDTH = resurface_styles.DEFAULT_BUTTON_WIDTH
 DEFAULT_BUTTON_HEIGHT = resurface_styles.DEFAULT_BUTTON_HEIGHT
+
+
+def _refresh_theme_globals() -> None:
+    global WINDOW_BG, SURFACE_BG, SURFACE_HOVER, SURFACE_BORDER
+    global TEXT_COLOR, BUTTON_BG, BUTTON_HOVER, BUTTON_PRESSED, BUTTON_BORDER
+
+    WINDOW_BG = QColor(resurface_styles.WINDOW_BG)
+    SURFACE_BG = QColor(resurface_styles.SURFACE_BG)
+    SURFACE_HOVER = QColor(resurface_styles.SURFACE_HOVER)
+    SURFACE_BORDER = QColor(resurface_styles.SURFACE_BORDER)
+    TEXT_COLOR = QColor(resurface_styles.theme_text_color())
+    BUTTON_BG = QColor(resurface_styles.themed_button_bg())
+    BUTTON_HOVER = QColor(resurface_styles.themed_button_hover())
+    BUTTON_PRESSED = QColor(resurface_styles.themed_button_pressed())
+    BUTTON_BORDER = QColor(resurface_styles.themed_button_border())
+
+
+def set_theme(is_dark: bool) -> None:
+    resurface_styles.set_theme(is_dark)
+    _refresh_theme_globals()
+
+
+_refresh_theme_globals()
 
 
 def qcolor_css(color: QColor) -> str:

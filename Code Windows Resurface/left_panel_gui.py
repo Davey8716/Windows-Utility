@@ -1024,7 +1024,7 @@ class LeftPanelBuilder:
             tooltip_text("folder_creator_launcher"),
         )
 
-        folder_btn = QPushButton("Folder \u2192 Desktop")
+        folder_btn = QPushButton("Folder Desktop")
         self._style_organizing_button(folder_btn)
         styles.apply_default_button_size(folder_btn, width=122)
         app.register_tooltip(folder_btn, tooltip_text("folder_to_desktop"))
@@ -1039,8 +1039,8 @@ class LeftPanelBuilder:
         app.register_tooltip(folder_input, tooltip_text("folder_name_input"))
 
         folder_row_layout.addWidget(folder_creator_btn)
-        folder_row_layout.addWidget(folder_btn)
         folder_row_layout.addWidget(folder_input)
+        folder_row_layout.addWidget(folder_btn)
         folder_layout.addWidget(folder_row)
 
         def on_folder_name_changed(text: str):
