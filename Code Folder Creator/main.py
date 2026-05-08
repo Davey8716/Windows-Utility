@@ -30,6 +30,8 @@ from PySide6.QtWidgets import (
 import styles
 
 MAX_NESTED_FOLDER_NAME_LENGTH = 64
+WINDOWS_RESURFACE_EXPANDED_WIDTH = 985
+WINDOWS_RESURFACE_HEIGHT = 875
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
@@ -74,8 +76,8 @@ class MainWindow(QMainWindow):
         self.status = StatusController(self, self.service)
         self.setWindowTitle("Folder Generator")
 
-        self.window_width = 900
-        self.window_height = 900
+        self.window_width = WINDOWS_RESURFACE_EXPANDED_WIDTH
+        self.window_height = WINDOWS_RESURFACE_HEIGHT
         self.tree_default_height = 360
         self.tree_expanded_height = 500
         outer_margin = 8
@@ -124,7 +126,7 @@ class MainWindow(QMainWindow):
         self.smart_folder_creator_frame = QFrame()
         self.smart_folder_creator_frame.setFrameShape(QFrame.NoFrame)
         self.smart_folder_creator_frame.setStyleSheet("border: none;")
-        self.smart_folder_creator_frame.setFixedWidth(875)
+        self.smart_folder_creator_frame.setFixedWidth(self.window_width - 25)
         self.smart_folder_creator_frame.setFixedHeight(content_frame_height)
 
         self.smart_layout = QVBoxLayout()
