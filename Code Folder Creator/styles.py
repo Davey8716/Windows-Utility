@@ -113,6 +113,10 @@ def plain_display_line_edit_style(font_size: int) -> str:
     """
 
 
+def frameless_surfaced_line_edit_style(font_size: int) -> str:
+    return resurface_styles.frameless_surfaced_line_edit_style(font_size)
+
+
 def organizing_button_style(font_size: int = 14) -> str:
     return resurface_styles.organizing_button_style(font_size=font_size)
 

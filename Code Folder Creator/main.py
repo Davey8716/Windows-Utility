@@ -509,8 +509,11 @@ class MainWindow(QMainWindow):
         self.find_btn = QPushButton("FIND 🔎")
         self.find_output_line = QLineEdit()
         self.find_output_line.setPlaceholderText("INPUT FOR FINDING FOLDERS.")
+        self.find_output_line.setReadOnly(False)
         self.find_output_line.setEnabled(True)
         self.find_output_line.setFixedSize(tree_controls_find_input_width, 40)
+        self.find_output_line.setProperty("framelessSurfaceFieldStyle", True)
+        self.find_output_line.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
 
         self.expand_tree_btn.setFixedSize(tree_controls_expand_width, styles.DEFAULT_BUTTON_HEIGHT)
         self.expand_folders_collapse_btn.setFixedSize(tree_controls_collapse_width, styles.DEFAULT_BUTTON_HEIGHT)

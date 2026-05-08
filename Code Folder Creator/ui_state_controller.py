@@ -63,7 +63,7 @@ class UIStateController:
         )
 
         self.w.find_btn.setEnabled(can_find)
-        self.w.find_output_line.setEnabled(can_find)
+        self.w.find_output_line.setEnabled(True)
         
         # ---- Duplicate detection ----
         parent_names = [
