@@ -432,6 +432,7 @@ class DesktopOperationsMixin:
     def open_folder_creator(self):
         project_dir = Path(__file__).resolve().parent.parent / "Code Folder Creator"
         title_candidates = [
+            "Folder Generator",
             "Folder Creator",
             "Code Folder Creator",
         ]
