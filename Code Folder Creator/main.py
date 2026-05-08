@@ -494,10 +494,10 @@ class MainWindow(QMainWindow):
         self.find_output_line.setEnabled(True)
         self.find_output_line.setFixedSize(230, 40)
 
-        self.expand_tree_btn.setFixedSize(120, 40)
-        self.expand_folders_collapse_btn.setFixedSize(140, 40)
-        self.sort_btn.setFixedSize(110, 40)
-        self.find_btn.setFixedSize(80, 40)
+        self.expand_tree_btn.setFixedSize(120, styles.DEFAULT_BUTTON_HEIGHT)
+        self.expand_folders_collapse_btn.setFixedSize(160, styles.DEFAULT_BUTTON_HEIGHT)
+        self.sort_btn.setFixedSize(110, styles.DEFAULT_BUTTON_HEIGHT)
+        self.find_btn.setFixedSize(80, styles.DEFAULT_BUTTON_HEIGHT)
 
         tree_controls_layout.addWidget(self.expand_tree_btn)
         tree_controls_layout.addWidget(self.expand_folders_collapse_btn)
