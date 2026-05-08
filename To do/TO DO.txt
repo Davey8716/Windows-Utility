@@ -1,10 +1,8 @@
-Make 2 extra branches of both windows folder creator + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
+Make 2 extra branches of both + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
 
 Fix mover arrows so if any app is at the far ends and cant go farther then the arrows in that direction dissapear + animate these
 Fix location of the mmb clicker relative to tabs etc
 Give proper icons to the mover gui!!!!!!!!!!!
-
-Make mover icon transparent and the icons themselves blue to match the theme
 
 Windows exe builder not making the exe icon tray icon again after build
 

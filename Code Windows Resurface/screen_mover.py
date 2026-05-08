@@ -21,13 +21,11 @@ DOCK_TOP_OFFSET = 14
 DOCK_RESTORED_TOP_OFFSET = 2
 LOOP_SLEEP = 0.03
 WINDOW_MOVE_SETTLE_SECONDS = 0.2
-DOCK_CORNER_RADIUS = 12
 DOCK_SIDE_PADDING = 13
 DOCK_ICON_SPACING_REDUCTION = 2
-DOCK_BG_COLOR = win32api.RGB(27, 34, 44)
-DOCK_EDGE_COLOR = win32api.RGB(64, 120, 78)
-DOCK_ARROW_COLOR = win32api.RGB(130, 255, 165)
-DOCK_ARROW_GLOW_COLOR = win32api.RGB(58, 168, 92)
+DOCK_TRANSPARENT_COLOR = win32api.RGB(255, 0, 255)
+DOCK_ARROW_COLOR = win32api.RGB(45, 125, 210)
+DOCK_ARROW_GLOW_COLOR = win32api.RGB(74, 111, 168)
 DOCK_LABELS = ("<<", "<", ">", ">>", "_", "□")
 LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 WNDPROC_TYPE = ctypes.WINFUNCTYPE(
@@ -83,16 +81,12 @@ class DockOverlayButton:
             hinstance,
             None,
         )
-        region = win32gui.CreateRoundRectRgn(
+        win32gui.SetLayeredWindowAttributes(
+            self.hwnd,
+            DOCK_TRANSPARENT_COLOR,
             0,
-            0,
-            DOCK_WIDTH + 1,
-            DOCK_HEIGHT + 1,
-            DOCK_CORNER_RADIUS,
-            DOCK_CORNER_RADIUS,
+            win32con.LWA_COLORKEY,
         )
-        win32gui.SetWindowRgn(self.hwnd, region, True)
-        win32gui.SetLayeredWindowAttributes(self.hwnd, 0, 240, win32con.LWA_ALPHA)
 
     def _window_proc(self, hwnd, msg, wparam, lparam):
         try:
@@ -127,29 +121,20 @@ class DockOverlayButton:
         try:
             rect = win32gui.GetClientRect(hwnd)
             left, top, right, bottom = rect
-            bg = win32gui.CreateSolidBrush(DOCK_BG_COLOR)
-            edge_pen = win32gui.CreatePen(win32con.PS_SOLID, 1, DOCK_EDGE_COLOR)
+            bg = win32gui.CreateSolidBrush(DOCK_TRANSPARENT_COLOR)
             old_brush = win32gui.SelectObject(hdc, bg)
-            old_pen = win32gui.SelectObject(hdc, edge_pen)
-            win32gui.RoundRect(
-                hdc,
-                left,
-                top,
-                right,
-                bottom,
-                DOCK_CORNER_RADIUS,
-                DOCK_CORNER_RADIUS,
-            )
+            old_pen = win32gui.SelectObject(hdc, win32gui.GetStockObject(win32con.NULL_PEN))
+            win32gui.Rectangle(hdc, left, top, right, bottom)
             win32gui.SetBkMode(hdc, win32con.TRANSPARENT)
 
             logfont = win32gui.LOGFONT()
             logfont.lfHeight = -18
             logfont.lfWeight = 700
             logfont.lfFaceName = "Segoe UI Symbol"
+            logfont.lfQuality = getattr(win32con, "NONANTIALIASED_QUALITY", 3)
             font = win32gui.CreateFontIndirect(logfont)
             old_font = win32gui.SelectObject(hdc, font)
 
-            glow_offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
             centers = self._icon_centers(left, right)
             icon_step = centers[1] - centers[0] if len(centers) > 1 else right - left
             vertical_center = (top + bottom) // 2
@@ -165,22 +150,6 @@ class DockOverlayButton:
                     int(vertical_center + (text_height / 2.0)),
                 )
 
-                for dx, dy in glow_offsets:
-                    glow_rect = (
-                        text_rect[0] + dx,
-                        text_rect[1] + dy,
-                        text_rect[2] + dx,
-                        text_rect[3] + dy,
-                    )
-                    win32gui.SetTextColor(hdc, DOCK_ARROW_GLOW_COLOR)
-                    win32gui.DrawText(
-                        hdc,
-                        label,
-                        -1,
-                        glow_rect,
-                        win32con.DT_CENTER | win32con.DT_VCENTER | win32con.DT_SINGLELINE,
-                    )
-
                 win32gui.SetTextColor(hdc, DOCK_ARROW_COLOR)
                 win32gui.DrawText(
                     hdc,
@@ -194,7 +163,6 @@ class DockOverlayButton:
             win32gui.SelectObject(hdc, old_pen)
             win32gui.SelectObject(hdc, old_brush)
             win32gui.DeleteObject(font)
-            win32gui.DeleteObject(edge_pen)
             win32gui.DeleteObject(bg)
         finally:
             win32gui.EndPaint(hwnd, paint_struct)
