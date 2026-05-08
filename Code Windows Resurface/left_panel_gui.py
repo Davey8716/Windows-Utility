@@ -966,8 +966,8 @@ class LeftPanelBuilder:
         folder_input.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
         app.register_tooltip(folder_input, tooltip_text("folder_name_input"))
 
-        folder_row_layout.addWidget(folder_btn)
         folder_row_layout.addWidget(folder_creator_btn)
+        folder_row_layout.addWidget(folder_btn)
         folder_row_layout.addWidget(folder_input)
         org_layout.addWidget(folder_row)
 

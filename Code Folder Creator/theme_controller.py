@@ -14,120 +14,149 @@ class ThemeController:
         app = self._application()
         app.setStyleSheet("""
             QWidget {
-                background-color: #C5C5C5;
-                color: #1a1a1a;
+                background-color: #282832;
+                color: #ffffff;
             }
 
             QLineEdit {
-                    background-color: #e8e8e8;
-                    border: 2px solid #444;
-                    border-radius: 2px;
-                    font-family: "Rubik UI";
-                    font-size: 12px;
-                    font-weight: 700;
-                }
+                background-color: #3a4860;
+                border: 2px solid #ffffff;
+                border-radius: 6px;
+                color: #ffffff;
+                font-family: "Segoe UI";
+                font-size: 15px;
+                font-weight: 700;
+                padding: 4px 8px;
+                selection-background-color: #4a6fa8;
+            }
 
             QLabel {
-                    background-color: #e8e8e8;
-                    border: 2px solid #444;
-                    border-radius: 2px;
-                    font-family: "Rubik UI";
-                    font-size: 12px;
-                    font-weight: 700;
-                }
+                background: transparent;
+                border: none;
+                color: #ffffff;
+                font-family: "Segoe UI";
+                font-size: 14px;
+                font-weight: 700;
+            }
 
             QPushButton:disabled {
-                background-color: #858585;
-                color: #696969;
-                border: 1px solid #444;
+                background-color: #1c66c4;
+                color: #ffffff;
+                border: 1px solid #8ac6f6;
             }
 
             QPushButton {
-                background-color: #e8e8e8;
-                color: #1a1a1a;
-                border: 1px solid #cfcfcf;
+                background-color: #1c66c4;
+                color: #ffffff;
+                border: 1px solid #8ac6f6;
+                border-radius: 3px;
                 font-weight: 700;
-                font-family: "Rubik UI";
-                font-size: 12px;
-                text-transform: uppercase;
+                font-family: "Segoe UI";
+                font-size: 14px;
                 text-align: center;
-                padding: 4px;
+                padding: 4px 8px;
             }
 
             QPushButton:hover {
-                background-color: #dcdcdc;
+                background-color: #2a78da;
             }
 
+            QPushButton:pressed,
             QPushButton:checked {
-                background-color: #2a2a2a;
-                color: white;
-                border: 2px solid #2a2a2a;
+                background-color: #144e9a;
+                color: #ffffff;
+                border: 1px solid #8ac6f6;
             }
 
             QComboBox {
-                background-color: #e8e8e8;
-                color: #1a1a1a;
-                border: 1px solid #cfcfcf;
-                padding-left: 15px;
-                padding-right: 15px;
-                font-family: "Rubik UI";
-                font-size: 13px;
+                background-color: #3a4860;
+                color: #ffffff;
+                border: 2px solid #ffffff;
+                border-radius: 6px;
+                padding: 4px 28px 4px 8px;
+                font-family: "Segoe UI";
+                font-size: 14px;
+                font-weight: 700;
             }
 
             QComboBox:disabled {
-                background-color: #858585;
-                color: #696969;
-                border: 1px solid #444;
+                background-color: #3a4860;
+                color: #ffffff;
+                border: 2px solid #ffffff;
             }
 
             QComboBox QLineEdit {
                 qproperty-alignment: AlignCenter;
             }
 
+            QComboBox:hover,
+            QComboBox:on {
+                background-color: #3a4860;
+            }
+
+            QComboBox::drop-down {
+                border: none;
+                background: transparent;
+                width: 22px;
+            }
+
             QComboBox QAbstractItemView {
+                background-color: #3a4860;
+                color: #ffffff;
+                selection-background-color: #4a6fa8;
+                selection-color: #ffffff;
+                border: 2px solid #ffffff;
                 padding: 4px;
+                outline: 0;
             }
 
             QSpinBox {
-                background-color: #e8e8e8;
-                color: #1a1a1a;
-                border: 1px solid #cfcfcf;
+                background-color: #3a4860;
+                color: #ffffff;
+                border: 2px solid #ffffff;
+                border-radius: 6px;
                 padding: 10px;
                 text-align: center;
-                font-family: "Rubik UI";
-                font-size: 13px;
+                font-family: "Segoe UI";
+                font-size: 14px;
+                font-weight: 700;
             }
 
             QSpinBox:disabled {
-                background-color: #858585;
-                color: #696969;
-                border: 1px solid #444;
+                background-color: #3a4860;
+                color: #ffffff;
+                border: 2px solid #ffffff;
             }
             
             QTreeWidget {
-                selection-background-color: #e8e8e8;  /* fallback */
-                font-family: "Rubik UI";
-                font-size: 16px;
+                background-color: #3a4860;
+                color: #ffffff;
+                border: 2px solid #ffffff;
+                border-radius: 2px;
+                selection-background-color: #3a4860;
+                font-family: "Segoe UI";
+                font-size: 14px;
+                font-weight: 700;
             }
 
             QTreeWidget::item:selected {
-                background-color: #e8e8e8;
-                color: #1a1a1a;
+                background-color: #3a4860;
+                color: #ffffff;
                 font-weight: 700;
-                font-family: "Rubik UI";
-                font-size: 16px;
+                font-family: "Segoe UI";
+                font-size: 14px;
             }
 
             QTreeWidget::item:selected:active {
-                background-color: #dcdcdc;
-                font-family: "Rubik UI";
-                font-size: 16px;
+                background-color: #4a6fa8;
+                font-family: "Segoe UI";
+                font-size: 14px;
             }
 
             QTreeWidget::item:selected:!active {
-                background-color: #e8e8e8;
-                font-family: "Rubik UI";
-                font-size: 16px;
+                background-color: #3a4860;
+                font-family: "Segoe UI";
+                font-size: 14px;
             }
 
             QSpinBox::up-button, QSpinBox::down-button {

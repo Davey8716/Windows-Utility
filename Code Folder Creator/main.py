@@ -109,7 +109,8 @@ class MainWindow(QMainWindow):
             QLabel {
                 background: transparent;
                 border: none;
-                color: #000000;
+                color: #ffffff;
+                font-family: "Segoe UI";
                 font-size: 20px;
                 font-weight: 1000;
             }
@@ -121,8 +122,8 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(header_grid)
 
         self.smart_folder_creator_frame = QFrame()
-        self.smart_folder_creator_frame.setFrameShape(QFrame.StyledPanel)
-        self.smart_folder_creator_frame.setStyleSheet("border: 5px solid 4D4D4DFF;")
+        self.smart_folder_creator_frame.setFrameShape(QFrame.NoFrame)
+        self.smart_folder_creator_frame.setStyleSheet("border: none;")
         self.smart_folder_creator_frame.setFixedWidth(875)
         self.smart_folder_creator_frame.setFixedHeight(999)
 
@@ -204,7 +205,7 @@ class MainWindow(QMainWindow):
         self.nested_date_config.lineEdit().setReadOnly(True)
 
         self.template_controls_frame = QFrame()
-        self.template_controls_frame.setFrameShape(QFrame.StyledPanel)
+        self.template_controls_frame.setFrameShape(QFrame.NoFrame)
         self.template_controls_frame.setFixedWidth(165)
 
         template_layout = QVBoxLayout()
@@ -218,7 +219,7 @@ class MainWindow(QMainWindow):
         template_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
 
         self.folder_buttons_frame = QFrame()
-        self.folder_buttons_frame.setFrameShape(QFrame.StyledPanel)
+        self.folder_buttons_frame.setFrameShape(QFrame.NoFrame)
         self.folder_buttons_frame.setFixedWidth(190)
 
         folder_buttons_layout = QVBoxLayout()
@@ -279,7 +280,7 @@ class MainWindow(QMainWindow):
         folder_buttons_layout.addStretch()
 
         self.date_controls_frame = QFrame()
-        self.date_controls_frame.setFrameShape(QFrame.StyledPanel)
+        self.date_controls_frame.setFrameShape(QFrame.NoFrame)
         self.date_controls_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.date_controls_frame.setFixedWidth(190)
 
@@ -293,7 +294,7 @@ class MainWindow(QMainWindow):
         date_layout.addWidget(self.nested_date_config, alignment=Qt.AlignHCenter)
 
         self.build_buttons_frame = QFrame()
-        self.build_buttons_frame.setFrameShape(QFrame.StyledPanel)
+        self.build_buttons_frame.setFrameShape(QFrame.NoFrame)
         self.build_buttons_frame.setFixedWidth(145)
 
         build_layout = QVBoxLayout()
@@ -318,7 +319,7 @@ class MainWindow(QMainWindow):
         build_layout.setAlignment(Qt.AlignTop)
 
         self.post_build_frame = QFrame()
-        self.post_build_frame.setFrameShape(QFrame.StyledPanel)
+        self.post_build_frame.setFrameShape(QFrame.NoFrame)
         self.post_build_frame.setFixedWidth(140)
 
         self.open_folder_build_toggle = QPushButton("OPEN OUTPUT\nDIR AFTER\n BUILD")
@@ -351,7 +352,7 @@ class MainWindow(QMainWindow):
             self.template_controls_frame,
         ]:
             frame.setFixedHeight(230)
-            frame.setStyleSheet("border: 5px solid #000000")
+            frame.setStyleSheet("border: none;")
 
         for dropdown in [self.load_user_template_dropdown, self.load_default_template_dropdown]:
             dropdown.setFixedSize(145, 40)
@@ -377,7 +378,7 @@ class MainWindow(QMainWindow):
         paths_layout.setSpacing(section_gap)
 
         self.template_path_column = QFrame()
-        self.template_path_column.setFrameShape(QFrame.StyledPanel)
+        self.template_path_column.setFrameShape(QFrame.NoFrame)
         self.template_path_column.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.template_path_column.setFixedWidth(360)
         template_col_layout = QVBoxLayout()
@@ -386,7 +387,7 @@ class MainWindow(QMainWindow):
         self.template_path_column.setLayout(template_col_layout)
 
         self.base_path_column = QFrame()
-        self.base_path_column.setFrameShape(QFrame.StyledPanel)
+        self.base_path_column.setFrameShape(QFrame.NoFrame)
         self.base_path_column.setFixedWidth(396)
         self.base_path_column.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         base_col_layout = QVBoxLayout()
@@ -467,7 +468,6 @@ class MainWindow(QMainWindow):
         self.find_btn = QPushButton("FIND 🔎")
         self.find_output_line = QLineEdit()
         self.find_output_line.setPlaceholderText("INPUT FOR FINDING FOLDERS.")
-        self.find_output_line.setStyleSheet("font: 15px solid #FFFFFF;")
         self.find_output_line.setEnabled(True)
         self.find_output_line.setFixedSize(230, 40)
 
@@ -490,7 +490,7 @@ class MainWindow(QMainWindow):
         self.smart_layout.addSpacing(section_gap)
 
         self.bottom_info_frame = QFrame()
-        self.bottom_info_frame.setFrameShape(QFrame.StyledPanel)
+        self.bottom_info_frame.setFrameShape(QFrame.NoFrame)
         self.bottom_info_frame.setFixedWidth(854)
         self.bottom_info_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
@@ -504,9 +504,10 @@ class MainWindow(QMainWindow):
 
         self.smart_status_frame = QFrame()
         self.smart_status_frame.setObjectName("statusFrame")
+        self.smart_status_frame.setFrameShape(QFrame.NoFrame)
         self.smart_status_frame.setFixedHeight(50)
         self.smart_status_frame.setFixedWidth(832)
-        self.smart_status_frame.setStyleSheet("border: 5px solid 4D4D4DFF;")
+        self.smart_status_frame.setStyleSheet("border: none;")
 
         smart_status_layout = QHBoxLayout()
         smart_status_layout.setContentsMargins(frame_padding, frame_padding, frame_padding, frame_padding)
@@ -521,7 +522,7 @@ class MainWindow(QMainWindow):
         smart_status_layout.addStretch()
 
         for frame in [self.template_path_column, self.base_path_column, self.bottom_info_frame]:
-            frame.setStyleSheet("border: 5px solid #000000")
+            frame.setStyleSheet("border: none;")
 
         bottom_info_layout.addWidget(self.smart_status_frame, alignment=Qt.AlignHCenter)
         self.smart_layout.addWidget(self.bottom_info_frame, alignment=Qt.AlignHCenter)

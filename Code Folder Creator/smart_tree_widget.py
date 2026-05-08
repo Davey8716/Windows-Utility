@@ -50,7 +50,8 @@ class SmartTreeWidget(QTreeWidget):
         
         painter = QPainter(self.viewport())
 
-        font = QFont("Rubik UI", 9)
+        font = QFont("Segoe UI", 10)
+        font.setBold(True)
         painter.setFont(font)
 
         painter.setPen(QColor(140, 140, 140))

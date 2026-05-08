@@ -33,11 +33,13 @@ class StatusController:
         # neutral frame
         frame.setStyleSheet("""
             QFrame#statusFrame {
-                border-radius: 2px;
                 background-color: transparent;
             }
             QLabel {
-                font-size: 12px;
+                color: #ffffff;
+                font-family: "Segoe UI";
+                font-size: 14px;
+                font-weight: 700;
             }
         """)
 
@@ -62,9 +64,12 @@ class StatusController:
 
         frame.setStyleSheet("""
             QFrame#statusFrame {
-                border-radius: 6px;
+                background-color: transparent;
             }
             QLabel {
-                font-size: 12px;
+                color: #ffffff;
+                font-family: "Segoe UI";
+                font-size: 14px;
+                font-weight: 700;
             }
         """)
