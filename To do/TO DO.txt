@@ -1,18 +1,26 @@
+Make 2 extra branches of both windows folder creator + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
+
+Fix mover arrows so if any app is at the far ends and cant go farther then the arrows in that direction dissapear + animate these
+Fix location of the mmb clicker relative to tabs etc
+Give proper icons to the mover gui!!!!!!!!!!!
+
+Make mover icon transparent and the icons themselves blue to match the theme
+
+Windows exe builder not making the exe icon tray icon again after build
+
+Ask if when pinned to taskbar right click can do actions other than unpin from taskbar and launch
+
+Fix sfc scannow and chkdsk
+
 Threading/lag
 
-Main and right utility are mammoth again and need splitting into new modules?
+right utility is mammoth again and need splitting into new modules?
 
 Do icons for the last list made in codex, plus do proper icons for the arrow < collapsible section/panel buttons
 
 Make light and dark mode versions of the icons that where made
 
 Button Sizes in general, colours relative to state
-
-Fix mover arrows so if any app is at the far ends and cant go farther then the arrows in that direction dissapear + animate these
-Fix location of the mmb clicker relative to tabs etc
-Give proper icons to the mover gui!!!!!!!!!!!
-
-Fix sfc scannow and chkdsk
 
 A hook for workspace builder ?
 
