@@ -1,3 +1,9 @@
+Merge the .jsons together so the app_state holds both the main gui and everything for the folder creator
+
+Make the theme controller of the folder creator be called styles and match the qcolor styling of the main resurface gui
+
+right utility is mammoth again and need splitting into new modules?
+
 Make 2 extra branches of both + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
 
 Fix mover arrows so if any app is at the far ends and cant go farther then the arrows in that direction dissapear + animate these
@@ -11,8 +17,6 @@ Add some of pinned jump lists to right click functionality of pinned exes to tas
 Fix sfc scannow and chkdsk
 
 Threading/lag
-
-right utility is mammoth again and need splitting into new modules?
 
 Do icons for the last list made in codex, plus do proper icons for the arrow < collapsible section/panel buttons
 

@@ -109,7 +109,11 @@ class NestedUIController:
 
         except Exception:
             self._loading_template = False
-            self.window.smart_status_text.setText("Error loading template")
+            self.window.status.set(
+                "Error loading template",
+                target="nested",
+                status_type="error",
+            )
 
     def load_user_template_from_dropdown(self):
         if self._loading_template:

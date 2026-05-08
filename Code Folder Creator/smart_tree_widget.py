@@ -224,7 +224,7 @@ class SmartTreeWidget(QTreeWidget):
         if hasattr(window, "status"):
             window.status.set(message, "nested", status_type)
         elif hasattr(window, "smart_status_text"):
-            window.smart_status_text.setText(message)
+            window.smart_status_text.clear()
                 
     def keyPressEvent(self, event: QKeyEvent):
         window = self.window()

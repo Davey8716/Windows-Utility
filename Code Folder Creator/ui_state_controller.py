@@ -10,6 +10,8 @@ class UIStateController:
         self.w = window
         self.tree = window.tree
         self.service = window.service
+        self._build_validation_key = None
+        self._selection_validation_key = None
 
     def update_build_button_state(self):
         has_invalid_chars = self.tree_contains_invalid_chars()
@@ -87,23 +89,33 @@ class UIStateController:
         has_duplicates = has_duplicate_parents or has_duplicate_children
 
         # ---- Status ----
+        validation_message = None
+        validation_key = None
         if has_duplicates:
-            self.w.smart_status_icon.setText("⚠")
-            self.w.smart_status_text.setText(
+            validation_message = (
                 "Duplicate folder names detected under the same parent.Rename folders before building."
                 "Or Auto number them."
             )
-        else:
-            if self.w.smart_status_text.text().startswith("Duplicate folder"):
-                self.w.smart_status_text.setText("")
-                self.w.smart_status_icon.setText(">")
+            validation_key = "duplicate_folders"
                 
         if has_invalid_chars:
-            self.w.smart_status_icon.setText("⚠")
-            self.w.smart_status_text.setText(
+            validation_message = (
                 "Invalid characters detected in folder names.\n "
                 "Remove <>:\"/\\|?* before building."
             )
+            validation_key = "invalid_folder_chars"
+
+        if validation_message is not None:
+            if self._build_validation_key != validation_key:
+                self.w.status.set(
+                    validation_message,
+                    target="nested",
+                    status_type="error",
+                    dedupe_key=f"build_validation:{validation_key}",
+                )
+                self._build_validation_key = validation_key
+        else:
+            self._build_validation_key = None
 
         # ---- Invalid names ----
         invalid_name_exists = False
@@ -191,34 +203,43 @@ class UIStateController:
         item = self.tree.currentItem()
 
         if not item:
-            self.w.smart_status_icon.setText(">")
-            self.w.smart_status_text.clear()
+            self._selection_validation_key = None
             return
 
         text = item.text(0).strip()
+        validation_message = None
+        validation_key = None
 
         if not text:
-            self.w.smart_status_icon.setText("⚠")
-            self.w.smart_status_text.setText("Folder name cannot be empty.")
-            return
+            validation_message = "Folder name cannot be empty."
+            validation_key = "empty_folder_name"
 
         has_invalid = any(c in text for c in INVALID_FOLDER_CHARS or "")
 
         if has_invalid:
-            self.w.smart_status_icon.setText("⚠")
-            self.w.smart_status_text.setText(
+            validation_message = (
                 "Invalid characters detected. Remove <>:\"/\\|?* from folder name."
             )
+            validation_key = "selected_invalid_chars"
 
         elif len(text) >= MAX_NESTED_FOLDER_NAME_LENGTH:
-            self.w.smart_status_icon.setText("⚠")
-            self.w.smart_status_text.setText(
+            validation_message = (
                 f"Folder name limit is {MAX_NESTED_FOLDER_NAME_LENGTH} characters."
             )
+            validation_key = "selected_name_limit"
+
+        if validation_message is not None:
+            if self._selection_validation_key != validation_key:
+                self.w.status.set(
+                    validation_message,
+                    target="nested",
+                    status_type="error",
+                    dedupe_key=f"selection_validation:{validation_key}",
+                )
+                self._selection_validation_key = validation_key
 
         else:
-            self.w.smart_status_icon.setText(">")
-            self.w.smart_status_text.clear()
+            self._selection_validation_key = None
 
 
     def tree_contains_invalid_chars(self):

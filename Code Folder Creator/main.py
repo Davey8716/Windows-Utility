@@ -27,6 +27,16 @@ from PySide6.QtWidgets import (
     QHeaderView,
 )
 
+from pathlib import Path
+import sys
+
+styles_path = Path(__file__).resolve().parent.parent / "Code Windows Resurface"
+
+if str(styles_path) not in sys.path:
+    sys.path.insert(0, str(styles_path))
+
+import styles
+
 MAX_NESTED_FOLDER_NAME_LENGTH = 64
 
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -409,7 +419,9 @@ class MainWindow(QMainWindow):
 
         for location_line in [self.template_path_line, self.base_path_line]:
             location_line.setFixedSize(300, 40)
+            location_line.setProperty("plainThemeLabelStyle", True)
             location_line.setReadOnly(True)
+            location_line.setStyleSheet(styles.plain_theme_label_style(15))
             location_line.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         for title in [self.template_path_title, self.base_path_title]:
@@ -529,6 +541,7 @@ class MainWindow(QMainWindow):
         smart_status_layout.addWidget(self.smart_status_icon)
         smart_status_layout.addWidget(self.smart_status_text)
         smart_status_layout.addStretch()
+        self.smart_status_frame.hide()
 
         for frame in [self.template_path_column, self.base_path_column, self.bottom_info_frame]:
             frame.setStyleSheet("border: none;")
@@ -702,9 +715,11 @@ class MainWindow(QMainWindow):
         name = item.text(0)
         if len(name) > MAX_NESTED_FOLDER_NAME_LENGTH:
             item.setText(0, name[:MAX_NESTED_FOLDER_NAME_LENGTH])
-            self.smart_status_icon.setText("⚠")
-            self.smart_status_text.setText(
-                f"Folder names limited to {MAX_NESTED_FOLDER_NAME_LENGTH} characters."
+            self.status.set(
+                f"Folder names limited to {MAX_NESTED_FOLDER_NAME_LENGTH} characters.",
+                target="nested",
+                status_type="error",
+                dedupe_key="folder_name_limit_enforced",
             )
 
     def restore_timestamp_state(self, toggle, combo, enabled_key, mode_key):
@@ -724,7 +739,7 @@ class MainWindow(QMainWindow):
         self.update_expand_button_text()
 
     def tree_gui_stretch(self):
-        is_visible = self.smart_status_frame.isVisible()
+        is_visible = self.bottom_info_frame.isVisible()
         targets = [self.bottom_info_frame]
 
         if is_visible:

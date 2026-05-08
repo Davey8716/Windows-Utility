@@ -1,62 +1,54 @@
-import json,os
+import os
+import sys
 from pathlib import Path
 
-class StateManager:
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+project_root_str = str(PROJECT_ROOT)
+if project_root_str not in sys.path:
+    sys.path.insert(0, project_root_str)
+
+from Shared.app_state_defaults import (
+    FOLDER_CREATOR_DEFAULTS,
+    SHARED_APP_STATE_DEFAULTS,
+)
+from Shared.shared_state_manager import JsonStateManager
+
+APP_DIR_NAME = "Windows Resurface"
+CONFIG_FILENAME = "app_state.json"
+LEGACY_APP_DIR_NAME = "FolderCreator"
+LEGACY_CONFIG_FILENAME = "folder_creator_user_state.json"
+
+DEFAULT_STATE = FOLDER_CREATOR_DEFAULTS
+
+
+def get_config_path() -> Path:
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        return Path(local_app_data) / APP_DIR_NAME / CONFIG_FILENAME
+    return Path.home() / "AppData" / "Local" / APP_DIR_NAME / CONFIG_FILENAME
+
+
+def get_legacy_config_path() -> Path:
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        return Path(local_app_data) / LEGACY_APP_DIR_NAME / LEGACY_CONFIG_FILENAME
+    return (
+        Path.home()
+        / "AppData"
+        / "Local"
+        / LEGACY_APP_DIR_NAME
+        / LEGACY_CONFIG_FILENAME
+    )
+
+
+class StateManager(JsonStateManager):
     def __init__(self):
-        self.app_dir = Path(os.getenv("LOCALAPPDATA")) / "FolderCreator"
-        self.app_dir.mkdir(parents=True, exist_ok=True)
-
-        self.state_file = self.app_dir / "folder_creator_user_state.json"
-
-        self.default_state = {
-            "last_base_dir": "",
-
-            # Nested creator
-            "nested_date_stamp_enabled": False,
-            "nested_date_stamp_mode": "ISO",
-            "nested_auto_number_enabled": False,
-
-            # Nested build behaviour
-            "open_folder_after_build": False,
-            "minimize_after_build": False,
-            "close_after_build": False,
-        }
-
-    # ---------------------------------------------------------
-    # Load State
-    # ---------------------------------------------------------
-    def load_state(self):
-        if not self.state_file.exists():
-            self.save_state(self.default_state)
-            return self.default_state.copy()
-
-        try:
-            with open(self.state_file, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            # ensure missing keys are filled
-            for k, v in self.default_state.items():
-                data.setdefault(k, v)
-
-            return data
-
-        except Exception:
-            return self.default_state.copy()
-
-    # ---------------------------------------------------------
-    # Save State
-    # ---------------------------------------------------------
-    def save_state(self, state_dict):
-        try:
-            with open(self.state_file, "w", encoding="utf-8") as f:
-                json.dump(state_dict, f, indent=4)
-        except Exception:
-            pass
-
-    # ---------------------------------------------------------
-    # Update Single Key
-    # ---------------------------------------------------------
-    def update(self, key, value):
-        state = self.load_state()
-        state[key] = value
-        self.save_state(state)
+        super().__init__(
+            app_dir_name=APP_DIR_NAME,
+            config_filename=CONFIG_FILENAME,
+            defaults=SHARED_APP_STATE_DEFAULTS,
+            persist_defaults_on_missing=True,
+            preserve_unknown_keys=True,
+            config_path_resolver=get_config_path,
+            legacy_config_path_resolver=get_legacy_config_path,
+        )

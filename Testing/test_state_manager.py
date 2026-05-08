@@ -1,10 +1,28 @@
 import json
+import importlib.util
 import shutil
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import state_manager
+
+def load_windows_state_manager_module():
+    module_path = (
+        Path(__file__).resolve().parent.parent
+        / "Code Windows Resurface"
+        / "state_manager.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "windows_resurface_state_manager",
+        module_path,
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+state_manager = load_windows_state_manager_module()
 
 EXPECTED_PERSISTED_KEYS = {
     "theme_dark",

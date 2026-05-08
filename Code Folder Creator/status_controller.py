@@ -1,4 +1,5 @@
 from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QMessageBox, QPushButton
 
 class StatusController:
     def __init__(self, window, service):
@@ -8,68 +9,87 @@ class StatusController:
         self.nested_timer = QTimer(window)
         self.nested_timer.setSingleShot(True)
         self.nested_timer.timeout.connect(lambda: self.reset("nested"))
+        self._active_message_box = None
+        self._active_dedupe_key = None
 
     # ---------------------------------------------------------
     # SET STATUS
     # ---------------------------------------------------------
-    def set(self, message: str, target: str = "nested", status_type: str = "info"):
-        icon = self.w.smart_status_icon
-        text = self.w.smart_status_text
-        frame = self.w.smart_status_frame
-        self.nested_timer.start(5000)
+    def set(
+        self,
+        message: str,
+        target: str = "nested",
+        status_type: str = "info",
+        *,
+        timeout_ms: int = 10_000,
+        show_close_now_button: bool = True,
+        dedupe_key: str | None = None,
+    ):
+        if (
+            dedupe_key is not None
+            and self._active_message_box is not None
+            and self._active_message_box.isVisible()
+            and self._active_dedupe_key == dedupe_key
+        ):
+            return
 
-        # icon
+        self._close_active_message_box()
+        self._active_dedupe_key = dedupe_key
+
+        box = QMessageBox(self.w)
+        box.setWindowTitle("Folder Creator")
+        box.setText(message)
+        box.setStandardButtons(QMessageBox.StandardButton.NoButton)
+
         if status_type == "success":
-            icon.setText("✓")
-            color = "#2ecc71"   # green
+            box.setIcon(QMessageBox.Icon.Information)
         elif status_type == "error":
-            icon.setText("✕")
-            color = "#e74c3c"   # red
+            box.setIcon(QMessageBox.Icon.Warning)
         else:
-            icon.setText(">")
-            color = self.service.theme_controller.current_accent
-            
+            box.setIcon(QMessageBox.Icon.Information)
 
-        # neutral frame
-        frame.setStyleSheet("""
-            QFrame#statusFrame {
-                background-color: transparent;
-            }
-            QLabel {
-                color: #ffffff;
-                font-family: "Segoe UI";
-                font-size: 14px;
-                font-weight: 700;
-            }
-        """)
+        close_now_button = None
+        if show_close_now_button:
+            close_now_button = box.addButton(
+                "Close Now",
+                QMessageBox.ButtonRole.ActionRole,
+            )
 
-        # hide icon visually (your current behaviour)
-        icon.setStyleSheet(f"font-weight: 700; color: {color};")
+        box.finished.connect(self._on_message_box_finished)
+        box.setModal(False)
+        box.show()
+        box.raise_()
+        box.activateWindow()
 
-        text.setText(message)
+        if close_now_button is not None and isinstance(close_now_button, QPushButton):
+            close_now_button.setDefault(False)
+            close_now_button.setAutoDefault(False)
+
+        self._active_message_box = box
+        QTimer.singleShot(timeout_ms, lambda: self._close_message_box(box))
 
     # ---------------------------------------------------------
     # RESET STATUS
     # ---------------------------------------------------------
     def reset(self, target: str):
-        accent = self.service.theme_controller.current_accent
+        if hasattr(self.w, "smart_status_icon"):
+            self.w.smart_status_icon.setText(">")
+        if hasattr(self.w, "smart_status_text"):
+            self.w.smart_status_text.clear()
 
-        icon = self.w.smart_status_icon
-        text = self.w.smart_status_text
-        frame = self.w.smart_status_frame
+    def _close_active_message_box(self) -> None:
+        if self._active_message_box is not None:
+            self._close_message_box(self._active_message_box)
 
-        icon.setText(">")
-        icon.setStyleSheet(f"font-weight: 700; color: {accent};")
-        text.setText("")
+    def _close_message_box(self, box) -> None:
+        if box is None:
+            return
+        try:
+            if box.isVisible():
+                box.done(0)
+        except RuntimeError:
+            pass
 
-        frame.setStyleSheet("""
-            QFrame#statusFrame {
-                background-color: transparent;
-            }
-            QLabel {
-                color: #ffffff;
-                font-family: "Segoe UI";
-                font-size: 14px;
-                font-weight: 700;
-            }
-        """)
+    def _on_message_box_finished(self, _result: int) -> None:
+        self._active_message_box = None
+        self._active_dedupe_key = None
