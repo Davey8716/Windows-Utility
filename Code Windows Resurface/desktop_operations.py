@@ -8,9 +8,12 @@ from pathlib import Path
 from PIL import ImageGrab
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QLineEdit
+import win32api
+import win32con
+import win32gui
 
 from state_manager import save_state
-from utility_toggles import minimize_all_except_gui
+from utility_toggles import _should_skip
 
 
 class DesktopOperationsMixin:
@@ -44,6 +47,7 @@ class DesktopOperationsMixin:
         *,
         delay_ms_after_minimize: int = 500,
     ) -> None:
+        tracked_windows = []
         hwnd = None
         if hasattr(self, "winId"):
             try:
@@ -52,21 +56,83 @@ class DesktopOperationsMixin:
                 hwnd = None
 
         if hwnd:
-            try:
-                minimize_all_except_gui(hwnd)
-            except Exception as exc:
-                print(f"[SCREENSHOT] Global minimize failed: {exc}")
+            tracked_windows = self._collect_screenshot_windows_to_minimize(hwnd)
+            self._minimize_tracked_screenshot_windows(tracked_windows)
 
         try:
             self.showMinimized()
         except Exception as exc:
             print(f"[SCREENSHOT] App minimize failed: {exc}")
 
+        def run_action():
+            action(tracked_windows, hwnd)
+
         if delay_ms_after_minimize > 0:
-            QTimer.singleShot(delay_ms_after_minimize, action)
+            QTimer.singleShot(delay_ms_after_minimize, run_action)
             return
 
-        action()
+        run_action()
+
+    def _collect_screenshot_windows_to_minimize(self, skip_hwnd: int) -> list[int]:
+        handles = []
+
+        def enum_handler(hwnd, _):
+            if _should_skip(hwnd, skip_hwnd):
+                return
+
+            try:
+                placement = win32gui.GetWindowPlacement(hwnd)
+            except Exception:
+                return
+
+            if placement[1] == win32con.SW_SHOWMINIMIZED:
+                return
+
+            handles.append(hwnd)
+
+        try:
+            win32gui.EnumWindows(enum_handler, None)
+        except Exception as exc:
+            print(f"[SCREENSHOT] Window enumeration failed: {exc}")
+
+        return handles
+
+    def _minimize_tracked_screenshot_windows(self, handles: list[int]) -> None:
+        for hwnd in handles:
+            try:
+                if win32gui.IsWindow(hwnd) and not win32gui.IsIconic(hwnd):
+                    win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+            except Exception as exc:
+                print(f"[SCREENSHOT] Window minimize failed for {hwnd}: {exc}")
+
+    def _restore_tracked_screenshot_windows(self, handles: list[int]) -> None:
+        for hwnd in handles:
+            try:
+                if win32gui.IsWindow(hwnd) and win32gui.IsIconic(hwnd):
+                    win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            except Exception as exc:
+                print(f"[SCREENSHOT] Window restore failed for {hwnd}: {exc}")
+
+    def _restore_post_screenshot_state(
+        self,
+        tracked_windows: list[int],
+        app_hwnd: int | None,
+    ) -> bool:
+        self._restore_tracked_screenshot_windows(tracked_windows)
+
+        if self._should_minimize_after_use():
+            return False
+
+        if app_hwnd:
+            try:
+                if win32gui.IsWindow(app_hwnd) and win32gui.IsIconic(app_hwnd):
+                    self.showNormal()
+                    self.raise_()
+                    self.activateWindow()
+            except Exception as exc:
+                print(f"[SCREENSHOT] App restore failed: {exc}")
+
+        return True
 
     def _save_state_safely(self, state: dict) -> None:
         save_state_fn = self._get_app_module_attr("save_state", save_state)
@@ -118,43 +184,107 @@ class DesktopOperationsMixin:
             delay_ms_after_minimize=500,
         )
 
-    def _capture_desktop_screenshot(self):
-        try:
-            img = ImageGrab.grab()
-
-            default_name = (
-                f"DesktopScreenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    def _enumerate_monitor_rects(self):
+        monitors = []
+        for index, monitor in enumerate(win32api.EnumDisplayMonitors(), start=1):
+            monitor_info = win32api.GetMonitorInfo(monitor[0])
+            left, top, right, bottom = monitor_info["Monitor"]
+            monitors.append(
+                {
+                    "index": index,
+                    "rect": (left, top, right, bottom),
+                }
             )
+        return monitors
+
+    def _capture_desktop_screenshot(
+        self,
+        tracked_windows: list[int] | None = None,
+        app_hwnd: int | None = None,
+    ):
+        save_paths = []
+        tracked_windows = list(tracked_windows or [])
+        try:
+            monitors = self._enumerate_monitor_rects()
+            img = ImageGrab.grab(all_screens=True)
+
+            if not monitors:
+                width, height = img.size
+                monitors = [{"index": 1, "rect": (0, 0, width, height)}]
+
+            virtual_left = min(monitor["rect"][0] for monitor in monitors)
+            virtual_top = min(monitor["rect"][1] for monitor in monitors)
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             path_type = self._get_app_module_attr("Path", Path)
             save_state_fn = self._get_app_module_attr("save_state", save_state)
             save_dir = path_type(self._get_master_backup_dir())
             save_dir.mkdir(parents=True, exist_ok=True)
-            save_path = save_dir / default_name
 
-            img.save(save_path)
-            self.state["desktop_screenshot_last_path"] = str(save_path)
+            for monitor in monitors:
+                left, top, right, bottom = monitor["rect"]
+                crop_box = (
+                    left - virtual_left,
+                    top - virtual_top,
+                    right - virtual_left,
+                    bottom - virtual_top,
+                )
+                monitor_img = img.crop(crop_box)
+                save_path = (
+                    save_dir
+                    / f"DesktopScreenshot_{timestamp}_Monitor{monitor['index']}.png"
+                )
+                monitor_img.save(save_path)
+                save_paths.append(save_path)
+
+            if save_paths:
+                self.state["desktop_screenshot_last_path"] = str(save_paths[0])
+            self.state["desktop_screenshot_last_dir"] = str(save_dir)
             try:
                 save_state_fn(self.state)
             except Exception as exc:
                 print(f"[STATE] Save failed: {exc}")
-            print(f"[SCREENSHOT] Saved: {save_path}")
-            self._show_organizing_timed_message(
-                self._message_box_icon("Information"),
-                "Desktop Screenshot",
-                f"Desktop screenshot saved to:\n{save_path}",
-                timeout_ms=5_000,
-                show_close_now_button=True,
+
+            count = len(save_paths)
+            if count <= 3:
+                saved_suffix = "\n".join(path.name for path in save_paths)
+                saved_summary = f"\nSaved files:\n{saved_suffix}"
+            else:
+                saved_summary = ""
+
+            print(f"[SCREENSHOT] Saved {count} monitor screenshot(s) to: {save_dir}")
+            app_restored = self._restore_post_screenshot_state(
+                tracked_windows,
+                app_hwnd,
             )
+            if app_restored:
+                self._show_organizing_timed_message(
+                    self._message_box_icon("Information"),
+                    "Desktop Screenshot",
+                    (
+                        f"Saved {count} desktop screenshot(s) to:\n{save_dir}"
+                        f"{saved_summary}"
+                    ),
+                    timeout_ms=5_000,
+                    show_close_now_button=True,
+                )
 
         except Exception as exc:
+            for save_path in save_paths:
+                try:
+                    save_path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+            self._restore_post_screenshot_state(tracked_windows, app_hwnd)
             print("[SCREENSHOT] Error:", exc)
-            self._show_organizing_timed_message(
-                self._message_box_icon("Warning"),
-                "Desktop Screenshot",
-                f"Could not save desktop screenshot:\n{exc}",
-                timeout_ms=5_000,
-                show_close_now_button=True,
-            )
+            if not self._should_minimize_after_use():
+                self._show_organizing_timed_message(
+                    self._message_box_icon("Warning"),
+                    "Desktop Screenshot",
+                    f"Could not save desktop screenshot:\n{exc}",
+                    timeout_ms=5_000,
+                    show_close_now_button=True,
+                )
 
     def backup_taskbar_apps(self):
         def action():
