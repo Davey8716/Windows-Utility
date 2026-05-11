@@ -198,6 +198,29 @@ def test_visible_dock_actions_only_show_window_controls_on_single_monitor(monkey
     )
 
 
+def test_visible_dock_actions_hide_maximize_when_window_has_no_maximize_box(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        screen_mover.win32api,
+        "EnumDisplayMonitors",
+        lambda: [(10, None, None), (20, None, None)],
+    )
+    monkeypatch.setattr(screen_mover.win32api, "MonitorFromWindow", lambda hwnd: 10)
+    monkeypatch.setattr(
+        screen_mover.win32gui,
+        "GetWindowLong",
+        lambda hwnd, index: 0,
+    )
+    monkeypatch.setattr(screen_mover.win32gui, "IsWindow", lambda hwnd: True)
+
+    assert screen_mover.get_visible_dock_actions(101) == (
+        "RIGHT",
+        "FAR_RIGHT",
+        "MINIMIZE",
+    )
+
+
 def test_dock_overlay_hit_test_only_uses_visible_actions():
     overlay = screen_mover.DockOverlayButton(worker=None, overlay_name="test")
     overlay.target_hwnd = 101

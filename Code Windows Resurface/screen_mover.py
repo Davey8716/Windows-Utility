@@ -26,7 +26,7 @@ LOOP_SLEEP = 0.03
 WINDOW_MOVE_SETTLE_SECONDS = 0.2
 DOCK_SIDE_PADDING = 13
 DOCK_ICON_SPACING_REDUCTION = 2
-DOCK_TRANSPARENT_COLOR = win32api.RGB(255, 0, 255)
+DOCK_TRANSPARENT_COLOR = win32api.RGB(255, 255, 255)
 DOCK_ARROW_COLOR = win32api.RGB(45, 125, 210)
 DOCK_ACTIONS = (
     ("FAR_LEFT", "<<"),
@@ -82,6 +82,21 @@ def get_window_monitor_position(hwnd):
     return current_idx, monitor_count
 
 
+def window_supports_maximize(hwnd):
+    try:
+        if not hwnd or not win32gui.IsWindow(hwnd):
+            return True
+    except Exception:
+        return True
+
+    try:
+        style = int(win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE))
+    except Exception:
+        return True
+
+    return bool(style & win32con.WS_MAXIMIZEBOX)
+
+
 def get_visible_dock_actions(hwnd):
     current_idx, monitor_count = get_window_monitor_position(hwnd)
     visible_monitor_actions = set()
@@ -95,11 +110,18 @@ def get_visible_dock_actions(hwnd):
             if current_idx < monitor_count - 1:
                 visible_monitor_actions.update({"RIGHT", "FAR_RIGHT"})
 
-    return tuple(
+    visible_actions = tuple(
         action
         for action, _label in DOCK_ACTIONS
         if action not in MONITOR_MOVE_ACTIONS or action in visible_monitor_actions
     )
+
+    if "MAXIMIZE" in visible_actions and not window_supports_maximize(hwnd):
+        visible_actions = tuple(
+            action for action in visible_actions if action != "MAXIMIZE"
+        )
+
+    return visible_actions
 
 
 def move_window_to_monitor(hwnd, direction):
