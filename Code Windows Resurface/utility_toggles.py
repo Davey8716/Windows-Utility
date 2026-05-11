@@ -12,7 +12,7 @@ import win32gui
 import win32process
 import pythoncom
 import win32com.client
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 
 from screen_mover import SCREEN_MOVER
 from desktop_icon_layout import save_desktop_icon_layout
@@ -633,10 +633,27 @@ class UtilityActionsManager:
 
         try:
             launch()
+            self._schedule_storage_sense_tracking_refresh()
             return True
         except Exception as e:
             print(f"[DEBUG] open_or_focus_storage_sense failed: {e}")
             return False
+
+    def _schedule_storage_sense_tracking_refresh(self) -> None:
+        if self.app is None:
+            return
+
+        for delay_ms in (150, 400, 900):
+            QTimer.singleShot(
+                delay_ms,
+                self._refresh_storage_sense_tracking,
+            )
+
+    def _refresh_storage_sense_tracking(self) -> None:
+        try:
+            self._find_storage_sense_handles()
+        except Exception as e:
+            print(f"[DEBUG] _refresh_storage_sense_tracking failed: {e}")
 
 
 def _iter_recycle_bin_metadata_files():
