@@ -1,7 +1,10 @@
 import ctypes
+import queue
 import threading
 import time
+import traceback
 from ctypes import wintypes
+from typing import Callable
 
 from pynput import mouse
 
@@ -25,7 +28,6 @@ DOCK_SIDE_PADDING = 13
 DOCK_ICON_SPACING_REDUCTION = 2
 DOCK_TRANSPARENT_COLOR = win32api.RGB(255, 0, 255)
 DOCK_ARROW_COLOR = win32api.RGB(45, 125, 210)
-DOCK_ARROW_GLOW_COLOR = win32api.RGB(74, 111, 168)
 DOCK_LABELS = ("<<", "<", ">", ">>", "_", "□")
 LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 WNDPROC_TYPE = ctypes.WINFUNCTYPE(
@@ -35,6 +37,112 @@ WNDPROC_TYPE = ctypes.WINFUNCTYPE(
     wintypes.WPARAM,
     wintypes.LPARAM,
 )
+
+
+def _resolve_target_monitor_index(current_idx, monitor_count, direction):
+    if direction == "LEFT":
+        return max(0, current_idx - 1)
+    if direction == "RIGHT":
+        return min(monitor_count - 1, current_idx + 1)
+    if direction == "FAR_LEFT":
+        return 0
+    if direction == "FAR_RIGHT":
+        return monitor_count - 1
+    return current_idx
+
+
+def move_window_to_monitor(hwnd, direction):
+    try:
+        monitors = win32api.EnumDisplayMonitors()
+        if len(monitors) < 2:
+            print("[MOVE] Only one monitor detected; skipping move.")
+            return
+
+        current_monitor = win32api.MonitorFromWindow(hwnd)
+        monitor_handles = [monitor[0] for monitor in monitors]
+        try:
+            current_idx = monitor_handles.index(current_monitor)
+        except ValueError:
+            print("[MOVE] Could not resolve current monitor.")
+            return
+
+        target_idx = _resolve_target_monitor_index(
+            current_idx,
+            len(monitors),
+            direction,
+        )
+        if target_idx == current_idx:
+            return
+
+        source_info = win32api.GetMonitorInfo(monitor_handles[current_idx])
+        target_info = win32api.GetMonitorInfo(monitor_handles[target_idx])
+        s_left, s_top, _, _ = source_info["Work"]
+        t_left, t_top, t_right, t_bottom = target_info["Work"]
+
+        placement = win32gui.GetWindowPlacement(hwnd)
+        show_cmd = placement[1]
+        was_maximized = show_cmd == win32con.SW_SHOWMAXIMIZED
+
+        if show_cmd == win32con.SW_SHOWMINIMIZED:
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            time.sleep(0.02)
+
+        if was_maximized:
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            time.sleep(0.02)
+
+        left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+        width = right - left
+        height = bottom - top
+
+        rel_x = left - s_left
+        rel_y = top - s_top
+        max_x = max(t_left, t_right - width)
+        max_y = max(t_top, t_bottom - height)
+        new_x = min(max(t_left + rel_x, t_left), max_x)
+        new_y = min(max(t_top + rel_y, t_top), max_y)
+
+        win32gui.SetWindowPos(
+            hwnd,
+            win32con.HWND_TOP,
+            new_x,
+            new_y,
+            width,
+            height,
+            win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE,
+        )
+
+        if was_maximized:
+            time.sleep(0.02)
+            win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+
+        print(f"[MOVE] Window moved {direction} to monitor index {target_idx}.")
+    except Exception as exc:
+        print(f"[ERROR] move_window_to_monitor: {exc}")
+
+
+def minimize_window(hwnd):
+    try:
+        win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+    except Exception as exc:
+        print(f"[ERROR] minimize_window: {exc}")
+
+
+def maximize_window(hwnd):
+    try:
+        win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+    except Exception as exc:
+        print(f"[ERROR] maximize_window: {exc}")
+
+
+def perform_window_action(hwnd, action):
+    if action == "MINIMIZE":
+        minimize_window(hwnd)
+        return
+    if action == "MAXIMIZE":
+        maximize_window(hwnd)
+        return
+    move_window_to_monitor(hwnd, action)
 
 
 class DockOverlayButton:
@@ -97,8 +205,8 @@ class DockOverlayButton:
                 return 1
 
             return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
-        except Exception as e:
-            print(f"[DOCK] WNDPROC error: {e}")
+        except Exception as exc:
+            print(f"[DOCK] WNDPROC error: {exc}")
             return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
     def _icon_centers(self, left, right):
@@ -119,11 +227,13 @@ class DockOverlayButton:
         hdc, paint_struct = win32gui.BeginPaint(hwnd)
 
         try:
-            rect = win32gui.GetClientRect(hwnd)
-            left, top, right, bottom = rect
+            left, top, right, bottom = win32gui.GetClientRect(hwnd)
             bg = win32gui.CreateSolidBrush(DOCK_TRANSPARENT_COLOR)
             old_brush = win32gui.SelectObject(hdc, bg)
-            old_pen = win32gui.SelectObject(hdc, win32gui.GetStockObject(win32con.NULL_PEN))
+            old_pen = win32gui.SelectObject(
+                hdc,
+                win32gui.GetStockObject(win32con.NULL_PEN),
+            )
             win32gui.Rectangle(hdc, left, top, right, bottom)
             win32gui.SetBkMode(hdc, win32con.TRANSPARENT)
 
@@ -142,7 +252,7 @@ class DockOverlayButton:
                 center_x = centers[index]
                 seg_left = int(center_x - (icon_step / 2.0))
                 seg_right = int(center_x + (icon_step / 2.0))
-                text_width, text_height = win32gui.GetTextExtentPoint32(hdc, label)
+                _text_width, text_height = win32gui.GetTextExtentPoint32(hdc, label)
                 text_rect = (
                     int(seg_left),
                     int(vertical_center - (text_height / 2.0)),
@@ -214,13 +324,18 @@ class DockOverlayButton:
             return None
 
         centers = self._icon_centers(left, right)
-        boundaries = [(centers[i] + centers[i + 1]) / 2.0 for i in range(len(centers) - 1)]
-        index = 0
+        boundaries = [
+            (centers[index] + centers[index + 1]) / 2.0
+            for index in range(len(centers) - 1)
+        ]
+        target_index = 0
         for boundary_index, boundary in enumerate(boundaries):
             if x < boundary:
                 break
-            index = boundary_index + 1
-        return ("FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT", "MINIMIZE", "MAXIMIZE")[index]
+            target_index = boundary_index + 1
+        return ("FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT", "MINIMIZE", "MAXIMIZE")[
+            target_index
+        ]
 
     def hide(self):
         self.target_hwnd = None
@@ -244,27 +359,91 @@ class DockOverlayButton:
 class ScreenMoverWorker:
     def __init__(self):
         self.dock_overlay = DockOverlayButton(self)
-        self.enabled = False
         self.thread = None
         self.mouse_listener = None
         self.lock = threading.Lock()
+        self.command_queue: queue.Queue[tuple[str, tuple]] = queue.Queue()
+        self.stop_event = threading.Event()
 
         self.title_bar_dock_enabled = True
         self.activation_button = "middle"
+        self._desired_title_bar_dock_enabled = True
+        self._desired_activation_button = "middle"
         self.app_hwnd = None
+        self.self_action_dispatch: Callable[[str], None] | None = None
         self._last_title_bar_hwnd = None
         self._last_title_bar_rect = None
         self._suppress_dock_until = 0.0
 
-    def configure(self, *, app_hwnd=None):
-        if app_hwnd:
-            self.app_hwnd = app_hwnd
-        self.refresh_from_state()
+    def configure(self, *, app_hwnd=None, self_action_dispatch=None):
+        state = load_state()
+        with self.lock:
+            if app_hwnd is not None:
+                self.app_hwnd = app_hwnd
+            if self_action_dispatch is not None:
+                self.self_action_dispatch = self_action_dispatch
+            self._desired_activation_button = self._load_activation_button(state)
+            self._desired_title_bar_dock_enabled = bool(
+                state.get("title_bar_dock_enabled", True)
+            )
 
     def refresh_from_state(self):
         state = load_state()
-        self.activation_button = self._load_activation_button(state)
-        self.title_bar_dock_enabled = bool(state.get("title_bar_dock_enabled", True))
+        self.update_settings(
+            title_bar_dock_enabled=bool(state.get("title_bar_dock_enabled", True)),
+            activation_button=self._load_activation_button(state),
+        )
+
+    def update_settings(self, *, title_bar_dock_enabled=None, activation_button=None):
+        with self.lock:
+            if title_bar_dock_enabled is not None:
+                self._desired_title_bar_dock_enabled = bool(title_bar_dock_enabled)
+            if activation_button is not None:
+                self._desired_activation_button = self._normalize_activation_button(
+                    activation_button
+                )
+
+            desired_dock = self._desired_title_bar_dock_enabled
+            desired_button = self._desired_activation_button
+            thread = self.thread
+            thread_alive = bool(thread and thread.is_alive())
+
+        should_run = self._service_enabled(desired_dock, desired_button)
+        if should_run:
+            if thread_alive:
+                self._queue_command(
+                    "settings",
+                    desired_dock,
+                    desired_button,
+                )
+            else:
+                self.start()
+            return
+
+        if thread_alive:
+            self._queue_command(
+                "settings",
+                desired_dock,
+                desired_button,
+            )
+        self.stop()
+
+    def request_click(self, x, y, button):
+        with self.lock:
+            thread = self.thread
+            thread_alive = bool(thread and thread.is_alive())
+
+        if thread_alive:
+            self._queue_command("click", x, y, button)
+
+    def _normalize_activation_button(self, button) -> str:
+        button_value = str(button).strip().lower()
+        if button_value in {"left", "middle", "right", "off"}:
+            return button_value
+        return "middle"
+
+    def _service_enabled(self, title_bar_dock_enabled, activation_button) -> bool:
+        return bool(title_bar_dock_enabled) or activation_button != "off"
 
     def _load_activation_button(self, state):
         button = str(state.get("screen_mover_activation_button", "")).strip().lower()
@@ -285,6 +464,9 @@ class ScreenMoverWorker:
         expected = mapping.get(self.activation_button)
         return expected is not None and button == expected
 
+    def _queue_command(self, command, *payload):
+        self.command_queue.put((command, payload))
+
     def _pump_messages(self):
         try:
             win32gui.PumpWaitingMessages()
@@ -293,7 +475,7 @@ class ScreenMoverWorker:
 
     def _get_window_exe(self, hwnd):
         try:
-            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
             return psutil.Process(pid).name().lower()
         except Exception:
             return ""
@@ -348,11 +530,6 @@ class ScreenMoverWorker:
             return False
         return True
 
-    def _can_move_window(self, hwnd):
-        if self._is_self_window_eligible(hwnd):
-            return True
-        return self._is_window_eligible(hwnd)
-
     def _get_root_window(self, hwnd):
         if not hwnd:
             return None
@@ -373,6 +550,11 @@ class ScreenMoverWorker:
             return bool(win32api.GetAsyncKeyState(win32con.VK_LBUTTON) & 0x8000)
         except Exception:
             return False
+
+    def _reset_title_bar_tracking(self):
+        self._last_title_bar_hwnd = None
+        self._last_title_bar_rect = None
+        self._suppress_dock_until = 0.0
 
     def _track_title_bar_motion(self, hwnd, rect):
         now = time.monotonic()
@@ -446,166 +628,149 @@ class ScreenMoverWorker:
 
         self.dock_overlay.show_for_target(hwnd, rect)
 
-    def _resolve_target_monitor_index(self, current_idx, monitor_count, direction):
-        if direction == "LEFT":
-            return max(0, current_idx - 1)
-        if direction == "RIGHT":
-            return min(monitor_count - 1, current_idx + 1)
-        if direction == "FAR_LEFT":
-            return 0
-        if direction == "FAR_RIGHT":
-            return monitor_count - 1
-        return current_idx
+    def _apply_settings(self, title_bar_dock_enabled, activation_button):
+        self.title_bar_dock_enabled = bool(title_bar_dock_enabled)
+        self.activation_button = self._normalize_activation_button(activation_button)
+        self._reset_title_bar_tracking()
+        if not self.title_bar_dock_enabled:
+            self.dock_overlay.hide()
 
-    def move_window_to_monitor(self, hwnd, direction):
-        try:
-            if not self._can_move_window(hwnd):
-                return
+    def _handle_click(self, x, y, button):
+        if self.activation_button == "off" or not self._activation_button_matches(button):
+            return
 
-            monitors = win32api.EnumDisplayMonitors()
-            if len(monitors) < 2:
-                print("[MOVE] Only one monitor detected; skipping move.")
-                return
+        direction = self.dock_overlay.hit_test(x, y)
+        target = self.dock_overlay.target_hwnd
+        if not direction or not target:
+            return
 
-            current_monitor = win32api.MonitorFromWindow(hwnd)
-            monitor_handles = [m[0] for m in monitors]
+        self.dock_overlay.hide()
+        self._dispatch_window_action(target, direction)
+
+    def _dispatch_window_action(self, target_hwnd, action):
+        if target_hwnd == self.app_hwnd:
+            if callable(self.self_action_dispatch):
+                try:
+                    self.self_action_dispatch(action)
+                except Exception as exc:
+                    print(f"[SCREEN_MOVER] Failed to dispatch self action {action}: {exc}")
+            else:
+                print(
+                    f"[SCREEN_MOVER] Missing GUI dispatch for self action {action}; ignoring."
+                )
+            return
+
+        if not self._is_window_eligible(target_hwnd):
+            return
+
+        perform_window_action(target_hwnd, action)
+
+    def _drain_command_queue(self):
+        while True:
             try:
-                current_idx = monitor_handles.index(current_monitor)
-            except ValueError:
-                print("[MOVE] Could not resolve current monitor.")
+                command, payload = self.command_queue.get_nowait()
+            except queue.Empty:
                 return
 
-            target_idx = self._resolve_target_monitor_index(
-                current_idx,
-                len(monitors),
-                direction,
-            )
-            if target_idx == current_idx:
-                return
-
-            source_info = win32api.GetMonitorInfo(monitor_handles[current_idx])
-            target_info = win32api.GetMonitorInfo(monitor_handles[target_idx])
-            s_left, s_top, _, _ = source_info["Work"]
-            t_left, t_top, t_right, t_bottom = target_info["Work"]
-
-            placement = win32gui.GetWindowPlacement(hwnd)
-            show_cmd = placement[1]
-            was_maximized = show_cmd == win32con.SW_SHOWMAXIMIZED
-
-            if show_cmd == win32con.SW_SHOWMINIMIZED:
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                time.sleep(0.02)
-
-            if was_maximized:
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                time.sleep(0.02)
-
-            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-            width = right - left
-            height = bottom - top
-
-            rel_x = left - s_left
-            rel_y = top - s_top
-            max_x = max(t_left, t_right - width)
-            max_y = max(t_top, t_bottom - height)
-            new_x = min(max(t_left + rel_x, t_left), max_x)
-            new_y = min(max(t_top + rel_y, t_top), max_y)
-
-            win32gui.SetWindowPos(
-                hwnd,
-                win32con.HWND_TOP,
-                new_x,
-                new_y,
-                width,
-                height,
-                win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE,
-            )
-
-            if was_maximized:
-                time.sleep(0.02)
-                win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
-
-            print(f"[MOVE] Window moved {direction} to monitor index {target_idx}.")
-        except Exception as e:
-            print(f"[ERROR] move_window_to_monitor: {e}")
-
-    def minimize_window(self, hwnd):
-        try:
-            if not self._can_move_window(hwnd):
-                return
-            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
-        except Exception as e:
-            print(f"[ERROR] minimize_window: {e}")
-
-    def maximize_window(self, hwnd):
-        try:
-            if not self._can_move_window(hwnd):
-                return
-            win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
-        except Exception as e:
-            print(f"[ERROR] maximize_window: {e}")
+            if command == "settings":
+                self._apply_settings(*payload)
+            elif command == "click":
+                self._handle_click(*payload)
+            elif command == "stop":
+                self.stop_event.set()
 
     def worker_loop(self):
         print("[THREAD] Screen mover loop started.")
 
-        while self.enabled:
-            self._pump_messages()
-            self._update_title_bar_dock()
-            time.sleep(LOOP_SLEEP)
+        with self.lock:
+            desired_dock = self._desired_title_bar_dock_enabled
+            desired_button = self._desired_activation_button
 
-        self.dock_overlay.hide()
-        self.dock_overlay.destroy()
+        self._apply_settings(desired_dock, desired_button)
+
+        try:
+            while not self.stop_event.is_set():
+                self._pump_messages()
+                self._drain_command_queue()
+                if self.stop_event.is_set():
+                    break
+                self._update_title_bar_dock()
+                time.sleep(LOOP_SLEEP)
+        except Exception as exc:
+            print(f"[THREAD] Screen mover loop crashed: {exc}")
+            traceback.print_exc()
+        finally:
+            try:
+                self.dock_overlay.hide()
+            except Exception as exc:
+                print(f"[DOCK] Failed to hide overlay during shutdown: {exc}")
+
+            try:
+                self.dock_overlay.destroy()
+            except Exception as exc:
+                print(f"[DOCK] Failed to destroy overlay during shutdown: {exc}")
+
+            with self.lock:
+                if threading.current_thread() is self.thread:
+                    self.thread = None
 
     def start(self):
         with self.lock:
-            if self.enabled:
+            if self.thread and self.thread.is_alive():
                 return
 
-            self.refresh_from_state()
-            self.enabled = True
+            if not self._service_enabled(
+                self._desired_title_bar_dock_enabled,
+                self._desired_activation_button,
+            ):
+                return
+
+            self.stop_event = threading.Event()
+            self.command_queue = queue.Queue()
             self.thread = threading.Thread(
                 target=self.worker_loop,
                 name="ScreenMoverWorker",
                 daemon=True,
             )
-            self.thread.start()
             self.mouse_listener = mouse.Listener(on_click=self.on_mouse_click)
-            self.mouse_listener.start()
+            thread = self.thread
+            listener = self.mouse_listener
+
+        thread.start()
+        try:
+            listener.start()
+        except Exception as exc:
+            print(f"[SCREEN_MOVER] Failed to start mouse listener: {exc}")
+            self.stop()
 
     def stop(self):
         with self.lock:
-            if not self.enabled:
-                return
+            thread = self.thread
+            thread_alive = bool(thread and thread.is_alive())
+            listener = self.mouse_listener
+            self.mouse_listener = None
 
-            self.enabled = False
+            if not thread_alive:
+                self.thread = None
+            else:
+                self.stop_event.set()
+                self._queue_command("stop")
 
-            if self.mouse_listener:
-                self.mouse_listener.stop()
-                self.mouse_listener = None
+        if listener:
+            try:
+                listener.stop()
+            except Exception as exc:
+                print(f"[SCREEN_MOVER] Failed to stop mouse listener: {exc}")
 
-        if self.thread and self.thread.is_alive():
-            self.thread.join(timeout=1.0)
-        self.thread = None
+        if thread_alive and thread is not None:
+            thread.join(timeout=1.0)
+            if thread.is_alive():
+                print("[SCREEN_MOVER] Worker thread did not exit within 1.0s.")
 
     def on_mouse_click(self, x, y, button, pressed):
-        if (
-            not self.enabled
-            or self.activation_button == "off"
-            or not pressed
-            or not self._activation_button_matches(button)
-        ):
+        if not pressed:
             return
-
-        direction = self.dock_overlay.hit_test(x, y)
-        target = self.dock_overlay.target_hwnd
-        if direction and target:
-            self.dock_overlay.hide()
-            if direction == "MINIMIZE":
-                self.minimize_window(target)
-            elif direction == "MAXIMIZE":
-                self.maximize_window(target)
-            else:
-                self.move_window_to_monitor(target, direction)
+        self.request_click(x, y, button)
 
 
 SCREEN_MOVER = ScreenMoverWorker()

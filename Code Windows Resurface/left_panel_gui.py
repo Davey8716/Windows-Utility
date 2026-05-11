@@ -703,7 +703,7 @@ class LeftPanelBuilder:
         def on_title_bar_dock_changed(checked: bool):
             state["title_bar_dock_enabled"] = checked
             save_state(state)
-            SCREEN_MOVER.title_bar_dock_enabled = checked
+            SCREEN_MOVER.update_settings(title_bar_dock_enabled=checked)
 
         title_bar_dock_btn.toggled.connect(on_title_bar_dock_changed)
 
@@ -748,7 +748,7 @@ class LeftPanelBuilder:
             state["screen_mover_activation_button"] = button_value
             state["mmb_activation_enabled"] = button_value == "middle"
             save_state(state)
-            SCREEN_MOVER.activation_button = button_value
+            SCREEN_MOVER.update_settings(activation_button=button_value)
             update_screen_move_combo_state()
 
         screen_move_button_combo.currentTextChanged.connect(

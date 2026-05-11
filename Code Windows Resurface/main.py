@@ -17,12 +17,12 @@ from right_utility_gui import (
     AdvancedToolsPanel as RightAdvancedToolsPanel,
     get_drive_info,
 )
-from screen_mover import SCREEN_MOVER
+from screen_mover import SCREEN_MOVER, perform_window_action
 from tray_toggles import TrayIconManager, resolve_application_icon
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from tooltips import QtTooltipManager, tooltip_text
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
 
 from PySide6.QtWidgets import (
     QWidget,
@@ -86,6 +86,18 @@ class SeverityComboItemDelegate(QStyledItemDelegate):
             index.data(Qt.ItemDataRole.DisplayRole) or "",
         )
         painter.restore()
+
+
+class ScreenMoverActionBridge(QObject):
+    action_requested = Signal(str)
+
+    def __init__(self, window):
+        super().__init__(window)
+        self.action_requested.connect(window.handle_screen_mover_self_action)
+
+    def dispatch(self, action: str) -> None:
+        self.action_requested.emit(action)
+
 
 def bring_existing_instance_to_front():
     target_hwnd = None
@@ -195,6 +207,7 @@ class UtilityControlApp(
         self._folder_creator_restore_topmost = False
         self.actions = UtilityActionsManager(self)
         self.tray_manager = TrayIconManager(self)
+        self._screen_mover_bridge = ScreenMoverActionBridge(self)
 
         self._build_ui()
         self._folder_creator_monitor_timer = QTimer(self)
@@ -206,7 +219,10 @@ class UtilityControlApp(
         self._drive_change_timer.timeout.connect(self._check_external_drive_changes)
         self._drive_change_timer.start(3000)
         self.tray_manager.create_tray_icon()
-        SCREEN_MOVER.configure(app_hwnd=int(self.winId()))
+        SCREEN_MOVER.configure(
+            app_hwnd=int(self.winId()),
+            self_action_dispatch=self._screen_mover_bridge.dispatch,
+        )
         SCREEN_MOVER.start()
         
         self._set_main_window_topmost_state(True)
@@ -371,6 +387,16 @@ class UtilityControlApp(
             win32gui.SetForegroundWindow(hwnd)
         except Exception:
             pass
+
+    def handle_screen_mover_self_action(self, action: str) -> None:
+        hwnd = int(self.winId())
+        if not hwnd:
+            return
+
+        try:
+            perform_window_action(hwnd, action)
+        except Exception as exc:
+            print(f"[SCREEN_MOVER] Failed self-window action {action}: {exc}")
 
     def prepare_for_shutdown(self):
         if self._shutdown_complete:
