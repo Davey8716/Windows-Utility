@@ -617,7 +617,10 @@ class UtilityControlApp(
         }
 
     def _apply_power_action_dropdown_style(self, combo: QComboBox) -> None:
-        font_size = int(combo.property("styleFontSize") or 14)
+        font_size = styles.coerce_font_size(
+            combo.property("styleFontSize"),
+            14,
+        ) or 14
         combo.setStyleSheet(styles.power_combo_style(font_size))
 
         severity_map = combo.property("powerActionSeverityMap") or {}
@@ -665,11 +668,17 @@ class UtilityControlApp(
         self._refresh_master_backup_path_display()
 
         for button in self.findChildren(QPushButton):
-            font_size = int(button.property("styleFontSize") or 14)
+            font_size = styles.coerce_font_size(
+                button.property("styleFontSize"),
+                14,
+            ) or 14
             button.setStyleSheet(styles.organizing_button_style(font_size=font_size))
 
         for combo in self.findChildren(QComboBox):
-            font_size = int(combo.property("styleFontSize") or 14)
+            font_size = styles.coerce_font_size(
+                combo.property("styleFontSize"),
+                14,
+            ) or 14
             if combo.property("connectedDrivesFieldStyle"):
                 self._apply_connected_drives_field_style()
             elif combo.property("powerActionStyle"):

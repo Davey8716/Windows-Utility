@@ -791,11 +791,17 @@ class MainWindow(QMainWindow):
                 label.setStyleSheet(styles.plain_theme_label_style(15))
 
         for combo in self.findChildren(QComboBox):
-            font_size = int(combo.property("styleFontSize") or 14)
+            font_size = styles.resurface_styles.coerce_font_size(
+                combo.property("styleFontSize"),
+                14,
+            ) or 14
             combo.setStyleSheet(styles.organizing_combo_style(font_size))
 
         for button in self.findChildren(QPushButton):
-            font_size = int(button.property("styleFontSize") or 14)
+            font_size = styles.resurface_styles.coerce_font_size(
+                button.property("styleFontSize"),
+                14,
+            ) or 14
             button.setStyleSheet(styles.organizing_button_style(font_size))
 
     def update_build_button_state(self):

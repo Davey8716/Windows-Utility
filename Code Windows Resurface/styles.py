@@ -156,7 +156,32 @@ def tooltip_border() -> QColor:
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
 
+
+def coerce_font_size(
+    font_size: int | float | str | None,
+    default: int | None = None,
+) -> int | None:
+    try:
+        normalized = int(font_size) if font_size is not None else None
+    except (TypeError, ValueError):
+        normalized = None
+
+    if normalized is not None and normalized > 0:
+        return normalized
+
+    if default is None:
+        return None
+
+    try:
+        fallback = int(default)
+    except (TypeError, ValueError):
+        return None
+
+    return fallback if fallback > 0 else None
+
+
 def label_style(font_size: int | None = None, bold: bool = True, color: QColor | None = None, font_family: str | None = None) -> str:
+    font_size = coerce_font_size(font_size)
     parts = []
     if font_family:
         parts.append(f"font-family: {font_family};")
@@ -169,6 +194,7 @@ def label_style(font_size: int | None = None, bold: bool = True, color: QColor |
     return " ".join(parts)
 
 def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
+    font_size = coerce_font_size(font_size, 18) or 18
     return f"""
         QPushButton, QToolButton {{
             color: {qcolor_css(text_color)};
@@ -334,6 +360,7 @@ def themed_button_border() -> QColor:
     return ORGANIZE_BUTTON_BORDER if THEME_IS_DARK else QColor(120, 120, 120)
 
 def organizing_button_style(font_size: int | None = None) -> str:
+    font_size = coerce_font_size(font_size)
     font_rule = f"font-size: {font_size}px;" if font_size is not None else ""
     return f"""
         QPushButton {{
@@ -402,6 +429,7 @@ def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
 
 
 def sidebar_output_clear_button_style(font_size: int = 12) -> str:
+    font_size = coerce_font_size(font_size, 12) or 12
     text_color = TEXT_LIGHT if THEME_IS_DARK else TEXT_DARK
     hover = QColor(220, 220, 220, 80) if THEME_IS_DARK else QColor(32, 32, 32, 35)
     pressed = QColor(220, 220, 220, 120) if THEME_IS_DARK else QColor(32, 32, 32, 60)
@@ -719,6 +747,7 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
     )
 
 def organizing_combo_style(font_size: int) -> str:
+    font_size = coerce_font_size(font_size, 14) or 14
     return f"""
         QComboBox {{
             {label_style(font_size=font_size, bold=True, color=theme_text_color())}
