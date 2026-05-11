@@ -10,6 +10,7 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QLineEdit
 
 from state_manager import save_state
+from utility_toggles import minimize_all_except_gui
 
 
 class DesktopOperationsMixin:
@@ -35,6 +36,36 @@ class DesktopOperationsMixin:
             if delay_ms_when_minimized > 0:
                 QTimer.singleShot(delay_ms_when_minimized, action)
                 return
+        action()
+
+    def _run_with_forced_desktop_minimize(
+        self,
+        action,
+        *,
+        delay_ms_after_minimize: int = 500,
+    ) -> None:
+        hwnd = None
+        if hasattr(self, "winId"):
+            try:
+                hwnd = int(self.winId())
+            except Exception:
+                hwnd = None
+
+        if hwnd:
+            try:
+                minimize_all_except_gui(hwnd)
+            except Exception as exc:
+                print(f"[SCREENSHOT] Global minimize failed: {exc}")
+
+        try:
+            self.showMinimized()
+        except Exception as exc:
+            print(f"[SCREENSHOT] App minimize failed: {exc}")
+
+        if delay_ms_after_minimize > 0:
+            QTimer.singleShot(delay_ms_after_minimize, action)
+            return
+
         action()
 
     def _save_state_safely(self, state: dict) -> None:
@@ -82,9 +113,9 @@ class DesktopOperationsMixin:
         return getattr(module, name, default)
 
     def take_desktop_screenshot(self):
-        self._run_with_optional_minimize(
+        self._run_with_forced_desktop_minimize(
             self._capture_desktop_screenshot,
-            delay_ms_when_minimized=250,
+            delay_ms_after_minimize=500,
         )
 
     def _capture_desktop_screenshot(self):
