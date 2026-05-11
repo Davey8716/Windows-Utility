@@ -1,13 +1,6 @@
-
-Make the theme controller of the folder creator be called styles and match the qcolor styling of the main resurface gui
-
 right utility is mammoth again and need splitting into new modules?
 
 Make 2 extra branches of both + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
-
-Fix mover arrows so if any app is at the far ends and cant go farther then the arrows in that direction dissapear + animate these
-Fix location of the mmb clicker relative to tabs etc
-Give proper icons to the mover gui!!!!!!!!!!!
 
 Windows exe builder not making the exe icon tray icon again after build
 
@@ -24,6 +17,4 @@ Make light and dark mode versions of the icons that where made
 Button Sizes in general, colours relative to state
 
 A hook for workspace builder ?
-
-A Hook for Folder creator ?
 

@@ -1,0 +1,15 @@
+"filename", "language", "Python", "comment", "blank", "total"
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\app_notifications.py", "Python", 4, 0, 1, 5
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\desktop_operations.py", "Python", 189, 0, 34, 223
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\left_panel_gui.py", "Python", -1, 0, 0, -1
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\main.py", "Python", 20, 0, 7, 27
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\right_utility_gui.py", "Python", 3, 0, 0, 3
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\screen_mover.py", "Python", 239, 0, 52, 291
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\tooltips.py", "Python", 8, 0, 1, 9
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\utility_toggles.py", "Python", -69, 0, -19, -88
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\app_state_defaults.py", "Python", 1, 0, 0, 1
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\shared_state_manager.py", "Python", 63, 0, 11, 74
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\conftest.py", "Python", 8, 0, 4, 12
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover.py", "Python", 187, 0, 52, 239
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_shared_state_manager.py", "Python", 56, 0, 12, 68
+"Total", "-", 708, 0, 155, 863
