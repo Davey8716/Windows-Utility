@@ -12,27 +12,13 @@ import win32gui
 import win32process
 import pythoncom
 import win32com.client
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt
 
 from screen_mover import SCREEN_MOVER
 from desktop_icon_layout import save_desktop_icon_layout
 from desktop_icon_layout import restore_desktop_icon_layout
 from desktop_icon_layout import desktop_icons_visible
 from desktop_icon_layout import set_desktop_icons_visible
-
-STORAGE_SENSE_WINDOW_TITLES = [
-    "Storage Sense",
-    "Storage",
-    "Settings",
-]
-STORAGE_SENSE_PROCESS_NAMES = {
-    "systemsettings.exe",
-    "applicationframehost.exe",
-}
-STORAGE_SENSE_WINDOW_CLASSES = {
-    "ApplicationFrameWindow",
-    "Windows.UI.Core.CoreWindow",
-}
 
 
 class UtilityActionsManager:
@@ -409,73 +395,6 @@ class UtilityActionsManager:
 
         return closed_any
 
-    def is_this_pc_open(self) -> bool:
-        return bool(find_explorer_windows_by_title("This PC"))
-
-    def get_this_pc_window_state(self) -> str:
-        return get_window_state_for_handles(find_explorer_windows_by_title("This PC"))
-
-    def focus_this_pc(self) -> bool:
-        return focus_window_handles(find_explorer_windows_by_title("This PC"))
-
-    def close_this_pc(self) -> bool:
-        return close_window_handles(find_explorer_windows_by_title("This PC"))
-
-    def get_storage_sense_window_state(self) -> str:
-        tracked_hwnd = self._get_tracked_storage_sense_handle()
-        if tracked_hwnd:
-            tracked_state = get_window_state_for_handles([tracked_hwnd])
-            if tracked_state != "closed":
-                return tracked_state
-        return get_window_state_for_handles(self._find_storage_sense_handles())
-
-    def focus_storage_sense(self) -> bool:
-        return focus_window_handles(self._ordered_storage_sense_handles())
-
-    def close_storage_sense(self) -> bool:
-        return close_window_handles(self._ordered_storage_sense_handles())
-
-    def _get_tracked_storage_sense_handle(self) -> int:
-        tracked_hwnd = int(
-            getattr(self.app, "_tracked_storage_sense_hwnd", 0) or 0
-        )
-        if tracked_hwnd and _is_top_level_window(tracked_hwnd):
-            return tracked_hwnd
-        return 0
-
-    def _ordered_storage_sense_handles(self) -> list[int]:
-        handles = self._find_storage_sense_handles()
-        tracked_hwnd = self._get_tracked_storage_sense_handle()
-        if not tracked_hwnd or tracked_hwnd not in handles:
-            return handles
-        return [tracked_hwnd, *[hwnd for hwnd in handles if hwnd != tracked_hwnd]]
-
-    def _find_storage_sense_handles(self) -> list[int]:
-        handles: list[int] = []
-        tracked_hwnd = self._get_tracked_storage_sense_handle()
-        tracked_pid = int(
-            getattr(self.app, "_tracked_storage_sense_pid", 0) or 0
-        )
-
-        if tracked_hwnd:
-            handles.append(tracked_hwnd)
-
-        for hwnd in find_windows_for_pid(tracked_pid):
-            if hwnd not in handles:
-                handles.append(hwnd)
-
-        for hwnd in find_storage_sense_windows():
-            if hwnd not in handles:
-                handles.append(hwnd)
-
-        if self.app is not None:
-            self.app._tracked_storage_sense_hwnd = handles[0] if handles else 0
-            self.app._tracked_storage_sense_pid = (
-                _get_window_pid(handles[0]) if handles else 0
-            )
-
-        return handles
-
     def capture_desktop_layout(self, out_path: str | None = None) -> int:
         if not out_path and self.app:
             out_path = getattr(
@@ -626,35 +545,6 @@ class UtilityActionsManager:
         return get_window_state_for_handles(
             find_windows_by_title_candidates(title_candidates)
         )
-
-    def open_or_focus_storage_sense(self, launch) -> bool:
-        if self.focus_storage_sense():
-            return True
-
-        try:
-            launch()
-            self._schedule_storage_sense_tracking_refresh()
-            return True
-        except Exception as e:
-            print(f"[DEBUG] open_or_focus_storage_sense failed: {e}")
-            return False
-
-    def _schedule_storage_sense_tracking_refresh(self) -> None:
-        if self.app is None:
-            return
-
-        for delay_ms in (150, 400, 900):
-            QTimer.singleShot(
-                delay_ms,
-                self._refresh_storage_sense_tracking,
-            )
-
-    def _refresh_storage_sense_tracking(self) -> None:
-        try:
-            self._find_storage_sense_handles()
-        except Exception as e:
-            print(f"[DEBUG] _refresh_storage_sense_tracking failed: {e}")
-
 
 def _iter_recycle_bin_metadata_files():
     for drive_root in _iter_windows_drive_roots():
@@ -992,61 +882,6 @@ def find_windows_by_title_candidates(
         win32gui.EnumWindows(enum_handler, None)
     except Exception as e:
         print(f"[DEBUG] find_windows_by_title_candidates failed: {e}")
-
-    return handles
-
-
-def find_storage_sense_windows() -> list[int]:
-    handles: list[int] = []
-    normalized_titles = [
-        candidate.strip().casefold()
-        for candidate in STORAGE_SENSE_WINDOW_TITLES
-        if candidate and candidate.strip()
-    ]
-
-    def enum_handler(hwnd, _):
-        if not _is_top_level_window(hwnd):
-            return
-
-        process_name = _get_window_process_name(hwnd)
-        if process_name not in STORAGE_SENSE_PROCESS_NAMES:
-            return
-
-        title = _get_window_title(hwnd)
-        class_name = _get_window_class_name(hwnd)
-        normalized_title = title.casefold()
-
-        if (
-            class_name in STORAGE_SENSE_WINDOW_CLASSES
-            or _title_matches_any_candidate(title, normalized_titles)
-            or normalized_title.startswith("settings")
-        ):
-            handles.append(hwnd)
-
-    try:
-        win32gui.EnumWindows(enum_handler, None)
-    except Exception as e:
-        print(f"[DEBUG] find_storage_sense_windows failed: {e}")
-
-    return handles
-
-
-def find_windows_for_pid(pid: int) -> list[int]:
-    if pid <= 0:
-        return []
-
-    handles: list[int] = []
-
-    def enum_handler(hwnd, _):
-        if not _is_top_level_window(hwnd):
-            return
-        if _get_window_pid(hwnd) == pid:
-            handles.append(hwnd)
-
-    try:
-        win32gui.EnumWindows(enum_handler, None)
-    except Exception as e:
-        print(f"[DEBUG] find_windows_for_pid failed for {pid}: {e}")
 
     return handles
 

@@ -37,8 +37,8 @@ TOOLTIP_TEXT = {
     "windows_utilities_toggle": "Shows windows utilities grouped by type and quick actions.",
     "maintenance_quick_actions_toggle": "Shows maintenance, cleanup, repair, and quick-access action menus.",
     "drive_space_display_toggle": "Shows disk usage for all detected drives.",
-    "open_this_pc": "Opens This PC when closed, focuses it if minimized, or closes it when already open.",
-    "open_storage_sense": "Opens Storage Sense when closed, focuses it if minimized, or closes it when already open.",
+    "open_this_pc": "Placeholder button. This PC behavior will be re-specified.",
+    "open_storage_sense": "Placeholder button. Storage Sense behavior will be re-specified.",
     "windows_dropdown_system": "Opens system-focused Windows tools such as Control Panel, Credential Manager, Settings, and System Information.",
     "windows_dropdown_monitoring_security": "Opens monitoring and security tools such as Reliability Monitor, Resource Monitor, Task Manager, and Windows Security.",
     "windows_dropdown_devices_storage": "Opens device and storage tools such as Device Manager, Disk Cleanup, and Disk Management.",
@@ -124,8 +124,17 @@ class QtTooltipManager(QObject):
         self._timer.stop()
         QToolTip.hideText()
 
-    def _build_tooltip_font(self) -> QFont:
-        font = QFont(self.widget.font())
-        font.setPixelSize(14)
-        font.setBold(True)
+    def _safe_tooltip_font(
+        self,
+        pixel_size: int = 14,
+        bold: bool = True,
+    ) -> QFont:
+        source_font = self.widget.font()
+        family = source_font.family().strip() if source_font is not None else ""
+        font = QFont(family or "Segoe UI")
+        font.setPixelSize(pixel_size)
+        font.setBold(bold)
         return font
+
+    def _build_tooltip_font(self) -> QFont:
+        return self._safe_tooltip_font(pixel_size=14, bold=True)

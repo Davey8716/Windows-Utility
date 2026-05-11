@@ -460,7 +460,6 @@ class AdvancedToolsPanel(QWidget):
 
     def _build_drive_space_display(self):
         drive_parent = self.display_space_section.content_layout
-        self._storage_sense_close_pending = False
 
         button_row = QWidget()
         button_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -479,7 +478,7 @@ class AdvancedToolsPanel(QWidget):
         btn_this_pc.setProperty("styleFontSize", 14)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
-        btn_this_pc.clicked.connect(self.toggle_this_pc)
+        btn_this_pc.clicked.connect(self._placeholder_this_pc_button)
         self.app.register_tooltip(
             btn_this_pc,
             tooltip_text("open_this_pc"),
@@ -498,7 +497,7 @@ class AdvancedToolsPanel(QWidget):
         btn_storage_sense.setProperty("styleFontSize", 14)
         btn_storage_sense.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_storage_sense)
-        btn_storage_sense.clicked.connect(self.toggle_storage_sense)
+        btn_storage_sense.clicked.connect(self._placeholder_storage_sense_button)
         self.app.register_tooltip(
             btn_storage_sense,
             tooltip_text("open_storage_sense"),
@@ -507,11 +506,6 @@ class AdvancedToolsPanel(QWidget):
         button_row_layout.setStretchFactor(btn_storage_sense, 1)
 
         drive_parent.addWidget(button_row)
-
-        self.this_pc_button_timer = QTimer(self)
-        self.this_pc_button_timer.timeout.connect(self._refresh_drive_space_buttons)
-        self.this_pc_button_timer.start(1000)
-        self._refresh_drive_space_buttons()
 
         self.drive_space_list = QListWidget()
         self.drive_space_list.setFixedHeight(120)
@@ -632,95 +626,11 @@ class AdvancedToolsPanel(QWidget):
             item.setSizeHint(QSize(0, 20))
             self.drive_space_list.addItem(item)
 
-    def _button_text_for_window_state(self, noun: str, state: str) -> str:
-        if state == "open":
-            return f"Close {noun}"
-        if state == "minimized":
-            return f"Focus {noun}"
-        return f"Open {noun}"
+    def _placeholder_this_pc_button(self):
+        return None
 
-    def _refresh_drive_space_buttons(self):
-        this_pc_state = self.app.actions.get_this_pc_window_state()
-        if hasattr(self, "btn_this_pc"):
-            self.btn_this_pc.setText(
-                self._button_text_for_window_state("This PC", this_pc_state)
-            )
-        if hasattr(self, "btn_storage_sense"):
-            if getattr(self, "_storage_sense_close_pending", False):
-                self.btn_storage_sense.setText("Open Storage Sense")
-                return
-            storage_sense_state = self.app.actions.get_storage_sense_window_state()
-            self.btn_storage_sense.setText(
-                self._button_text_for_window_state(
-                    "Storage Sense",
-                    storage_sense_state,
-                )
-            )
-
-    def toggle_this_pc(self):
-        window_state = self.app.actions.get_this_pc_window_state()
-        if window_state == "open":
-            closed = self.app.actions.close_this_pc()
-            self._refresh_drive_space_buttons()
-            if closed:
-                return
-            self.app._show_timed_message(
-                QMessageBox.Icon.Warning,
-                "This PC",
-                "Could not close This PC.",
-            )
-            return
-        if window_state == "minimized":
-            focused = self.app.actions.focus_this_pc()
-            self._refresh_drive_space_buttons()
-            if focused:
-                return
-            self.app._show_timed_message(
-                QMessageBox.Icon.Warning,
-                "This PC",
-                "Could not focus This PC.",
-            )
-            return
-
-        self._minimize_and_run(self._open_this_pc)
-        self._refresh_drive_space_buttons()
-        QTimer.singleShot(500, self._refresh_drive_space_buttons)
-
-    def toggle_storage_sense(self):
-        window_state = self.app.actions.get_storage_sense_window_state()
-        if window_state == "open":
-            closed = self.app.actions.close_storage_sense()
-            if closed:
-                self._storage_sense_close_pending = True
-                self.btn_storage_sense.setText("Open Storage Sense")
-                QTimer.singleShot(750, self._finish_storage_sense_close_refresh)
-                return
-            self._refresh_drive_space_buttons()
-            self.app._show_timed_message(
-                QMessageBox.Icon.Warning,
-                "Storage Sense",
-                "Could not close Storage Sense.",
-            )
-            return
-        if window_state == "minimized":
-            focused = self.app.actions.focus_storage_sense()
-            self._refresh_drive_space_buttons()
-            if focused:
-                return
-            self.app._show_timed_message(
-                QMessageBox.Icon.Warning,
-                "Storage Sense",
-                "Could not focus Storage Sense.",
-            )
-            return
-
-        self._minimize_and_run(self.open_storage_sense)
-        self._refresh_drive_space_buttons()
-        QTimer.singleShot(500, self._refresh_drive_space_buttons)
-
-    def _finish_storage_sense_close_refresh(self):
-        self._storage_sense_close_pending = False
-        self._refresh_drive_space_buttons()
+    def _placeholder_storage_sense_button(self):
+        return None
 
     def _add_action_button(self, parent_layout, label, action):
         button = QPushButton(label)
@@ -1043,11 +953,6 @@ class AdvancedToolsPanel(QWidget):
         self.app.actions.open_or_focus_window_titles(
             ["Power Options"],
             lambda: self._shell_execute("control.exe", "/name Microsoft.PowerOptions"),
-        )
-
-    def open_storage_sense(self):
-        return self.app.actions.open_or_focus_storage_sense(
-            lambda: self._shell_open("ms-settings:storagesense"),
         )
 
     def _add_windows_dropdown(self, parent_layout, label, actions_map):
@@ -1586,9 +1491,6 @@ class AdvancedToolsPanel(QWidget):
 
         combo.currentTextChanged.connect(runner)
         parent_layout.addWidget(combo, row, column)
-
-    def _open_this_pc(self):
-        subprocess.Popen(["explorer", "shell:MyComputerFolder"])
 
     def _run_brave_export(self):
         start_dir = Path(self.app.get_default_bookmarks_export_dir())
