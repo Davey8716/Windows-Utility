@@ -110,6 +110,7 @@ class AdvancedToolsPanel(QWidget):
     SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET = 6
     SIDEBAR_OUTPUT_CLEAR_BUTTON_RIGHT_OFFSET = 20
     SIDEBAR_OUTPUT_CLEAR_BUTTON_UP_OFFSET = 20
+    TRACKED_WINDOW_BUTTON_REFRESH_MS = 1500
     OUTER_SIDE_PADDING = 14
     WINDOWS_UTILITIES_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH
     WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 8
@@ -157,6 +158,11 @@ class AdvancedToolsPanel(QWidget):
         self._sidebar_output_timer = None
         self._sidebar_output_path = None
         self._sidebar_output_offset = 0
+        self._tracked_window_buttons: dict[str, dict[str, object]] = {}
+        self._tracked_window_button_refresh_timer = QTimer(self)
+        self._tracked_window_button_refresh_timer.timeout.connect(
+            self._refresh_tracked_window_button_labels
+        )
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -467,6 +473,7 @@ class AdvancedToolsPanel(QWidget):
         button_row_layout.setContentsMargins(0, 0, 0, 0)
         button_row_layout.setSpacing(10)
 
+        this_pc_titles = ("This PC",)
         btn_this_pc = QPushButton("Open This PC")
         self.btn_this_pc = btn_this_pc
         btn_this_pc.setMinimumWidth(styles.DEFAULT_BUTTON_WIDTH)
@@ -478,7 +485,20 @@ class AdvancedToolsPanel(QWidget):
         btn_this_pc.setProperty("styleFontSize", 14)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
-        btn_this_pc.clicked.connect(self._placeholder_this_pc_button)
+        self._register_tracked_window_button(
+            "this_pc",
+            btn_this_pc,
+            labels={
+                "closed": "Open This PC",
+                "open": "Close This PC",
+                "minimized": "Focus This PC",
+            },
+            title_candidates=this_pc_titles,
+            open_action=lambda: self.app.actions.open_or_focus_window_titles(
+                this_pc_titles,
+                lambda: self._shell_execute("explorer.exe", "shell:MyComputerFolder"),
+            ),
+        )
         self.app.register_tooltip(
             btn_this_pc,
             tooltip_text("open_this_pc"),
@@ -486,6 +506,7 @@ class AdvancedToolsPanel(QWidget):
         button_row_layout.addWidget(btn_this_pc)
         button_row_layout.setStretchFactor(btn_this_pc, 1)
 
+        storage_sense_titles = ("Settings",)
         btn_storage_sense = QPushButton("Open Storage Sense")
         self.btn_storage_sense = btn_storage_sense
         btn_storage_sense.setMinimumWidth(styles.DEFAULT_BUTTON_WIDTH)
@@ -497,13 +518,31 @@ class AdvancedToolsPanel(QWidget):
         btn_storage_sense.setProperty("styleFontSize", 14)
         btn_storage_sense.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_storage_sense)
-        btn_storage_sense.clicked.connect(self._placeholder_storage_sense_button)
+        self._register_tracked_window_button(
+            "storage_sense",
+            btn_storage_sense,
+            labels={
+                "closed": "Open Storage Sense",
+                "open": "Close Storage Sense",
+                "minimized": "Focus Storage Sense",
+            },
+            title_candidates=storage_sense_titles,
+            open_action=lambda: self.app.actions.open_or_focus_window_titles(
+                storage_sense_titles,
+                lambda: self._shell_open("ms-settings:storagepolicies"),
+            ),
+        )
         self.app.register_tooltip(
             btn_storage_sense,
             tooltip_text("open_storage_sense"),
         )
         button_row_layout.addWidget(btn_storage_sense)
         button_row_layout.setStretchFactor(btn_storage_sense, 1)
+        self._refresh_tracked_window_button_labels()
+        if not self._tracked_window_button_refresh_timer.isActive():
+            self._tracked_window_button_refresh_timer.start(
+                self.TRACKED_WINDOW_BUTTON_REFRESH_MS
+            )
 
         drive_parent.addWidget(button_row)
 
@@ -626,11 +665,73 @@ class AdvancedToolsPanel(QWidget):
             item.setSizeHint(QSize(0, 20))
             self.drive_space_list.addItem(item)
 
-    def _placeholder_this_pc_button(self):
-        return None
+    def _register_tracked_window_button(
+        self,
+        key: str,
+        button: QPushButton,
+        *,
+        labels: dict[str, str],
+        title_candidates: list[str] | tuple[str, ...],
+        open_action,
+    ) -> None:
+        self._tracked_window_buttons[key] = {
+            "button": button,
+            "labels": dict(labels),
+            "title_candidates": tuple(title_candidates),
+            "open_action": open_action,
+        }
+        button.clicked.connect(
+            lambda _checked=False, action_key=key: self._handle_tracked_window_button(
+                action_key
+            )
+        )
 
-    def _placeholder_storage_sense_button(self):
-        return None
+    def _tracked_window_button_label(
+        self,
+        labels: dict[str, str],
+        state: str,
+    ) -> str:
+        return labels.get(state, labels["closed"])
+
+    def _refresh_tracked_window_button_labels(self):
+        if not self.isVisible():
+            return
+
+        for key in self._tracked_window_buttons:
+            self._refresh_tracked_window_button_label(key)
+
+    def _refresh_tracked_window_button_label(self, key: str):
+        spec = self._tracked_window_buttons.get(key)
+        if not spec:
+            return
+
+        button = spec["button"]
+        labels = spec["labels"]
+        title_candidates = spec["title_candidates"]
+        state = self.app.actions.get_window_titles_state(title_candidates)
+        button_text = self._tracked_window_button_label(labels, state)
+        if button.text() != button_text:
+            button.setText(button_text)
+
+    def _handle_tracked_window_button(self, key: str):
+        spec = self._tracked_window_buttons.get(key)
+        if not spec:
+            return
+
+        title_candidates = spec["title_candidates"]
+        state = self.app.actions.get_window_titles_state(title_candidates)
+
+        if state == "open":
+            self.app.actions.close_window_titles(title_candidates)
+        elif state == "minimized":
+            self._minimize_and_run(
+                lambda: self.app.actions.maximize_window_titles(title_candidates)
+            )
+        else:
+            self._minimize_and_run(spec["open_action"])
+
+        self._refresh_tracked_window_button_label(key)
+        QTimer.singleShot(350, self._refresh_tracked_window_button_labels)
 
     def _add_action_button(self, parent_layout, label, action):
         button = QPushButton(label)

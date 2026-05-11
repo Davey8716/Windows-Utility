@@ -538,6 +538,14 @@ class UtilityActionsManager:
     ) -> bool:
         return focus_window_handles(find_windows_by_title_candidates(title_candidates))
 
+    def maximize_window_titles(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+    ) -> bool:
+        return maximize_window_handles(
+            find_windows_by_title_candidates(title_candidates)
+        )
+
     def get_window_titles_state(
         self,
         title_candidates: list[str] | tuple[str, ...],
@@ -812,6 +820,20 @@ def focus_window_handles(handles: list[int]) -> bool:
     return focused_any
 
 
+def maximize_window_handles(handles: list[int]) -> bool:
+    focused_any = False
+    for hwnd in handles:
+        try:
+            win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+            win32gui.SetForegroundWindow(hwnd)
+            focused_any = True
+            break
+        except Exception as e:
+            print(f"[DEBUG] maximize_window_handles failed for hwnd {hwnd}: {e}")
+
+    return focused_any
+
+
 def close_window_handles(handles: list[int]) -> bool:
     closed_any = False
     for hwnd in handles:
@@ -828,12 +850,14 @@ def get_window_state_for_handles(handles: list[int]) -> str:
     if not handles:
         return "closed"
 
-    top_level_handles = [hwnd for hwnd in handles if _is_top_level_window(hwnd)]
-    if not top_level_handles:
+    trackable_top_level_handles = [
+        hwnd for hwnd in handles if _is_trackable_top_level_window(hwnd)
+    ]
+    if not trackable_top_level_handles:
         return "closed"
 
     minimized_found = False
-    for hwnd in top_level_handles:
+    for hwnd in trackable_top_level_handles:
         try:
             if not _is_window_minimized(hwnd):
                 return "open"
@@ -873,7 +897,7 @@ def find_windows_by_title_candidates(
     handles: list[int] = []
 
     def enum_handler(hwnd, _):
-        if _is_top_level_window(hwnd):
+        if _is_trackable_top_level_window(hwnd):
             title = _get_window_title(hwnd)
             if title and _title_matches_any_candidate(title, normalized_candidates):
                 handles.append(hwnd)
@@ -939,6 +963,42 @@ def _is_visible_top_level_window(hwnd: int) -> bool:
         return False
 
     return True
+
+
+def _is_trackable_top_level_window(hwnd: int) -> bool:
+    if not _is_top_level_window(hwnd):
+        return False
+
+    if _is_window_cloaked(hwnd):
+        return False
+
+    try:
+        if win32gui.IsWindowVisible(hwnd):
+            return True
+    except Exception:
+        pass
+
+    return _is_window_minimized(hwnd)
+
+
+def _is_window_cloaked(hwnd: int) -> bool:
+    DWMWA_CLOAKED = 14
+    cloaked = ctypes.c_int(0)
+
+    try:
+        result = ctypes.windll.dwmapi.DwmGetWindowAttribute(
+            int(hwnd),
+            DWMWA_CLOAKED,
+            ctypes.byref(cloaked),
+            ctypes.sizeof(cloaked),
+        )
+    except Exception:
+        return False
+
+    if result != 0:
+        return False
+
+    return bool(cloaked.value)
 
 
 def _get_window_title(hwnd: int) -> str:
