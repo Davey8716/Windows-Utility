@@ -13,6 +13,17 @@ from PySide6.QtWidgets import (
 
 
 class WindowMessageMixin:
+    def _is_standard_message_box_icon(self, icon) -> bool:
+        icon_namespace = getattr(QMessageBox, "Icon", QMessageBox)
+        standard_icons = (
+            getattr(icon_namespace, "NoIcon", None),
+            getattr(icon_namespace, "Information", None),
+            getattr(icon_namespace, "Question", None),
+            getattr(icon_namespace, "Warning", None),
+            getattr(icon_namespace, "Critical", None),
+        )
+        return icon in standard_icons
+
     def _get_grouped_timed_message_boxes(self) -> dict:
         grouped_boxes = getattr(self, "_grouped_timed_message_boxes", None)
         if isinstance(grouped_boxes, dict):
@@ -32,12 +43,7 @@ class WindowMessageMixin:
         return active_boxes
 
     def _apply_message_box_icon(self, message_box: QMessageBox, icon) -> None:
-        if icon == self._message_box_icon("NoIcon"):
-            message_box._suppress_standard_icon = True
-            message_box.setIcon(icon)
-            message_box.setIconPixmap(QPixmap())
-            return
-        if icon == self._message_box_icon("Information"):
+        if self._is_standard_message_box_icon(icon):
             message_box._suppress_standard_icon = True
             message_box.setIcon(self._message_box_icon("NoIcon"))
             message_box.setIconPixmap(QPixmap())
@@ -375,8 +381,7 @@ class WindowMessageMixin:
                     active_grouped_box._grouped_entries = [(title, text)]
                 else:
                     active_grouped_box._grouped_entries.append((title, text))
-                if icon == self._message_box_icon("Warning"):
-                    active_grouped_box.setIcon(icon)
+                self._apply_message_box_icon(active_grouped_box, icon)
                 self._refresh_grouped_timed_message(
                     active_grouped_box,
                     title=merge_title or title,
