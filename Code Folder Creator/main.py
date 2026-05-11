@@ -90,7 +90,10 @@ class MainWindow(QMainWindow):
         self.tree.header().setSectionResizeMode(QHeaderView.ResizeToContents)
 
         self.service = AppService(self.tree)
-        styles.set_theme(bool(self.service.state.get("theme_dark", True)))
+        self._theme_dark = bool(self.service.state.get("theme_dark", True))
+        self._shared_state_path = self.service.state_manager.get_config_path()
+        self._shared_state_mtime_ns = None
+        styles.set_theme(self._theme_dark)
         self.status = StatusController(self, self.service)
         self.setWindowTitle("Folder Generator")
 
@@ -131,16 +134,16 @@ class MainWindow(QMainWindow):
         header_grid.setHorizontalSpacing(header_gap)
         header_grid.setVerticalSpacing(frame_padding)
 
-        title_label = QLabel("Nested Folder Creator")
-        title_label.setFixedSize(230, 50)
-        title_label.setAlignment(Qt.AlignCenter)
-        title_label.setStyleSheet(styles.title_label_style())
+        self.title_label = QLabel("Nested Folder Creator")
+        self.title_label.setFixedSize(230, 50)
+        self.title_label.setAlignment(Qt.AlignCenter)
+        self.title_label.setStyleSheet(styles.title_label_style())
 
-        header_grid.addWidget(title_label, 0, 0)
+        header_grid.addWidget(self.title_label, 0, 0)
         header_grid.setColumnStretch(0, 1)
         main_layout.addLayout(header_grid)
 
-        header_block_height = title_label.height() + (frame_padding * 2)
+        header_block_height = self.title_label.height() + (frame_padding * 2)
         content_frame_height = (
             self.window_height
             - (outer_margin * 2)
@@ -219,6 +222,7 @@ class MainWindow(QMainWindow):
         self.nested_date_config.setEnabled(False)
         self.nested_date_config.setFixedWidth(180)
         self.nested_date_config.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        self.nested_date_config.setProperty("styleFontSize", 14)
         self.nested_date_config.setStyleSheet(styles.organizing_combo_style(14))
 
         for i in range(self.nested_date_config.count()):
@@ -289,6 +293,7 @@ class MainWindow(QMainWindow):
             ]
         )
         self.file_dropdown.setFixedSize(170, 40)
+        self.file_dropdown.setProperty("styleFontSize", 14)
         self.file_dropdown.setStyleSheet(styles.organizing_combo_style(14))
         file_row.addStretch()
         file_row.addWidget(self.file_dropdown)
@@ -361,6 +366,7 @@ class MainWindow(QMainWindow):
         ]:
             btn.setFixedWidth(180)
             btn.setCheckable(True)
+            btn.setProperty("styleFontSize", 11)
 
         self.open_folder_build_toggle.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
         self.minimize_after_build_toggle.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
@@ -387,6 +393,7 @@ class MainWindow(QMainWindow):
 
         for dropdown in [self.load_user_template_dropdown, self.load_default_template_dropdown]:
             styles.apply_default_button_size(dropdown)
+            dropdown.setProperty("styleFontSize", 14)
             dropdown.setStyleSheet(styles.organizing_combo_style(14))
 
         widgets = [
@@ -709,6 +716,11 @@ class MainWindow(QMainWindow):
         self.open_folder_build_toggle.setStyleSheet(styles.organizing_button_style(font_size=11))
         self.minimize_after_build_toggle.setStyleSheet(styles.organizing_button_style(font_size=11))
         self.close_app_after_build_toggle.setStyleSheet(styles.organizing_button_style(font_size=11))
+        self.apply_theme(self._theme_dark)
+        self._shared_state_mtime_ns = self._get_shared_state_mtime_ns()
+        self._shared_state_watch_timer = QTimer(self)
+        self._shared_state_watch_timer.timeout.connect(self._sync_theme_from_shared_state)
+        self._shared_state_watch_timer.start(500)
         self._apply_fixed_window_style()
 
     def _apply_fixed_window_style(self):
@@ -742,6 +754,49 @@ class MainWindow(QMainWindow):
             0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
         )
+
+    def _get_shared_state_mtime_ns(self):
+        try:
+            return self._shared_state_path.stat().st_mtime_ns
+        except OSError:
+            return None
+
+    def _sync_theme_from_shared_state(self):
+        current_mtime_ns = self._get_shared_state_mtime_ns()
+        if current_mtime_ns == self._shared_state_mtime_ns:
+            return
+
+        self._shared_state_mtime_ns = current_mtime_ns
+        state = self.service.state_manager.load_state()
+        self.service.state = state
+
+        theme_dark = bool(state.get("theme_dark", True))
+        if theme_dark != self._theme_dark:
+            self.apply_theme(theme_dark)
+
+    def apply_theme(self, is_dark: bool):
+        self._theme_dark = bool(is_dark)
+        styles.set_theme(self._theme_dark)
+        styles.apply_app_theme(QApplication.instance())
+
+        self.title_label.setStyleSheet(styles.title_label_style())
+        self.tree_frame.setStyleSheet(styles.tree_outer_frame_style())
+        self.tree.setStyleSheet(styles.surfaced_tree_widget_style())
+        self.find_output_line.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
+        self.smart_status_icon.setStyleSheet(styles.status_label_style())
+        self.smart_status_text.setStyleSheet(styles.status_label_style())
+
+        for label in self.findChildren(QLabel):
+            if label.property("plainThemeLabelStyle"):
+                label.setStyleSheet(styles.plain_theme_label_style(15))
+
+        for combo in self.findChildren(QComboBox):
+            font_size = int(combo.property("styleFontSize") or 14)
+            combo.setStyleSheet(styles.organizing_combo_style(font_size))
+
+        for button in self.findChildren(QPushButton):
+            font_size = int(button.property("styleFontSize") or 14)
+            button.setStyleSheet(styles.organizing_button_style(font_size))
 
     def update_build_button_state(self):
         self.ui_state.update_build_button_state()
