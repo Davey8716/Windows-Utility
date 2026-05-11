@@ -17,7 +17,7 @@ from right_utility_gui import (
     AdvancedToolsPanel as RightAdvancedToolsPanel,
     get_drive_info,
 )
-from screen_mover import SCREEN_MOVER, perform_window_action
+from screen_mover import ScreenMover, perform_window_action
 from tray_toggles import TrayIconManager, resolve_application_icon
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
@@ -208,6 +208,7 @@ class UtilityControlApp(
         self.actions = UtilityActionsManager(self)
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
+        self.screen_mover = ScreenMover(name="WindowsResurfaceMain")
 
         self._build_ui()
         self._folder_creator_monitor_timer = QTimer(self)
@@ -219,11 +220,11 @@ class UtilityControlApp(
         self._drive_change_timer.timeout.connect(self._check_external_drive_changes)
         self._drive_change_timer.start(3000)
         self.tray_manager.create_tray_icon()
-        SCREEN_MOVER.configure(
+        self.screen_mover.configure(
             app_hwnd=int(self.winId()),
             self_action_dispatch=self._screen_mover_bridge.dispatch,
         )
-        SCREEN_MOVER.start()
+        self.screen_mover.start()
         
         self._set_main_window_topmost_state(True)
         self._apply_fixed_window_style()
@@ -406,7 +407,7 @@ class UtilityControlApp(
         self._unregister_session_notifications()
 
         try:
-            SCREEN_MOVER.stop()
+            self.screen_mover.stop()
         except Exception:
             pass
 

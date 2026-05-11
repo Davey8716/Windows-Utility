@@ -28,7 +28,15 @@ DOCK_SIDE_PADDING = 13
 DOCK_ICON_SPACING_REDUCTION = 2
 DOCK_TRANSPARENT_COLOR = win32api.RGB(255, 0, 255)
 DOCK_ARROW_COLOR = win32api.RGB(45, 125, 210)
-DOCK_LABELS = ("<<", "<", ">", ">>", "_", "□")
+DOCK_ACTIONS = (
+    ("FAR_LEFT", "<<"),
+    ("LEFT", "<"),
+    ("RIGHT", ">"),
+    ("FAR_RIGHT", ">>"),
+    ("MINIMIZE", "_"),
+    ("MAXIMIZE", "□"),
+)
+MONITOR_MOVE_ACTIONS = {"FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT"}
 LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 WNDPROC_TYPE = ctypes.WINFUNCTYPE(
     LRESULT,
@@ -49,6 +57,49 @@ def _resolve_target_monitor_index(current_idx, monitor_count, direction):
     if direction == "FAR_RIGHT":
         return monitor_count - 1
     return current_idx
+
+
+def _monitor_handles():
+    return [monitor[0] for monitor in win32api.EnumDisplayMonitors()]
+
+
+def get_window_monitor_position(hwnd):
+    try:
+        monitor_handles = _monitor_handles()
+    except Exception:
+        return None, 0
+
+    monitor_count = len(monitor_handles)
+    if monitor_count == 0:
+        return None, 0
+
+    try:
+        current_monitor = win32api.MonitorFromWindow(hwnd)
+        current_idx = monitor_handles.index(current_monitor)
+    except Exception:
+        return None, monitor_count
+
+    return current_idx, monitor_count
+
+
+def get_visible_dock_actions(hwnd):
+    current_idx, monitor_count = get_window_monitor_position(hwnd)
+    visible_monitor_actions = set()
+
+    if monitor_count > 1:
+        if current_idx is None:
+            visible_monitor_actions = set(MONITOR_MOVE_ACTIONS)
+        else:
+            if current_idx > 0:
+                visible_monitor_actions.update({"FAR_LEFT", "LEFT"})
+            if current_idx < monitor_count - 1:
+                visible_monitor_actions.update({"RIGHT", "FAR_RIGHT"})
+
+    return tuple(
+        action
+        for action, _label in DOCK_ACTIONS
+        if action not in MONITOR_MOVE_ACTIONS or action in visible_monitor_actions
+    )
 
 
 def move_window_to_monitor(hwnd, direction):
@@ -146,13 +197,20 @@ def perform_window_action(hwnd, action):
 
 
 class DockOverlayButton:
-    def __init__(self, worker):
+    def __init__(self, worker, *, overlay_name=None):
         self.worker = worker
         self.hwnd = None
         self.target_hwnd = None
         self.rect = None
         self.visible = False
-        self._class_name = "WindowsResurfaceDockOverlay"
+        self.visible_actions = tuple(action for action, _label in DOCK_ACTIONS)
+        normalized_name = "".join(
+            character if str(character).isalnum() else "_"
+            for character in str(overlay_name or id(self))
+        )
+        self._class_name = (
+            f"WindowsResurfaceDockOverlay_{normalized_name}_{id(self)}"
+        )
         self._wnd_proc = None
 
     def _ensure_window(self):
@@ -209,8 +267,10 @@ class DockOverlayButton:
             print(f"[DOCK] WNDPROC error: {exc}")
             return win32gui.DefWindowProc(hwnd, msg, wparam, lparam)
 
-    def _icon_centers(self, left, right):
-        icon_count = len(DOCK_LABELS)
+    def _icon_centers(self, left, right, icon_count):
+        icon_count = max(0, int(icon_count))
+        if icon_count == 0:
+            return []
         if icon_count <= 1:
             return [left + ((right - left) / 2.0)]
 
@@ -222,6 +282,28 @@ class DockOverlayButton:
         centered_start = left + (((right - left) - total_span) / 2.0)
         start = min(max(centered_start, min_start), max_start)
         return [start + (index * icon_step) for index in range(icon_count)]
+
+    def _action_layout(self, left, right):
+        actions = tuple(self.visible_actions)
+        centers = self._icon_centers(left, right, len(actions))
+        if not centers:
+            return []
+
+        if len(centers) > 1:
+            icon_step = centers[1] - centers[0]
+        else:
+            icon_step = max(1.0, float(right - left) - (DOCK_SIDE_PADDING * 2))
+
+        return [
+            (
+                actions[index],
+                DOCK_ACTIONS_DICT[actions[index]],
+                centers[index],
+                center - (icon_step / 2.0),
+                center + (icon_step / 2.0),
+            )
+            for index, center in enumerate(centers)
+        ]
 
     def _paint(self, hwnd):
         hdc, paint_struct = win32gui.BeginPaint(hwnd)
@@ -245,13 +327,11 @@ class DockOverlayButton:
             font = win32gui.CreateFontIndirect(logfont)
             old_font = win32gui.SelectObject(hdc, font)
 
-            centers = self._icon_centers(left, right)
-            icon_step = centers[1] - centers[0] if len(centers) > 1 else right - left
             vertical_center = (top + bottom) // 2
-            for index, label in enumerate(DOCK_LABELS):
-                center_x = centers[index]
-                seg_left = int(center_x - (icon_step / 2.0))
-                seg_right = int(center_x + (icon_step / 2.0))
+            for _action, label, _center_x, seg_left, seg_right in self._action_layout(
+                left,
+                right,
+            ):
                 _text_width, text_height = win32gui.GetTextExtentPoint32(hdc, label)
                 text_rect = (
                     int(seg_left),
@@ -279,8 +359,13 @@ class DockOverlayButton:
 
         return 0
 
-    def show_for_target(self, target_hwnd, rect):
+    def show_for_target(self, target_hwnd, rect, actions):
         self._ensure_window()
+        visible_actions = tuple(actions)
+        if not visible_actions:
+            self.hide()
+            return
+
         left, top, right, _ = rect
         x = left + max(TITLE_BAR_SIDE_MARGIN, ((right - left) - DOCK_WIDTH) // 2)
         y = top + DOCK_TOP_OFFSET
@@ -295,11 +380,13 @@ class DockOverlayButton:
         should_update = (
             target_hwnd != self.target_hwnd
             or new_rect != self.rect
+            or visible_actions != self.visible_actions
             or not self.visible
         )
 
         self.target_hwnd = target_hwnd
         self.rect = new_rect
+        self.visible_actions = visible_actions
         if not should_update:
             return
 
@@ -315,31 +402,30 @@ class DockOverlayButton:
         self.visible = True
         win32gui.InvalidateRect(self.hwnd, None, True)
 
-    def hit_test(self, x, y):
+    def contains_point(self, x, y):
         if not self.rect or not self.target_hwnd:
+            return False
+
+        left, top, right, bottom = self.rect
+        return left <= x < right and top <= y < bottom
+
+    def hit_test(self, x, y):
+        if not self.contains_point(x, y):
             return None
 
         left, top, right, bottom = self.rect
-        if not (left <= x < right and top <= y < bottom):
-            return None
-
-        centers = self._icon_centers(left, right)
-        boundaries = [
-            (centers[index] + centers[index + 1]) / 2.0
-            for index in range(len(centers) - 1)
-        ]
-        target_index = 0
-        for boundary_index, boundary in enumerate(boundaries):
-            if x < boundary:
-                break
-            target_index = boundary_index + 1
-        return ("FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT", "MINIMIZE", "MAXIMIZE")[
-            target_index
-        ]
+        for action, _label, _center_x, seg_left, seg_right in self._action_layout(
+            left,
+            right,
+        ):
+            if seg_left <= x < seg_right:
+                return action
+        return None
 
     def hide(self):
         self.target_hwnd = None
         self.rect = None
+        self.visible_actions = tuple(action for action, _label in DOCK_ACTIONS)
         if self.hwnd and win32gui.IsWindow(self.hwnd):
             win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
         self.visible = False
@@ -348,6 +434,7 @@ class DockOverlayButton:
         self.target_hwnd = None
         self.rect = None
         self.visible = False
+        self.visible_actions = tuple(action for action, _label in DOCK_ACTIONS)
         if self.hwnd and win32gui.IsWindow(self.hwnd):
             try:
                 win32gui.DestroyWindow(self.hwnd)
@@ -356,9 +443,19 @@ class DockOverlayButton:
         self.hwnd = None
 
 
-class ScreenMoverWorker:
-    def __init__(self):
-        self.dock_overlay = DockOverlayButton(self)
+DOCK_ACTIONS_DICT = dict(DOCK_ACTIONS)
+
+
+class ScreenMover:
+    def __init__(
+        self,
+        *,
+        name="ScreenMoverWorker",
+        app_hwnd=None,
+        self_action_dispatch: Callable[[str], None] | None = None,
+    ):
+        self.name = str(name).strip() or "ScreenMoverWorker"
+        self.dock_overlay = DockOverlayButton(self, overlay_name=self.name)
         self.thread = None
         self.mouse_listener = None
         self.lock = threading.Lock()
@@ -369,8 +466,8 @@ class ScreenMoverWorker:
         self.activation_button = "middle"
         self._desired_title_bar_dock_enabled = True
         self._desired_activation_button = "middle"
-        self.app_hwnd = None
-        self.self_action_dispatch: Callable[[str], None] | None = None
+        self.app_hwnd = app_hwnd
+        self.self_action_dispatch = self_action_dispatch
         self._last_title_bar_hwnd = None
         self._last_title_bar_rect = None
         self._suppress_dock_until = 0.0
@@ -574,8 +671,7 @@ class ScreenMoverWorker:
     def _title_bar_candidate(self):
         try:
             cursor_x, cursor_y = win32gui.GetCursorPos()
-            direction = self.dock_overlay.hit_test(cursor_x, cursor_y)
-            if direction and self.dock_overlay.target_hwnd:
+            if self.dock_overlay.contains_point(cursor_x, cursor_y):
                 hwnd = self.dock_overlay.target_hwnd
                 rect = win32gui.GetWindowRect(hwnd)
                 return hwnd, rect
@@ -626,7 +722,14 @@ class ScreenMoverWorker:
             self.dock_overlay.hide()
             return
 
-        self.dock_overlay.show_for_target(hwnd, rect)
+        self.dock_overlay.show_for_target(
+            hwnd,
+            rect,
+            self._visible_dock_actions(hwnd),
+        )
+
+    def _visible_dock_actions(self, hwnd):
+        return get_visible_dock_actions(hwnd)
 
     def _apply_settings(self, title_bar_dock_enabled, activation_button):
         self.title_bar_dock_enabled = bool(title_bar_dock_enabled)
@@ -729,7 +832,7 @@ class ScreenMoverWorker:
             self.command_queue = queue.Queue()
             self.thread = threading.Thread(
                 target=self.worker_loop,
-                name="ScreenMoverWorker",
+                name=self.name,
                 daemon=True,
             )
             self.mouse_listener = mouse.Listener(on_click=self.on_mouse_click)
@@ -773,4 +876,5 @@ class ScreenMoverWorker:
         self.request_click(x, y, button)
 
 
-SCREEN_MOVER = ScreenMoverWorker()
+ScreenMoverWorker = ScreenMover
+SCREEN_MOVER = ScreenMover()

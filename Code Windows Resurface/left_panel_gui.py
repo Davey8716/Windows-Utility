@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Callable
 
 import styles
-from screen_mover import SCREEN_MOVER
 from state_manager import save_state
 from tooltips import left_section_toggle_tooltip, tooltip_text
 from PySide6.QtCore import Qt, QTimer, QSize
@@ -703,7 +702,7 @@ class LeftPanelBuilder:
         def on_title_bar_dock_changed(checked: bool):
             state["title_bar_dock_enabled"] = checked
             save_state(state)
-            SCREEN_MOVER.update_settings(title_bar_dock_enabled=checked)
+            app.screen_mover.update_settings(title_bar_dock_enabled=checked)
 
         title_bar_dock_btn.toggled.connect(on_title_bar_dock_changed)
 
@@ -748,7 +747,7 @@ class LeftPanelBuilder:
             state["screen_mover_activation_button"] = button_value
             state["mmb_activation_enabled"] = button_value == "middle"
             save_state(state)
-            SCREEN_MOVER.update_settings(activation_button=button_value)
+            app.screen_mover.update_settings(activation_button=button_value)
             update_screen_move_combo_state()
 
         screen_move_button_combo.currentTextChanged.connect(

@@ -150,3 +150,66 @@ def test_screen_mover_stop_keeps_thread_reference_until_worker_exits(monkeypatch
 
     assert wait_until(lambda: worker.thread is None)
     assert worker.dock_overlay.destroy_threads == ["ScreenMoverWorker"]
+
+
+def test_visible_dock_actions_hide_left_actions_on_leftmost_monitor(monkeypatch):
+    monkeypatch.setattr(
+        screen_mover.win32api,
+        "EnumDisplayMonitors",
+        lambda: [(10, None, None), (20, None, None), (30, None, None)],
+    )
+    monkeypatch.setattr(screen_mover.win32api, "MonitorFromWindow", lambda hwnd: 10)
+
+    assert screen_mover.get_visible_dock_actions(101) == (
+        "RIGHT",
+        "FAR_RIGHT",
+        "MINIMIZE",
+        "MAXIMIZE",
+    )
+
+
+def test_visible_dock_actions_hide_right_actions_on_rightmost_monitor(monkeypatch):
+    monkeypatch.setattr(
+        screen_mover.win32api,
+        "EnumDisplayMonitors",
+        lambda: [(10, None, None), (20, None, None), (30, None, None)],
+    )
+    monkeypatch.setattr(screen_mover.win32api, "MonitorFromWindow", lambda hwnd: 30)
+
+    assert screen_mover.get_visible_dock_actions(101) == (
+        "FAR_LEFT",
+        "LEFT",
+        "MINIMIZE",
+        "MAXIMIZE",
+    )
+
+
+def test_visible_dock_actions_only_show_window_controls_on_single_monitor(monkeypatch):
+    monkeypatch.setattr(
+        screen_mover.win32api,
+        "EnumDisplayMonitors",
+        lambda: [(10, None, None)],
+    )
+    monkeypatch.setattr(screen_mover.win32api, "MonitorFromWindow", lambda hwnd: 10)
+
+    assert screen_mover.get_visible_dock_actions(101) == (
+        "MINIMIZE",
+        "MAXIMIZE",
+    )
+
+
+def test_dock_overlay_hit_test_only_uses_visible_actions():
+    overlay = screen_mover.DockOverlayButton(worker=None, overlay_name="test")
+    overlay.target_hwnd = 101
+    overlay.rect = (0, 0, 180, 30)
+    overlay.visible_actions = ("RIGHT", "FAR_RIGHT", "MINIMIZE", "MAXIMIZE")
+
+    layout = overlay._action_layout(0, 180)
+    assert [action for action, *_rest in layout] == list(overlay.visible_actions)
+
+    left_gap_x = int(layout[0][3] - 1)
+    assert overlay.hit_test(left_gap_x, 10) is None
+
+    for action, _label, _center_x, seg_left, seg_right in layout:
+        midpoint_x = int((seg_left + seg_right) / 2.0)
+        assert overlay.hit_test(midpoint_x, 10) == action
