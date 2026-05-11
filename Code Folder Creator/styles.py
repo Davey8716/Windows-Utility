@@ -138,12 +138,12 @@ def frameless_surfaced_line_edit_style(font_size: int) -> str:
 
 
 def tree_outer_frame_style() -> str:
-    return """
-        QFrame {
-            background-color: #ffffff;
-            border: 1px solid #ffffff;
+    return f"""
+        QFrame {{
+            background-color: {qcolor_css(SURFACE_BG)};
+            border: 1px solid {qcolor_css(SURFACE_BORDER)};
             border-radius: 2px;
-        }
+        }}
     """
 
 
