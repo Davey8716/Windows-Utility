@@ -2,7 +2,6 @@ import os
 import subprocess
 import sys
 import inspect
-from datetime import datetime
 from pathlib import Path
 
 from PIL import ImageGrab
@@ -46,6 +45,7 @@ class DesktopOperationsMixin:
         action,
         *,
         delay_ms_after_minimize: int = 500,
+        capture_spec: dict | None = None,
     ) -> None:
         tracked_windows = []
         hwnd = None
@@ -65,7 +65,7 @@ class DesktopOperationsMixin:
             print(f"[SCREENSHOT] App minimize failed: {exc}")
 
         def run_action():
-            action(tracked_windows, hwnd)
+            action(tracked_windows, hwnd, capture_spec)
 
         if delay_ms_after_minimize > 0:
             QTimer.singleShot(delay_ms_after_minimize, run_action)
@@ -179,9 +179,30 @@ class DesktopOperationsMixin:
         return getattr(module, name, default)
 
     def take_desktop_screenshot(self):
+        capture_spec = self._build_desktop_screenshot_capture_spec()
+        if capture_spec is None:
+            return
+
+        existing_paths = capture_spec["existing_paths"]
+        if existing_paths:
+            question = self._show_modal_message(
+                self._message_box_icon("Question"),
+                "Overwrite Desktop Screenshots",
+                (
+                    "Desktop screenshots already exist in the master backup folder."
+                    "\n\nOverwrite the current saved screenshot set?"
+                ),
+                self._message_box_button("Yes")
+                | self._message_box_button("Cancel"),
+                self._message_box_button("Cancel"),
+            )
+            if question != self._message_box_button("Yes"):
+                return
+
         self._run_with_forced_desktop_minimize(
             self._capture_desktop_screenshot,
             delay_ms_after_minimize=500,
+            capture_spec=capture_spec,
         )
 
     def _enumerate_monitor_rects(self):
@@ -197,31 +218,72 @@ class DesktopOperationsMixin:
             )
         return monitors
 
+    def _build_desktop_screenshot_capture_spec(self):
+        monitors = self._enumerate_monitor_rects()
+        path_type = self._get_app_module_attr("Path", Path)
+        save_dir = path_type(self._get_master_backup_dir())
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        if not monitors:
+            monitors = [{"index": 1, "rect": None}]
+
+        target_paths = [
+            save_dir / f"DesktopScreenshot_Monitor{monitor['index']}.png"
+            for monitor in monitors
+        ]
+
+        existing_pattern_paths = sorted(
+            save_dir.glob("DesktopScreenshot_Monitor*.png")
+        )
+        stale_paths = [
+            path for path in existing_pattern_paths if path not in target_paths
+        ]
+        existing_paths = [
+            path for path in [*target_paths, *stale_paths] if path.exists()
+        ]
+
+        return {
+            "monitors": monitors,
+            "save_dir": save_dir,
+            "target_paths": target_paths,
+            "stale_paths": stale_paths,
+            "existing_paths": existing_paths,
+        }
+
     def _capture_desktop_screenshot(
         self,
         tracked_windows: list[int] | None = None,
         app_hwnd: int | None = None,
+        capture_spec: dict | None = None,
     ):
         save_paths = []
         tracked_windows = list(tracked_windows or [])
         try:
-            monitors = self._enumerate_monitor_rects()
+            capture_spec = capture_spec or self._build_desktop_screenshot_capture_spec()
+            monitors = list(capture_spec.get("monitors") or [])
             img = ImageGrab.grab(all_screens=True)
 
             if not monitors:
                 width, height = img.size
                 monitors = [{"index": 1, "rect": (0, 0, width, height)}]
 
-            virtual_left = min(monitor["rect"][0] for monitor in monitors)
-            virtual_top = min(monitor["rect"][1] for monitor in monitors)
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            path_type = self._get_app_module_attr("Path", Path)
             save_state_fn = self._get_app_module_attr("save_state", save_state)
-            save_dir = path_type(self._get_master_backup_dir())
-            save_dir.mkdir(parents=True, exist_ok=True)
+            save_dir = capture_spec["save_dir"]
+            target_paths = list(capture_spec.get("target_paths") or [])
+            stale_paths = list(capture_spec.get("stale_paths") or [])
 
-            for monitor in monitors:
+            normalized_monitors = []
+            if monitors and monitors[0].get("rect") is None:
+                width, height = img.size
+                normalized_monitors = [{"index": 1, "rect": (0, 0, width, height)}]
+                target_paths = [save_dir / "DesktopScreenshot_Monitor1.png"]
+            else:
+                normalized_monitors = monitors
+
+            virtual_left = min(monitor["rect"][0] for monitor in normalized_monitors)
+            virtual_top = min(monitor["rect"][1] for monitor in normalized_monitors)
+
+            for monitor, save_path in zip(normalized_monitors, target_paths):
                 left, top, right, bottom = monitor["rect"]
                 crop_box = (
                     left - virtual_left,
@@ -230,12 +292,12 @@ class DesktopOperationsMixin:
                     bottom - virtual_top,
                 )
                 monitor_img = img.crop(crop_box)
-                save_path = (
-                    save_dir
-                    / f"DesktopScreenshot_{timestamp}_Monitor{monitor['index']}.png"
-                )
                 monitor_img.save(save_path)
                 save_paths.append(save_path)
+
+            for stale_path in stale_paths:
+                if stale_path.exists():
+                    stale_path.unlink(missing_ok=True)
 
             if save_paths:
                 self.state["desktop_screenshot_last_path"] = str(save_paths[0])
