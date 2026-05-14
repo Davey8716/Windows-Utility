@@ -43,6 +43,9 @@ class FakeOverlay:
         self.hit_test_threads.append(threading.current_thread().name)
         return self.direction
 
+    def contains_point(self, x, y):
+        return bool(self.rect)
+
     def hide(self):
         self.hide_threads.append(threading.current_thread().name)
         self.target_hwnd = None
@@ -219,6 +222,79 @@ def test_visible_dock_actions_hide_maximize_when_window_has_no_maximize_box(
         "FAR_RIGHT",
         "MINIMIZE",
     )
+
+
+def test_window_is_fullscreen_detects_monitor_covering_window(monkeypatch):
+    monkeypatch.setattr(
+        screen_mover.win32gui,
+        "GetWindowPlacement",
+        lambda hwnd: (
+            0,
+            screen_mover.win32con.SW_SHOWNORMAL,
+            (0, 0),
+            (0, 0),
+            (0, 0, 0, 0),
+        ),
+    )
+    monkeypatch.setattr(
+        screen_mover.win32api,
+        "MonitorFromWindow",
+        lambda hwnd, flags=0: 10,
+    )
+    monkeypatch.setattr(
+        screen_mover.win32api,
+        "GetMonitorInfo",
+        lambda monitor: {"Monitor": (0, 0, 1920, 1080)},
+    )
+
+    assert screen_mover.window_is_fullscreen(101, (0, 0, 1920, 1080))
+
+
+def test_window_is_fullscreen_allows_maximized_windows(monkeypatch):
+    monkeypatch.setattr(
+        screen_mover.win32gui,
+        "GetWindowPlacement",
+        lambda hwnd: (
+            0,
+            screen_mover.win32con.SW_SHOWMAXIMIZED,
+            (0, 0),
+            (0, 0),
+            (0, 0, 0, 0),
+        ),
+    )
+    monkeypatch.setattr(
+        screen_mover.win32api,
+        "MonitorFromWindow",
+        lambda hwnd, flags=0: 10,
+    )
+    monkeypatch.setattr(
+        screen_mover.win32api,
+        "GetMonitorInfo",
+        lambda monitor: {"Monitor": (0, 0, 1920, 1080)},
+    )
+
+    assert not screen_mover.window_is_fullscreen(101, (0, 0, 1920, 1080))
+
+
+def test_title_bar_candidate_rejects_fullscreen_window(monkeypatch):
+    worker = screen_mover.ScreenMoverWorker()
+    worker.dock_overlay = FakeOverlay(target_hwnd=None)
+    worker.dock_overlay.visible = False
+
+    monkeypatch.setattr(worker.dock_overlay, "contains_point", lambda x, y: False)
+    monkeypatch.setattr(screen_mover.win32gui, "GetCursorPos", lambda: (100, 5))
+    monkeypatch.setattr(screen_mover.win32gui, "WindowFromPoint", lambda point: 101)
+    monkeypatch.setattr(worker, "_get_root_window", lambda hwnd: hwnd)
+    monkeypatch.setattr(worker, "_is_window_eligible", lambda hwnd: True)
+    monkeypatch.setattr(worker, "_is_self_window_eligible", lambda hwnd: False)
+    monkeypatch.setattr(
+        screen_mover.win32gui,
+        "GetWindowRect",
+        lambda hwnd: (0, 0, 1920, 1080),
+    )
+    monkeypatch.setattr(worker, "_is_window_fullscreen", lambda hwnd, rect=None: True)
+
+    assert worker._title_bar_candidate() == (None, None)
 
 
 def test_dock_overlay_hit_test_only_uses_visible_actions():

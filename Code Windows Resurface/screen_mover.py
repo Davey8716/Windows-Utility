@@ -97,6 +97,38 @@ def window_supports_maximize(hwnd):
     return bool(style & win32con.WS_MAXIMIZEBOX)
 
 
+def window_is_fullscreen(hwnd, rect=None):
+    if not hwnd:
+        return False
+
+    try:
+        placement = win32gui.GetWindowPlacement(hwnd)
+        if placement[1] == win32con.SW_SHOWMAXIMIZED:
+            return False
+    except Exception:
+        pass
+
+    try:
+        if rect is None:
+            rect = win32gui.GetWindowRect(hwnd)
+        monitor = win32api.MonitorFromWindow(
+            hwnd,
+            getattr(win32con, "MONITOR_DEFAULTTONEAREST", 2),
+        )
+        monitor_rect = win32api.GetMonitorInfo(monitor)["Monitor"]
+    except Exception:
+        return False
+
+    left, top, right, bottom = rect
+    mon_left, mon_top, mon_right, mon_bottom = monitor_rect
+    return (
+        left <= mon_left
+        and top <= mon_top
+        and right >= mon_right
+        and bottom >= mon_bottom
+    )
+
+
 def get_visible_dock_actions(hwnd):
     current_idx, monitor_count = get_window_monitor_position(hwnd)
     visible_monitor_actions = set()
@@ -642,6 +674,9 @@ class ScreenMover:
         title = win32gui.GetWindowText(hwnd).strip()
         return bool(title)
 
+    def _is_window_fullscreen(self, hwnd, rect=None):
+        return window_is_fullscreen(hwnd, rect)
+
     def _is_self_window_eligible(self, hwnd):
         if not self.app_hwnd or hwnd != self.app_hwnd:
             return False
@@ -696,6 +731,8 @@ class ScreenMover:
             if self.dock_overlay.contains_point(cursor_x, cursor_y):
                 hwnd = self.dock_overlay.target_hwnd
                 rect = win32gui.GetWindowRect(hwnd)
+                if self._is_window_fullscreen(hwnd, rect):
+                    return None, None
                 return hwnd, rect
 
             raw_hwnd = win32gui.WindowFromPoint((cursor_x, cursor_y))
@@ -709,6 +746,9 @@ class ScreenMover:
         try:
             rect = win32gui.GetWindowRect(hwnd)
         except Exception:
+            return None, None
+
+        if self._is_window_fullscreen(hwnd, rect):
             return None, None
 
         left, top, right, _ = rect
