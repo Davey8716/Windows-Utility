@@ -365,12 +365,7 @@ class DockOverlayButton:
         try:
             left, top, right, bottom = win32gui.GetClientRect(hwnd)
             bg = win32gui.CreateSolidBrush(DOCK_TRANSPARENT_COLOR)
-            old_brush = win32gui.SelectObject(hdc, bg)
-            old_pen = win32gui.SelectObject(
-                hdc,
-                win32gui.GetStockObject(win32con.NULL_PEN),
-            )
-            win32gui.Rectangle(hdc, left, top, right, bottom)
+            win32gui.FillRect(hdc, (left, top, right, bottom), bg)
             win32gui.SetBkMode(hdc, win32con.TRANSPARENT)
 
             logfont = win32gui.LOGFONT()
@@ -404,8 +399,6 @@ class DockOverlayButton:
                 )
 
             win32gui.SelectObject(hdc, old_font)
-            win32gui.SelectObject(hdc, old_pen)
-            win32gui.SelectObject(hdc, old_brush)
             win32gui.DeleteObject(font)
             win32gui.DeleteObject(bg)
         finally:
