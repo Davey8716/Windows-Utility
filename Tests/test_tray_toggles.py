@@ -1,0 +1,185 @@
+import os
+import shutil
+import sys
+from pathlib import Path
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication
+
+from tray_toggles import (
+    TRAY_ICON_BUNDLE_NAME,
+    TRAY_ICON_ENV_VAR,
+    TrayIconManager,
+    application_icon_candidates,
+    application_icon_path,
+    resolve_application_icon,
+)
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SOURCE_ICON_PATH = PROJECT_ROOT / "Exe Tray Icons" / "Windows_utility_Icon.ico"
+
+
+def _app() -> QApplication:
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    return app
+
+
+def _copy_source_icon(path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(SOURCE_ICON_PATH, path)
+    return path
+
+
+def test_application_icon_candidates_prioritize_env_var(monkeypatch, tmp_path) -> None:
+    env_icon = tmp_path / "from-env.ico"
+    fake_exe = tmp_path / "Windows Resurface.exe"
+    monkeypatch.setenv(TRAY_ICON_ENV_VAR, str(env_icon))
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+
+    candidates = application_icon_candidates()
+
+    assert candidates[0] == env_icon
+    assert candidates[1] == fake_exe.with_name(TRAY_ICON_BUNDLE_NAME)
+
+
+def test_application_icon_candidates_prioritize_meipass_icon(monkeypatch, tmp_path) -> None:
+    fake_exe = tmp_path / "dist" / "Windows Resurface.exe"
+    meipass_dir = tmp_path / "bundle"
+    monkeypatch.delenv(TRAY_ICON_ENV_VAR, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    monkeypatch.setattr(sys, "_MEIPASS", str(meipass_dir), raising=False)
+
+    candidates = application_icon_candidates()
+
+    assert candidates[0] == meipass_dir / TRAY_ICON_BUNDLE_NAME
+    assert candidates[1] == fake_exe.with_name(TRAY_ICON_BUNDLE_NAME)
+    assert candidates[2] == fake_exe.parent / "_internal" / TRAY_ICON_BUNDLE_NAME
+
+
+def test_application_icon_candidates_include_internal_one_folder_icon(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    fake_exe = tmp_path / "dist" / "Windows Resurface.exe"
+    monkeypatch.delenv(TRAY_ICON_ENV_VAR, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+
+    candidates = application_icon_candidates()
+
+    assert candidates[0] == fake_exe.with_name(TRAY_ICON_BUNDLE_NAME)
+    assert candidates[1] == fake_exe.parent / "_internal" / TRAY_ICON_BUNDLE_NAME
+
+
+def test_application_icon_path_loads_meipass_before_exe_sibling(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    _app()
+    fake_exe = tmp_path / "dist" / "Windows Resurface.exe"
+    stale_exe_icon = _copy_source_icon(fake_exe.with_name(TRAY_ICON_BUNDLE_NAME))
+    meipass_icon = _copy_source_icon(tmp_path / "bundle" / TRAY_ICON_BUNDLE_NAME)
+    monkeypatch.delenv(TRAY_ICON_ENV_VAR, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    monkeypatch.setattr(sys, "_MEIPASS", str(meipass_icon.parent), raising=False)
+
+    icon = resolve_application_icon()
+
+    assert stale_exe_icon.is_file()
+    assert application_icon_path() == meipass_icon
+    assert not icon.isNull()
+
+
+def test_application_icon_path_loads_nested_meipass_icon(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    _app()
+    fake_exe = tmp_path / "dist" / "Windows Resurface.exe"
+    meipass_dir = tmp_path / "bundle"
+    nested_icon = _copy_source_icon(
+        meipass_dir / TRAY_ICON_BUNDLE_NAME / "selected.ico"
+    )
+    monkeypatch.delenv(TRAY_ICON_ENV_VAR, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    monkeypatch.setattr(sys, "_MEIPASS", str(meipass_dir), raising=False)
+
+    icon = resolve_application_icon()
+
+    assert application_icon_path() == nested_icon
+    assert not icon.isNull()
+
+
+def test_application_icon_path_loads_exe_sibling_before_source_fallback(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    _app()
+    fake_exe = tmp_path / "Windows Resurface.exe"
+    bundled_icon = _copy_source_icon(fake_exe.with_name(TRAY_ICON_BUNDLE_NAME))
+    monkeypatch.delenv(TRAY_ICON_ENV_VAR, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+
+    icon = resolve_application_icon()
+
+    assert application_icon_path() == bundled_icon
+    assert not icon.isNull()
+
+
+def test_application_icon_path_loads_nested_internal_icon(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    _app()
+    fake_exe = tmp_path / "dist" / "Windows Resurface.exe"
+    nested_icon = _copy_source_icon(
+        fake_exe.parent / "_internal" / TRAY_ICON_BUNDLE_NAME / "selected.ico"
+    )
+    monkeypatch.delenv(TRAY_ICON_ENV_VAR, raising=False)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+
+    icon = resolve_application_icon()
+
+    assert application_icon_path() == nested_icon
+    assert not icon.isNull()
+
+
+def test_application_icon_path_uses_source_fallback_without_bundle(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    _app()
+    monkeypatch.delenv(TRAY_ICON_ENV_VAR, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "Windows Resurface.exe"))
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+
+    icon = resolve_application_icon()
+
+    assert application_icon_path() == PROJECT_ROOT / "Exe Tray Icons" / SOURCE_ICON_PATH.name
+    assert not icon.isNull()
+
+
+def test_tray_manager_uses_existing_window_icon_for_tray() -> None:
+    _app()
+    icon = QIcon(str(SOURCE_ICON_PATH))
+
+    class FakeWindow(QObject):
+        def __init__(self):
+            super().__init__()
+            self._icon = icon
+
+        def windowIcon(self):
+            return self._icon
+
+    manager = TrayIconManager(FakeWindow())
+
+    assert manager._resolve_tray_icon().cacheKey() == icon.cacheKey()

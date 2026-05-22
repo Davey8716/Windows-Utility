@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import styles
@@ -9,6 +10,7 @@ from screen_mover import SCREEN_MOVER
 
 
 TRAY_ICON_ENV_VAR = "EXE_BUILDER_TRAY_ICON_PATH"
+TRAY_ICON_BUNDLE_NAME = "_exe_builder_tray_icon.ico"
 LOCAL_ICON_CANDIDATES = (
     Path(__file__).resolve().parent / "Icons" / "Windows_utility_Icon.ico",
     Path(__file__).resolve().parent / "Icons" / "WindowsIcon.ico",
@@ -114,21 +116,9 @@ class TrayIconManager(QObject):
 
 
 def resolve_application_icon(window=None):
-    env_icon = os.environ.get(TRAY_ICON_ENV_VAR, "").strip()
-    if env_icon:
-        icon = QIcon(env_icon)
-        if not icon.isNull():
-            return icon
-
-    base_dir = Path(__file__).resolve().parent.parent
-    for candidate in (
-        *(base_dir / "Exe Tray Icons" / path.name for path in LOCAL_ICON_CANDIDATES),
-        *LOCAL_ICON_CANDIDATES,
-    ):
-        if candidate.is_file():
-            icon = QIcon(str(candidate))
-            if not icon.isNull():
-                return icon
+    icon_path = application_icon_path(window)
+    if icon_path is not None:
+        return QIcon(str(icon_path))
 
     if window is not None and hasattr(window, "windowIcon"):
         icon = window.windowIcon()
@@ -136,3 +126,60 @@ def resolve_application_icon(window=None):
             return icon
 
     return QIcon.fromTheme("applications-system")
+
+
+def application_icon_path(window=None):
+    for candidate in application_icon_candidates(window):
+        if candidate.is_file():
+            icon = QIcon(str(candidate))
+            if not icon.isNull():
+                return candidate
+    return None
+
+
+def application_icon_candidates(window=None):
+    candidates = []
+
+    env_icon = os.environ.get(TRAY_ICON_ENV_VAR, "").strip()
+    if env_icon:
+        candidates.append(Path(env_icon))
+
+    bundle_dir = getattr(sys, "_MEIPASS", "")
+    if bundle_dir:
+        candidates.extend(_expanded_bundle_icon_candidates(Path(bundle_dir)))
+
+    executable_dir = Path(sys.executable).resolve().parent
+    candidates.extend(
+        _expanded_bundle_icon_candidates(executable_dir)
+        + _expanded_bundle_icon_candidates(executable_dir / "_internal")
+    )
+
+    base_dir = Path(__file__).resolve().parent.parent
+    candidates.extend(
+        (
+            *(base_dir / "Exe Tray Icons" / path.name for path in LOCAL_ICON_CANDIDATES),
+            *LOCAL_ICON_CANDIDATES,
+        )
+    )
+
+    return _dedupe_icon_candidates(candidates)
+
+
+def _expanded_bundle_icon_candidates(base_dir):
+    bundle_path = base_dir / TRAY_ICON_BUNDLE_NAME
+    candidates = [bundle_path]
+    if bundle_path.is_dir():
+        candidates.extend(sorted(bundle_path.glob("*.ico")))
+    return candidates
+
+
+def _dedupe_icon_candidates(candidates):
+    unique_candidates = []
+    seen = set()
+    for candidate in candidates:
+        normalized = os.path.normcase(os.path.abspath(candidate))
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        unique_candidates.append(candidate)
+    return unique_candidates
