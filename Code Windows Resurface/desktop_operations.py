@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 import inspect
@@ -13,6 +14,9 @@ import win32gui
 
 from state_manager import save_state
 from utility_toggles import _should_skip
+
+
+PROJECT_ROOT_ENV_VAR = "WIN11_RESURFACE_PROJECT_ROOT"
 
 
 class DesktopOperationsMixin:
@@ -653,7 +657,8 @@ class DesktopOperationsMixin:
         self._run_with_optional_minimize(action)
 
     def open_folder_creator(self):
-        project_dir = Path(__file__).resolve().parent.parent / "Code Folder Creator"
+        project_root = self._resolve_windows_resurface_project_root()
+        project_dir = project_root / "Code Folder Creator"
         title_candidates = [
             "Folder Generator",
             "Folder Creator",
@@ -662,32 +667,8 @@ class DesktopOperationsMixin:
         launch_target = self._resolve_folder_creator_launch_target(project_dir)
 
         def launch():
-            if launch_target is None:
-                os.makedirs(project_dir, exist_ok=True)
-                os.startfile(str(project_dir))
-                return
-
-            if launch_target.suffix.lower() in {".py", ".pyw"}:
-                subprocess.Popen(
-                    [sys.executable, str(launch_target)],
-                    cwd=str(project_dir),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                return
-
-            if launch_target.suffix.lower() in {".bat", ".cmd"}:
-                subprocess.Popen(
-                    [str(launch_target)],
-                    cwd=str(project_dir),
-                    shell=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                return
-
             subprocess.Popen(
-                [str(launch_target)],
+                self._python_script_command(launch_target),
                 cwd=str(project_dir),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
@@ -695,10 +676,7 @@ class DesktopOperationsMixin:
 
         def action():
             if launch_target is None:
-                opened = self.actions.open_or_focus_folder_path(
-                    str(project_dir),
-                    launch=launch,
-                )
+                opened = False
             else:
                 window_state = self.actions.get_window_titles_state(title_candidates)
                 if window_state != "closed":
@@ -737,26 +715,60 @@ class DesktopOperationsMixin:
         self,
         project_dir: Path,
     ) -> Path | None:
-        candidate_names = (
-            "main.py",
-            "main.pyw",
-            "app.py",
-            "app.pyw",
-            "run.py",
-            "run.pyw",
-            "launcher.py",
-            "launcher.pyw",
-            "start.py",
-            "start.pyw",
-            "Folder Creator.exe",
-            "folder_creator.exe",
-            "launch.bat",
-            "start.bat",
-        )
-
-        for candidate_name in candidate_names:
-            candidate_path = project_dir / candidate_name
-            if candidate_path.exists():
-                return candidate_path
-
+        main_path = project_dir.resolve() / "main.py"
+        if main_path.is_file():
+            return main_path
         return None
+
+    def _resolve_windows_resurface_project_root(self) -> Path:
+        for candidate in self._windows_resurface_project_root_candidates():
+            candidate_root = candidate.resolve()
+            if self._is_windows_resurface_project_root(candidate_root):
+                return candidate_root
+
+        return Path(__file__).resolve().parent.parent
+
+    def _windows_resurface_project_root_candidates(self) -> tuple[Path, ...]:
+        candidates = []
+
+        env_path = os.environ.get(PROJECT_ROOT_ENV_VAR)
+        if env_path:
+            candidates.append(Path(env_path))
+
+        source_root = Path(__file__).resolve().parent.parent
+        candidates.append(source_root)
+
+        cwd = Path.cwd().resolve()
+        candidates.extend((cwd, *cwd.parents))
+
+        candidates.append(Path.home() / "Desktop" / "Projects" / "Win-11-Resurface")
+
+        unique_candidates = []
+        seen = set()
+        for candidate in candidates:
+            candidate_str = str(candidate)
+            if candidate_str in seen:
+                continue
+            seen.add(candidate_str)
+            unique_candidates.append(candidate)
+
+        return tuple(unique_candidates)
+
+    def _is_windows_resurface_project_root(self, path: Path) -> bool:
+        return (path / "Code Windows Resurface" / "main.py").is_file()
+
+    def _python_script_command(self, script_path: Path) -> list[str]:
+        executable_path = Path(sys.executable)
+        executable_name = executable_path.name.lower()
+        if executable_name.startswith("python"):
+            return [str(executable_path), str(script_path)]
+
+        python_path = shutil.which("python")
+        if python_path:
+            return [python_path, str(script_path)]
+
+        py_launcher_path = shutil.which("py")
+        if py_launcher_path:
+            return [py_launcher_path, "-3", str(script_path)]
+
+        return ["python", str(script_path)]

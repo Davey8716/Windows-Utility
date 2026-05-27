@@ -1,11 +1,14 @@
 
 import sys
 import ctypes
+import hashlib
 from ctypes import wintypes
 from pathlib import Path
+import psutil
 import styles
 import win32gui
 import win32con
+import win32process
 from PySide6.QtGui import QColor
 
 from app_notifications import WindowMessageMixin
@@ -40,13 +43,106 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
 )
 
-MUTEX_NAME = "Windows Resurface"
+MUTEX_BASE_NAME = "Windows Resurface"
 WM_QUERYENDSESSION = 0x0011
 ENDSESSION_LOGOFF = 0x80000000
 WM_WTSSESSION_CHANGE = 0x02B1
 WTS_SESSION_LOCK = 0x7
 NOTIFY_FOR_THIS_SESSION = 0
 WM_APP_RESTORE_INSTANCE = 0x8001
+
+
+def _normalized_identity_path(path: Path) -> str:
+    return str(path.resolve()).casefold()
+
+
+def _path_identity_hash(path: Path) -> str:
+    normalized_path = _normalized_identity_path(path)
+    return hashlib.sha256(normalized_path.encode("utf-8")).hexdigest()[:16]
+
+
+def _is_packaged_execution() -> bool:
+    if getattr(sys, "frozen", False):
+        return True
+
+    executable_name = Path(sys.executable).name.lower()
+    return executable_name.endswith(".exe") and not executable_name.startswith(
+        ("python", "py.")
+    )
+
+
+def current_instance_scope() -> tuple[str, Path]:
+    if _is_packaged_execution():
+        return ("exe", Path(sys.executable).resolve())
+
+    return ("source", Path(__file__).resolve().parent.parent)
+
+
+def instance_mutex_name(scope: tuple[str, Path] | None = None) -> str:
+    scope_kind, scope_path = scope or current_instance_scope()
+    return f"{MUTEX_BASE_NAME}:{scope_kind}:{_path_identity_hash(scope_path)}"
+
+
+def _source_entrypoint_for_root(project_root: Path) -> Path:
+    return project_root / "Code Windows Resurface" / "main.py"
+
+
+def _cmdline_references_path(
+    cmdline: list[str],
+    cwd: str | None,
+    target_path: Path,
+) -> bool:
+    normalized_target = _normalized_identity_path(target_path)
+    cwd_path = Path(cwd) if cwd else None
+
+    for arg in cmdline:
+        if not arg:
+            continue
+
+        arg_path = Path(arg.strip('"'))
+        paths_to_check = [arg_path]
+        if not arg_path.is_absolute() and cwd_path is not None:
+            paths_to_check.append(cwd_path / arg_path)
+
+        for path_to_check in paths_to_check:
+            try:
+                if _normalized_identity_path(path_to_check) == normalized_target:
+                    return True
+            except OSError:
+                continue
+
+    return False
+
+
+def _window_matches_instance_scope(
+    hwnd: int,
+    scope: tuple[str, Path] | None = None,
+) -> bool:
+    scope_kind, scope_path = scope or current_instance_scope()
+
+    try:
+        _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
+        process = psutil.Process(pid)
+    except Exception:
+        return False
+
+    if scope_kind == "exe":
+        try:
+            return _normalized_identity_path(Path(process.exe())) == (
+                _normalized_identity_path(scope_path)
+            )
+        except Exception:
+            return False
+
+    source_entrypoint = _source_entrypoint_for_root(scope_path)
+    try:
+        return _cmdline_references_path(
+            process.cmdline(),
+            process.cwd(),
+            source_entrypoint,
+        )
+    except Exception:
+        return False
 
 
 class SeverityComboItemDelegate(QStyledItemDelegate):
@@ -99,7 +195,7 @@ class ScreenMoverActionBridge(QObject):
         self.action_requested.emit(action)
 
 
-def bring_existing_instance_to_front():
+def bring_existing_instance_to_front(scope: tuple[str, Path] | None = None):
     target_hwnd = None
 
     def enum_handler(hwnd, _):
@@ -109,7 +205,11 @@ def bring_existing_instance_to_front():
         except Exception:
             return True
 
-        if "Windows Resurface" in title and hwnd != 0:
+        if (
+            "Windows Resurface" in title
+            and hwnd != 0
+            and _window_matches_instance_scope(hwnd, scope)
+        ):
             target_hwnd = hwnd
 
         return True
@@ -129,14 +229,15 @@ def bring_existing_instance_to_front():
     except Exception as e:
         print("[RESTORE] failed:", e)
 
-def ensure_single_instance():
+def ensure_single_instance(scope: tuple[str, Path] | None = None):
+    scope = scope or current_instance_scope()
     kernel32 = ctypes.windll.kernel32
-    mutex = kernel32.CreateMutexW(None, False, MUTEX_NAME)
+    mutex = kernel32.CreateMutexW(None, False, instance_mutex_name(scope))
     last_error = kernel32.GetLastError()
 
     ERROR_ALREADY_EXISTS = 183
     if last_error == ERROR_ALREADY_EXISTS:
-        bring_existing_instance_to_front()
+        bring_existing_instance_to_front(scope)
         sys.exit(0)
 
     return mutex
