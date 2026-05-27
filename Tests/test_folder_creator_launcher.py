@@ -146,7 +146,7 @@ def test_open_folder_creator_launches_main_py_without_folder_fallback(monkeypatc
 
     harness.open_folder_creator()
 
-    assert harness.actions.window_title_calls
+    assert harness.actions.window_title_calls == []
     assert harness.actions.folder_path_calls == []
     assert popen_calls
     assert popen_calls[0][0] == [sys.executable, str(launch_target)]

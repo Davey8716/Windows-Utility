@@ -5,15 +5,22 @@ import sys
 import inspect
 from pathlib import Path
 
+import psutil
 from PIL import ImageGrab
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QLineEdit
 import win32api
 import win32con
 import win32gui
+import win32process
 
 from state_manager import save_state
-from utility_toggles import _should_skip
+from utility_toggles import (
+    _should_skip,
+    close_window_handles,
+    focus_window_handles,
+    get_window_state_for_handles,
+)
 
 
 PROJECT_ROOT_ENV_VAR = "WIN11_RESURFACE_PROJECT_ROOT"
@@ -678,9 +685,13 @@ class DesktopOperationsMixin:
             if launch_target is None:
                 opened = False
             else:
-                window_state = self.actions.get_window_titles_state(title_candidates)
+                window_handles = self._folder_creator_window_handles(
+                    title_candidates,
+                    launch_target,
+                )
+                window_state = get_window_state_for_handles(window_handles)
                 if window_state != "closed":
-                    closed = self.actions.close_window_titles(title_candidates)
+                    closed = close_window_handles(window_handles)
                     if closed:
                         QTimer.singleShot(
                             300,
@@ -689,13 +700,17 @@ class DesktopOperationsMixin:
                         return
 
                 self._begin_folder_creator_z_order_handoff(title_candidates)
-                opened = self.actions.open_or_focus_window_titles(
+                opened = self._open_or_focus_folder_creator_window(
                     title_candidates,
+                    launch_target,
                     launch,
                 )
 
                 if opened:
-                    self._focus_folder_creator_window(title_candidates)
+                    self._focus_folder_creator_window_handles(
+                        title_candidates,
+                        launch_target,
+                    )
                     return
 
             if opened:
@@ -719,6 +734,111 @@ class DesktopOperationsMixin:
         if main_path.is_file():
             return main_path
         return None
+
+    def _open_or_focus_folder_creator_window(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+        launch_target: Path,
+        launch,
+    ) -> bool:
+        if self._focus_folder_creator_window_handles(title_candidates, launch_target):
+            return True
+
+        try:
+            launch()
+            return True
+        except Exception as e:
+            print(f"[DEBUG] open_folder_creator failed for {launch_target}: {e}")
+            return False
+
+    def _focus_folder_creator_window_handles(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+        launch_target: Path,
+    ) -> bool:
+        return focus_window_handles(
+            self._folder_creator_window_handles(title_candidates, launch_target)
+        )
+
+    def _folder_creator_window_handles(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+        launch_target: Path,
+    ) -> list[int]:
+        normalized_candidates = [
+            candidate.strip().casefold()
+            for candidate in title_candidates
+            if candidate and candidate.strip()
+        ]
+        if not normalized_candidates:
+            return []
+
+        handles: list[int] = []
+
+        def enum_handler(hwnd, _):
+            try:
+                title = win32gui.GetWindowText(hwnd).strip()
+            except Exception:
+                return True
+
+            if not title:
+                return True
+
+            normalized_title = title.casefold()
+            title_matches = any(
+                normalized_title == candidate
+                or normalized_title.endswith(f" - {candidate}")
+                or candidate in normalized_title
+                for candidate in normalized_candidates
+            )
+            if not title_matches:
+                return True
+
+            if self._window_process_references_script(hwnd, launch_target):
+                handles.append(hwnd)
+
+            return True
+
+        try:
+            win32gui.EnumWindows(enum_handler, None)
+        except Exception as e:
+            print(f"[DEBUG] _folder_creator_window_handles failed: {e}")
+
+        return handles
+
+    def _window_process_references_script(
+        self,
+        hwnd: int,
+        script_path: Path,
+    ) -> bool:
+        try:
+            _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
+            process = psutil.Process(pid)
+            cmdline = process.cmdline()
+            cwd = process.cwd()
+        except Exception:
+            return False
+
+        normalized_script = str(script_path.resolve()).casefold()
+        cwd_path = Path(cwd) if cwd else None
+
+        for arg in cmdline:
+            if not arg:
+                continue
+
+            arg_path = Path(arg.strip('"'))
+            paths_to_check = [arg_path]
+            if not arg_path.is_absolute() and cwd_path is not None:
+                paths_to_check.append(cwd_path / arg_path)
+
+            for path_to_check in paths_to_check:
+                try:
+                    if str(path_to_check.resolve()).casefold() == normalized_script:
+                        return True
+                except OSError:
+                    continue
+
+        return False
 
     def _resolve_windows_resurface_project_root(self) -> Path:
         for candidate in self._windows_resurface_project_root_candidates():
