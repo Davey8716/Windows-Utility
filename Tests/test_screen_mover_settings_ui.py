@@ -2,8 +2,8 @@ import copy
 
 import main
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon, QKeySequence
-from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QColor, QIcon, QKeySequence
+from PySide6.QtWidgets import QApplication, QComboBox
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 
 
@@ -284,6 +284,60 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         window.window_close_btn.click()
         assert shutdown_calls == [True]
     finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_live_theme_switch_preserves_blue_and_power_dropdown_roles(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        combos = window.findChildren(QComboBox)
+        power_combo = next(combo for combo in combos if combo.property("powerActionStyle"))
+        standard_combo = next(
+            combo
+            for combo in combos
+            if not combo.property("powerActionStyle")
+            and not combo.property("connectedDrivesFieldStyle")
+        )
+
+        for is_dark, standard_color, power_color in (
+            (True, "#1c66c4", "#2b313c"),
+            (False, "#2d73c8", "#46515f"),
+        ):
+            window.apply_theme(is_dark)
+
+            assert f"background-color: {standard_color};" in standard_combo.styleSheet()
+            assert f"background-color: {power_color};" in power_combo.styleSheet()
+            assert f"background-color: {standard_color};" not in power_combo.styleSheet()
+
+            sleep_row = power_combo.findText("Sleep")
+            shutdown_row = power_combo.findText("Shutdown")
+            sleep_background = power_combo.itemData(
+                sleep_row,
+                Qt.ItemDataRole.BackgroundRole,
+            )
+            shutdown_background = power_combo.itemData(
+                shutdown_row,
+                Qt.ItemDataRole.BackgroundRole,
+            )
+
+            assert isinstance(sleep_background, QColor)
+            assert isinstance(shutdown_background, QColor)
+            assert power_combo.itemData(
+                sleep_row,
+                Qt.ItemDataRole.ForegroundRole,
+            ) == main.styles.contrasting_text_color(sleep_background)
+            assert power_combo.itemData(
+                shutdown_row,
+                Qt.ItemDataRole.ForegroundRole,
+            ) == main.styles.contrasting_text_color(shutdown_background)
+    finally:
+        main.styles.set_theme(True)
         window._quit_requested = True
         window.close()
         window.deleteLater()

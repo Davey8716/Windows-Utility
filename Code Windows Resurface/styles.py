@@ -1,17 +1,20 @@
+import sys
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 
 TEXT_LIGHT = QColor(255, 255, 255)
-TEXT_DARK = QColor(0, 0, 0)
+TEXT_DARK = QColor(17, 24, 32)
 OFF_WHITE_FIELD_BG = QColor(245, 245, 240)
 
-WINDOW_BG = QColor(40, 40, 50)
-SURFACE_BG = QColor(58, 72, 96)
-SURFACE_HOVER = QColor(74, 111, 168)
+WINDOW_BG = QColor(23, 27, 36)
+SURFACE_BG = QColor(34, 42, 54)
+SURFACE_HOVER = QColor(49, 68, 95)
 PANEL_BG = QColor(58, 72, 96)
 PANEL_HOVER = QColor(74, 111, 168)
 PANEL_BORDER = QColor(255, 255, 255)
-SURFACE_BORDER = QColor(255, 255, 255)
+SURFACE_BORDER = QColor(93, 107, 125)
 SURFACE_DARK = SURFACE_BG
 SURFACE_HOVER_DARK = SURFACE_HOVER
 SURFACE_HOVER_LIGHT = SURFACE_HOVER
@@ -122,17 +125,17 @@ def set_theme(is_dark: bool) -> None:
 
     if is_dark:
         THEME_IS_DARK = True
-        WINDOW_BG = QColor(40, 40, 50)
-        SURFACE_BG = QColor(58, 72, 96)
-        SURFACE_HOVER = QColor(74, 111, 168)
-        SURFACE_BORDER = QColor(255, 255, 255)
+        WINDOW_BG = QColor(23, 27, 36)
+        SURFACE_BG = QColor(34, 42, 54)
+        SURFACE_HOVER = QColor(49, 68, 95)
+        SURFACE_BORDER = QColor(93, 107, 125)
         CURRENT_TEXT = TEXT_LIGHT
     else:
         THEME_IS_DARK = False
-        WINDOW_BG = QColor(255, 255, 255)
-        SURFACE_BG = QColor(255, 255, 255)
-        SURFACE_HOVER = QColor(230, 236, 244)
-        SURFACE_BORDER = QColor(0, 0, 0)
+        WINDOW_BG = QColor(221, 227, 234)
+        SURFACE_BG = QColor(238, 242, 246)
+        SURFACE_HOVER = QColor(203, 216, 231)
+        SURFACE_BORDER = QColor(126, 142, 160)
         CURRENT_TEXT = TEXT_DARK
 
     SURFACE_DARK = SURFACE_BG
@@ -145,6 +148,32 @@ def set_theme(is_dark: bool) -> None:
 
 def theme_text_color() -> QColor:
     return CURRENT_TEXT
+
+
+def control_text_color() -> QColor:
+    return TEXT_LIGHT
+
+
+def contrasting_text_color(background: QColor) -> QColor:
+    def linear_channel(channel: int) -> float:
+        normalized = channel / 255.0
+        if normalized <= 0.04045:
+            return normalized / 12.92
+        return ((normalized + 0.055) / 1.055) ** 2.4
+
+    luminance = (
+        0.2126 * linear_channel(background.red())
+        + 0.7152 * linear_channel(background.green())
+        + 0.0722 * linear_channel(background.blue())
+    )
+    light_contrast = 1.05 / (luminance + 0.05)
+    dark_luminance = (
+        0.2126 * linear_channel(TEXT_DARK.red())
+        + 0.7152 * linear_channel(TEXT_DARK.green())
+        + 0.0722 * linear_channel(TEXT_DARK.blue())
+    )
+    dark_contrast = (luminance + 0.05) / (dark_luminance + 0.05)
+    return TEXT_LIGHT if light_contrast >= dark_contrast else TEXT_DARK
 
 
 def themed_surface_field_bg() -> QColor:
@@ -173,6 +202,21 @@ def tooltip_border() -> QColor:
 
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
+
+
+def dropdown_chevron_path() -> Path:
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    roots = []
+    if bundle_root:
+        roots.append(Path(bundle_root))
+    roots.append(Path(__file__).resolve().parent.parent)
+
+    for root in roots:
+        candidate = root / "App Icons" / "Dropdown Chevron.svg"
+        if candidate.is_file():
+            return candidate
+
+    return roots[-1] / "App Icons" / "Dropdown Chevron.svg"
 
 
 def coerce_font_size(
@@ -359,23 +403,35 @@ def tooltip_style() -> str:
 
 
 def themed_button_bg() -> QColor:
-    return ORGANIZE_BUTTON_BG if THEME_IS_DARK else QColor(228, 228, 228)
+    return ORGANIZE_BUTTON_BG if THEME_IS_DARK else QColor(45, 115, 200)
 
 
 def themed_button_hover() -> QColor:
-    return ORGANIZE_BUTTON_HOVER if THEME_IS_DARK else QColor(212, 212, 212)
+    return ORGANIZE_BUTTON_HOVER if THEME_IS_DARK else QColor(62, 134, 220)
 
 
 def themed_button_pressed() -> QColor:
-    return ORGANIZE_BUTTON_PRESSED if THEME_IS_DARK else QColor(184, 184, 184)
+    return ORGANIZE_BUTTON_PRESSED if THEME_IS_DARK else QColor(33, 91, 160)
 
 
 def themed_button_pressed_hover() -> QColor:
-    return ORGANIZE_BUTTON_PRESSED_HOVER if THEME_IS_DARK else QColor(170, 170, 170)
+    return ORGANIZE_BUTTON_PRESSED_HOVER if THEME_IS_DARK else QColor(40, 107, 184)
 
 
 def themed_button_border() -> QColor:
-    return ORGANIZE_BUTTON_BORDER if THEME_IS_DARK else QColor(120, 120, 120)
+    return ORGANIZE_BUTTON_BORDER if THEME_IS_DARK else QColor(25, 79, 135)
+
+
+def themed_button_disabled_bg() -> QColor:
+    return QColor(54, 82, 117) if THEME_IS_DARK else QColor(137, 168, 204)
+
+
+def themed_button_disabled_text() -> QColor:
+    return QColor(217, 230, 242) if THEME_IS_DARK else QColor(247, 251, 255)
+
+
+def themed_button_disabled_border() -> QColor:
+    return QColor(97, 120, 150) if THEME_IS_DARK else QColor(110, 142, 180)
 
 def organizing_button_style(font_size: int | None = None) -> str:
     font_size = coerce_font_size(font_size)
@@ -386,7 +442,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             padding: 4px 8px;
             {font_rule}
             font-weight: bold;
-            color: {qcolor_css(theme_text_color())};
+            color: {qcolor_css(control_text_color())};
             border: 1px solid {qcolor_css(themed_button_border())};
             border-radius: 3px;
             background-color: {qcolor_css(themed_button_bg())};
@@ -404,9 +460,9 @@ def organizing_button_style(font_size: int | None = None) -> str:
             border: 1px solid {qcolor_css(themed_button_border())};
         }}
         QPushButton:disabled {{
-            color: {qcolor_css(theme_text_color())};
-            border: 1px solid {qcolor_css(themed_button_border())};
-            background-color: {qcolor_css(themed_button_bg())};
+            color: {qcolor_css(themed_button_disabled_text())};
+            border: 1px solid {qcolor_css(themed_button_disabled_border())};
+            background-color: {qcolor_css(themed_button_disabled_bg())};
         }}
     """
 
@@ -417,7 +473,7 @@ def hotkey_edit_style(font_size: int = 13) -> str:
     font_size = coerce_font_size(font_size, 13) or 13
     return f"""
         QKeySequenceEdit {{
-            {label_style(font_size=font_size, bold=True, color=theme_text_color())}
+            {label_style(font_size=font_size, bold=True, color=control_text_color())}
             min-height: 26px;
             padding: 2px 6px;
             background-color: {qcolor_css(themed_button_bg())};
@@ -573,113 +629,168 @@ def plain_theme_label_style(font_size: int) -> str:
         }}
     """
 
-def surfaced_combo_style(font_size: int) -> str:
+def _modern_combo_style(
+    font_size: int,
+    *,
+    background: QColor,
+    hover: QColor,
+    pressed: QColor,
+    pressed_hover: QColor,
+    border: QColor,
+    text: QColor,
+    popup_background: QColor | None = None,
+    popup_text: QColor | None = None,
+    disabled_text: QColor | None = None,
+    disabled_border: QColor | None = None,
+    font_family: str | None = None,
+) -> str:
+    font_size = coerce_font_size(font_size, 14) or 14
+    popup_background = popup_background or background
+    popup_text = popup_text or text
+    disabled_text = disabled_text or themed_button_disabled_text()
+    disabled_border = disabled_border or themed_button_disabled_border()
+    chevron_path = dropdown_chevron_path().as_posix()
     return f"""
         QComboBox {{
             {label_style(
                 font_size=font_size,
                 bold=True,
-                color=themed_surface_field_text(),
+                color=text,
+                font_family=font_family,
             )}
-            background-color: {qcolor_css(themed_surface_field_bg())};
-            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            background-color: {qcolor_css(background)};
+            border: 1px solid {qcolor_css(border)};
             border-radius: 6px;
-            padding: 4px 28px 4px 8px;
+            padding: 4px 34px 4px 10px;
         }}
-        QComboBox:hover,
-        QComboBox:on {{
-            background-color: {qcolor_css(themed_surface_field_bg())};
+        QComboBox:disabled {{
+            color: {qcolor_css(disabled_text)};
+            border: 1px solid {qcolor_css(disabled_border)};
+        }}
+        QComboBox:enabled {{
+            color: {qcolor_css(text)};
+            border: 1px solid {qcolor_css(border)};
+        }}
+        QComboBox:hover {{
+            border-color: {qcolor_css(pressed_hover)};
+        }}
+        QComboBox[persistPressed="true"] {{
+            border: 2px solid {qcolor_css(text)};
+        }}
+        QComboBox[persistPressed="true"]:hover {{
+            border-color: {qcolor_css(text)};
         }}
         QComboBox::drop-down {{
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            width: 28px;
+            background-color: {qcolor_css(background)};
             border: none;
-            background: transparent;
-            width: 22px;
+            border-left: 1px solid {qcolor_css(border)};
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;
+        }}
+        QComboBox:disabled::drop-down {{
+            background-color: {qcolor_css(background)};
+            border: none;
+            border-left: 1px solid {qcolor_css(disabled_border)};
+            border-top-right-radius: 5px;
+            border-bottom-right-radius: 5px;
+        }}
+        QComboBox:enabled::drop-down {{
+            background-color: {qcolor_css(background)};
+            border-left: 1px solid {qcolor_css(border)};
+        }}
+        QComboBox:hover::drop-down {{
+            background-color: {qcolor_css(background)};
+        }}
+        QComboBox::drop-down:on {{
+            background-color: {qcolor_css(background)};
+        }}
+        QComboBox::down-arrow {{
+            image: url("{chevron_path}");
+            width: 10px;
+            height: 6px;
         }}
         QComboBox QAbstractItemView {{
-            background-color: {qcolor_css(themed_surface_field_bg())};
-            color: {qcolor_css(themed_surface_field_text())};
-            selection-background-color: {qcolor_css(PANEL_HOVER)};
-            selection-color: {qcolor_css(themed_surface_field_text())};
-            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            background-color: {qcolor_css(popup_background)};
+            color: {qcolor_css(popup_text)};
+            selection-background-color: {qcolor_css(hover)};
+            selection-color: {qcolor_css(popup_text)};
+            border: 1px solid {qcolor_css(border)};
+            border-radius: 6px;
+            padding: 4px;
             outline: 0;
         }}
         QComboBox QAbstractItemView::item {{
-            padding: 4px 8px;
+            min-height: 18px;
+            padding: 6px 10px;
             border: none;
         }}
+        QComboBox QAbstractItemView::item:selected {{
+            background-color: {qcolor_css(hover)};
+            color: {qcolor_css(popup_text)};
+            border-left: 3px solid {qcolor_css(pressed)};
+        }}
+        QComboBox QAbstractItemView::item:hover {{
+            background-color: {qcolor_css(hover)};
+            color: {qcolor_css(popup_text)};
+        }}
     """
+
+
+def surfaced_combo_style(font_size: int) -> str:
+    return _modern_combo_style(
+        font_size,
+        background=themed_button_bg(),
+        hover=themed_button_hover(),
+        pressed=themed_button_pressed(),
+        pressed_hover=themed_button_pressed_hover(),
+        border=themed_button_border(),
+        text=control_text_color(),
+    )
 
 
 def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") -> str:
-    return f"""
-        QComboBox {{
-            {label_style(
-                font_size=font_size,
-                bold=True,
-                color=themed_surface_field_text(),
-                font_family=font_family,
-            )}
-            background-color: {qcolor_css(WINDOW_BG)};
-            border: none;
-            border-radius: 6px;
-            padding: 4px 24px 4px 6px;
-        }}
-        QComboBox:hover,
-        QComboBox:on {{
-            background-color: {qcolor_css(WINDOW_BG)};
-        }}
-        QComboBox::drop-down {{
-            border: none;
-            background: transparent;
-            width: 18px;
-        }}
-        QComboBox QAbstractItemView {{
-            background-color: {qcolor_css(WINDOW_BG)};
-            color: {qcolor_css(themed_surface_field_text())};
-            selection-background-color: {qcolor_css(PANEL_HOVER)};
-            selection-color: {qcolor_css(themed_surface_field_text())};
-            border: none;
-            outline: 0;
-        }}
-        QComboBox QAbstractItemView::item {{
-            padding: 4px 8px;
-            border: none;
-        }}
-    """
+    return _modern_combo_style(
+        font_size,
+        background=themed_button_bg(),
+        hover=themed_button_hover(),
+        pressed=themed_button_pressed(),
+        pressed_hover=themed_button_pressed_hover(),
+        border=themed_button_border(),
+        text=control_text_color(),
+        font_family=font_family,
+    )
 
 
 def power_combo_style(font_size: int) -> str:
-    power_bg = QColor(26, 118, 214) if THEME_IS_DARK else QColor(42, 134, 230)
-    power_hover = QColor(44, 138, 235) if THEME_IS_DARK else QColor(58, 148, 242)
-    power_pressed = QColor(18, 94, 176) if THEME_IS_DARK else QColor(30, 108, 196)
-    power_border = QColor(132, 198, 255) if THEME_IS_DARK else QColor(23, 86, 158)
+    if THEME_IS_DARK:
+        power_bg = QColor(43, 49, 60)
+        power_hover = QColor(56, 65, 80)
+        power_pressed = QColor(32, 38, 47)
+        power_pressed_hover = QColor(48, 57, 70)
+        power_border = QColor(101, 113, 132)
+    else:
+        power_bg = QColor(70, 81, 95)
+        power_hover = QColor(89, 102, 117)
+        power_pressed = QColor(53, 64, 77)
+        power_pressed_hover = QColor(74, 87, 102)
+        power_border = QColor(40, 52, 66)
 
-    return f"""
-        QComboBox {{
-            {label_style(font_size=font_size, bold=True, color=theme_text_color())}
-            background-color: {qcolor_css(power_bg)};
-            border: 1px solid {qcolor_css(power_border)};
-            border-radius: 3px;
-            padding: 4px 8px;
-        }}
-        QComboBox:hover {{
-            background-color: {qcolor_css(power_hover)};
-        }}
-        QComboBox:on {{
-            background-color: {qcolor_css(power_pressed)};
-        }}
-        QComboBox QAbstractItemView {{
-            background-color: {qcolor_css(themed_surface_field_bg())};
-            color: {qcolor_css(theme_text_color())};
-            border: 1px solid {qcolor_css(power_border)};
-            outline: 0;
-            padding: 2px;
-        }}
-        QComboBox QAbstractItemView::item {{
-            padding: 4px 8px;
-            border: none;
-        }}
-    """
+    return _modern_combo_style(
+        font_size,
+        background=power_bg,
+        hover=power_hover,
+        pressed=power_pressed,
+        pressed_hover=power_pressed_hover,
+        border=power_border,
+        text=control_text_color(),
+        popup_background=SURFACE_BG,
+        popup_text=theme_text_color(),
+        disabled_text=QColor(211, 216, 223),
+        disabled_border=SURFACE_BORDER,
+    )
 
 
 def emphasized_surface_line_edit_style(font_size: int) -> str:
@@ -700,24 +811,15 @@ def emphasized_surface_line_edit_style(font_size: int) -> str:
     """
 
 def combo_style(font_size: int) -> str:
-    return f"""
-        QComboBox {{
-            {label_style(font_size=font_size, bold=True, color=TEXT_LIGHT)}
-            background-color: {qcolor_css(PANEL_BG)};
-            border: 2px solid {qcolor_css(PANEL_BORDER)};
-            border-radius: 6px;
-            padding: 4px 8px;
-        }}
-        QComboBox:hover {{
-            background-color: {qcolor_css(PANEL_HOVER)};
-        }}
-        QComboBox QAbstractItemView {{
-            background-color: {qcolor_css(PANEL_BG)};
-            color: {qcolor_css(TEXT_LIGHT)};
-            selection-background-color: {qcolor_css(PANEL_HOVER)};
-            border: 2px solid {qcolor_css(PANEL_BORDER)};
-        }}
-    """
+    return _modern_combo_style(
+        font_size,
+        background=themed_button_bg(),
+        hover=themed_button_hover(),
+        pressed=themed_button_pressed(),
+        pressed_hover=themed_button_pressed_hover(),
+        border=themed_button_border(),
+        text=control_text_color(),
+    )
 
 
 LEFT_PANEL_FRAME_STYLE = collapsible_section_frame_style()
@@ -783,51 +885,15 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
     )
 
 def organizing_combo_style(font_size: int) -> str:
-    font_size = coerce_font_size(font_size, 14) or 14
-    return f"""
-        QComboBox {{
-            {label_style(font_size=font_size, bold=True, color=theme_text_color())}
-            background-color: {qcolor_css(themed_button_bg())};
-            border: 1px solid {qcolor_css(themed_button_border())};
-            border-radius: 3px;
-            padding: 4px 8px;
-        }}
-        QComboBox:hover {{
-            background-color: {qcolor_css(themed_button_hover())};
-        }}
-        QComboBox:disabled {{
-            background-color: {qcolor_css(themed_surface_field_bg())};
-            color: {qcolor_css(themed_surface_field_border())};
-            border: 1px solid {qcolor_css(themed_surface_field_border())};
-        }}
-        QComboBox:on {{
-            background-color: {qcolor_css(themed_button_pressed())};
-        }}
-        QComboBox[persistPressed="true"] {{
-            background-color: {qcolor_css(themed_button_pressed())};
-        }}
-        QComboBox QAbstractItemView {{
-            background-color: {qcolor_css(themed_button_bg())};
-            color: {qcolor_css(theme_text_color())};
-            selection-background-color: {qcolor_css(themed_button_hover())};
-            selection-color: {qcolor_css(theme_text_color())};
-            border: 1px solid {qcolor_css(themed_button_border())};
-            outline: 0;
-        }}
-        QComboBox QAbstractItemView::item {{
-            padding: 4px 8px;
-            border: none;
-        }}
-        QComboBox QAbstractItemView::item:selected {{
-            background-color: {qcolor_css(themed_button_hover())};
-            color: {qcolor_css(theme_text_color())};
-            border-left: 3px solid {qcolor_css(themed_button_pressed())};
-        }}
-        QComboBox QAbstractItemView::item:hover {{
-            background-color: {qcolor_css(themed_button_hover())};
-            color: {qcolor_css(theme_text_color())};
-        }}
-    """
+    return _modern_combo_style(
+        font_size,
+        background=themed_button_bg(),
+        hover=themed_button_hover(),
+        pressed=themed_button_pressed(),
+        pressed_hover=themed_button_pressed_hover(),
+        border=themed_button_border(),
+        text=control_text_color(),
+    )
 
 def apply_default_button_size(
     button,

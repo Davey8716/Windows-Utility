@@ -146,8 +146,9 @@ class BraveBookmarksExporter:
             )
 
     def _export_chromium_bookmarks(self, bookmarks_json, lines):
-        roots = bookmarks_json.get("roots", {})
-        before_count = len(lines)
+        roots = bookmarks_json.get("roots")
+        if not isinstance(roots, dict):
+            return False
 
         for key in ("bookmark_bar", "other", "synced"):
             section = roots.get(key)
@@ -167,7 +168,7 @@ class BraveBookmarksExporter:
             if not is_bar:
                 lines.append("    </DL><p>")
 
-        return len(lines) > before_count
+        return True
 
     def _firefox_add_date(self, raw_value):
         try:

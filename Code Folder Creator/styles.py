@@ -200,6 +200,8 @@ def apply_standard_button_styles(widget, font_size: int = 14) -> None:
 
 def _application_stylesheet() -> str:
     return f"""
+        {resurface_styles.window_style()}
+
         QWidget {{
             background-color: {qcolor_css(WINDOW_BG)};
             color: {qcolor_css(TEXT_COLOR)};
@@ -225,63 +227,13 @@ def _application_stylesheet() -> str:
 
         {organizing_button_style(font_size=14)}
 
-        QComboBox {{
-            {resurface_styles.label_style(font_size=14, bold=True, color=TEXT_COLOR, font_family="Segoe UI")}
-            background-color: {qcolor_css(BUTTON_BG)};
-            color: {qcolor_css(TEXT_COLOR)};
-            border: 1px solid {qcolor_css(BUTTON_BORDER)};
-            border-radius: 3px;
-            padding: 4px 8px;
-        }}
-
-        QComboBox:disabled {{
-            background-color: {qcolor_css(BUTTON_BG)};
-            color: {qcolor_css(TEXT_COLOR)};
-            border: 1px solid {qcolor_css(BUTTON_BORDER)};
-        }}
+        {organizing_combo_style(font_size=14)}
 
         QComboBox QLineEdit {{
             background: transparent;
             border: none;
-            color: {qcolor_css(TEXT_COLOR)};
+            color: {qcolor_css(resurface_styles.control_text_color())};
             qproperty-alignment: AlignCenter;
-        }}
-
-        QComboBox:hover,
-        QComboBox:on {{
-            background-color: {qcolor_css(BUTTON_HOVER)};
-        }}
-
-        QComboBox::drop-down {{
-            border: none;
-            background: transparent;
-            width: 22px;
-        }}
-
-        QComboBox QAbstractItemView {{
-            background-color: {qcolor_css(BUTTON_BG)};
-            color: {qcolor_css(TEXT_COLOR)};
-            selection-background-color: {qcolor_css(BUTTON_HOVER)};
-            selection-color: {qcolor_css(TEXT_COLOR)};
-            border: 1px solid {qcolor_css(BUTTON_BORDER)};
-            padding: 4px;
-            outline: 0;
-        }}
-
-        QComboBox QAbstractItemView::item {{
-            padding: 4px 8px;
-            border: none;
-        }}
-
-        QComboBox QAbstractItemView::item:selected {{
-            background-color: {qcolor_css(BUTTON_HOVER)};
-            color: {qcolor_css(TEXT_COLOR)};
-            border-left: 3px solid {qcolor_css(BUTTON_PRESSED)};
-        }}
-
-        QComboBox QAbstractItemView::item:hover {{
-            background-color: {qcolor_css(BUTTON_HOVER)};
-            color: {qcolor_css(TEXT_COLOR)};
         }}
 
         QSpinBox {{
@@ -327,7 +279,6 @@ def _application_stylesheet() -> str:
             background-color: {qcolor_css(SURFACE_BG)};
         }}
 
-        {resurface_styles.window_style()}
         {resurface_styles.tooltip_style()}
         {resurface_styles.message_box_style()}
     """

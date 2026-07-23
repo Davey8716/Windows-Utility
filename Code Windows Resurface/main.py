@@ -996,15 +996,19 @@ class UtilityControlApp(
         severity_map = combo.property("powerActionSeverityMap") or {}
         placeholder_text = combo.property("powerActionPlaceholder") or ""
         color_map = self._power_action_item_colors()
-        text_color = styles.theme_text_color()
 
         for row in range(combo.count()):
             label = combo.itemText(row)
             severity = "placeholder" if label == placeholder_text else severity_map.get(label)
             if not severity:
                 continue
-            combo.setItemData(row, color_map[severity], Qt.ItemDataRole.BackgroundRole)
-            combo.setItemData(row, text_color, Qt.ItemDataRole.ForegroundRole)
+            background = color_map[severity]
+            combo.setItemData(row, background, Qt.ItemDataRole.BackgroundRole)
+            combo.setItemData(
+                row,
+                styles.contrasting_text_color(background),
+                Qt.ItemDataRole.ForegroundRole,
+            )
 
         if not isinstance(combo.itemDelegate(), SeverityComboItemDelegate):
             combo.setItemDelegate(SeverityComboItemDelegate(combo))

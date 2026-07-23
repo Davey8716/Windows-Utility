@@ -17,7 +17,6 @@ from PySide6.QtCore import QEvent, QPoint, QSize, Qt, QTimer, QProcess
 from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
-    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -1613,8 +1612,7 @@ class AdvancedToolsPanel(QWidget):
         )
         if any(out_path.exists() for _exporter, out_path in export_targets):
             prompt += (
-                "\n\nExisting bookmark export files will ask for overwrite "
-                "confirmation one at a time."
+                "\n\nExisting bookmark export files in this list will be overwritten."
             )
 
         result = self.app._show_modal_message(
@@ -1627,31 +1625,11 @@ class AdvancedToolsPanel(QWidget):
         if result != QMessageBox.StandardButton.Save:
             return None
 
-        approved_targets = []
-        for exporter, out_path in export_targets:
-            if not out_path.exists():
-                approved_targets.append((exporter, out_path))
-                continue
-
-            selected_path, _selected_filter = QFileDialog.getSaveFileName(
-                self,
-                f"Save {exporter.browser_name} Bookmarks",
-                str(out_path),
-                "HTML Files (*.html);;All Files (*)",
-            )
-            if not selected_path:
-                return None
-
-            approved_targets.append((exporter, Path(selected_path)))
-
-        if not approved_targets:
-            return None
-
         exported_paths = []
 
         def run_export():
             nonlocal exported_paths
-            for exporter, out_path in approved_targets:
+            for exporter, out_path in export_targets:
                 if exporter.export_to_file(str(out_path)):
                     exported_paths.append(str(out_path))
 
