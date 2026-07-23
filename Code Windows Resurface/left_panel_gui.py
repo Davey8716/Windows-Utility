@@ -757,16 +757,92 @@ class LeftPanelBuilder:
             on_screen_move_button_changed
         )
 
-        shortcut_title = QLabel("Keyboard Shortcuts", screen_section.content)
+        shortcuts_header = QWidget(screen_section.content)
+        shortcuts_header.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        shortcuts_header_layout = QHBoxLayout(shortcuts_header)
+        shortcuts_header_layout.setContentsMargins(0, 0, 0, 0)
+
+        shortcut_title = QLabel("Keyboard Shortcuts", shortcuts_header)
         shortcut_title.setStyleSheet(styles.label_style(font_size=14))
-        screen_layout.addWidget(shortcut_title)
+
+        shortcut_toggle = QToolButton(shortcuts_header)
+        shortcut_toggle.setCursor(Qt.CursorShape.ArrowCursor)
+        shortcut_toggle.setArrowType(Qt.ArrowType.NoArrow)
+        shortcut_toggle.setStyleSheet(
+            styles.section_toggle_style(
+                styles.theme_text_color(),
+                styles.SURFACE_DARK,
+            )
+        )
+        section_toggle_slot_width, section_toggle_slot_height = (
+            styles.section_toggle_slot_size()
+        )
+        shortcut_toggle.setFixedSize(
+            section_toggle_slot_width,
+            section_toggle_slot_height,
+        )
+        app.register_tooltip(
+            shortcut_toggle,
+            tooltip_text("screen_mover_hotkeys_toggle"),
+        )
+
+        shortcut_title_spacer = QWidget(shortcuts_header)
+        shortcut_title_spacer.setFixedSize(
+            section_toggle_slot_width,
+            section_toggle_slot_height,
+        )
+        shortcuts_header_layout.addWidget(shortcut_title_spacer)
+        shortcuts_header_layout.addStretch()
+        shortcuts_header_layout.addWidget(shortcut_title)
+        shortcuts_header_layout.addStretch()
+        shortcuts_header_layout.addWidget(shortcut_toggle)
+        screen_layout.addWidget(shortcuts_header)
+
+        shortcuts_container = QWidget(screen_section.content)
+        shortcuts_container.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        shortcuts_layout = QVBoxLayout(shortcuts_container)
+        shortcuts_layout.setContentsMargins(0, 0, 0, 0)
+        shortcuts_layout.setSpacing(6)
+        screen_layout.addWidget(shortcuts_container)
+        app.screen_mover_shortcuts_container = shortcuts_container
+        app.screen_mover_shortcuts_toggle_btn = shortcut_toggle
+
+        def set_shortcuts_open(is_open: bool, *, persist: bool = True) -> None:
+            is_open = bool(is_open)
+            state["screen_mover_keyboard_shortcuts_open"] = is_open
+            shortcuts_container.setVisible(is_open)
+            shortcut_toggle.setText(
+                styles.arrow_glyph(
+                    Qt.ArrowType.DownArrow if is_open else Qt.ArrowType.UpArrow
+                )
+            )
+            if persist:
+                app.save_all_settings()
+
+        initial_shortcuts_open = bool(
+            state.get("screen_mover_keyboard_shortcuts_open", True)
+        )
+        set_shortcuts_open(initial_shortcuts_open, persist=False)
+
+        def toggle_shortcuts() -> None:
+            set_shortcuts_open(
+                not bool(state.get("screen_mover_keyboard_shortcuts_open", True))
+            )
+
+        shortcut_toggle.clicked.connect(toggle_shortcuts)
 
         shortcut_grid = QGridLayout()
         shortcut_grid.setContentsMargins(0, 0, 0, 0)
         shortcut_grid.setHorizontalSpacing(8)
         shortcut_grid.setVerticalSpacing(6)
         shortcut_grid.setColumnStretch(1, 1)
-        screen_layout.addLayout(shortcut_grid)
+        shortcuts_layout.addLayout(shortcut_grid)
 
         hotkey_values = state.get("screen_mover_keyboard_hotkeys", {})
         if not isinstance(hotkey_values, dict):
@@ -808,10 +884,10 @@ class LeftPanelBuilder:
             app.apply_screen_mover_settings()
 
         for row, (action, label_text) in enumerate(ACTION_LABELS.items()):
-            label = QLabel(label_text, screen_section.content)
+            label = QLabel(label_text, shortcuts_container)
             label.setStyleSheet(styles.label_style(font_size=12))
 
-            edit = QKeySequenceEdit(screen_section.content)
+            edit = QKeySequenceEdit(shortcuts_container)
             if hasattr(edit, "setMaximumSequenceLength"):
                 edit.setMaximumSequenceLength(1)
             edit.setKeySequence(
@@ -823,7 +899,7 @@ class LeftPanelBuilder:
             )
             app.screen_mover_hotkey_edits[action] = edit
 
-            clear_button = QPushButton("Clear", screen_section.content)
+            clear_button = QPushButton("Clear", shortcuts_container)
             clear_button.setCursor(Qt.CursorShape.ArrowCursor)
             clear_button.setProperty("styleFontSize", 11)
             clear_button.setStyleSheet(styles.organizing_button_style(11))
@@ -845,7 +921,7 @@ class LeftPanelBuilder:
 
         reset_button = QPushButton(
             "Reset Screen Mover Defaults",
-            screen_section.content,
+            shortcuts_container,
         )
         reset_button.setCursor(Qt.CursorShape.ArrowCursor)
         reset_button.setProperty("styleFontSize", 12)
@@ -855,7 +931,7 @@ class LeftPanelBuilder:
             app.reset_screen_mover_settings()
 
         reset_button.clicked.connect(reset_screen_mover_defaults)
-        screen_layout.addWidget(reset_button)
+        shortcuts_layout.addWidget(reset_button)
         app.screen_mover_reset_btn = reset_button
         app.register_tooltip(
             reset_button,

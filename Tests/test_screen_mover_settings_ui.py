@@ -133,6 +133,41 @@ class FakeWindow:
         }
 
 
+def _build_offscreen_window(monkeypatch, state):
+    monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
+    monkeypatch.setattr(main, "save_state", lambda _state: None)
+    monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
+    monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
+    monkeypatch.setattr(main, "TrayIconManager", FakeTrayManager)
+    monkeypatch.setattr(main, "resolve_application_icon", lambda _window: QIcon())
+    monkeypatch.setattr(
+        main.UtilityControlApp,
+        "_current_external_drives",
+        lambda _self: set(),
+    )
+    monkeypatch.setattr(
+        main.UtilityControlApp,
+        "_set_main_window_topmost_state",
+        lambda _self, _enabled: None,
+    )
+    monkeypatch.setattr(
+        main.UtilityControlApp,
+        "_apply_fixed_window_style",
+        lambda _self: None,
+    )
+    monkeypatch.setattr(
+        main.UtilityControlApp,
+        "_register_session_notifications",
+        lambda _self: None,
+    )
+    monkeypatch.setattr(
+        main.UtilityControlApp,
+        "run_recycle_bin_auto_cleanup",
+        lambda _self: None,
+    )
+    return main.UtilityControlApp()
+
+
 def test_master_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):
     saved_states = []
     monkeypatch.setattr(main, "save_state", lambda state: saved_states.append(dict(state)))
@@ -184,39 +219,7 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
     state["screen_mover_activation_button"] = "right"
     state["screen_mover_keyboard_hotkeys"]["LEFT"] = "<ctrl>+<left>"
 
-    monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
-    monkeypatch.setattr(main, "save_state", lambda _state: None)
-    monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
-    monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
-    monkeypatch.setattr(main, "TrayIconManager", FakeTrayManager)
-    monkeypatch.setattr(main, "resolve_application_icon", lambda _window: QIcon())
-    monkeypatch.setattr(
-        main.UtilityControlApp,
-        "_current_external_drives",
-        lambda _self: set(),
-    )
-    monkeypatch.setattr(
-        main.UtilityControlApp,
-        "_set_main_window_topmost_state",
-        lambda _self, _enabled: None,
-    )
-    monkeypatch.setattr(
-        main.UtilityControlApp,
-        "_apply_fixed_window_style",
-        lambda _self: None,
-    )
-    monkeypatch.setattr(
-        main.UtilityControlApp,
-        "_register_session_notifications",
-        lambda _self: None,
-    )
-    monkeypatch.setattr(
-        main.UtilityControlApp,
-        "run_recycle_bin_auto_cleanup",
-        lambda _self: None,
-    )
-
-    window = main.UtilityControlApp()
+    window = _build_offscreen_window(monkeypatch, state)
     try:
         assert window.screen_mover_enabled_btn.isChecked()
         assert window.screen_move_button_combo.currentData() == "right"
@@ -232,6 +235,26 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
             window.screen_mover_hotkey_edits["LEFT"].keySequence().toString()
             == QKeySequence("Ctrl+Left").toString()
         )
+        assert not window.screen_mover_shortcuts_container.isHidden()
+
+        window.screen_mover_shortcuts_toggle_btn.click()
+        assert window.screen_mover_shortcuts_container.isHidden()
+        assert window.state["screen_mover_keyboard_shortcuts_open"] is False
+        assert window.screen_mover_shortcuts_toggle_btn.text() == "▲"
+
+        screen_section = next(
+            section
+            for section in window.left_sections
+            if section.section_id == "screen_mover"
+        )
+        window._set_left_section_open(screen_section, False)
+        window._set_left_section_open(screen_section, True)
+        assert window.screen_mover_shortcuts_container.isHidden()
+
+        window.screen_mover_shortcuts_toggle_btn.click()
+        assert not window.screen_mover_shortcuts_container.isHidden()
+        assert window.state["screen_mover_keyboard_shortcuts_open"] is True
+        assert window.screen_mover_shortcuts_toggle_btn.text() == "▼"
 
         window.state["desktop_screenshot_last_dir"] = "unchanged"
         window.reset_screen_mover_settings()
@@ -242,6 +265,22 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
             edit.keySequence().isEmpty()
             for edit in window.screen_mover_hotkey_edits.values()
         )
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_screen_mover_shortcuts_restore_collapsed_state_offscreen(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["screen_mover_keyboard_shortcuts_open"] = False
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        assert window.screen_mover_shortcuts_container.isHidden()
+        assert window.screen_mover_shortcuts_toggle_btn.text() == "▲"
     finally:
         window._quit_requested = True
         window.close()

@@ -20,6 +20,7 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "mmb_activation_enabled": True,
     "screen_mover_activation_button": "middle",
     "title_bar_dock_enabled": True,
+    "screen_mover_keyboard_shortcuts_open": True,
     "screen_mover_keyboard_hotkeys": {
         "FAR_LEFT": "",
         "LEFT": "",

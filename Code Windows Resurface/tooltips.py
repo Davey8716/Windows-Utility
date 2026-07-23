@@ -16,6 +16,7 @@ TOOLTIP_TEXT = {
     "screen_mover_enabled": "Enables the title-bar dock, mouse trigger, and configured keyboard shortcuts.",
     "screen_move_button": "Chooses which mouse button activates moving a window from the tracked title-bar dock.",
     "screen_mover_hotkey": "Sets a global keyboard shortcut for this window action.",
+    "screen_mover_hotkeys_toggle": "Shows or hides the keyboard shortcut settings.",
     "screen_mover_hotkey_clear": "Removes this keyboard shortcut.",
     "screen_mover_reset": "Restores the Screen Mover defaults without changing other Windows Resurface settings.",
     "idle_plugged_reminder": "Controls warnings when you lock, log out, restart, shut down, or use this app's power actions with an external drive still connected.",
