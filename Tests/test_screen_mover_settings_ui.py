@@ -242,6 +242,54 @@ def test_left_panel_scrollbar_policy_tracks_available_height(monkeypatch):
         qt_app.processEvents()
 
 
+def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    minimize_calls = []
+    monkeypatch.setattr(
+        main.UtilityControlApp,
+        "showMinimized",
+        lambda window: minimize_calls.append(window),
+    )
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        assert window.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert window.window_title_label.text() == "Windows Resurface"
+        assert window.master_collapse_btn_left.parent() is window.window_title_bar
+        assert window.window_minimize_btn.parent() is window.window_title_bar
+        assert window.window_close_btn.parent() is window.window_title_bar
+        assert not window.window_minimize_btn.icon().isNull()
+        assert not window.window_close_btn.icon().isNull()
+
+        left_states = copy.deepcopy(window.state["left_section_states"])
+        window.window_minimize_btn.click()
+        assert minimize_calls == [window]
+
+        window.apply_theme(False)
+        assert "font-size: 18px" in window.window_minimize_btn.styleSheet()
+        assert "font-size: 18px" in window.window_close_btn.styleSheet()
+        assert window.state["left_section_states"] == left_states
+
+        window.show()
+        qt_app.processEvents()
+        window.window_close_btn.click()
+        qt_app.processEvents()
+        assert not window.isVisible()
+
+        shutdown_calls = []
+        window.prepare_for_shutdown = lambda: shutdown_calls.append(True)
+        window._quit_requested = True
+        window.show()
+        window.window_close_btn.click()
+        assert shutdown_calls == [True]
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_master_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):
     saved_states = []
     monkeypatch.setattr(main, "save_state", lambda state: saved_states.append(dict(state)))

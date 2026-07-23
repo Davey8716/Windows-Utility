@@ -35,7 +35,7 @@ class LeftPanelBuilder:
         return Path(__file__).resolve().parent.parent / "App Icons"
 
     def build(self) -> None:
-        self._build_header()
+        self.master_btn = self.app.master_collapse_btn_left
         self.app.left_sections = []
         self.app.master_toggle_left_state = bool(
             self.state.get("master_toggle_left", True)
@@ -50,55 +50,6 @@ class LeftPanelBuilder:
 
         self.app.main_layout.addStretch(1)
         self._wire_master_toggle()
-
-    def _build_header(self) -> None:
-        app = self.app
-        header = QWidget(app.main_frame)
-        header.setFixedWidth(app.MAIN_SECTION_OUTER_WIDTH)
-        header.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(
-            app.MAIN_SECTION_SIDE_PADDING,
-            10,
-            app.MAIN_SECTION_SIDE_PADDING
-            + (app.MAIN_SECTION_FRAME_WIDTH - app.LEFT_SECTION_VISIBLE_FRAME_WIDTH)
-            + app.LEFT_TOGGLE_RIGHT_INSET,
-            10,
-        )
-
-        title = QLabel("Windows Resurface", header)
-        title.setStyleSheet(styles.label_style(font_size=20))
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        master_btn = QToolButton(header)
-        master_btn.setProperty("leftMasterToggleButton", True)
-        master_btn.setCursor(Qt.CursorShape.ArrowCursor)
-        master_btn.setArrowType(Qt.ArrowType.NoArrow)
-        master_btn.setText(styles.arrow_glyph(Qt.ArrowType.DownArrow))
-        master_btn.setStyleSheet(
-            styles.left_master_toggle_style(
-                styles.theme_text_color(),
-                styles.SURFACE_DARK,
-            )
-        )
-        left_master_slot_width, left_master_slot_height = (
-            styles.left_master_toggle_slot_size()
-        )
-        master_btn.setFixedSize(left_master_slot_width, left_master_slot_height)
-        app.master_collapse_btn_left = master_btn
-        self.master_btn = master_btn
-        app.register_tooltip(master_btn, tooltip_text("master_collapse_left"))
-
-        header_spacer = QWidget(header)
-        header_spacer.setFixedSize(left_master_slot_width, left_master_slot_height)
-
-        header_layout.addWidget(header_spacer)
-        header_layout.addStretch()
-        header_layout.addWidget(title)
-        header_layout.addStretch()
-        header_layout.addWidget(master_btn)
-
-        app.main_layout.addWidget(header, 0, Qt.AlignmentFlag.AlignLeft)
 
     def _add_left_section_spacer(self, height: int):
         self.app.main_layout.addSpacing(height)

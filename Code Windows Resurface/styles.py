@@ -81,6 +81,24 @@ def side_panel_toggle_style(text_color: QColor, hover_color: QColor) -> str:
     return _toggle_glyph_style(text_color, 25)
 
 
+def title_bar_control_style(*, close_button: bool = False) -> str:
+    text = qcolor_css(CURRENT_TEXT)
+    hover = qcolor_css(QColor(190, 57, 47) if close_button else SURFACE_HOVER)
+    pressed = qcolor_css(QColor(151, 42, 35) if close_button else SURFACE_BG)
+    return f"""
+        QToolButton {{
+            color: {text};
+            background: transparent;
+            border: none;
+            padding: 0px;
+            font-size: 18px;
+            font-weight: bold;
+        }}
+        QToolButton:hover {{ background-color: {hover}; }}
+        QToolButton:pressed {{ background-color: {pressed}; }}
+    """
+
+
 def left_master_toggle_style(text_color: QColor, hover_color: QColor) -> str:
     return _toggle_glyph_style(text_color, 20)
 

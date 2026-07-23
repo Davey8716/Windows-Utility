@@ -9,7 +9,7 @@ import styles
 import win32gui
 import win32con
 import win32process
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 
 from app_notifications import WindowMessageMixin
 from app_paths import MasterBackupPathsMixin
@@ -26,11 +26,13 @@ from tray_toggles import TrayIconManager, resolve_application_icon
 from utility_toggles import  UtilityActionsManager 
 from state_manager import load_state, save_state
 from tooltips import QtTooltipManager, tooltip_text
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, Qt, QTimer, Signal, QSize
 
 from PySide6.QtWidgets import (
     QWidget,
     QComboBox,
+    QHBoxLayout,
+    QLabel,
     QPushButton,
     QToolButton,
     QVBoxLayout,
@@ -197,6 +199,41 @@ class ScreenMoverActionBridge(QObject):
         self.action_requested.emit(action)
 
 
+class TitleBarDragRegion(QWidget):
+    def __init__(self, window):
+        super().__init__(window)
+        self._window = window
+        self._drag_offset = None
+
+    def mousePressEvent(self, event):
+        if event.button() != Qt.MouseButton.LeftButton:
+            return super().mousePressEvent(event)
+
+        window_handle = self._window.windowHandle()
+        if window_handle is not None and window_handle.startSystemMove():
+            self._drag_offset = None
+        else:
+            self._drag_offset = (
+                event.globalPosition().toPoint()
+                - self._window.frameGeometry().topLeft()
+            )
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        if (
+            self._drag_offset is not None
+            and event.buttons() & Qt.MouseButton.LeftButton
+        ):
+            self._window.move(event.globalPosition().toPoint() - self._drag_offset)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_offset = None
+        super().mouseReleaseEvent(event)
+
+
 def bring_existing_instance_to_front(scope: tuple[str, Path] | None = None):
     target_hwnd = None
 
@@ -253,6 +290,7 @@ class UtilityControlApp(
 ):
     MAIN_PANEL_WIDTH = 450
     PREFERRED_WINDOW_HEIGHT = 1180
+    TITLE_BAR_HEIGHT = 36
     RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 65
     MAIN_SECTION_SIDE_PADDING = 14
     LEFT_TOGGLE_RIGHT_INSET = 14
@@ -287,6 +325,7 @@ class UtilityControlApp(
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
         self.WINDOW_HEIGHT = self._resolve_window_height()
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
         
@@ -636,6 +675,7 @@ class UtilityControlApp(
 
         self.root_container = QWidget(self)
         self.root_container.setGeometry(0, 0, self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+        self._build_title_bar()
 
         self.main_scroll = QScrollArea(self.root_container)
         self.main_scroll.setWidgetResizable(True)
@@ -715,6 +755,56 @@ class UtilityControlApp(
         self._update_panel_geometries()
         self._position_advanced_settings_toggle()
 
+    def _build_title_bar(self) -> None:
+        title_bar = QFrame(self.root_container)
+        title_bar.setObjectName("WindowTitleBar")
+        title_bar.setFixedHeight(self.TITLE_BAR_HEIGHT)
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(12, 0, 0, 0)
+        title_layout.setSpacing(0)
+
+        drag_region = TitleBarDragRegion(self)
+        drag_layout = QHBoxLayout(drag_region)
+        drag_layout.setContentsMargins(0, 0, 0, 0)
+        title = QLabel("Windows Resurface", drag_region)
+        title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        drag_layout.addWidget(title)
+        title_layout.addWidget(drag_region, 1)
+
+        master_btn = QToolButton(title_bar)
+        master_btn.setProperty("leftMasterToggleButton", True)
+        master_btn.setCursor(Qt.CursorShape.ArrowCursor)
+        master_btn.setArrowType(Qt.ArrowType.NoArrow)
+        left_master_slot_width, _ = styles.left_master_toggle_slot_size()
+        master_btn.setFixedSize(left_master_slot_width + 8, self.TITLE_BAR_HEIGHT)
+        self.master_collapse_btn_left = master_btn
+        self.register_tooltip(master_btn, tooltip_text("master_collapse_left"))
+        title_layout.addWidget(master_btn)
+
+        minimize_btn = QToolButton(title_bar)
+        minimize_btn.setProperty("titleBarMinimizeButton", True)
+        minimize_btn.setCursor(Qt.CursorShape.ArrowCursor)
+        minimize_btn.setIconSize(QSize(16, 16))
+        minimize_btn.setFixedSize(42, self.TITLE_BAR_HEIGHT)
+        minimize_btn.clicked.connect(self.showMinimized)
+        self.window_minimize_btn = minimize_btn
+        self.register_tooltip(minimize_btn, tooltip_text("window_minimize"))
+        title_layout.addWidget(minimize_btn)
+
+        close_btn = QToolButton(title_bar)
+        close_btn.setProperty("titleBarCloseButton", True)
+        close_btn.setCursor(Qt.CursorShape.ArrowCursor)
+        close_btn.setIconSize(QSize(16, 16))
+        close_btn.setFixedSize(42, self.TITLE_BAR_HEIGHT)
+        close_btn.clicked.connect(self.close)
+        self.window_close_btn = close_btn
+        self.register_tooltip(close_btn, tooltip_text("window_close"))
+        title_layout.addWidget(close_btn)
+
+        self.window_title_bar = title_bar
+        self.window_title_label = title
+        self._apply_title_bar_theme()
+
     def toggle_advanced_settings_panel(self):
         self.advanced_settings_open = not self.advanced_settings_open
         self.state["advanced_panel_open"] = self.advanced_settings_open
@@ -739,13 +829,53 @@ class UtilityControlApp(
 
     def _update_panel_geometries(self):
         self.root_container.setGeometry(0, 0, self.width(), self.height())
-        self.main_scroll.setGeometry(0, 0, self.MAIN_PANEL_WIDTH, self.height())
+        content_height = self.height() - self.TITLE_BAR_HEIGHT
+        self.window_title_bar.setGeometry(0, 0, self.width(), self.TITLE_BAR_HEIGHT)
+        self.main_scroll.setGeometry(
+            0,
+            self.TITLE_BAR_HEIGHT,
+            self.MAIN_PANEL_WIDTH,
+            content_height,
+        )
         self.advanced_settings_panel.setGeometry(
             self.MAIN_PANEL_WIDTH,
-            0,
+            self.TITLE_BAR_HEIGHT,
             self.ADVANCED_PANEL_WIDTH,
-            self.height(),
+            content_height,
         )
+
+    def _apply_title_bar_theme(self) -> None:
+        self.window_title_bar.setStyleSheet(
+            "QFrame#WindowTitleBar "
+            f"{{ background-color: {styles.qcolor_css(styles.WINDOW_BG)}; }}"
+        )
+        self.window_title_label.setStyleSheet(styles.label_style(font_size=16))
+        self.master_collapse_btn_left.setStyleSheet(
+            styles.left_master_toggle_style(
+                styles.theme_text_color(),
+                styles.SURFACE_DARK,
+            )
+        )
+        self.window_minimize_btn.setStyleSheet(styles.title_bar_control_style())
+        self.window_minimize_btn.setIcon(self._title_bar_icon("minimize"))
+        self.window_close_btn.setStyleSheet(
+            styles.title_bar_control_style(close_button=True)
+        )
+        self.window_close_btn.setIcon(self._title_bar_icon("close"))
+
+    def _title_bar_icon(self, action: str) -> QIcon:
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(styles.theme_text_color(), 2))
+        if action == "minimize":
+            painter.drawLine(3, 11, 13, 11)
+        else:
+            painter.drawLine(4, 4, 12, 12)
+            painter.drawLine(12, 4, 4, 12)
+        painter.end()
+        return QIcon(pixmap)
 
     @classmethod
     def _height_for_available_height(cls, available_height: int | None) -> int:
@@ -769,16 +899,21 @@ class UtilityControlApp(
         if layout is not None:
             layout.activate()
         content_height = self.main_frame.sizeHint().height()
+        viewport_height = self.WINDOW_HEIGHT - self.TITLE_BAR_HEIGHT
         policy = (
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
-            if content_height > self.WINDOW_HEIGHT
+            if content_height > viewport_height
             else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         self.main_scroll.setVerticalScrollBarPolicy(policy)
 
     def _position_advanced_settings_toggle(self):
         x = self.MAIN_PANEL_WIDTH - self.advanced_settings_toggle.width() + 14
-        y = (self.height() - self.advanced_settings_toggle.height()) // 2
+        y = self.TITLE_BAR_HEIGHT + (
+            self.height()
+            - self.TITLE_BAR_HEIGHT
+            - self.advanced_settings_toggle.height()
+        ) // 2
         self.advanced_settings_toggle.move(x, y)
 
     def _set_left_section_open(self, section, is_open: bool):
@@ -877,6 +1012,7 @@ class UtilityControlApp(
     def apply_theme(self, is_dark: bool):
         styles.set_theme(is_dark)
         self.setStyleSheet(styles.window_style() + styles.tooltip_style())
+        self._apply_title_bar_theme()
 
         for frame in self.findChildren(QFrame, "CollapsibleSectionFrame"):
             frame.setStyleSheet(styles.collapsible_section_frame_style())
@@ -944,7 +1080,11 @@ class UtilityControlApp(
         colors = self._get_arrow_colors()
 
         for btn in self.findChildren(QToolButton):
-            if btn.property("leftMasterToggleButton"):
+            if btn.property("titleBarMinimizeButton"):
+                btn.setStyleSheet(styles.title_bar_control_style())
+            elif btn.property("titleBarCloseButton"):
+                btn.setStyleSheet(styles.title_bar_control_style(close_button=True))
+            elif btn.property("leftMasterToggleButton"):
                 btn.setStyleSheet(
                     styles.left_master_toggle_style(
                         colors["text"],

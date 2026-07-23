@@ -37,6 +37,8 @@ TOOLTIP_TEXT = {
     "master_backup_path": "Chooses the base folder used by backup and layout utilities.",
     "backup_path_input": "Shows the current master backup folder path.",
     "side_panel_toggle": "Shows or hides the advanced tools side panel.",
+    "window_minimize": "Minimizes Windows Resurface.",
+    "window_close": "Hides Windows Resurface to the system tray.",
     "master_collapse_left": "Master collapse toggle for all left-panel sections.",
     "master_collapse_right": "Master collapse toggle for all of these regions.",
     "windows_utilities_toggle": "Shows windows utilities grouped by type and quick actions.",
