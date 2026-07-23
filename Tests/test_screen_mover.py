@@ -1,5 +1,6 @@
 import threading
 import time
+from pathlib import Path
 
 import screen_mover
 
@@ -79,7 +80,7 @@ def test_screen_mover_clicks_are_processed_on_worker_thread(monkeypatch):
     dispatch_event = threading.Event()
 
     worker = screen_mover.ScreenMoverWorker()
-    worker.dock_overlay = FakeOverlay(target_hwnd=101, direction="MAXIMIZE")
+    worker.dock_overlay = FakeOverlay(target_hwnd=101, direction="MINIMIZE")
     worker._pump_messages = lambda: None
     worker._update_title_bar_dock = lambda: None
     worker.configure(
@@ -96,7 +97,7 @@ def test_screen_mover_clicks_are_processed_on_worker_thread(monkeypatch):
     worker.on_mouse_click(5, 5, screen_mover.mouse.Button.middle, True)
 
     assert dispatch_event.wait(1.0)
-    assert dispatch_calls == [("MAXIMIZE", "ScreenMoverWorker")]
+    assert dispatch_calls == [("MINIMIZE", "ScreenMoverWorker")]
     assert worker.dock_overlay.hide_threads
     assert worker.dock_overlay.hide_threads[0] == "ScreenMoverWorker"
     assert external_actions == []
@@ -312,3 +313,82 @@ def test_dock_overlay_hit_test_only_uses_visible_actions():
     for action, _label, _center_x, seg_left, seg_right in layout:
         midpoint_x = int((seg_left + seg_right) / 2.0)
         assert overlay.hit_test(midpoint_x, 10) == action
+
+
+def test_dock_overlay_keeps_actions_in_fixed_positions_when_actions_are_hidden():
+    overlay = screen_mover.DockOverlayButton(worker=None, overlay_name="test")
+
+    overlay.visible_actions = tuple(
+        action for action, _label in screen_mover.DOCK_ACTIONS
+    )
+    full_layout = {
+        action: center for action, _label, center, _left, _right in overlay._action_layout(0, 180)
+    }
+
+    overlay.visible_actions = ("RIGHT", "FAR_RIGHT", "MINIMIZE", "MAXIMIZE")
+    reduced_layout = {
+        action: center for action, _label, center, _left, _right in overlay._action_layout(0, 180)
+    }
+
+    assert reduced_layout == {
+        action: full_layout[action] for action in overlay.visible_actions
+    }
+
+
+def test_dock_icon_theme_uses_contrast_with_hysteresis():
+    assert screen_mover._dock_icon_theme_for_luminance(20) == "White"
+    assert screen_mover._dock_icon_theme_for_luminance(240) == "Black"
+    assert screen_mover._dock_icon_theme_for_luminance(150, "White") == "White"
+    assert screen_mover._dock_icon_theme_for_luminance(150, "Black") == "Black"
+    assert screen_mover._dock_icon_theme_for_luminance(None) == "Black"
+
+
+def test_dock_icon_paths_include_windows_resurface_asset_tree():
+    project_root = Path(screen_mover.__file__).resolve().parent.parent
+    directories = screen_mover._dock_icon_directories("Black")
+
+    assert project_root / "Icon Pngs" / "Black" in directories
+    assert (project_root / "Icon Pngs" / "Black" / "Left.png").is_file()
+
+
+def test_self_window_maximize_is_suppressed():
+    dispatched = []
+    worker = screen_mover.ScreenMoverWorker(
+        app_hwnd=101,
+        self_action_dispatch=dispatched.append,
+    )
+
+    worker._dispatch_window_action(101, "MAXIMIZE")
+    worker._dispatch_window_action(101, "MINIMIZE")
+
+    assert dispatched == ["MINIMIZE"]
+    assert "MAXIMIZE" not in worker._visible_dock_actions(101)
+
+
+def test_hotkey_action_uses_foreground_target_and_worker_dispatch():
+    worker = screen_mover.ScreenMoverWorker()
+    dispatched = []
+    worker._foreground_action_target = lambda: 202
+    worker._dispatch_window_action = lambda hwnd, action: dispatched.append(
+        (hwnd, action)
+    )
+
+    worker._handle_action("RIGHT")
+
+    assert dispatched == [(202, "RIGHT")]
+
+
+def test_force_running_keeps_worker_service_available_for_hotkeys():
+    worker = screen_mover.ScreenMoverWorker()
+
+    assert not worker._service_enabled(False, "off", False)
+    assert worker._service_enabled(False, "off", True)
+
+
+def test_legacy_middle_mouse_setting_remains_supported():
+    worker = screen_mover.ScreenMoverWorker()
+
+    assert worker._load_activation_button({"mmb_activation_enabled": True}) == (
+        "middle"
+    )
+    assert worker._load_activation_button({"mmb_activation_enabled": False}) == "off"

@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 import ctypes
 import queue
+import sys
 import threading
 import time
 import traceback
 from ctypes import wintypes
+from pathlib import Path
 from typing import Callable
 
 from pynput import mouse
@@ -16,6 +20,7 @@ import win32process
 
 from state_manager import load_state
 
+
 TITLE_BAR_SIDE_MARGIN = 60
 TITLE_BAR_BUTTON_GAP = 180
 DOCK_WIDTH = 180
@@ -24,18 +29,37 @@ DOCK_TOP_OFFSET = 14
 DOCK_RESTORED_TOP_OFFSET = 2
 LOOP_SLEEP = 0.03
 WINDOW_MOVE_SETTLE_SECONDS = 0.2
+SELF_WINDOW_DOCK_TITLE_CLEARANCE = 166
 DOCK_SIDE_PADDING = 13
 DOCK_ICON_SPACING_REDUCTION = 2
 DOCK_TRANSPARENT_COLOR = win32api.RGB(255, 255, 255)
 DOCK_ARROW_COLOR = win32api.RGB(45, 125, 210)
+DOCK_ICON_FOLDER = "Icon Pngs"
+DOCK_ICON_THEME_BLACK = "Black"
+DOCK_ICON_THEME_WHITE = "White"
+DOCK_ICON_DEFAULT_THEME = DOCK_ICON_THEME_BLACK
+DOCK_DARK_BAR_ICON_THEME = DOCK_ICON_THEME_WHITE
+DOCK_LIGHT_BAR_ICON_THEME = DOCK_ICON_THEME_BLACK
+DOCK_THEME_LUMINANCE_THRESHOLD = 150
+DOCK_THEME_HYSTERESIS = 5
+DOCK_DARK_BAR_LUMINANCE_MAX = DOCK_THEME_LUMINANCE_THRESHOLD - DOCK_THEME_HYSTERESIS
+DOCK_LIGHT_BAR_LUMINANCE_MIN = DOCK_THEME_LUMINANCE_THRESHOLD + DOCK_THEME_HYSTERESIS
 DOCK_ACTIONS = (
     ("FAR_LEFT", "<<"),
     ("LEFT", "<"),
     ("RIGHT", ">"),
     ("FAR_RIGHT", ">>"),
     ("MINIMIZE", "_"),
-    ("MAXIMIZE", "□"),
+    ("MAXIMIZE", "[]"),
 )
+DOCK_ACTION_ICON_FILES = {
+    "FAR_LEFT": "Far Left.png",
+    "LEFT": "Left.png",
+    "RIGHT": "Right.png",
+    "FAR_RIGHT": "Far Right.png",
+    "MINIMIZE": "Minimize.png",
+    "MAXIMIZE": "Maximize.png",
+}
 MONITOR_MOVE_ACTIONS = {"FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT"}
 LRESULT = getattr(wintypes, "LRESULT", ctypes.c_ssize_t)
 WNDPROC_TYPE = ctypes.WINFUNCTYPE(
@@ -45,6 +69,213 @@ WNDPROC_TYPE = ctypes.WINFUNCTYPE(
     wintypes.WPARAM,
     wintypes.LPARAM,
 )
+DOCK_ACTIONS_DICT = dict(DOCK_ACTIONS)
+
+
+class GdiplusStartupInput(ctypes.Structure):
+    _fields_ = [
+        ("GdiplusVersion", ctypes.c_uint32),
+        ("DebugEventCallback", ctypes.c_void_p),
+        ("SuppressBackgroundThread", ctypes.c_int),
+        ("SuppressExternalCodecs", ctypes.c_int),
+    ]
+
+
+class DockIconRenderer:
+    def __init__(self):
+        self._gdiplus = None
+        self._token = ctypes.c_void_p()
+        self._images: dict[tuple[str, str], ctypes.c_void_p | None] = {}
+        self._startup_attempted = False
+
+    def draw_action(self, hdc, action: str, theme: str) -> bool:
+        image = self._image_for_action(action, theme)
+        if not image:
+            return False
+
+        graphics = ctypes.c_void_p()
+        if self._gdiplus.GdipCreateFromHDC(int(hdc), ctypes.byref(graphics)) != 0:
+            return False
+
+        try:
+            status = self._gdiplus.GdipDrawImageRectI(
+                graphics,
+                image,
+                0,
+                0,
+                DOCK_WIDTH,
+                DOCK_HEIGHT,
+            )
+            return status == 0
+        finally:
+            self._gdiplus.GdipDeleteGraphics(graphics)
+
+    def dispose(self) -> None:
+        if self._gdiplus is not None:
+            for image in self._images.values():
+                if image:
+                    try:
+                        self._gdiplus.GdipDisposeImage(image)
+                    except Exception:
+                        pass
+
+            if self._token:
+                try:
+                    self._gdiplus.GdiplusShutdown(self._token)
+                except Exception:
+                    pass
+
+        self._gdiplus = None
+        self._token = ctypes.c_void_p()
+        self._images.clear()
+        self._startup_attempted = False
+
+    def preload_themes(self, themes) -> None:
+        for theme in themes:
+            for action, _label in DOCK_ACTIONS:
+                self._image_for_action(action, theme)
+
+    def _image_for_action(self, action: str, theme: str):
+        cache_key = (theme, action)
+        if cache_key in self._images:
+            return self._images[cache_key]
+
+        image = self._load_image(action, theme)
+        self._images[cache_key] = image
+        return image
+
+    def _load_image(self, action: str, theme: str):
+        if not self._ensure_gdiplus():
+            return None
+
+        filename = DOCK_ACTION_ICON_FILES.get(action)
+        if not filename:
+            return None
+
+        for icon_dir in _dock_icon_directories(theme):
+            icon_path = icon_dir / filename
+            if not icon_path.is_file():
+                continue
+
+            image = ctypes.c_void_p()
+            status = self._gdiplus.GdipLoadImageFromFile(
+                str(icon_path),
+                ctypes.byref(image),
+            )
+            if status == 0 and image:
+                return image
+
+        return None
+
+    def _ensure_gdiplus(self) -> bool:
+        if self._gdiplus is not None:
+            return True
+        if self._startup_attempted:
+            return False
+
+        self._startup_attempted = True
+        try:
+            self._gdiplus = ctypes.windll.gdiplus
+            startup_input = GdiplusStartupInput(1, None, 0, 0)
+            status = self._gdiplus.GdiplusStartup(
+                ctypes.byref(self._token),
+                ctypes.byref(startup_input),
+                None,
+            )
+            if status != 0:
+                self._gdiplus = None
+                return False
+        except Exception:
+            self._gdiplus = None
+            return False
+
+        return True
+
+
+def _dock_icon_directories(theme: str | None = None) -> list[Path]:
+    directories: list[Path] = []
+    theme = str(theme or "").strip()
+
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        directories.extend(_dock_icon_directory_candidates(Path(bundle_root), theme))
+
+    directories.extend(
+        _dock_icon_directory_candidates(Path(sys.executable).resolve().parent, theme)
+    )
+    directories.extend(
+        _dock_icon_directory_candidates(Path(__file__).resolve().parent.parent, theme)
+    )
+
+    return directories
+
+
+def _dock_icon_directory_candidates(root: Path, theme: str) -> list[Path]:
+    base_dir = root / DOCK_ICON_FOLDER
+    if not theme:
+        return [base_dir]
+    return [base_dir / theme, base_dir]
+
+
+def _dock_icon_theme_for_luminance(
+    luminance: float | None,
+    current_theme: str | None = None,
+) -> str:
+    if luminance is None:
+        return DOCK_ICON_DEFAULT_THEME
+    if luminance <= DOCK_DARK_BAR_LUMINANCE_MAX:
+        return DOCK_DARK_BAR_ICON_THEME
+    if luminance >= DOCK_LIGHT_BAR_LUMINANCE_MIN:
+        return DOCK_LIGHT_BAR_ICON_THEME
+    if current_theme in {DOCK_ICON_THEME_BLACK, DOCK_ICON_THEME_WHITE}:
+        return current_theme
+    return DOCK_DARK_BAR_ICON_THEME
+
+
+def _dock_icon_theme_for_rect(rect, current_theme: str | None = None) -> str:
+    luminance = _average_screen_luminance(rect)
+    return _dock_icon_theme_for_luminance(luminance, current_theme)
+
+
+def _average_screen_luminance(rect) -> float | None:
+    left, top, right, bottom = rect
+    width = max(0, int(right - left))
+    height = max(0, int(bottom - top))
+    if width == 0 or height == 0:
+        return None
+
+    sample_x_count = min(9, width)
+    sample_y_count = min(3, height)
+    screen_hdc = None
+    total = 0.0
+    count = 0
+
+    try:
+        screen_hdc = win32gui.GetDC(0)
+        for x_index in range(sample_x_count):
+            x = int(left + ((x_index + 0.5) * width / sample_x_count))
+            for y_index in range(sample_y_count):
+                y = int(top + ((y_index + 0.5) * height / sample_y_count))
+                color = win32gui.GetPixel(screen_hdc, x, y)
+                if color == -1:
+                    continue
+                red = color & 0xFF
+                green = (color >> 8) & 0xFF
+                blue = (color >> 16) & 0xFF
+                total += (0.2126 * red) + (0.7152 * green) + (0.0722 * blue)
+                count += 1
+    except Exception:
+        return None
+    finally:
+        if screen_hdc is not None:
+            try:
+                win32gui.ReleaseDC(0, screen_hdc)
+            except Exception:
+                pass
+
+    if count == 0:
+        return None
+    return total / count
 
 
 def _resolve_target_monitor_index(current_idx, monitor_count, direction):
@@ -258,14 +489,14 @@ class DockOverlayButton:
         self.rect = None
         self.visible = False
         self.visible_actions = tuple(action for action, _label in DOCK_ACTIONS)
+        self.icon_theme = DOCK_ICON_DEFAULT_THEME
         normalized_name = "".join(
             character if str(character).isalnum() else "_"
             for character in str(overlay_name or id(self))
         )
-        self._class_name = (
-            f"WindowsResurfaceDockOverlay_{normalized_name}_{id(self)}"
-        )
+        self._class_name = f"WindowsResurfaceDockOverlay_{normalized_name}_{id(self)}"
         self._wnd_proc = None
+        self._icon_renderer = DockIconRenderer()
 
     def _ensure_window(self):
         if self.hwnd and win32gui.IsWindow(self.hwnd):
@@ -308,6 +539,11 @@ class DockOverlayButton:
             win32con.LWA_COLORKEY,
         )
 
+    def preload_icons(self) -> None:
+        self._icon_renderer.preload_themes(
+            (DOCK_ICON_THEME_BLACK, DOCK_ICON_THEME_WHITE),
+        )
+
     def _window_proc(self, hwnd, msg, wparam, lparam):
         try:
             if msg == win32con.WM_PAINT:
@@ -339,24 +575,24 @@ class DockOverlayButton:
 
     def _action_layout(self, left, right):
         actions = tuple(self.visible_actions)
-        centers = self._icon_centers(left, right, len(actions))
+        all_actions = tuple(action for action, _label in DOCK_ACTIONS)
+        centers = self._icon_centers(left, right, len(all_actions))
         if not centers:
             return []
 
-        if len(centers) > 1:
-            icon_step = centers[1] - centers[0]
-        else:
-            icon_step = max(1.0, float(right - left) - (DOCK_SIDE_PADDING * 2))
+        icon_step = centers[1] - centers[0]
+        center_by_action = dict(zip(all_actions, centers))
 
         return [
             (
-                actions[index],
-                DOCK_ACTIONS_DICT[actions[index]],
-                centers[index],
-                center - (icon_step / 2.0),
-                center + (icon_step / 2.0),
+                action,
+                DOCK_ACTIONS_DICT[action],
+                center_by_action[action],
+                center_by_action[action] - (icon_step / 2.0),
+                center_by_action[action] + (icon_step / 2.0),
             )
-            for index, center in enumerate(centers)
+            for action in actions
+            if action in center_by_action
         ]
 
     def _paint(self, hwnd):
@@ -377,10 +613,13 @@ class DockOverlayButton:
             old_font = win32gui.SelectObject(hdc, font)
 
             vertical_center = (top + bottom) // 2
-            for _action, label, _center_x, seg_left, seg_right in self._action_layout(
+            for action, label, _center_x, seg_left, seg_right in self._action_layout(
                 left,
                 right,
             ):
+                if self._icon_renderer.draw_action(hdc, action, self.icon_theme):
+                    continue
+
                 _text_width, text_height = win32gui.GetTextExtentPoint32(hdc, label)
                 text_rect = (
                     int(seg_left),
@@ -415,6 +654,10 @@ class DockOverlayButton:
 
         left, top, right, _ = rect
         x = left + max(TITLE_BAR_SIDE_MARGIN, ((right - left) - DOCK_WIDTH) // 2)
+        if self.worker.app_hwnd and target_hwnd == self.worker.app_hwnd:
+            min_x = left + SELF_WINDOW_DOCK_TITLE_CLEARANCE
+            max_x = right - DOCK_WIDTH
+            x = min(max(x, min_x), max_x)
         y = top + DOCK_TOP_OFFSET
         try:
             placement = win32gui.GetWindowPlacement(target_hwnd)
@@ -424,16 +667,34 @@ class DockOverlayButton:
         except Exception:
             pass
         new_rect = (x, y, x + DOCK_WIDTH, y + DOCK_HEIGHT)
+        needs_theme_sample = (
+            target_hwnd != self.target_hwnd
+            or new_rect != self.rect
+            or visible_actions != self.visible_actions
+            or not self.visible
+        )
+        icon_theme = self.icon_theme
+        if needs_theme_sample:
+            current_theme = (
+                self.icon_theme
+                if self.visible
+                and target_hwnd == self.target_hwnd
+                and new_rect == self.rect
+                else None
+            )
+            icon_theme = _dock_icon_theme_for_rect(new_rect, current_theme)
         should_update = (
             target_hwnd != self.target_hwnd
             or new_rect != self.rect
             or visible_actions != self.visible_actions
+            or icon_theme != self.icon_theme
             or not self.visible
         )
 
         self.target_hwnd = target_hwnd
         self.rect = new_rect
         self.visible_actions = visible_actions
+        self.icon_theme = icon_theme
         if not should_update:
             return
 
@@ -473,6 +734,7 @@ class DockOverlayButton:
         self.target_hwnd = None
         self.rect = None
         self.visible_actions = tuple(action for action, _label in DOCK_ACTIONS)
+        self.icon_theme = DOCK_ICON_DEFAULT_THEME
         if self.hwnd and win32gui.IsWindow(self.hwnd):
             win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
         self.visible = False
@@ -482,15 +744,14 @@ class DockOverlayButton:
         self.rect = None
         self.visible = False
         self.visible_actions = tuple(action for action, _label in DOCK_ACTIONS)
+        self.icon_theme = DOCK_ICON_DEFAULT_THEME
         if self.hwnd and win32gui.IsWindow(self.hwnd):
             try:
                 win32gui.DestroyWindow(self.hwnd)
             except win32gui.error:
                 pass
         self.hwnd = None
-
-
-DOCK_ACTIONS_DICT = dict(DOCK_ACTIONS)
+        self._icon_renderer.dispose()
 
 
 class ScreenMover:
@@ -511,16 +772,18 @@ class ScreenMover:
 
         self.title_bar_dock_enabled = True
         self.activation_button = "middle"
+        self.force_running = False
         self._desired_title_bar_dock_enabled = True
         self._desired_activation_button = "middle"
+        self._desired_force_running = False
         self.app_hwnd = app_hwnd
         self.self_action_dispatch = self_action_dispatch
         self._last_title_bar_hwnd = None
         self._last_title_bar_rect = None
         self._suppress_dock_until = 0.0
 
-    def configure(self, *, app_hwnd=None, self_action_dispatch=None):
-        state = load_state()
+    def configure(self, *, app_hwnd=None, self_action_dispatch=None, settings=None):
+        state = settings or load_state()
         with self.lock:
             if app_hwnd is not None:
                 self.app_hwnd = app_hwnd
@@ -538,7 +801,13 @@ class ScreenMover:
             activation_button=self._load_activation_button(state),
         )
 
-    def update_settings(self, *, title_bar_dock_enabled=None, activation_button=None):
+    def update_settings(
+        self,
+        *,
+        title_bar_dock_enabled=None,
+        activation_button=None,
+        force_running=None,
+    ):
         with self.lock:
             if title_bar_dock_enabled is not None:
                 self._desired_title_bar_dock_enabled = bool(title_bar_dock_enabled)
@@ -546,19 +815,23 @@ class ScreenMover:
                 self._desired_activation_button = self._normalize_activation_button(
                     activation_button
                 )
+            if force_running is not None:
+                self._desired_force_running = bool(force_running)
 
             desired_dock = self._desired_title_bar_dock_enabled
             desired_button = self._desired_activation_button
+            desired_force = self._desired_force_running
             thread = self.thread
             thread_alive = bool(thread and thread.is_alive())
 
-        should_run = self._service_enabled(desired_dock, desired_button)
+        should_run = self._service_enabled(desired_dock, desired_button, desired_force)
         if should_run:
             if thread_alive:
                 self._queue_command(
                     "settings",
                     desired_dock,
                     desired_button,
+                    desired_force,
                 )
             else:
                 self.start()
@@ -569,6 +842,7 @@ class ScreenMover:
                 "settings",
                 desired_dock,
                 desired_button,
+                desired_force,
             )
         self.stop()
 
@@ -580,14 +854,35 @@ class ScreenMover:
         if thread_alive:
             self._queue_command("click", x, y, button)
 
+    def request_action(self, action):
+        action_value = str(action or "").strip().upper()
+        if action_value not in DOCK_ACTIONS_DICT:
+            return
+
+        with self.lock:
+            thread = self.thread
+            thread_alive = bool(thread and thread.is_alive())
+
+        if thread_alive:
+            self._queue_command("action", action_value)
+
     def _normalize_activation_button(self, button) -> str:
         button_value = str(button).strip().lower()
         if button_value in {"left", "middle", "right", "off"}:
             return button_value
         return "middle"
 
-    def _service_enabled(self, title_bar_dock_enabled, activation_button) -> bool:
-        return bool(title_bar_dock_enabled) or activation_button != "off"
+    def _service_enabled(
+        self,
+        title_bar_dock_enabled,
+        activation_button,
+        force_running=False,
+    ) -> bool:
+        return (
+            bool(force_running)
+            or bool(title_bar_dock_enabled)
+            or activation_button != "off"
+        )
 
     def _load_activation_button(self, state):
         button = str(state.get("screen_mover_activation_button", "")).strip().lower()
@@ -784,11 +1079,20 @@ class ScreenMover:
         )
 
     def _visible_dock_actions(self, hwnd):
-        return get_visible_dock_actions(hwnd)
+        visible_actions = get_visible_dock_actions(hwnd)
+        if hwnd == self.app_hwnd:
+            return tuple(action for action in visible_actions if action != "MAXIMIZE")
+        return visible_actions
 
-    def _apply_settings(self, title_bar_dock_enabled, activation_button):
+    def _apply_settings(
+        self,
+        title_bar_dock_enabled,
+        activation_button,
+        force_running=False,
+    ):
         self.title_bar_dock_enabled = bool(title_bar_dock_enabled)
         self.activation_button = self._normalize_activation_button(activation_button)
+        self.force_running = bool(force_running)
         self._reset_title_bar_tracking()
         if not self.title_bar_dock_enabled:
             self.dock_overlay.hide()
@@ -805,8 +1109,38 @@ class ScreenMover:
         self.dock_overlay.hide()
         self._dispatch_window_action(target, direction)
 
+    def _handle_action(self, action):
+        target = self._foreground_action_target()
+        if not target:
+            return
+        self._dispatch_window_action(target, action)
+
+    def _foreground_action_target(self):
+        try:
+            hwnd = win32gui.GetForegroundWindow()
+        except Exception:
+            return None
+
+        hwnd = self._get_root_window(hwnd)
+        if not hwnd or hwnd == self.dock_overlay.hwnd:
+            return None
+
+        try:
+            rect = win32gui.GetWindowRect(hwnd)
+        except Exception:
+            rect = None
+
+        if self._is_window_fullscreen(hwnd, rect):
+            return None
+
+        if self._is_window_eligible(hwnd) or self._is_self_window_eligible(hwnd):
+            return hwnd
+        return None
+
     def _dispatch_window_action(self, target_hwnd, action):
         if target_hwnd == self.app_hwnd:
+            if action == "MAXIMIZE":
+                return
             if callable(self.self_action_dispatch):
                 try:
                     self.self_action_dispatch(action)
@@ -834,6 +1168,8 @@ class ScreenMover:
                 self._apply_settings(*payload)
             elif command == "click":
                 self._handle_click(*payload)
+            elif command == "action":
+                self._handle_action(*payload)
             elif command == "stop":
                 self.stop_event.set()
 
@@ -843,8 +1179,13 @@ class ScreenMover:
         with self.lock:
             desired_dock = self._desired_title_bar_dock_enabled
             desired_button = self._desired_activation_button
+            desired_force = self._desired_force_running
 
-        self._apply_settings(desired_dock, desired_button)
+        self._apply_settings(desired_dock, desired_button, desired_force)
+        try:
+            self.dock_overlay.preload_icons()
+        except Exception as exc:
+            print(f"[DOCK] Failed to preload dock icons: {exc}")
 
         try:
             while not self.stop_event.is_set():
@@ -880,6 +1221,7 @@ class ScreenMover:
             if not self._service_enabled(
                 self._desired_title_bar_dock_enabled,
                 self._desired_activation_button,
+                self._desired_force_running,
             ):
                 return
 

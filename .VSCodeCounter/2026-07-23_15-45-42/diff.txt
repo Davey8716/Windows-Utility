@@ -1,0 +1,40 @@
+Date : 2026-07-23 15:45:42
+Directory : c:\Users\davey\Desktop\Projects\Win-11-Resurface
+Total : 11 files,  1225 codes, 0 comments, 326 blanks, all 1551 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |         10 |      1,150 |          0 |        291 |      1,441 |
+| Markdown |          1 |         75 |          0 |         35 |        110 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                          | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                             |         11 |      1,225 |          0 |        326 |      1,551 |
+| . (Files)                                                                                     |          1 |         75 |          0 |         35 |        110 |
+| Code Windows Resurface                                                                        |          5 |        719 |          0 |        156 |        875 |
+| Shared                                                                                        |          1 |          8 |          0 |          0 |          8 |
+| Tests                                                                                         |          4 |        423 |          0 |        135 |        558 |
++-----------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                      | language | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\desktop_operations.py | Python   |        103 |          0 |         29 |        132 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\hotkeys.py            | Python   |        190 |          0 |         35 |        225 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\main.py               | Python   |         76 |          0 |         25 |        101 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\screen_mover.py       | Python   |        315 |          0 |         55 |        370 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\tray_toggles.py       | Python   |         35 |          0 |         12 |         47 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\README.md                                    | Markdown |         75 |          0 |         35 |        110 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\app_state_defaults.py                 | Python   |          8 |          0 |          0 |          8 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_folder_creator_launcher.py        | Python   |        122 |          0 |         49 |        171 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_instance_scope.py                 | Python   |         98 |          0 |         27 |        125 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover.py                   | Python   |         65 |          0 |         11 |         76 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_tray_toggles.py                   | Python   |        138 |          0 |         48 |        186 |
+| Total                                                                                         |          |      1,225 |          0 |        326 |      1,551 |
++-----------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+

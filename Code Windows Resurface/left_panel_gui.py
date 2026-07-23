@@ -2,15 +2,17 @@ from pathlib import Path
 from typing import Callable
 
 import styles
+from hotkeys import ACTION_LABELS, hotkey_to_display, normalize_hotkey
 from state_manager import save_state
 from tooltips import left_section_toggle_tooltip, tooltip_text
 from PySide6.QtCore import Qt, QTimer, QSize
-from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QKeySequenceEdit,
     QLabel,
     QLineEdit,
     QMessageBox,
@@ -691,20 +693,19 @@ class LeftPanelBuilder:
         screen_row_layout.setSpacing(10)
         screen_layout.addWidget(screen_row)
 
-        title_bar_dock_btn = self._make_toggle_button(
-            "Title Bar Dock",
+        screen_mover_enabled_btn = self._make_toggle_button(
+            "Screen Mover",
             state.get("title_bar_dock_enabled", True),
         )
-        self._bind_toggle_state_text(title_bar_dock_btn, "Title Bar Dock")
-        screen_row_layout.addWidget(title_bar_dock_btn)
-        app.register_tooltip(title_bar_dock_btn, tooltip_text("title_bar_dock"))
+        self._bind_toggle_state_text(screen_mover_enabled_btn, "Screen Mover")
+        screen_row_layout.addWidget(screen_mover_enabled_btn)
+        app.screen_mover_enabled_btn = screen_mover_enabled_btn
+        app.register_tooltip(
+            screen_mover_enabled_btn,
+            tooltip_text("screen_mover_enabled"),
+        )
 
-        def on_title_bar_dock_changed(checked: bool):
-            state["title_bar_dock_enabled"] = checked
-            save_state(state)
-            app.screen_mover.update_settings(title_bar_dock_enabled=checked)
-
-        title_bar_dock_btn.toggled.connect(on_title_bar_dock_changed)
+        screen_mover_enabled_btn.toggled.connect(app.set_screen_mover_enabled)
 
         screen_move_button_combo = QComboBox()
         screen_move_button_combo.addItem("Move Button: Off", "off")
@@ -713,7 +714,9 @@ class LeftPanelBuilder:
         screen_move_button_combo.addItem("Right Mouse Button", "right")
         screen_move_button_combo.setCursor(Qt.CursorShape.ArrowCursor)
         styles.apply_default_button_size(screen_move_button_combo)
+        screen_move_button_combo.setProperty("styleFontSize", 14)
         screen_move_button_combo.setStyleSheet(styles.organizing_combo_style(14))
+        app.screen_move_button_combo = screen_move_button_combo
 
         def update_screen_move_combo_state() -> None:
             screen_move_button_combo.setProperty(
@@ -747,11 +750,116 @@ class LeftPanelBuilder:
             state["screen_mover_activation_button"] = button_value
             state["mmb_activation_enabled"] = button_value == "middle"
             save_state(state)
-            app.screen_mover.update_settings(activation_button=button_value)
+            app.apply_screen_mover_settings()
             update_screen_move_combo_state()
 
         screen_move_button_combo.currentTextChanged.connect(
             on_screen_move_button_changed
+        )
+
+        shortcut_title = QLabel("Keyboard Shortcuts", screen_section.content)
+        shortcut_title.setStyleSheet(styles.label_style(font_size=14))
+        screen_layout.addWidget(shortcut_title)
+
+        shortcut_grid = QGridLayout()
+        shortcut_grid.setContentsMargins(0, 0, 0, 0)
+        shortcut_grid.setHorizontalSpacing(8)
+        shortcut_grid.setVerticalSpacing(6)
+        shortcut_grid.setColumnStretch(1, 1)
+        screen_layout.addLayout(shortcut_grid)
+
+        hotkey_values = state.get("screen_mover_keyboard_hotkeys", {})
+        if not isinstance(hotkey_values, dict):
+            hotkey_values = {}
+            state["screen_mover_keyboard_hotkeys"] = hotkey_values
+
+        app.screen_mover_hotkey_edits = {}
+
+        def save_hotkey(action: str, edit: QKeySequenceEdit) -> None:
+            portable_text = edit.keySequence().toString(
+                QKeySequence.SequenceFormat.PortableText
+            )
+            normalized = normalize_hotkey(portable_text)
+            state.setdefault("screen_mover_keyboard_hotkeys", {})[
+                action
+            ] = normalized
+
+            display_text = hotkey_to_display(normalized)
+            if (
+                edit.keySequence().toString(
+                    QKeySequence.SequenceFormat.PortableText
+                )
+                != display_text
+            ):
+                edit.blockSignals(True)
+                edit.setKeySequence(QKeySequence(display_text))
+                edit.blockSignals(False)
+
+            save_state(state)
+            app.apply_screen_mover_settings()
+            QTimer.singleShot(0, edit.clearFocus)
+
+        def clear_hotkey(action: str, edit: QKeySequenceEdit) -> None:
+            state.setdefault("screen_mover_keyboard_hotkeys", {})[action] = ""
+            edit.blockSignals(True)
+            edit.clear()
+            edit.blockSignals(False)
+            save_state(state)
+            app.apply_screen_mover_settings()
+
+        for row, (action, label_text) in enumerate(ACTION_LABELS.items()):
+            label = QLabel(label_text, screen_section.content)
+            label.setStyleSheet(styles.label_style(font_size=12))
+
+            edit = QKeySequenceEdit(screen_section.content)
+            if hasattr(edit, "setMaximumSequenceLength"):
+                edit.setMaximumSequenceLength(1)
+            edit.setKeySequence(
+                QKeySequence(hotkey_to_display(hotkey_values.get(action, "")))
+            )
+            edit.setStyleSheet(styles.hotkey_edit_style(13))
+            edit.keySequenceChanged.connect(
+                lambda _sequence, action=action, edit=edit: save_hotkey(action, edit)
+            )
+            app.screen_mover_hotkey_edits[action] = edit
+
+            clear_button = QPushButton("Clear", screen_section.content)
+            clear_button.setCursor(Qt.CursorShape.ArrowCursor)
+            clear_button.setProperty("styleFontSize", 11)
+            clear_button.setStyleSheet(styles.organizing_button_style(11))
+            clear_button.clicked.connect(
+                lambda _checked=False, action=action, edit=edit: clear_hotkey(
+                    action,
+                    edit,
+                )
+            )
+
+            shortcut_grid.addWidget(label, row, 0)
+            shortcut_grid.addWidget(edit, row, 1)
+            shortcut_grid.addWidget(clear_button, row, 2)
+            app.register_tooltip(edit, tooltip_text("screen_mover_hotkey"))
+            app.register_tooltip(
+                clear_button,
+                tooltip_text("screen_mover_hotkey_clear"),
+            )
+
+        reset_button = QPushButton(
+            "Reset Screen Mover Defaults",
+            screen_section.content,
+        )
+        reset_button.setCursor(Qt.CursorShape.ArrowCursor)
+        reset_button.setProperty("styleFontSize", 12)
+        reset_button.setStyleSheet(styles.organizing_button_style(12))
+
+        def reset_screen_mover_defaults() -> None:
+            app.reset_screen_mover_settings()
+
+        reset_button.clicked.connect(reset_screen_mover_defaults)
+        screen_layout.addWidget(reset_button)
+        app.screen_mover_reset_btn = reset_button
+        app.register_tooltip(
+            reset_button,
+            tooltip_text("screen_mover_reset"),
         )
 
         self._attach_left_section(

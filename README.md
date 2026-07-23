@@ -14,7 +14,7 @@ Feel free to clone the repo, explore the code, adapt it to your own setup, and m
 
 ## Features
 
-- Move windows between monitors from a title-bar dock overlay, with optional left, middle, or right mouse activation
+- Move, minimize, or maximize windows from a contrast-aware title-bar dock, with configurable mouse activation and global keyboard shortcuts
 - Keep the app always on top, switch theme, toggle tooltips, and enable Zen Mode to hide desktop icons
 - Warn before lock, log out, restart, or shutdown when external drives are still connected
 - Show plug and unplug notifications for removable drives
@@ -67,7 +67,7 @@ python main.py
 The left side is the everyday tools area:
 
 - `User Interface`: theme, always-on-top, tooltips, desktop Zen Mode, power actions, minimize-after-use
-- `Screen Mover`: title-bar dock and mouse button selection for monitor moving
+- `Screen Mover`: master enable control, mouse trigger, and configurable keyboard shortcuts for moving, minimizing, or maximizing the foreground window
 - `External Drive Reminder Options`: connected drive display plus leave and plug/unplug reminders
 - `General Organising Utilities`: screenshots, desktop layout backup/restore, bookmarks export, taskbar backup, master backup path
 - `Folder Utilities`: launch Folder Creator or create a named desktop folder
@@ -87,6 +87,16 @@ The app stores its settings here:
 
 - `%LOCALAPPDATA%\Windows Resurface\app_state.json`
 
+Screen Mover settings are stored with the rest of Windows Resurface. They are
+independent of the standalone Browser App Mover application and are not imported
+from or written to its settings file.
+
+The Screen Mover supports shortcuts for Far Left, Left, Right, Far Right,
+Minimize, and Maximize. Empty shortcut fields are disabled. The tray menu's
+`Screen Mover Enabled` action mirrors the master control in the main window, and
+`Reset Screen Mover Defaults` restores the middle mouse trigger and clears all
+shortcuts without changing other app settings.
+
 The master backup path is configurable inside the app and defaults to your home folder. Depending on which tools you use, Windows Resurface can create files such as:
 
 - `TaskBarApps\` for taskbar shortcut backups
@@ -100,10 +110,12 @@ The master backup path is configurable inside the app and defaults to your home 
 - Some actions may prompt for administrator approval depending on the Windows tool being opened or command being run.
 - A few Windows utilities depend on Windows edition or permissions. For example, some management consoles may not be available on all Home installations.
 - The `Folder Creator` button expects the companion tool to remain in the repo at `Code Folder Creator/`.
+- Packaged builds should include the `Icon Pngs/` folder beside the executable or as bundled application data. The Screen Mover falls back to blue text symbols if those images are unavailable.
 
 ## Project Structure
 
 - `Code Windows Resurface/` main app source
+- `Icon Pngs/` black and white Screen Mover dock actions
 - `Code Folder Creator/` optional companion tool opened by the app
 - `Shared/` shared app state defaults and JSON state manager
 - `Tests/` automated tests for shared state handling and screen mover behavior

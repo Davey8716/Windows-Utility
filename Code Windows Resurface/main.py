@@ -15,6 +15,7 @@ from app_notifications import WindowMessageMixin
 from app_paths import MasterBackupPathsMixin
 from desktop_operations import DesktopOperationsMixin
 from external_drive_mixin import ExternalDriveMixin
+from hotkeys import GlobalHotkeyManager, VALID_ACTIONS, active_hotkeys
 from left_panel_gui import LeftPanelBuilder
 from right_utility_gui import (
     AdvancedToolsPanel as RightAdvancedToolsPanel,
@@ -37,6 +38,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QApplication,
     QFrame,
+    QKeySequenceEdit,
     QMessageBox,
     QSizePolicy,
     QStyle,
@@ -310,6 +312,7 @@ class UtilityControlApp(
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
         self.screen_mover = ScreenMover(name="WindowsResurfaceMain")
+        self.hotkey_manager = GlobalHotkeyManager(self.screen_mover.request_action)
 
         self._build_ui()
         self._folder_creator_monitor_timer = QTimer(self)
@@ -324,8 +327,9 @@ class UtilityControlApp(
         self.screen_mover.configure(
             app_hwnd=int(self.winId()),
             self_action_dispatch=self._screen_mover_bridge.dispatch,
+            settings=self.state,
         )
-        self.screen_mover.start()
+        self.apply_screen_mover_settings()
         
         self._set_main_window_topmost_state(True)
         self._apply_fixed_window_style()
@@ -490,7 +494,73 @@ class UtilityControlApp(
         except Exception:
             pass
 
+    def apply_screen_mover_settings(self) -> None:
+        enabled = bool(self.state.get("title_bar_dock_enabled", True))
+        hotkeys = active_hotkeys(
+            self.state.get("screen_mover_keyboard_hotkeys", {})
+        )
+        activation_button = (
+            self.state.get("screen_mover_activation_button", "middle")
+            if enabled
+            else "off"
+        )
+
+        self.screen_mover.update_settings(
+            title_bar_dock_enabled=enabled,
+            activation_button=activation_button,
+            force_running=enabled and bool(hotkeys),
+        )
+        self.hotkey_manager.update_hotkeys(hotkeys, enabled=enabled)
+
+        tray_manager = getattr(self, "tray_manager", None)
+        if tray_manager is not None:
+            tray_manager.sync_screen_mover_action()
+
+    def set_screen_mover_enabled(self, enabled: bool) -> None:
+        enabled = bool(enabled)
+        self.state["title_bar_dock_enabled"] = enabled
+
+        toggle = getattr(self, "screen_mover_enabled_btn", None)
+        if toggle is not None and toggle.isChecked() != enabled:
+            toggle.blockSignals(True)
+            toggle.setChecked(enabled)
+            toggle.blockSignals(False)
+            toggle.setText(
+                "Screen Mover On" if enabled else "Screen Mover Off"
+            )
+
+        save_state(self.state)
+        self.apply_screen_mover_settings()
+
+    def reset_screen_mover_settings(self) -> None:
+        self.state["title_bar_dock_enabled"] = True
+        self.state["screen_mover_activation_button"] = "middle"
+        self.state["mmb_activation_enabled"] = True
+        self.state["screen_mover_keyboard_hotkeys"] = {
+            action: "" for action in VALID_ACTIONS
+        }
+
+        combo = getattr(self, "screen_move_button_combo", None)
+        if combo is not None:
+            combo_index = combo.findData("middle")
+            combo.blockSignals(True)
+            combo.setCurrentIndex(combo_index)
+            combo.blockSignals(False)
+            combo.setProperty("persistPressed", True)
+            combo.style().unpolish(combo)
+            combo.style().polish(combo)
+
+        for edit in getattr(self, "screen_mover_hotkey_edits", {}).values():
+            edit.blockSignals(True)
+            edit.clear()
+            edit.blockSignals(False)
+
+        self.set_screen_mover_enabled(True)
+
     def handle_screen_mover_self_action(self, action: str) -> None:
+        if action == "MAXIMIZE":
+            return
+
         hwnd = int(self.winId())
         if not hwnd:
             return
@@ -506,6 +576,11 @@ class UtilityControlApp(
 
         self._shutdown_complete = True
         self._unregister_session_notifications()
+
+        try:
+            self.hotkey_manager.stop()
+        except Exception:
+            pass
 
         try:
             self.screen_mover.stop()
@@ -785,6 +860,9 @@ class UtilityControlApp(
                 line_edit.setStyleSheet(styles.surfaced_line_edit_style(15))
             else:
                 line_edit.setStyleSheet(styles.line_edit_style(15))
+
+        for hotkey_edit in self.findChildren(QKeySequenceEdit):
+            hotkey_edit.setStyleSheet(styles.hotkey_edit_style(13))
 
         backup_path_label = getattr(self, "backup_path_input", None)
         if (

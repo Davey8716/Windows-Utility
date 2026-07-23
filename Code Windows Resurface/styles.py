@@ -395,6 +395,24 @@ def organizing_button_style(font_size: int | None = None) -> str:
 def toggle_button_style(font_size: int | None = None) -> str:
     return organizing_button_style(font_size=font_size)
 
+def hotkey_edit_style(font_size: int = 13) -> str:
+    font_size = coerce_font_size(font_size, 13) or 13
+    return f"""
+        QKeySequenceEdit {{
+            {label_style(font_size=font_size, bold=True, color=theme_text_color())}
+            min-height: 26px;
+            padding: 2px 6px;
+            background-color: {qcolor_css(themed_button_bg())};
+            border: 1px solid {qcolor_css(themed_button_border())};
+            border-radius: 3px;
+            selection-background-color: {qcolor_css(themed_button_pressed())};
+        }}
+        QKeySequenceEdit:hover,
+        QKeySequenceEdit:focus {{
+            border-color: {qcolor_css(themed_button_pressed())};
+        }}
+    """
+
 def text_edit_style(font_family: str, font_size: int) -> str:
     return f"""
         QTextEdit {{

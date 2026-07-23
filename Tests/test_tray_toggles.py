@@ -6,7 +6,7 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QObject
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QApplication
 
 from tray_toggles import (
@@ -183,3 +183,31 @@ def test_tray_manager_uses_existing_window_icon_for_tray() -> None:
     manager = TrayIconManager(FakeWindow())
 
     assert manager._resolve_tray_icon().cacheKey() == icon.cacheKey()
+
+
+def test_tray_screen_mover_action_syncs_and_dispatches() -> None:
+    _app()
+
+    class FakeWindow(QObject):
+        def __init__(self):
+            super().__init__()
+            self.state = {"title_bar_dock_enabled": False}
+            self.enabled_calls = []
+
+        def set_screen_mover_enabled(self, enabled):
+            self.enabled_calls.append(enabled)
+            self.state["title_bar_dock_enabled"] = enabled
+
+    window = FakeWindow()
+    manager = TrayIconManager(window)
+    manager.screen_mover_action = QAction("Screen Mover Enabled", window)
+    manager.screen_mover_action.setCheckable(True)
+
+    manager.sync_screen_mover_action()
+    assert not manager.screen_mover_action.isChecked()
+
+    manager.toggle_screen_mover(True)
+    manager.sync_screen_mover_action()
+
+    assert window.enabled_calls == [True]
+    assert manager.screen_mover_action.isChecked()

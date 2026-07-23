@@ -6,7 +6,6 @@ import styles
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import QObject
-from screen_mover import SCREEN_MOVER
 
 
 TRAY_ICON_ENV_VAR = "EXE_BUILDER_TRAY_ICON_PATH"
@@ -23,6 +22,7 @@ class TrayIconManager(QObject):
         self.app = app
         self.tray = None
         self.zen_mode_action = None
+        self.screen_mover_action = None
 
     def _resolve_tray_icon(self):
         icon = self.app.windowIcon()
@@ -49,17 +49,22 @@ class TrayIconManager(QObject):
         self.zen_mode_action.toggled.connect(self.toggle_zen_mode)
         menu.addAction(self.zen_mode_action)
 
+        self.screen_mover_action = QAction("Screen Mover Enabled", self.app)
+        self.screen_mover_action.setCheckable(True)
+        self.screen_mover_action.toggled.connect(self.toggle_screen_mover)
+        menu.addAction(self.screen_mover_action)
+
         menu.addSeparator()
 
         quit_action = QAction("Quit", self.app)
         quit_action.triggered.connect(self.quit_from_tray)
         menu.addAction(quit_action)
 
-        menu.aboutToShow.connect(self.sync_zen_mode_action)
+        menu.aboutToShow.connect(self.sync_actions)
         self.tray.setContextMenu(menu)
         self.tray.activated.connect(self.on_tray_activated)
         self.tray.show()
-        self.sync_zen_mode_action()
+        self.sync_actions()
 
     def toggle_window(self):
         if self.app.isVisible():
@@ -75,6 +80,21 @@ class TrayIconManager(QObject):
         self.zen_mode_action.blockSignals(True)
         self.zen_mode_action.setChecked(enabled)
         self.zen_mode_action.blockSignals(False)
+
+    def sync_screen_mover_action(self):
+        if not self.screen_mover_action:
+            return
+
+        enabled = bool(
+            getattr(self.app, "state", {}).get("title_bar_dock_enabled", True)
+        )
+        self.screen_mover_action.blockSignals(True)
+        self.screen_mover_action.setChecked(enabled)
+        self.screen_mover_action.blockSignals(False)
+
+    def sync_actions(self):
+        self.sync_zen_mode_action()
+        self.sync_screen_mover_action()
 
     def toggle_zen_mode(self, enabled: bool):
         zen_button = getattr(self.app, "desktop_zen_btn", None)
@@ -97,6 +117,13 @@ class TrayIconManager(QObject):
             return
 
         self.sync_zen_mode_action()
+
+    def toggle_screen_mover(self, enabled: bool):
+        setter = getattr(self.app, "set_screen_mover_enabled", None)
+        if callable(setter):
+            setter(enabled)
+        else:
+            self.sync_screen_mover_action()
 
     def quit_from_tray(self):
         setattr(self.app, "_quit_requested", True)
