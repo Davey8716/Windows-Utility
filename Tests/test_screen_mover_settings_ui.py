@@ -1,6 +1,7 @@
 import copy
 
 import main
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QKeySequence
 from PySide6.QtWidgets import QApplication
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
@@ -133,7 +134,7 @@ class FakeWindow:
         }
 
 
-def _build_offscreen_window(monkeypatch, state):
+def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
     monkeypatch.setattr(main, "save_state", lambda _state: None)
     monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
@@ -165,7 +166,80 @@ def _build_offscreen_window(monkeypatch, state):
         "run_recycle_bin_auto_cleanup",
         lambda _self: None,
     )
+    if window_height is not None:
+        monkeypatch.setattr(
+            main.UtilityControlApp,
+            "_resolve_window_height",
+            lambda _self: window_height,
+        )
     return main.UtilityControlApp()
+
+
+def test_window_height_resolver_uses_preferred_or_available_work_area():
+    resolver = main.UtilityControlApp._height_for_available_height
+
+    assert main.UtilityControlApp.PREFERRED_WINDOW_HEIGHT == 1180
+    assert resolver(None) == 1180
+    assert resolver(1440) == 1180
+    assert resolver(1180) == 1180
+    assert resolver(900) == 900
+
+
+def test_window_height_resolver_reads_screen_available_geometry():
+    class FakeGeometry:
+        def __init__(self, height):
+            self._height = height
+
+        def height(self):
+            return self._height
+
+    class FakeScreen:
+        def __init__(self, height):
+            self._geometry = FakeGeometry(height)
+
+        def availableGeometry(self):
+            return self._geometry
+
+    class HeightResolverWindow:
+        def __init__(self, height):
+            self._screen = FakeScreen(height)
+
+        def screen(self):
+            return self._screen
+
+        @staticmethod
+        def _height_for_available_height(available_height):
+            return main.UtilityControlApp._height_for_available_height(available_height)
+
+    assert main.UtilityControlApp._resolve_window_height(HeightResolverWindow(1440)) == 1180
+    assert main.UtilityControlApp._resolve_window_height(HeightResolverWindow(900)) == 900
+
+
+def test_left_panel_scrollbar_policy_tracks_available_height(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    tall_window = _build_offscreen_window(monkeypatch, state, window_height=1180)
+
+    try:
+        assert tall_window.main_scroll.verticalScrollBarPolicy() == (
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+    finally:
+        tall_window._quit_requested = True
+        tall_window.close()
+        tall_window.deleteLater()
+        qt_app.processEvents()
+
+    constrained_window = _build_offscreen_window(monkeypatch, state, window_height=800)
+    try:
+        assert constrained_window.main_scroll.verticalScrollBarPolicy() == (
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+    finally:
+        constrained_window._quit_requested = True
+        constrained_window.close()
+        constrained_window.deleteLater()
+        qt_app.processEvents()
 
 
 def test_master_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):

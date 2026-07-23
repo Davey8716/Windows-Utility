@@ -252,6 +252,7 @@ class UtilityControlApp(
     QWidget,
 ):
     MAIN_PANEL_WIDTH = 450
+    PREFERRED_WINDOW_HEIGHT = 1180
     RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 65
     MAIN_SECTION_SIDE_PADDING = 14
     LEFT_TOGGLE_RIGHT_INSET = 14
@@ -285,7 +286,7 @@ class UtilityControlApp(
         self.EXPANDED_WIDTH = self.COLLAPSED_WIDTH + self.RIGHT_PANEL_WIDTH
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH
-        self.WINDOW_HEIGHT = 875
+        self.WINDOW_HEIGHT = self._resolve_window_height()
         self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
         
@@ -701,6 +702,7 @@ class UtilityControlApp(
         )
         
         LeftPanelBuilder(self).build()
+        self._update_main_scrollbar_policy()
 
         if self.advanced_settings_open:
             self.WINDOW_WIDTH = self.EXPANDED_WIDTH
@@ -745,6 +747,35 @@ class UtilityControlApp(
             self.height(),
         )
 
+    @classmethod
+    def _height_for_available_height(cls, available_height: int | None) -> int:
+        """Return the preferred height unless the work area is shorter."""
+        if available_height is None or available_height <= 0:
+            return cls.PREFERRED_WINDOW_HEIGHT
+        return min(cls.PREFERRED_WINDOW_HEIGHT, int(available_height))
+
+    def _resolve_window_height(self) -> int:
+        screen = self.screen() or QApplication.primaryScreen()
+        available_height = (
+            screen.availableGeometry().height() if screen is not None else None
+        )
+        return self._height_for_available_height(available_height)
+
+    def _update_main_scrollbar_policy(self) -> None:
+        if not hasattr(self, "main_scroll") or not hasattr(self, "main_frame"):
+            return
+
+        layout = self.main_frame.layout()
+        if layout is not None:
+            layout.activate()
+        content_height = self.main_frame.sizeHint().height()
+        policy = (
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+            if content_height > self.WINDOW_HEIGHT
+            else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.main_scroll.setVerticalScrollBarPolicy(policy)
+
     def _position_advanced_settings_toggle(self):
         x = self.MAIN_PANEL_WIDTH - self.advanced_settings_toggle.width() + 14
         y = (self.height() - self.advanced_settings_toggle.height()) // 2
@@ -762,6 +793,7 @@ class UtilityControlApp(
                 )
             )
         self._sync_left_section_spacing(section)
+        self._update_main_scrollbar_policy()
 
     def _sync_left_section_spacing(self, section):
         if hasattr(section, "is_open"):

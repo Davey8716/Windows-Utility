@@ -822,6 +822,7 @@ class LeftPanelBuilder:
                     Qt.ArrowType.DownArrow if is_open else Qt.ArrowType.UpArrow
                 )
             )
+            app._update_main_scrollbar_policy()
             if persist:
                 app.save_all_settings()
 
