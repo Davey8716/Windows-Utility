@@ -31,7 +31,6 @@ from PySide6.QtCore import QObject, Qt, QTimer, Signal, QSize
 from PySide6.QtWidgets import (
     QWidget,
     QComboBox,
-    QHBoxLayout,
     QLabel,
     QPushButton,
     QToolButton,
@@ -288,8 +287,10 @@ class UtilityControlApp(
     QWidget,
 ):
     MAIN_PANEL_WIDTH = 480
-    PREFERRED_WINDOW_HEIGHT = 1180
-    TITLE_BAR_HEIGHT = 36
+    PREFERRED_WINDOW_HEIGHT = 1216
+    TITLE_TEXT_ROW_HEIGHT = 36
+    TITLE_CONTROL_ROW_HEIGHT = 36
+    TITLE_BAR_HEIGHT = TITLE_TEXT_ROW_HEIGHT + TITLE_CONTROL_ROW_HEIGHT
     RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 65
     MAIN_SECTION_SIDE_PADDING = 14
     LEFT_TOGGLE_RIGHT_INSET = 14
@@ -758,51 +759,46 @@ class UtilityControlApp(
         title_bar = QFrame(self.root_container)
         title_bar.setObjectName("WindowTitleBar")
         title_bar.setFixedHeight(self.TITLE_BAR_HEIGHT)
-        title_layout = QHBoxLayout(title_bar)
-        title_layout.setContentsMargins(12, 0, 0, 0)
-        title_layout.setSpacing(0)
 
         drag_region = TitleBarDragRegion(self)
-        drag_layout = QHBoxLayout(drag_region)
-        drag_layout.setContentsMargins(0, 0, 0, 0)
-        title = QLabel("Windows Resurface", drag_region)
+        drag_region.setParent(title_bar)
+
+        title = QLabel("Windows Resurface", title_bar)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        drag_layout.addWidget(title)
-        title_layout.addWidget(drag_region, 1)
 
         master_btn = QToolButton(title_bar)
         master_btn.setProperty("leftMasterToggleButton", True)
         master_btn.setCursor(Qt.CursorShape.ArrowCursor)
         master_btn.setArrowType(Qt.ArrowType.NoArrow)
         left_master_slot_width, _ = styles.left_master_toggle_slot_size()
-        master_btn.setFixedSize(left_master_slot_width + 8, self.TITLE_BAR_HEIGHT)
+        master_btn.setFixedSize(left_master_slot_width + 8, self.TITLE_CONTROL_ROW_HEIGHT)
         self.master_collapse_btn_left = master_btn
         self.register_tooltip(master_btn, tooltip_text("master_collapse_left"))
-        title_layout.addWidget(master_btn)
 
         minimize_btn = QToolButton(title_bar)
         minimize_btn.setProperty("titleBarMinimizeButton", True)
         minimize_btn.setCursor(Qt.CursorShape.ArrowCursor)
         minimize_btn.setIconSize(QSize(16, 16))
-        minimize_btn.setFixedSize(42, self.TITLE_BAR_HEIGHT)
+        minimize_btn.setFixedSize(42, self.TITLE_TEXT_ROW_HEIGHT)
         minimize_btn.clicked.connect(self.showMinimized)
         self.window_minimize_btn = minimize_btn
         self.register_tooltip(minimize_btn, tooltip_text("window_minimize"))
-        title_layout.addWidget(minimize_btn)
 
         close_btn = QToolButton(title_bar)
         close_btn.setProperty("titleBarCloseButton", True)
         close_btn.setCursor(Qt.CursorShape.ArrowCursor)
         close_btn.setIconSize(QSize(16, 16))
-        close_btn.setFixedSize(42, self.TITLE_BAR_HEIGHT)
+        close_btn.setFixedSize(42, self.TITLE_TEXT_ROW_HEIGHT)
         close_btn.clicked.connect(self.close)
         self.window_close_btn = close_btn
         self.register_tooltip(close_btn, tooltip_text("window_close"))
-        title_layout.addWidget(close_btn)
 
         self.window_title_bar = title_bar
+        self.window_drag_region = drag_region
         self.window_title_label = title
         self._apply_title_bar_theme()
+        self._position_title_bar_controls()
 
     def toggle_advanced_settings_panel(self):
         self.advanced_settings_open = not self.advanced_settings_open
@@ -830,6 +826,7 @@ class UtilityControlApp(
         self.root_container.setGeometry(0, 0, self.width(), self.height())
         content_height = self.height() - self.TITLE_BAR_HEIGHT
         self.window_title_bar.setGeometry(0, 0, self.width(), self.TITLE_BAR_HEIGHT)
+        self._position_title_bar_controls()
         self.main_scroll.setGeometry(
             0,
             self.TITLE_BAR_HEIGHT,
@@ -842,6 +839,54 @@ class UtilityControlApp(
             self.ADVANCED_PANEL_WIDTH,
             content_height,
         )
+
+    def _position_title_bar_controls(self) -> None:
+        if not hasattr(self, "window_title_label"):
+            return
+
+        title_control_width = (
+            self.window_minimize_btn.width() + self.window_close_btn.width()
+        )
+        self.window_drag_region.setGeometry(
+            0,
+            0,
+            max(0, self.width() - title_control_width),
+            self.TITLE_TEXT_ROW_HEIGHT,
+        )
+        self.window_title_label.setGeometry(
+            0,
+            0,
+            self.width(),
+            self.TITLE_TEXT_ROW_HEIGHT,
+        )
+        close_x = self.width() - self.window_close_btn.width()
+        minimize_x = close_x - self.window_minimize_btn.width()
+        self.window_minimize_btn.move(minimize_x, 0)
+        self.window_close_btn.move(close_x, 0)
+        self.window_drag_region.lower()
+        self.window_title_label.raise_()
+        self.window_minimize_btn.raise_()
+        self.window_close_btn.raise_()
+        self._position_left_master_collapse_button()
+
+    def _position_left_master_collapse_button(self) -> None:
+        if not hasattr(self, "master_collapse_btn_left"):
+            return
+
+        section_toggle_width, _ = styles.section_toggle_slot_size()
+        section_toggle_x = (
+            self.MAIN_SECTION_SIDE_PADDING
+            + self.LEFT_SECTION_VISIBLE_FRAME_WIDTH
+            - self.LEFT_TOGGLE_RIGHT_INSET
+            - section_toggle_width
+        )
+        section_toggle_center_x = section_toggle_x + (section_toggle_width // 2)
+        x = section_toggle_center_x - (self.master_collapse_btn_left.width() // 2)
+        y = self.TITLE_TEXT_ROW_HEIGHT + (
+            self.TITLE_CONTROL_ROW_HEIGHT - self.master_collapse_btn_left.height()
+        ) // 2
+        self.master_collapse_btn_left.move(x, y)
+        self.master_collapse_btn_left.raise_()
 
     def _apply_title_bar_theme(self) -> None:
         self.window_title_bar.setStyleSheet(

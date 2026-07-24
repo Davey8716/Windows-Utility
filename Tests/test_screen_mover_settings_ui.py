@@ -178,9 +178,10 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
 def test_window_height_resolver_uses_preferred_or_available_work_area():
     resolver = main.UtilityControlApp._height_for_available_height
 
-    assert main.UtilityControlApp.PREFERRED_WINDOW_HEIGHT == 1180
-    assert resolver(None) == 1180
-    assert resolver(1440) == 1180
+    assert main.UtilityControlApp.PREFERRED_WINDOW_HEIGHT == 1216
+    assert resolver(None) == 1216
+    assert resolver(1440) == 1216
+    assert resolver(1216) == 1216
     assert resolver(1180) == 1180
     assert resolver(900) == 900
 
@@ -211,14 +212,14 @@ def test_window_height_resolver_reads_screen_available_geometry():
         def _height_for_available_height(available_height):
             return main.UtilityControlApp._height_for_available_height(available_height)
 
-    assert main.UtilityControlApp._resolve_window_height(HeightResolverWindow(1440)) == 1180
+    assert main.UtilityControlApp._resolve_window_height(HeightResolverWindow(1440)) == 1216
     assert main.UtilityControlApp._resolve_window_height(HeightResolverWindow(900)) == 900
 
 
 def test_left_panel_scrollbar_policy_tracks_available_height(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
-    tall_window = _build_offscreen_window(monkeypatch, state, window_height=1180)
+    tall_window = _build_offscreen_window(monkeypatch, state, window_height=1216)
 
     try:
         assert tall_window.main_scroll.verticalScrollBarPolicy() == (
@@ -245,6 +246,7 @@ def test_left_panel_scrollbar_policy_tracks_available_height(monkeypatch):
 def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["advanced_panel_open"] = True
     minimize_calls = []
     monkeypatch.setattr(
         main.UtilityControlApp,
@@ -254,13 +256,48 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
     window = _build_offscreen_window(monkeypatch, state)
 
     try:
+        window.show()
+        qt_app.processEvents()
+
+        def window_center_x(widget):
+            position = widget.mapTo(window, QPoint(0, 0))
+            return position.x() + (widget.width() // 2)
+
+        def window_y(widget):
+            return widget.mapTo(window, QPoint(0, 0)).y()
+
         assert window.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert window.TITLE_BAR_HEIGHT == (
+            window.TITLE_TEXT_ROW_HEIGHT + window.TITLE_CONTROL_ROW_HEIGHT
+        )
         assert window.window_title_label.text() == "Windows Resurface"
         assert window.master_collapse_btn_left.parent() is window.window_title_bar
         assert window.window_minimize_btn.parent() is window.window_title_bar
         assert window.window_close_btn.parent() is window.window_title_bar
         assert not window.window_minimize_btn.icon().isNull()
         assert not window.window_close_btn.icon().isNull()
+
+        user_interface_section = next(
+            section
+            for section in window.left_sections
+            if section.section_id == "user_interface"
+        )
+        assert window_center_x(window.window_title_label) == window.width() // 2
+        assert window_y(window.window_title_label) == 0
+        assert window.window_title_label.height() == window.TITLE_TEXT_ROW_HEIGHT
+        assert window_y(window.window_minimize_btn) == 0
+        assert window_y(window.window_close_btn) == 0
+        assert window.window_minimize_btn.height() == window.TITLE_TEXT_ROW_HEIGHT
+        assert window.window_close_btn.height() == window.TITLE_TEXT_ROW_HEIGHT
+        assert window.master_collapse_btn_left.x() < window.MAIN_PANEL_WIDTH
+        assert window.window_minimize_btn.x() > window.MAIN_PANEL_WIDTH
+        assert window.window_close_btn.x() > window.window_minimize_btn.x()
+        assert window_y(window.master_collapse_btn_left) == window.TITLE_TEXT_ROW_HEIGHT
+        assert window_center_x(window.master_collapse_btn_left) == window_center_x(
+            user_interface_section.toggle_btn
+        )
+        assert window.main_scroll.y() == window.TITLE_BAR_HEIGHT
+        assert window.advanced_settings_panel.y() == window.TITLE_BAR_HEIGHT
 
         left_states = copy.deepcopy(window.state["left_section_states"])
         window.window_minimize_btn.click()
@@ -271,8 +308,6 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         assert "font-size: 18px" in window.window_close_btn.styleSheet()
         assert window.state["left_section_states"] == left_states
 
-        window.show()
-        qt_app.processEvents()
         window.window_close_btn.click()
         qt_app.processEvents()
         assert not window.isVisible()
