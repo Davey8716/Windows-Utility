@@ -41,7 +41,6 @@ from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QKeySequenceEdit,
-    QMessageBox,
     QSizePolicy,
     QStyle,
     QStyledItemDelegate,
@@ -288,7 +287,7 @@ class UtilityControlApp(
     DesktopOperationsMixin,
     QWidget,
 ):
-    MAIN_PANEL_WIDTH = 450
+    MAIN_PANEL_WIDTH = 480
     PREFERRED_WINDOW_HEIGHT = 1180
     TITLE_BAR_HEIGHT = 36
     RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 65
@@ -305,7 +304,7 @@ class UtilityControlApp(
     ORGANISING_SECTION_TOP_SPACER = 0
     FOLDER_UTILITIES_TOP_SPACER = 0
     RECYCLE_BIN_ACTIONS_TOP_SPACER = 0
-    MAIN_SECTION_FRAME_WIDTH = 405
+    MAIN_SECTION_FRAME_WIDTH = 435
     LEFT_SECTION_VISIBLE_FRAME_WIDTH = MAIN_SECTION_FRAME_WIDTH - 4
     MAIN_SECTION_OUTER_WIDTH = (
         MAIN_SECTION_FRAME_WIDTH + (MAIN_SECTION_SIDE_PADDING * 2)
@@ -320,7 +319,7 @@ class UtilityControlApp(
         self.setWindowTitle("Windows Resurface")
         self.setStyleSheet(styles.window_style() + styles.tooltip_style())
         self.setWindowIcon(resolve_application_icon(self))
-        self.COLLAPSED_WIDTH = 470
+        self.COLLAPSED_WIDTH = 500
         self.EXPANDED_WIDTH = self.COLLAPSED_WIDTH + self.RIGHT_PANEL_WIDTH
         self.ADVANCED_PANEL_WIDTH = self.EXPANDED_WIDTH - self.COLLAPSED_WIDTH
         self.WINDOW_WIDTH = self.COLLAPSED_WIDTH

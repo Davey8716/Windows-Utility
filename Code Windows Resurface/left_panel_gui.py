@@ -25,6 +25,13 @@ from PySide6.QtWidgets import (
 
 
 class LeftPanelBuilder:
+    LEFT_CONTROL_COLUMN_WIDTH = styles.DEFAULT_BUTTON_WIDTH
+    RIGHT_CONTROL_COLUMN_WIDTH = 210
+    CONTROL_COLUMN_GAP = 10
+    CONTROL_ROW_WIDTH = (
+        LEFT_CONTROL_COLUMN_WIDTH + CONTROL_COLUMN_GAP + RIGHT_CONTROL_COLUMN_WIDTH
+    )
+
     def __init__(self, app):
         self.app = app
         self.state = app.state
@@ -203,6 +210,35 @@ class LeftPanelBuilder:
         button.setProperty("styleFontSize", font_size)
         button.setStyleSheet(styles.toggle_button_style(font_size=font_size))
         return button
+
+    def _make_two_column_control_row(self) -> tuple[QWidget, QGridLayout]:
+        row = QWidget()
+        row.setFixedWidth(self.CONTROL_ROW_WIDTH)
+        row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+        layout = QGridLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setHorizontalSpacing(self.CONTROL_COLUMN_GAP)
+        layout.setVerticalSpacing(0)
+        layout.setColumnMinimumWidth(0, self.LEFT_CONTROL_COLUMN_WIDTH)
+        layout.setColumnMinimumWidth(1, self.RIGHT_CONTROL_COLUMN_WIDTH)
+        layout.setColumnStretch(0, 0)
+        layout.setColumnStretch(1, 0)
+        return row, layout
+
+    def _add_two_column_control_row(
+        self,
+        parent_layout: QVBoxLayout,
+        left_widget: QWidget,
+        right_widget: QWidget,
+    ) -> QWidget:
+        row, row_layout = self._make_two_column_control_row()
+        left_widget.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
+        right_widget.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
+        row_layout.addWidget(left_widget, 0, 0)
+        row_layout.addWidget(right_widget, 0, 1)
+        parent_layout.addWidget(row)
+        return row
 
     def _bind_toggle_state_text(
         self,
@@ -419,13 +455,16 @@ class LeftPanelBuilder:
             expanded_spacer_height=app.USER_INTERFACE_TOP_SPACER,
         )
 
-        compact_toggle_width = (styles.DEFAULT_BUTTON_WIDTH - 10) // 2
+        compact_toggle_width = (
+            self.LEFT_CONTROL_COLUMN_WIDTH - self.CONTROL_COLUMN_GAP
+        ) // 2
 
-        ui_top_row = QWidget(ui_section.content)
-        ui_top_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        ui_top_row_layout = QHBoxLayout(ui_top_row)
-        ui_top_row_layout.setContentsMargins(0, 0, 0, 0)
-        ui_top_row_layout.setSpacing(10)
+        ui_top_row, ui_top_row_layout = self._make_two_column_control_row()
+        compact_toggle_slot = QWidget(ui_top_row)
+        compact_toggle_slot.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
+        compact_toggle_slot_layout = QHBoxLayout(compact_toggle_slot)
+        compact_toggle_slot_layout.setContentsMargins(0, 0, 0, 0)
+        compact_toggle_slot_layout.setSpacing(self.CONTROL_COLUMN_GAP)
         ui_layout.addWidget(ui_top_row)
 
         dark_mode_btn = self._make_compact_toggle_button(
@@ -440,7 +479,7 @@ class LeftPanelBuilder:
             unchecked_icon_source=self._create_theme_toggle_icon("light"),
             icon_size=18,
         )
-        ui_top_row_layout.addWidget(dark_mode_btn)
+        compact_toggle_slot_layout.addWidget(dark_mode_btn)
         app.register_tooltip(dark_mode_btn, tooltip_text("dark_mode"))
 
         desktop_zen_mode_enabled = bool(state.get("desktop_zen_mode_enabled", False))
@@ -464,7 +503,7 @@ class LeftPanelBuilder:
             unchecked_text="Off",
             icon_size=18,
         )
-        ui_top_row_layout.addWidget(desktop_zen_btn)
+        compact_toggle_slot_layout.addWidget(desktop_zen_btn)
         app.register_tooltip(desktop_zen_btn, tooltip_text("desktop_zen_mode"))
 
         power_dropdown = self._make_action_dropdown(
@@ -495,26 +534,16 @@ class LeftPanelBuilder:
                 "Shutdown": "red",
             },
         )
-        ui_top_row_layout.addWidget(power_dropdown)
-        ui_top_row_layout.setStretch(2, 1)
+        power_dropdown.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
+        ui_top_row_layout.addWidget(compact_toggle_slot, 0, 0)
+        ui_top_row_layout.addWidget(power_dropdown, 0, 1)
         app.register_tooltip(power_dropdown, tooltip_text("power_options"))
-
-        ui_middle_row = QWidget(ui_section.content)
-        ui_middle_row.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
-        ui_middle_row_layout = QHBoxLayout(ui_middle_row)
-        ui_middle_row_layout.setContentsMargins(0, 0, 0, 0)
-        ui_middle_row_layout.setSpacing(10)
-        ui_layout.addWidget(ui_middle_row)
 
         always_on_top_btn = self._make_toggle_button(
             "Always on Top",
             state.get("main_always_on_top_enabled", True),
         )
         self._bind_toggle_state_text(always_on_top_btn, "Always on Top")
-        ui_middle_row_layout.addWidget(always_on_top_btn)
         app.register_tooltip(always_on_top_btn, tooltip_text("always_on_top"))
 
         tooltips_btn = self._make_toggle_button(
@@ -522,18 +551,8 @@ class LeftPanelBuilder:
             state.get("tooltips_enabled", True),
         )
         self._bind_toggle_state_text(tooltips_btn, "Tooltips")
-        ui_middle_row_layout.addWidget(tooltips_btn)
         app.register_tooltip(tooltips_btn, tooltip_text("enable_tooltips"))
-
-        ui_bottom_row = QWidget(ui_section.content)
-        ui_bottom_row.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
-        ui_bottom_row_layout = QHBoxLayout(ui_bottom_row)
-        ui_bottom_row_layout.setContentsMargins(0, 0, 0, 0)
-        ui_bottom_row_layout.setSpacing(10)
-        ui_layout.addWidget(ui_bottom_row)
+        self._add_two_column_control_row(ui_layout, always_on_top_btn, tooltips_btn)
 
         maximize_all_enabled = bool(
             state.get(
@@ -543,7 +562,6 @@ class LeftPanelBuilder:
         )
         max_all_btn = self._make_toggle_button("Maximize All", maximize_all_enabled)
         self._bind_toggle_state_text(max_all_btn, "Maximize All")
-        ui_bottom_row_layout.addWidget(max_all_btn)
         app.register_tooltip(max_all_btn, tooltip_text("maximize_all"))
 
         minimize_after_use_btn = self._make_toggle_button(
@@ -560,11 +578,14 @@ class LeftPanelBuilder:
             QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
         )
-        styles.apply_default_button_size(minimize_after_use_btn)
-        ui_bottom_row_layout.addWidget(minimize_after_use_btn)
         app.register_tooltip(
             minimize_after_use_btn,
             tooltip_text("minimize_after_use"),
+        )
+        self._add_two_column_control_row(
+            ui_layout,
+            max_all_btn,
+            minimize_after_use_btn,
         )
 
         def on_dark_mode_changed(checked: bool):
@@ -1043,18 +1064,8 @@ class LeftPanelBuilder:
         )
         app.backup_path = app._get_master_backup_dir()
 
-        desktop_actions_row = QWidget()
-        desktop_actions_row.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
-        desktop_actions_row_layout = QHBoxLayout(desktop_actions_row)
-        desktop_actions_row_layout.setContentsMargins(0, 0, 0, 0)
-        desktop_actions_row_layout.setSpacing(10)
-
         screenshot_btn = QPushButton("Desktop Screenshot")
         self._style_organizing_button(screenshot_btn)
-        desktop_actions_row_layout.addWidget(screenshot_btn)
         screenshot_btn.clicked.connect(app.take_desktop_screenshot)
         app.register_tooltip(screenshot_btn, tooltip_text("desktop_screenshot"))
 
@@ -1065,25 +1076,18 @@ class LeftPanelBuilder:
                 "Restore Layout": app.restore_desktop_layout,
             },
         )
-        desktop_actions_row_layout.addWidget(layout_actions_combo)
-        org_layout.addWidget(desktop_actions_row)
         app.register_tooltip(
             layout_actions_combo,
             tooltip_text("capture_desktop_layout"),
         )
-
-        bookmarks_taskbar_row = QWidget()
-        bookmarks_taskbar_row.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
+        self._add_two_column_control_row(
+            org_layout,
+            screenshot_btn,
+            layout_actions_combo,
         )
-        bookmarks_taskbar_row_layout = QHBoxLayout(bookmarks_taskbar_row)
-        bookmarks_taskbar_row_layout.setContentsMargins(0, 0, 0, 0)
-        bookmarks_taskbar_row_layout.setSpacing(10)
 
         brave_export_btn = QPushButton("Export Bookmarks")
         self._style_organizing_button(brave_export_btn)
-        bookmarks_taskbar_row_layout.addWidget(brave_export_btn)
         brave_export_btn.clicked.connect(app.export_bookmarks)
         app.register_tooltip(brave_export_btn, tooltip_text("export_bookmarks"))
 
@@ -1094,22 +1098,15 @@ class LeftPanelBuilder:
                 "Open Backup Folder": app.open_taskbar_backup_folder,
             },
         )
-        bookmarks_taskbar_row_layout.addWidget(taskbar_actions_combo)
-        org_layout.addWidget(bookmarks_taskbar_row)
         app.register_tooltip(taskbar_actions_combo, tooltip_text("backup_taskbar"))
-
-        master_backup_row = QWidget()
-        master_backup_row.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
+        self._add_two_column_control_row(
+            org_layout,
+            brave_export_btn,
+            taskbar_actions_combo,
         )
-        master_backup_row_layout = QHBoxLayout(master_backup_row)
-        master_backup_row_layout.setContentsMargins(0, 0, 0, 0)
-        master_backup_row_layout.setSpacing(10)
 
         master_backup_btn = QPushButton("Master Backup Path")
         self._style_organizing_button(master_backup_btn)
-        master_backup_row_layout.addWidget(master_backup_btn)
         app.register_tooltip(master_backup_btn, tooltip_text("master_backup_path"))
 
         app.backup_path_input = QLabel()
@@ -1119,10 +1116,13 @@ class LeftPanelBuilder:
         app.backup_path_input.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
-        master_backup_row_layout.addWidget(app.backup_path_input)
         app._refresh_master_backup_path_display()
 
-        org_layout.addWidget(master_backup_row)
+        self._add_two_column_control_row(
+            org_layout,
+            master_backup_btn,
+            app.backup_path_input,
+        )
 
         master_backup_btn.clicked.connect(app._choose_master_backup_dir)
         app._taskbar_backup_folder_timer = QTimer(app)
@@ -1205,14 +1205,23 @@ class LeftPanelBuilder:
         )
 
         recycle_bin_controls = QWidget()
+        recycle_bin_controls.setFixedWidth(self.CONTROL_ROW_WIDTH)
         recycle_bin_controls.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
         )
         recycle_bin_controls_layout = QGridLayout(recycle_bin_controls)
         recycle_bin_controls_layout.setContentsMargins(0, 0, 0, 0)
-        recycle_bin_controls_layout.setHorizontalSpacing(10)
+        recycle_bin_controls_layout.setHorizontalSpacing(self.CONTROL_COLUMN_GAP)
         recycle_bin_controls_layout.setVerticalSpacing(10)
+        recycle_bin_controls_layout.setColumnMinimumWidth(
+            0,
+            self.LEFT_CONTROL_COLUMN_WIDTH,
+        )
+        recycle_bin_controls_layout.setColumnMinimumWidth(
+            1,
+            self.RIGHT_CONTROL_COLUMN_WIDTH,
+        )
 
         cleanup_actions_combo = self._make_action_dropdown(
             " Cleanup Actions ",
@@ -1222,6 +1231,7 @@ class LeftPanelBuilder:
                 "Empty Recycle Bin": app.empty_recycle_bin,
             },
         )
+        cleanup_actions_combo.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
         recycle_bin_controls_layout.addWidget(cleanup_actions_combo, 0, 0)
         app.register_tooltip(cleanup_actions_combo, tooltip_text("cleanup_actions"))
 
@@ -1233,6 +1243,7 @@ class LeftPanelBuilder:
             recycle_bin_auto_clean_enabled,
         )
         self._bind_toggle_state_text(recycle_bin_auto_clean_btn, "Auto-clean")
+        recycle_bin_auto_clean_btn.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
         recycle_bin_controls_layout.addWidget(recycle_bin_auto_clean_btn, 0, 1)
         app.register_tooltip(
             recycle_bin_auto_clean_btn,
@@ -1252,22 +1263,28 @@ class LeftPanelBuilder:
         )
 
         cleanup_rule_label = QLabel("Delete items older than:")
+        cleanup_rule_label.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
         cleanup_rule_label.setStyleSheet(styles.label_style(font_size=14))
-        recycle_bin_age_rule_slot = QWidget()
-        recycle_bin_age_rule_slot.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
         recycle_bin_age_rule_row = QWidget()
+        recycle_bin_age_rule_row.setFixedWidth(self.CONTROL_ROW_WIDTH)
         recycle_bin_age_rule_row_layout = QGridLayout(recycle_bin_age_rule_row)
         recycle_bin_age_rule_row_layout.setContentsMargins(0, 0, 0, 0)
-        recycle_bin_age_rule_row_layout.setHorizontalSpacing(10)
+        recycle_bin_age_rule_row_layout.setHorizontalSpacing(self.CONTROL_COLUMN_GAP)
         recycle_bin_age_rule_row_layout.setVerticalSpacing(0)
         recycle_bin_age_rule_row_layout.addWidget(cleanup_rule_label, 0, 0)
+        recycle_bin_age_rule_combo.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
         recycle_bin_age_rule_row_layout.addWidget(recycle_bin_age_rule_combo, 0, 1)
-        recycle_bin_age_rule_row_layout.setColumnStretch(0, 1)
-        recycle_bin_age_rule_row_layout.setColumnStretch(1, 1)
+        recycle_bin_age_rule_row_layout.setColumnMinimumWidth(
+            0,
+            self.LEFT_CONTROL_COLUMN_WIDTH,
+        )
+        recycle_bin_age_rule_row_layout.setColumnMinimumWidth(
+            1,
+            self.RIGHT_CONTROL_COLUMN_WIDTH,
+        )
         recycle_bin_age_rule_row_height = recycle_bin_age_rule_row.sizeHint().height()
+        recycle_bin_age_rule_slot = QWidget()
+        recycle_bin_age_rule_slot.setFixedWidth(self.CONTROL_ROW_WIDTH)
         recycle_bin_age_rule_slot.setFixedHeight(recycle_bin_age_rule_row_height)
         recycle_bin_age_rule_slot_layout = QVBoxLayout(recycle_bin_age_rule_slot)
         recycle_bin_age_rule_slot_layout.setContentsMargins(0, 0, 0, 0)

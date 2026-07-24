@@ -1,9 +1,9 @@
 import copy
 
 import main
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QColor, QIcon, QKeySequence
-from PySide6.QtWidgets import QApplication, QComboBox
+from PySide6.QtWidgets import QApplication, QComboBox, QPushButton
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 
 
@@ -338,6 +338,84 @@ def test_live_theme_switch_preserves_blue_and_power_dropdown_roles(monkeypatch):
             ) == main.styles.contrasting_text_color(shutdown_background)
     finally:
         main.styles.set_theme(True)
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_main_window_and_power_dropdown_are_wide_enough(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.show()
+        qt_app.processEvents()
+
+        def window_x(widget):
+            return widget.mapTo(window, QPoint(0, 0)).x()
+
+        def button_with_text(text):
+            return next(
+                button
+                for button in window.findChildren(QPushButton)
+                if button.text() == text
+            )
+
+        def combo_with_placeholder(placeholder):
+            return next(
+                combo
+                for combo in window.findChildren(QComboBox)
+                if combo.currentText().strip() == placeholder
+            )
+
+        power_combo = next(
+            combo
+            for combo in window.findChildren(QComboBox)
+            if combo.property("powerActionStyle")
+        )
+        compact_slot = power_combo.parent().layout().itemAtPosition(0, 0).widget()
+        compact_buttons = sorted(
+            compact_slot.findChildren(QPushButton),
+            key=window_x,
+        )
+
+        left_column_x = window_x(button_with_text("Always on Top On"))
+        right_column_x = window_x(power_combo)
+
+        assert window.COLLAPSED_WIDTH == 500
+        assert window.MAIN_PANEL_WIDTH == 480
+        assert window.width() == 500
+        assert window.main_scroll.width() == 480
+        assert power_combo.width() == 210
+        assert power_combo.minimumWidth() == 210
+        assert power_combo.maximumWidth() == 210
+
+        for text in (
+            "Always on Top On",
+            "Maximize All On",
+            "Desktop Screenshot",
+            "Export Bookmarks",
+            "Master Backup Path",
+        ):
+            assert window_x(button_with_text(text)) == left_column_x
+
+        for widget in (
+            button_with_text("Tooltips On"),
+            button_with_text("Minimize After Use On"),
+            combo_with_placeholder("Desktop Actions"),
+            combo_with_placeholder("Taskbar Actions"),
+            window.backup_path_input,
+        ):
+            assert window_x(widget) == right_column_x
+            assert widget.width() == 210
+
+        assert window_x(compact_buttons[0]) == left_column_x
+        assert compact_buttons[0].width() == 85
+        assert compact_buttons[1].width() == 85
+        assert window_x(compact_buttons[1]) == left_column_x + 95
+    finally:
         window._quit_requested = True
         window.close()
         window.deleteLater()
