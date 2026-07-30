@@ -72,6 +72,23 @@ WNDPROC_TYPE = ctypes.WINFUNCTYPE(
 DOCK_ACTIONS_DICT = dict(DOCK_ACTIONS)
 
 
+def is_steam_game_executable(executable_path) -> bool:
+    """Return whether an executable is installed beneath steamapps/common."""
+    if not executable_path:
+        return False
+
+    path_parts = [
+        part.casefold()
+        for part in str(executable_path).replace("/", "\\").split("\\")
+        if part
+    ]
+    return any(
+        path_parts[index : index + 2] == ["steamapps", "common"]
+        and index + 3 < len(path_parts)
+        for index in range(len(path_parts) - 1)
+    )
+
+
 class GdiplusStartupInput(ctypes.Structure):
     _fields_ = [
         ("GdiplusVersion", ctypes.c_uint32),
@@ -919,6 +936,14 @@ class ScreenMover:
         except Exception:
             return ""
 
+    def _is_steam_game_window(self, hwnd):
+        try:
+            _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
+            executable_path = psutil.Process(pid).exe()
+        except Exception:
+            return False
+        return is_steam_game_executable(executable_path)
+
     def _is_file_explorer_window(self, hwnd):
         try:
             class_name = win32gui.GetClassName(hwnd)
@@ -1018,6 +1043,8 @@ class ScreenMover:
             cursor_x, cursor_y = win32gui.GetCursorPos()
             if self.dock_overlay.contains_point(cursor_x, cursor_y):
                 hwnd = self.dock_overlay.target_hwnd
+                if self._is_steam_game_window(hwnd):
+                    return None, None
                 rect = win32gui.GetWindowRect(hwnd)
                 if self._is_window_fullscreen(hwnd, rect):
                     return None, None
@@ -1029,6 +1056,8 @@ class ScreenMover:
 
         hwnd = self._get_root_window(raw_hwnd)
         if not (self._is_window_eligible(hwnd) or self._is_self_window_eligible(hwnd)):
+            return None, None
+        if self._is_steam_game_window(hwnd):
             return None, None
 
         try:

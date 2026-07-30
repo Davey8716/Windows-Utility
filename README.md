@@ -97,6 +97,10 @@ Minimize, and Maximize. Empty shortcut fields are disabled. The tray menu's
 `Reset Screen Mover Defaults` restores the middle mouse trigger and clears all
 shortcuts without changing other app settings.
 
+The visible title-bar mover dock is suppressed for executables installed beneath
+a Steam library's `steamapps\common` directory. Configured keyboard shortcuts
+and mouse-trigger mover actions remain available for those game windows.
+
 The master backup path is configurable inside the app and defaults to your home folder. Depending on which tools you use, Windows Resurface can create files such as:
 
 - `TaskBarApps\` for taskbar shortcut backups

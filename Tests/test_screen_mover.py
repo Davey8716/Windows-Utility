@@ -1,7 +1,10 @@
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
+import pytest
 import screen_mover
 
 
@@ -55,6 +58,81 @@ class FakeOverlay:
 
     def destroy(self):
         self.destroy_threads.append(threading.current_thread().name)
+
+
+@pytest.mark.parametrize(
+    "executable_path",
+    [
+        r"C:\Program Files (x86)\Steam\steamapps\common\Portal 2\portal2.exe",
+        r"D:\STEAMLIBRARY\SteamApps\Common\Game\bin\game.exe",
+        "E:/SteamLibrary/steamapps/common/Game/game.exe",
+    ],
+)
+def test_recognizes_steam_game_executable_paths(executable_path):
+    assert screen_mover.is_steam_game_executable(executable_path)
+
+
+@pytest.mark.parametrize(
+    "executable_path",
+    [
+        None,
+        "",
+        r"C:\Program Files (x86)\Steam\steam.exe",
+        r"C:\Games\steamapps\common\game.exe",
+        r"C:\Games\notsteamapps\common\Game\game.exe",
+        r"C:\Games\steamapps\commonplace\Game\game.exe",
+        r"C:\Games\Game\game.exe",
+    ],
+)
+def test_rejects_non_steam_game_executable_paths(executable_path):
+    assert not screen_mover.is_steam_game_executable(executable_path)
+
+
+def test_process_lookup_failure_does_not_classify_window_as_steam_game():
+    mover = screen_mover.ScreenMover.__new__(screen_mover.ScreenMover)
+
+    with patch.object(
+        screen_mover.win32process,
+        "GetWindowThreadProcessId",
+        side_effect=OSError,
+    ):
+        assert not mover._is_steam_game_window(123)
+
+
+def test_steam_game_window_is_not_a_title_bar_candidate():
+    mover = screen_mover.ScreenMover.__new__(screen_mover.ScreenMover)
+    mover.dock_overlay = SimpleNamespace(contains_point=lambda _x, _y: False)
+    mover._get_root_window = Mock(return_value=123)
+    mover._is_window_eligible = Mock(return_value=True)
+    mover._is_self_window_eligible = Mock(return_value=False)
+    mover._is_steam_game_window = Mock(return_value=True)
+
+    with (
+        patch.object(screen_mover.win32gui, "GetCursorPos", return_value=(100, 100)),
+        patch.object(screen_mover.win32gui, "WindowFromPoint", return_value=123),
+        patch.object(screen_mover.win32gui, "GetWindowRect") as get_window_rect,
+    ):
+        assert mover._title_bar_candidate() == (None, None)
+
+    get_window_rect.assert_not_called()
+
+
+def test_steam_detection_does_not_change_shared_window_eligibility():
+    mover = screen_mover.ScreenMover.__new__(screen_mover.ScreenMover)
+    mover.app_hwnd = 999
+    mover.dock_overlay = SimpleNamespace(hwnd=998)
+    mover._is_owned_by_app = Mock(return_value=False)
+    mover._is_system_window = Mock(return_value=False)
+    mover._is_steam_game_window = Mock(return_value=True)
+
+    with (
+        patch.object(screen_mover.win32gui, "IsWindow", return_value=True),
+        patch.object(screen_mover.win32gui, "IsWindowVisible", return_value=True),
+        patch.object(screen_mover.win32gui, "GetWindowText", return_value="Steam Game"),
+    ):
+        assert mover._is_window_eligible(123)
+
+    mover._is_steam_game_window.assert_not_called()
 
 
 def test_screen_mover_clicks_are_processed_on_worker_thread(monkeypatch):
