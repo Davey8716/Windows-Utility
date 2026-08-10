@@ -72,6 +72,16 @@ WNDPROC_TYPE = ctypes.WINFUNCTYPE(
 DOCK_ACTIONS_DICT = dict(DOCK_ACTIONS)
 
 
+def _dock_left_for_target(target_hwnd, rect, app_hwnd=None) -> int:
+    left, _top, right, _bottom = rect
+    x = left + max(TITLE_BAR_SIDE_MARGIN, ((right - left) - DOCK_WIDTH) // 2)
+    if app_hwnd and target_hwnd == app_hwnd:
+        min_x = left + SELF_WINDOW_DOCK_TITLE_CLEARANCE
+        max_x = right - DOCK_WIDTH
+        x = min(max(x, min_x), max_x)
+    return x
+
+
 def is_steam_game_executable(executable_path) -> bool:
     """Return whether an executable is installed beneath steamapps/common."""
     if not executable_path:
@@ -669,12 +679,8 @@ class DockOverlayButton:
             self.hide()
             return
 
-        left, top, right, _ = rect
-        x = left + max(TITLE_BAR_SIDE_MARGIN, ((right - left) - DOCK_WIDTH) // 2)
-        if self.worker.app_hwnd and target_hwnd == self.worker.app_hwnd:
-            min_x = left + SELF_WINDOW_DOCK_TITLE_CLEARANCE
-            max_x = right - DOCK_WIDTH
-            x = min(max(x, min_x), max_x)
+        _left, top, _right, _bottom = rect
+        x = _dock_left_for_target(target_hwnd, rect, self.worker.app_hwnd)
         y = top + DOCK_TOP_OFFSET
         try:
             placement = win32gui.GetWindowPlacement(target_hwnd)
@@ -748,11 +754,12 @@ class DockOverlayButton:
         return None
 
     def hide(self):
+        was_visible = self.visible
         self.target_hwnd = None
         self.rect = None
         self.visible_actions = tuple(action for action, _label in DOCK_ACTIONS)
         self.icon_theme = DOCK_ICON_DEFAULT_THEME
-        if self.hwnd and win32gui.IsWindow(self.hwnd):
+        if was_visible and self.hwnd and win32gui.IsWindow(self.hwnd):
             win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
         self.visible = False
 
@@ -1043,8 +1050,6 @@ class ScreenMover:
             cursor_x, cursor_y = win32gui.GetCursorPos()
             if self.dock_overlay.contains_point(cursor_x, cursor_y):
                 hwnd = self.dock_overlay.target_hwnd
-                if self._is_steam_game_window(hwnd):
-                    return None, None
                 rect = win32gui.GetWindowRect(hwnd)
                 if self._is_window_fullscreen(hwnd, rect):
                     return None, None
@@ -1055,17 +1060,9 @@ class ScreenMover:
             return None, None
 
         hwnd = self._get_root_window(raw_hwnd)
-        if not (self._is_window_eligible(hwnd) or self._is_self_window_eligible(hwnd)):
-            return None, None
-        if self._is_steam_game_window(hwnd):
-            return None, None
-
         try:
             rect = win32gui.GetWindowRect(hwnd)
         except Exception:
-            return None, None
-
-        if self._is_window_fullscreen(hwnd, rect):
             return None, None
 
         left, top, right, _ = rect
@@ -1077,7 +1074,19 @@ class ScreenMover:
         if not (top <= cursor_y <= caption_bottom):
             return None, None
 
-        if not (left + TITLE_BAR_SIDE_MARGIN <= cursor_x <= right - TITLE_BAR_BUTTON_GAP):
+        dock_left = _dock_left_for_target(hwnd, rect, self.app_hwnd)
+        if not (dock_left <= cursor_x < dock_left + DOCK_WIDTH):
+            return None, None
+
+        if cursor_x > right - TITLE_BAR_BUTTON_GAP:
+            return None, None
+
+        if not (self._is_window_eligible(hwnd) or self._is_self_window_eligible(hwnd)):
+            return None, None
+        if self._is_steam_game_window(hwnd):
+            return None, None
+
+        if self._is_window_fullscreen(hwnd, rect):
             return None, None
 
         if self._is_left_button_pressed():

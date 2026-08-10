@@ -101,20 +101,108 @@ def test_process_lookup_failure_does_not_classify_window_as_steam_game():
 
 def test_steam_game_window_is_not_a_title_bar_candidate():
     mover = screen_mover.ScreenMover.__new__(screen_mover.ScreenMover)
+    mover.app_hwnd = None
     mover.dock_overlay = SimpleNamespace(contains_point=lambda _x, _y: False)
     mover._get_root_window = Mock(return_value=123)
+    mover._get_caption_height = Mock(return_value=30)
     mover._is_window_eligible = Mock(return_value=True)
     mover._is_self_window_eligible = Mock(return_value=False)
     mover._is_steam_game_window = Mock(return_value=True)
+    mover._is_window_fullscreen = Mock()
 
     with (
-        patch.object(screen_mover.win32gui, "GetCursorPos", return_value=(100, 100)),
+        patch.object(screen_mover.win32gui, "GetCursorPos", return_value=(350, 5)),
         patch.object(screen_mover.win32gui, "WindowFromPoint", return_value=123),
-        patch.object(screen_mover.win32gui, "GetWindowRect") as get_window_rect,
+        patch.object(
+            screen_mover.win32gui,
+            "GetWindowRect",
+            return_value=(0, 0, 800, 600),
+        ),
     ):
         assert mover._title_bar_candidate() == (None, None)
 
-    get_window_rect.assert_not_called()
+    mover._is_steam_game_window.assert_called_once_with(123)
+    mover._is_window_fullscreen.assert_not_called()
+
+
+def test_hovering_existing_dock_does_not_repeat_process_classification():
+    mover = screen_mover.ScreenMover.__new__(screen_mover.ScreenMover)
+    mover.dock_overlay = SimpleNamespace(
+        contains_point=lambda _x, _y: True,
+        target_hwnd=123,
+    )
+    mover._is_steam_game_window = Mock()
+    mover._is_window_fullscreen = Mock(return_value=False)
+
+    with (
+        patch.object(screen_mover.win32gui, "GetCursorPos", return_value=(100, 100)),
+        patch.object(screen_mover.win32gui, "GetWindowRect", return_value=(0, 0, 800, 600)),
+        patch.object(screen_mover.win32gui, "WindowFromPoint") as window_from_point,
+    ):
+        assert mover._title_bar_candidate() == (123, (0, 0, 800, 600))
+
+    mover._is_steam_game_window.assert_not_called()
+    window_from_point.assert_not_called()
+
+
+@pytest.mark.parametrize("cursor_x", [309, 490])
+def test_cursor_outside_dock_span_skips_expensive_candidate_checks(cursor_x):
+    mover = screen_mover.ScreenMover.__new__(screen_mover.ScreenMover)
+    mover.app_hwnd = None
+    mover.dock_overlay = SimpleNamespace(contains_point=lambda _x, _y: False)
+    mover._get_root_window = Mock(return_value=123)
+    mover._get_caption_height = Mock(return_value=30)
+    mover._is_window_eligible = Mock()
+    mover._is_self_window_eligible = Mock()
+    mover._is_steam_game_window = Mock()
+    mover._is_window_fullscreen = Mock()
+
+    with (
+        patch.object(screen_mover.win32gui, "GetCursorPos", return_value=(cursor_x, 5)),
+        patch.object(screen_mover.win32gui, "WindowFromPoint", return_value=123),
+        patch.object(
+            screen_mover.win32gui,
+            "GetWindowRect",
+            return_value=(0, 0, 800, 600),
+        ),
+    ):
+        assert mover._title_bar_candidate() == (None, None)
+
+    mover._is_window_eligible.assert_not_called()
+    mover._is_self_window_eligible.assert_not_called()
+    mover._is_steam_game_window.assert_not_called()
+    mover._is_window_fullscreen.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("cursor_x", "expected"),
+    [(310, True), (489, True), (490, False)],
+)
+def test_dock_span_uses_left_inclusive_right_exclusive_boundaries(cursor_x, expected):
+    mover = screen_mover.ScreenMover.__new__(screen_mover.ScreenMover)
+    mover.app_hwnd = None
+    mover.dock_overlay = SimpleNamespace(contains_point=lambda _x, _y: False)
+    mover._get_root_window = Mock(return_value=123)
+    mover._get_caption_height = Mock(return_value=30)
+    mover._is_window_eligible = Mock(return_value=True)
+    mover._is_self_window_eligible = Mock(return_value=False)
+    mover._is_steam_game_window = Mock(return_value=False)
+    mover._is_window_fullscreen = Mock(return_value=False)
+    mover._is_left_button_pressed = Mock(return_value=False)
+    mover._track_title_bar_motion = Mock(return_value=False)
+
+    with (
+        patch.object(screen_mover.win32gui, "GetCursorPos", return_value=(cursor_x, 5)),
+        patch.object(screen_mover.win32gui, "WindowFromPoint", return_value=123),
+        patch.object(
+            screen_mover.win32gui,
+            "GetWindowRect",
+            return_value=(0, 0, 800, 600),
+        ),
+    ):
+        candidate, _rect = mover._title_bar_candidate()
+
+    assert bool(candidate) is expected
 
 
 def test_steam_detection_does_not_change_shared_window_eligibility():
@@ -361,7 +449,7 @@ def test_title_bar_candidate_rejects_fullscreen_window(monkeypatch):
     worker.dock_overlay.visible = False
 
     monkeypatch.setattr(worker.dock_overlay, "contains_point", lambda x, y: False)
-    monkeypatch.setattr(screen_mover.win32gui, "GetCursorPos", lambda: (100, 5))
+    monkeypatch.setattr(screen_mover.win32gui, "GetCursorPos", lambda: (900, 5))
     monkeypatch.setattr(screen_mover.win32gui, "WindowFromPoint", lambda point: 101)
     monkeypatch.setattr(worker, "_get_root_window", lambda hwnd: hwnd)
     monkeypatch.setattr(worker, "_is_window_eligible", lambda hwnd: True)
@@ -374,6 +462,44 @@ def test_title_bar_candidate_rejects_fullscreen_window(monkeypatch):
     monkeypatch.setattr(worker, "_is_window_fullscreen", lambda hwnd, rect=None: True)
 
     assert worker._title_bar_candidate() == (None, None)
+
+
+def test_dock_left_uses_same_special_clearance_for_app_window():
+    rect = (0, 0, 400, 300)
+
+    assert screen_mover._dock_left_for_target(101, rect, app_hwnd=None) == 110
+    assert screen_mover._dock_left_for_target(101, rect, app_hwnd=101) == 166
+
+
+def test_missing_title_bar_candidate_hides_visible_dock_immediately():
+    mover = screen_mover.ScreenMover.__new__(screen_mover.ScreenMover)
+    mover.title_bar_dock_enabled = True
+    mover.dock_overlay = Mock()
+    mover._title_bar_candidate = Mock(return_value=(None, None))
+
+    mover._update_title_bar_dock()
+
+    mover.dock_overlay.hide.assert_called_once_with()
+    mover.dock_overlay.show_for_target.assert_not_called()
+
+
+def test_dock_overlay_hide_only_calls_windows_when_visible(monkeypatch):
+    overlay = screen_mover.DockOverlayButton(worker=None, overlay_name="test")
+    overlay.hwnd = 123
+    overlay.target_hwnd = 101
+    overlay.rect = (0, 0, 180, 30)
+    overlay.visible = True
+    show_window = Mock()
+    monkeypatch.setattr(screen_mover.win32gui, "IsWindow", lambda hwnd: True)
+    monkeypatch.setattr(screen_mover.win32gui, "ShowWindow", show_window)
+
+    overlay.hide()
+    overlay.hide()
+
+    show_window.assert_called_once_with(123, screen_mover.win32con.SW_HIDE)
+    assert overlay.visible is False
+    assert overlay.target_hwnd is None
+    assert overlay.rect is None
 
 
 def test_dock_overlay_hit_test_only_uses_visible_actions():
