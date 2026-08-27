@@ -1285,7 +1285,7 @@ class LeftPanelBuilder:
             tooltip_text("folder_creator_launcher"),
         )
 
-        folder_btn = QPushButton("Folder Desktop")
+        folder_btn = QPushButton("Folder To Desktop")
         self._style_organizing_button(folder_btn)
         app.register_tooltip(folder_btn, tooltip_text("folder_to_desktop"))
 
