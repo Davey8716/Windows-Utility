@@ -970,6 +970,7 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         assert panel.sidebar_output_container.width() == 488
         assert panel.sidebar_output.width() == 488
         assert panel.sidebar_output_container.height() == 285
+        assert panel.sidebar_output_clear_btn.text() == "Clear Log"
 
         grid_left = selector_grid.mapTo(maintenance_page, QPoint()).x()
         output_left = panel.sidebar_output_container.mapTo(
@@ -988,6 +989,26 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
             QPoint(),
         ).y()
         assert output_top - grid_bottom == 16
+
+        clear_button_pos = panel.sidebar_output_clear_btn.mapTo(
+            maintenance_page,
+            QPoint(),
+        )
+        output_bottom = output_top + panel.sidebar_output_container.height()
+        assert clear_button_pos.x() == output_left
+        assert clear_button_pos.y() - output_bottom == 16
+
+        panel._set_sidebar_output_context("Flush DNS")
+        panel.sidebar_output.setPlainText("Output to clear")
+        panel.sidebar_output_clear_btn.click()
+        assert panel.sidebar_output.toPlainText() == "Dns output log cleared."
+
+        for is_dark in (False, True):
+            window.apply_theme(is_dark)
+            qt_app.processEvents()
+            assert panel.sidebar_output_clear_btn.styleSheet() == (
+                styles.organizing_button_style(font_size=14)
+            )
     finally:
         window._quit_requested = True
         window.close()

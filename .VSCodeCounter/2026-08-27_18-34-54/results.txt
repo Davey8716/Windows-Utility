@@ -1,0 +1,86 @@
+Date : 2026-08-27 18:34:54
+Directory : c:\Users\davey\Desktop\Projects\Win-11-Resurface
+Total : 52 files,  16027 codes, 662 comments, 3106 blanks, all 19795 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |         46 |     15,594 |        662 |      3,014 |     19,270 |
+| JSON     |          1 |        215 |          0 |          0 |        215 |
+| Markdown |          3 |        212 |          0 |         90 |        302 |
+| XML      |          2 |          6 |          0 |          2 |          8 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                  | files      | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                     |         52 |     16,027 |        662 |      3,106 |     19,795 |
+| . (Files)                                                                                             |          1 |         88 |          0 |         38 |        126 |
+| App Icons                                                                                             |          2 |          6 |          0 |          2 |          8 |
+| Code Folder Creator                                                                                   |         12 |      2,559 |        191 |        746 |      3,496 |
+| Code Windows Resurface                                                                                |         21 |      9,656 |        471 |      1,567 |     11,694 |
+| Shared                                                                                                |          2 |        258 |          0 |         45 |        303 |
+| Tests                                                                                                 |         11 |      2,510 |          0 |        557 |      3,067 |
+| benchmarks                                                                                            |          3 |        950 |          0 |        151 |      1,101 |
++-------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                              | language | code       | comment    | blank      | total      |
++-------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\App Icons\Dropdown Chevron Light.svg                 | XML      |          3 |          0 |          1 |          4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\App Icons\Dropdown Chevron.svg                       | XML      |          3 |          0 |          1 |          4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\README.md                        | Markdown |        110 |          0 |         49 |        159 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\app_service.py                   | Python   |         42 |          0 |         14 |         56 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\main.py                          | Python   |        748 |          0 |        134 |        882 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\nested_folder_manager.py         | Python   |        379 |         50 |        128 |        557 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\nested_ui_controller.py          | Python   |        443 |          8 |        161 |        612 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\smart_tree_widget.py             | Python   |        221 |         35 |         74 |        330 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\state_manager.py                 | Python   |         44 |          0 |         11 |         55 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\status_controller.py             | Python   |         75 |          6 |         15 |         96 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\styles.py                        | Python   |        182 |         67 |         42 |        291 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\system_paths.py                  | Python   |         15 |          0 |          6 |         21 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\template_IO_layer.py             | Python   |         82 |         15 |         31 |        128 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\ui_state_controller.py           | Python   |        218 |         10 |         81 |        309 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\app_notifications.py          | Python   |        459 |          0 |         52 |        511 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\app_paths.py                  | Python   |        110 |          0 |         29 |        139 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\application_window.py         | Python   |      1,056 |          4 |        148 |      1,208 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\collapsible_section.py        | Python   |         96 |         14 |         19 |        129 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\desktop_icon_layout.py        | Python   |        277 |         33 |         69 |        379 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\desktop_operations.py         | Python   |        756 |          0 |        139 |        895 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\drive_reminder_logic.py       | Python   |          0 |          0 |          1 |          1 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\external_drive_mixin.py       | Python   |        370 |          0 |         54 |        424 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\hotkeys.py                    | Python   |        194 |          0 |         35 |        229 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\instance_runtime.py           | Python   |        119 |          3 |         28 |        150 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\left_panel_gui.py             | Python   |      1,277 |          0 |        166 |      1,443 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\main.py                       | Python   |         14 |          1 |          8 |         23 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\navigation_shell.py           | Python   |         68 |          1 |          9 |         78 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\right_utility_gui.py          | Python   |      1,534 |          0 |        197 |      1,731 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\screen_mover.py               | Python   |      1,101 |          1 |        214 |      1,316 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\styles.py                     | Python   |        691 |        370 |         16 |      1,077 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\tooltips.py                   | Python   |        124 |          0 |         23 |        147 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\tray_toggles.py               | Python   |        166 |          0 |         47 |        213 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\universal_bookmarks_export.py | Python   |        298 |         16 |         64 |        378 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\utility_toggles.py            | Python   |        839 |         26 |        234 |      1,099 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\window_chrome.py              | Python   |        107 |          2 |         15 |        124 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\README.md                                            | Markdown |         88 |          0 |         38 |        126 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\app_state_defaults.py                         | Python   |         57 |          0 |          4 |         61 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\shared_state_manager.py                       | Python   |        201 |          0 |         41 |        242 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\conftest.py                                    | Python   |          8 |          0 |          4 |         12 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_bookmarks_export_ui.py                    | Python   |        152 |          0 |         35 |        187 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_folder_creator_launcher.py                | Python   |        122 |          0 |         49 |        171 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_hotkeys.py                                | Python   |         62 |          0 |         20 |         82 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_instance_scope.py                         | Python   |        123 |          0 |         32 |        155 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover.py                           | Python   |        474 |          0 |        125 |        599 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_settings_ui.py               | Python   |      1,129 |          0 |        180 |      1,309 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_shared_state_manager.py                   | Python   |         87 |          0 |         16 |        103 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_styles.py                                 | Python   |        150 |          0 |         34 |        184 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_tray_toggles.py                           | Python   |        158 |          0 |         56 |        214 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_universal_bookmarks_export.py             | Python   |         45 |          0 |          6 |         51 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\benchmarks\benchmark_actions.py                      | Python   |        721 |          0 |        148 |        869 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\benchmarks\latest_results.json                       | JSON     |        215 |          0 |          0 |        215 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\benchmarks\latest_results.md                         | Markdown |         14 |          0 |          3 |         17 |
+| Total                                                                                                 |          |     16,027 |        662 |      3,106 |     19,795 |
++-------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+

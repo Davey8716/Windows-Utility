@@ -1,0 +1,14 @@
+"filename", "language", "XML", "Python", "comment", "blank", "total"
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\App Icons\Dropdown Chevron Light.svg", "XML", 3, 0, 0, 1, 4
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\application_window.py", "Python", 0, 1056, 4, 148, 1208
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\instance_runtime.py", "Python", 0, 119, 3, 28, 150
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\left_panel_gui.py", "Python", 0, -54, 0, -5, -59
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\main.py", "Python", 0, -1317, -10, -191, -1518
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\navigation_shell.py", "Python", 0, 68, 1, 9, 78
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\styles.py", "Python", 0, 169, -125, 0, 44
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\tooltips.py", "Python", 0, -1, 0, 0, -1
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\window_chrome.py", "Python", 0, 107, 2, 15, 124
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\app_state_defaults.py", "Python", 0, -1, 0, 0, -1
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_settings_ui.py", "Python", 0, 48, 0, 3, 51
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_styles.py", "Python", 0, 26, 0, 4, 30
+"Total", "-", 3, 220, -125, 12, 110

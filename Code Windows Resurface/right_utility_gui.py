@@ -13,8 +13,7 @@ from state_manager import save_state
 from tooltips import format_tooltip_text, tooltip_text
 from universal_bookmarks_export import BraveBookmarksExporter
 import win32file
-from PySide6.QtCore import QEvent, QPoint, QSize, Qt, QTimer, QProcess
-from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
+from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -105,10 +104,6 @@ def get_drive_info():
     return drives
 
 class AdvancedToolsPanel(QWidget):
-    SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE = 18
-    SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET = 6
-    SIDEBAR_OUTPUT_CLEAR_BUTTON_RIGHT_OFFSET = 20
-    SIDEBAR_OUTPUT_CLEAR_BUTTON_UP_OFFSET = 20
     TRACKED_WINDOW_BUTTON_REFRESH_MS = 1500
     OUTER_SIDE_PADDING = 14
     WINDOWS_UTILITIES_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH
@@ -309,41 +304,36 @@ class AdvancedToolsPanel(QWidget):
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
         self.sidebar_output.setProperty("surfaceFieldStyle", True)
-        self.sidebar_output.setViewportMargins(
-            0,
-            self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE
-            + (self.SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET * 2),
-            self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE
-            + (self.SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET * 2),
-            0,
-        )
         self.sidebar_output.document().setDocumentMargin(6)
         sidebar_output_layout.addWidget(self.sidebar_output, 0, 0)
         self._sidebar_output_last_action_label = None
 
-        self.sidebar_output_clear_btn = QToolButton(self.sidebar_output.viewport())
-        self.sidebar_output_clear_btn.setText("")
-        self.sidebar_output_clear_btn.setCursor(Qt.CursorShape.ArrowCursor)
-        self.sidebar_output_clear_btn.setFixedSize(
-            QSize(
-                self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
-                self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
-            )
-        )
-        self.sidebar_output_clear_btn.setIconSize(
-            QSize(
-                self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
-                self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE,
-            )
-        )
-        self.sidebar_output_clear_btn.setProperty("sidebarOutputClearButton", True)
-        self.sidebar_output_clear_btn.clicked.connect(self._clear_sidebar_output)
-        self.sidebar_output.viewport().installEventFilter(self)
-        self.sidebar_output_clear_btn.raise_()
-        self._position_sidebar_output_clear_button()
         self._apply_sidebar_output_theme()
         self.sidebar_utils_section.content_layout.addWidget(
             self.sidebar_output_container,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
+
+        clear_log_row = QWidget()
+        clear_log_row.setFixedWidth(self.MAINTENANCE_CONTENT_WIDTH)
+        clear_log_row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        clear_log_layout = QHBoxLayout(clear_log_row)
+        clear_log_layout.setContentsMargins(0, 0, 0, 0)
+        clear_log_layout.setSpacing(0)
+
+        self.sidebar_output_clear_btn = QPushButton("Clear Log")
+        styles.apply_default_button_size(self.sidebar_output_clear_btn)
+        self.sidebar_output_clear_btn.setProperty("styleFontSize", 14)
+        self.sidebar_output_clear_btn.setStyleSheet(styles.button_text_style(14))
+        self.sidebar_output_clear_btn.clicked.connect(self._clear_sidebar_output)
+        clear_log_layout.addWidget(
+            self.sidebar_output_clear_btn,
+            0,
+            Qt.AlignmentFlag.AlignLeft,
+        )
+        self.sidebar_utils_section.content_layout.addWidget(
+            clear_log_row,
             0,
             Qt.AlignmentFlag.AlignHCenter,
         )
@@ -439,42 +429,6 @@ class AdvancedToolsPanel(QWidget):
             }
             """
         )
-        self._update_sidebar_output_clear_button_icon()
-        self.sidebar_output_clear_btn.setStyleSheet(
-            styles.sidebar_output_clear_button_style()
-        )
-        self._position_sidebar_output_clear_button()
-
-    def _update_sidebar_output_clear_button_icon(self):
-        icon_size = self.SIDEBAR_OUTPUT_CLEAR_BUTTON_SIZE
-        pixmap = QPixmap(icon_size, icon_size)
-        pixmap.fill(Qt.GlobalColor.transparent)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        pen = QPen(styles.theme_text_color())
-        pen.setWidth(2)
-        painter.setPen(pen)
-
-        margin = 5
-        painter.drawLine(margin, margin, icon_size - margin, icon_size - margin)
-        painter.drawLine(margin, icon_size - margin, icon_size - margin, margin)
-        painter.end()
-
-        self.sidebar_output_clear_btn.setIcon(QIcon(pixmap))
-
-    def _position_sidebar_output_clear_button(self):
-        viewport = self.sidebar_output.viewport()
-        inset = self.SIDEBAR_OUTPUT_CLEAR_BUTTON_INSET
-        x_pos = (
-            viewport.width()
-            - self.sidebar_output_clear_btn.width()
-            - inset
-            + self.SIDEBAR_OUTPUT_CLEAR_BUTTON_RIGHT_OFFSET
-        )
-        y_pos = inset - self.SIDEBAR_OUTPUT_CLEAR_BUTTON_UP_OFFSET
-        max_x = max(0, viewport.width() - self.sidebar_output_clear_btn.width())
-        self.sidebar_output_clear_btn.move(max(0, min(max_x, x_pos)), max(0, y_pos))
 
     def _set_sidebar_output_context(self, action_label: str):
         if action_label in self.SIDEBAR_OUTPUT_CLEAR_MESSAGES:
@@ -487,11 +441,6 @@ class AdvancedToolsPanel(QWidget):
             "Output log cleared.",
         )
         self.sidebar_output.setPlainText(message)
-
-    def eventFilter(self, obj, event):
-        if obj is self.sidebar_output.viewport() and event.type() == QEvent.Type.Resize:
-            self._position_sidebar_output_clear_button()
-        return super().eventFilter(obj, event)
 
     def _build_drive_space_display(self):
         drive_parent = self.display_space_section.content_layout
