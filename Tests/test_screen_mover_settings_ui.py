@@ -290,7 +290,6 @@ def test_navigation_restores_valid_page_and_falls_back_to_overview(monkeypatch):
         window.deleteLater()
         qt_app.processEvents()
 
-
 def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
@@ -1062,25 +1061,6 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
         )
         assert not window.screen_mover_shortcuts_container.isHidden()
 
-        window.screen_mover_shortcuts_toggle_btn.click()
-        assert window.screen_mover_shortcuts_container.isHidden()
-        assert window.state["screen_mover_keyboard_shortcuts_open"] is False
-        assert window.screen_mover_shortcuts_toggle_btn.text() == "▲"
-
-        screen_section = next(
-            section
-            for section in window.left_sections
-            if section.section_id == "screen_mover"
-        )
-        window._set_left_section_open(screen_section, False)
-        window._set_left_section_open(screen_section, True)
-        assert window.screen_mover_shortcuts_container.isHidden()
-
-        window.screen_mover_shortcuts_toggle_btn.click()
-        assert not window.screen_mover_shortcuts_container.isHidden()
-        assert window.state["screen_mover_keyboard_shortcuts_open"] is True
-        assert window.screen_mover_shortcuts_toggle_btn.text() == "▼"
-
         window.state["desktop_screenshot_last_dir"] = "unchanged"
         window.reset_screen_mover_settings()
 
@@ -1234,22 +1214,6 @@ def test_screen_mover_shortcuts_have_balanced_heading_spacing(monkeypatch):
         assert shortcuts_container.y() - (
             shortcuts_header.y() + shortcuts_header.height()
         ) == 16
-    finally:
-        window._quit_requested = True
-        window.close()
-        window.deleteLater()
-        qt_app.processEvents()
-
-
-def test_screen_mover_shortcuts_restore_collapsed_state_offscreen(monkeypatch):
-    qt_app = QApplication.instance() or QApplication([])
-    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
-    state["screen_mover_keyboard_shortcuts_open"] = False
-    window = _build_offscreen_window(monkeypatch, state)
-
-    try:
-        assert window.screen_mover_shortcuts_container.isHidden()
-        assert window.screen_mover_shortcuts_toggle_btn.text() == "▲"
     finally:
         window._quit_requested = True
         window.close()

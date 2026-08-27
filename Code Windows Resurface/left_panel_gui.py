@@ -754,37 +754,9 @@ class LeftPanelBuilder:
         shortcut_title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         shortcut_title.setStyleSheet(styles.label_style(font_size=14))
 
-        shortcut_toggle = QToolButton(shortcuts_header)
-        shortcut_toggle.setCursor(Qt.CursorShape.ArrowCursor)
-        shortcut_toggle.setArrowType(Qt.ArrowType.NoArrow)
-        shortcut_toggle.setStyleSheet(
-            styles.section_toggle_style(
-                styles.theme_text_color(),
-                styles.SURFACE_DARK,
-            )
-        )
-        section_toggle_slot_width, section_toggle_slot_height = (
-            styles.section_toggle_slot_size()
-        )
-        shortcut_toggle.setFixedSize(
-            section_toggle_slot_width,
-            section_toggle_slot_height,
-        )
-        app.register_tooltip(
-            shortcut_toggle,
-            tooltip_text("screen_mover_hotkeys_toggle"),
-        )
-
-        shortcut_title_spacer = QWidget(shortcuts_header)
-        shortcut_title_spacer.setFixedSize(
-            section_toggle_slot_width,
-            section_toggle_slot_height,
-        )
-        shortcuts_header_layout.addWidget(shortcut_title_spacer)
         shortcuts_header_layout.addStretch()
         shortcuts_header_layout.addWidget(shortcut_title)
         shortcuts_header_layout.addStretch()
-        shortcuts_header_layout.addWidget(shortcut_toggle)
         screen_layout.addWidget(
             shortcuts_header,
             0,
@@ -812,32 +784,6 @@ class LeftPanelBuilder:
         app.screen_mover_controls_row = screen_row
         app.screen_mover_shortcuts_header = shortcuts_header
         app.screen_mover_shortcuts_container = shortcuts_container
-        app.screen_mover_shortcuts_toggle_btn = shortcut_toggle
-
-        def set_shortcuts_open(is_open: bool, *, persist: bool = True) -> None:
-            is_open = bool(is_open)
-            state["screen_mover_keyboard_shortcuts_open"] = is_open
-            shortcuts_container.setVisible(is_open)
-            shortcut_toggle.setText(
-                styles.arrow_glyph(
-                    Qt.ArrowType.DownArrow if is_open else Qt.ArrowType.UpArrow
-                )
-            )
-            app._update_main_scrollbar_policy()
-            if persist:
-                app.save_all_settings()
-
-        initial_shortcuts_open = bool(
-            state.get("screen_mover_keyboard_shortcuts_open", True)
-        )
-        set_shortcuts_open(initial_shortcuts_open, persist=False)
-
-        def toggle_shortcuts() -> None:
-            set_shortcuts_open(
-                not bool(state.get("screen_mover_keyboard_shortcuts_open", True))
-            )
-
-        shortcut_toggle.clicked.connect(toggle_shortcuts)
 
         shortcut_grid = QGridLayout()
         shortcut_grid.setContentsMargins(0, 0, 0, 0)
