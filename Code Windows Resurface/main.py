@@ -2,6 +2,7 @@
 import sys
 import ctypes
 import hashlib
+import time
 from ctypes import wintypes
 from pathlib import Path
 import psutil
@@ -239,39 +240,60 @@ class TitleBarDragRegion(QWidget):
         super().mouseReleaseEvent(event)
 
 
-def bring_existing_instance_to_front(scope: tuple[str, Path] | None = None):
-    target_hwnd = None
+def bring_existing_instance_to_front(
+    scope: tuple[str, Path] | None = None,
+    *,
+    attempts: int = 40,
+    retry_delay_seconds: float = 0.1,
+) -> bool:
+    """Request activation of an existing process, including one still starting.
 
-    def enum_handler(hwnd, _):
-        nonlocal target_hwnd
-        try:
-            title = win32gui.GetWindowText(hwnd)
-        except Exception:
+    The mutex is created before the Qt window is constructed.  Source launches
+    can therefore overlap during slow imports: the later process sees the mutex
+    but a one-off window enumeration finds nothing and exits.  Retry the lookup
+    for a short, bounded interval so the first process has time to create its
+    native window.
+    """
+    for attempt in range(max(1, attempts)):
+        target_hwnd = None
+
+        def enum_handler(hwnd, _):
+            nonlocal target_hwnd
+            try:
+                title = win32gui.GetWindowText(hwnd)
+            except Exception:
+                return True
+
+            if (
+                "Windows Resurface" in title
+                and hwnd != 0
+                and _window_matches_instance_scope(hwnd, scope)
+            ):
+                target_hwnd = hwnd
+                return False
+
             return True
 
-        if (
-            "Windows Resurface" in title
-            and hwnd != 0
-            and _window_matches_instance_scope(hwnd, scope)
-        ):
-            target_hwnd = hwnd
+        try:
+            ctypes.windll.kernel32.SetLastError(0)
+            win32gui.EnumWindows(enum_handler, None)
+        except Exception as exc:
+            print("[RESTORE] enumeration failed:", exc)
+            return False
 
-        return True
+        if target_hwnd:
+            try:
+                win32gui.PostMessage(target_hwnd, WM_APP_RESTORE_INSTANCE, 0, 0)
+                return True
+            except Exception as exc:
+                print("[RESTORE] failed:", exc)
+                return False
 
-    try:
-        ctypes.windll.kernel32.SetLastError(0)
-        win32gui.EnumWindows(enum_handler, None)
-    except Exception as e:
-        print("[RESTORE] enumeration failed:", e)
-        return
+        if attempt < attempts - 1:
+            time.sleep(retry_delay_seconds)
 
-    if not target_hwnd:
-        return
-
-    try:
-        win32gui.PostMessage(target_hwnd, WM_APP_RESTORE_INSTANCE, 0, 0)
-    except Exception as e:
-        print("[RESTORE] failed:", e)
+    print("[RESTORE] existing instance did not create a window in time.")
+    return False
 
 def ensure_single_instance(scope: tuple[str, Path] | None = None):
     scope = scope or current_instance_scope()

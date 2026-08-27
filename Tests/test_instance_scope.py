@@ -122,3 +122,33 @@ def test_exe_instance_scope_matches_only_same_exe(monkeypatch, tmp_path):
         100,
         ("exe", target_exe),
     )
+
+
+def test_restore_retries_until_starting_instance_creates_its_window(monkeypatch):
+    enum_calls = 0
+    posted_messages = []
+
+    def enum_windows(callback, _):
+        nonlocal enum_calls
+        enum_calls += 1
+        if enum_calls == 2:
+            callback(100, None)
+
+    monkeypatch.setattr(resurface_main.win32gui, "EnumWindows", enum_windows)
+    monkeypatch.setattr(resurface_main.win32gui, "GetWindowText", lambda hwnd: "Windows Resurface")
+    monkeypatch.setattr(resurface_main, "_window_matches_instance_scope", lambda hwnd, scope: True)
+    monkeypatch.setattr(
+        resurface_main.win32gui,
+        "PostMessage",
+        lambda hwnd, message, wparam, lparam: posted_messages.append(
+            (hwnd, message, wparam, lparam)
+        ),
+    )
+    monkeypatch.setattr(resurface_main.time, "sleep", lambda seconds: None)
+
+    assert resurface_main.bring_existing_instance_to_front(
+        attempts=3,
+        retry_delay_seconds=0,
+    )
+    assert enum_calls == 2
+    assert posted_messages == [(100, resurface_main.WM_APP_RESTORE_INSTANCE, 0, 0)]
