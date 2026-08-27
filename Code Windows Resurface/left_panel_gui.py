@@ -843,6 +843,7 @@ class LeftPanelBuilder:
             shortcut_labels.append(label)
 
             edit = QKeySequenceEdit(shortcuts_container)
+            edit.setObjectName("ScreenMoverShortcutEdit")
             if hasattr(edit, "setMaximumSequenceLength"):
                 edit.setMaximumSequenceLength(1)
             edit.setFixedHeight(styles.PAGE_CONTROL_HEIGHT)

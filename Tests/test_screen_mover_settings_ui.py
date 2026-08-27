@@ -1231,6 +1231,57 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
         qt_app.processEvents()
 
 
+def test_screen_mover_shortcut_fields_keep_surface_style_after_restart_and_theme_refresh(
+    monkeypatch,
+):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["theme_dark"] = False
+
+    def assert_shortcut_field_style(window, is_dark: bool) -> None:
+        expected_background = styles.qcolor_css(styles.themed_surface_field_bg())
+        expected_border = styles.qcolor_css(styles.themed_surface_field_border())
+
+        for edit in window.screen_mover_hotkey_edits.values():
+            assert edit.objectName() == "ScreenMoverShortcutEdit"
+            assert "QKeySequenceEdit#ScreenMoverShortcutEdit" in edit.styleSheet()
+            assert (
+                "QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit"
+                in edit.styleSheet()
+            )
+            assert f"background-color: {expected_background};" in edit.styleSheet()
+            assert f"border: 2px solid {expected_border};" in edit.styleSheet()
+            internal_edits = edit.findChildren(QLineEdit)
+            assert len(internal_edits) == 1
+            assert internal_edits[0].objectName() == "qt_keysequenceedit_lineedit"
+            assert internal_edits[0].styleSheet() == ""
+            image = edit.grab().toImage()
+            assert image.pixelColor(
+                image.width() // 2,
+                image.height() // 2,
+            ).name() == expected_background
+
+        assert styles.THEME_IS_DARK is is_dark
+
+    for _ in range(2):
+        window = _build_offscreen_window(monkeypatch, state)
+        try:
+            window.navigate_to_page("screen_mover")
+            window.show()
+            qt_app.processEvents()
+            assert_shortcut_field_style(window, False)
+
+            for is_dark in (True, False):
+                window.apply_theme(is_dark)
+                qt_app.processEvents()
+                assert_shortcut_field_style(window, is_dark)
+        finally:
+            window._quit_requested = True
+            window.close()
+            window.deleteLater()
+            qt_app.processEvents()
+
+
 def test_screen_mover_shortcuts_have_balanced_heading_spacing(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)

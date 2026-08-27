@@ -595,6 +595,8 @@ class UtilityControlApp(
         self.navigate_to_page(saved_page, persist=False)
         self.main_frame.hide()
         self._apply_navigation_theme()
+        self._refresh_screen_mover_shortcut_field_styles()
+        QTimer.singleShot(0, self._refresh_screen_mover_shortcut_field_styles)
 
     def _build_title_bar(self) -> None:
         self.window_chrome.build()
@@ -604,6 +606,30 @@ class UtilityControlApp(
 
     def _apply_title_bar_theme(self) -> None:
         self.window_chrome.apply_theme()
+
+    def _refresh_screen_mover_shortcut_field_styles(self) -> None:
+        """Restore shortcut-field styling after Qt reparents or repolishes it."""
+        for hotkey_edit in self.findChildren(QKeySequenceEdit):
+            if hotkey_edit.objectName() != "ScreenMoverShortcutEdit":
+                continue
+
+            internal_edits = hotkey_edit.findChildren(QLineEdit)
+            for internal_edit in internal_edits:
+                internal_edit.setStyleSheet("")
+            hotkey_edit.setStyleSheet(styles.hotkey_edit_style(13))
+            widgets = (hotkey_edit, *internal_edits)
+            for widget in widgets:
+                widget.style().unpolish(widget)
+                widget.style().polish(widget)
+                widget.update()
+
+    @staticmethod
+    def _is_screen_mover_shortcut_internal_field(line_edit: QLineEdit) -> bool:
+        parent = line_edit.parentWidget()
+        return (
+            isinstance(parent, QKeySequenceEdit)
+            and parent.objectName() == "ScreenMoverShortcutEdit"
+        )
 
     def _create_page(self, title_text: str, description: str):
         page = QWidget(self.page_stack)
@@ -988,6 +1014,8 @@ class UtilityControlApp(
             frame.setStyleSheet(styles.collapsible_section_frame_style())
 
         for line_edit in self.findChildren(QLineEdit):
+            if self._is_screen_mover_shortcut_internal_field(line_edit):
+                continue
             if line_edit.property("emphasizedSurfaceFieldStyle"):
                 line_edit.setStyleSheet(styles.emphasized_surface_line_edit_style(15))
             elif line_edit.property("framelessSurfaceFieldStyle"):
@@ -999,8 +1027,7 @@ class UtilityControlApp(
             else:
                 line_edit.setStyleSheet(styles.line_edit_style(15))
 
-        for hotkey_edit in self.findChildren(QKeySequenceEdit):
-            hotkey_edit.setStyleSheet(styles.hotkey_edit_style(13))
+        self._refresh_screen_mover_shortcut_field_styles()
 
         backup_path_label = getattr(self, "backup_path_input", None)
         if (

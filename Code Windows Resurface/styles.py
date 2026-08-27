@@ -572,20 +572,43 @@ def toggle_button_style(font_size: int | None = None) -> str:
     return organizing_button_style(font_size=font_size)
 
 def hotkey_edit_style(font_size: int = 13) -> str:
+    """Style the Screen Mover shortcut editor as a persistent surface field."""
     font_size = coerce_font_size(font_size, 13) or 13
     return f"""
-        QKeySequenceEdit {{
-            {label_style(font_size=font_size, bold=True, color=control_text_color())}
+        QKeySequenceEdit#ScreenMoverShortcutEdit {{
+            {label_style(
+                font_size=font_size,
+                bold=True,
+                color=themed_surface_field_text(),
+            )}
             min-height: 26px;
-            padding: 2px 6px;
-            background-color: {qcolor_css(themed_button_bg())};
-            border: 1px solid {qcolor_css(themed_button_border())};
-            border-radius: 3px;
-            selection-background-color: {qcolor_css(themed_button_pressed())};
+            padding: 4px 8px;
+            background-color: {qcolor_css(themed_surface_field_bg())};
+            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            border-radius: 6px;
+            selection-background-color: {qcolor_css(PANEL_HOVER)};
         }}
-        QKeySequenceEdit:hover,
-        QKeySequenceEdit:focus {{
-            border-color: {qcolor_css(themed_button_pressed())};
+        QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit {{
+            {label_style(
+                font_size=font_size,
+                bold=True,
+                color=themed_surface_field_text(),
+            )}
+            padding: 4px 8px;
+            background-color: {qcolor_css(themed_surface_field_bg())};
+            border: 2px solid {qcolor_css(themed_surface_field_border())};
+            border-radius: 6px;
+            selection-background-color: {qcolor_css(PANEL_HOVER)};
+        }}
+        QKeySequenceEdit#ScreenMoverShortcutEdit:hover,
+        QKeySequenceEdit#ScreenMoverShortcutEdit:focus {{
+            border-color: {qcolor_css(themed_surface_field_border())};
+            background-color: {qcolor_css(themed_surface_field_bg())};
+        }}
+        QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit:hover,
+        QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit:focus {{
+            border-color: {qcolor_css(themed_surface_field_border())};
+            background-color: {qcolor_css(themed_surface_field_bg())};
         }}
     """
 
