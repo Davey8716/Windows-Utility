@@ -500,6 +500,7 @@ def test_live_theme_switch_preserves_blue_and_power_dropdown_roles(monkeypatch):
             assert f"background-color: {standard_color};" not in power_combo.styleSheet()
 
             sleep_row = power_combo.findText("Sleep")
+            logout_row = power_combo.findText("Log out")
             shutdown_row = power_combo.findText("Shutdown")
             sleep_background = power_combo.itemData(
                 sleep_row,
@@ -512,14 +513,28 @@ def test_live_theme_switch_preserves_blue_and_power_dropdown_roles(monkeypatch):
 
             assert isinstance(sleep_background, QColor)
             assert isinstance(shutdown_background, QColor)
-            assert power_combo.itemData(
-                sleep_row,
-                Qt.ItemDataRole.ForegroundRole,
-            ) == main.styles.contrasting_text_color(sleep_background)
-            assert power_combo.itemData(
-                shutdown_row,
-                Qt.ItemDataRole.ForegroundRole,
-            ) == main.styles.contrasting_text_color(shutdown_background)
+            if is_dark:
+                assert power_combo.itemData(
+                    sleep_row,
+                    Qt.ItemDataRole.ForegroundRole,
+                ) == main.styles.TEXT_LIGHT
+                assert power_combo.itemData(
+                    logout_row,
+                    Qt.ItemDataRole.ForegroundRole,
+                ) == main.styles.TEXT_LIGHT
+                assert power_combo.itemData(
+                    shutdown_row,
+                    Qt.ItemDataRole.ForegroundRole,
+                ) == main.styles.contrasting_text_color(shutdown_background)
+            else:
+                assert power_combo.itemData(
+                    shutdown_row,
+                    Qt.ItemDataRole.ForegroundRole,
+                ) == QColor(0, 0, 0)
+                assert power_combo.itemData(
+                    sleep_row,
+                    Qt.ItemDataRole.ForegroundRole,
+                ) == main.styles.contrasting_text_color(sleep_background)
     finally:
         main.styles.set_theme(True)
         window._quit_requested = True

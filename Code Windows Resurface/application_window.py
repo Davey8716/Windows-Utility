@@ -945,6 +945,13 @@ class UtilityControlApp(
             "red": QColor(176, 38, 38) if styles.THEME_IS_DARK else QColor(204, 52, 52),
         }
 
+    def _power_action_item_foreground(self, label: str, background: QColor) -> QColor:
+        if styles.THEME_IS_DARK and label in {"Sleep", "Log out"}:
+            return styles.TEXT_LIGHT
+        if not styles.THEME_IS_DARK and label == "Shutdown":
+            return QColor(0, 0, 0)
+        return styles.contrasting_text_color(background)
+
     def _apply_power_action_dropdown_style(self, combo: QComboBox) -> None:
         font_size = styles.coerce_font_size(
             combo.property("styleFontSize"),
@@ -965,7 +972,7 @@ class UtilityControlApp(
             combo.setItemData(row, background, Qt.ItemDataRole.BackgroundRole)
             combo.setItemData(
                 row,
-                styles.contrasting_text_color(background),
+                self._power_action_item_foreground(label, background),
                 Qt.ItemDataRole.ForegroundRole,
             )
 
