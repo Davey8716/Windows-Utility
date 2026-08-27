@@ -542,6 +542,31 @@ def test_main_window_and_power_dropdown_are_wide_enough(monkeypatch):
         qt_app.processEvents()
 
 
+def test_navigation_panel_border_aligns_with_active_page_title(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.show()
+        qt_app.processEvents()
+
+        for page_id in ("overview", "user_interface", "screen_mover"):
+            window.navigate_to_page(page_id)
+            qt_app.processEvents()
+            current_page = window.page_stack.currentWidget()
+            page_title = current_page.findChild(QLabel, "PageTitle")
+            assert page_title is not None
+            assert window.navigation_list.mapTo(window, QPoint(0, 0)).y() == (
+                page_title.mapTo(window, QPoint(0, 0)).y()
+            )
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)

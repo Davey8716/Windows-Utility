@@ -322,6 +322,7 @@ class UtilityControlApp(
     TITLE_TEXT_TOP_PADDING = 6
     TITLE_CONTROL_ROW_HEIGHT = 0
     TITLE_BAR_HEIGHT = 40
+    PAGE_TITLE_TOP_INSET = 28
     MAIN_PANEL_WIDTH = 480
     PREFERRED_WINDOW_HEIGHT = WINDOW_HEIGHT
     RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 65
@@ -756,7 +757,14 @@ class UtilityControlApp(
         body_layout.setSpacing(0)
         root_layout.addWidget(body, 1)
 
-        self.navigation_list = QListWidget(body)
+        self.navigation_sidebar = QWidget(body)
+        self.navigation_sidebar.setObjectName("NavigationSidebar")
+        self.navigation_sidebar.setFixedWidth(self.SIDEBAR_WIDTH)
+        navigation_layout = QVBoxLayout(self.navigation_sidebar)
+        navigation_layout.setContentsMargins(0, self.PAGE_TITLE_TOP_INSET, 0, 0)
+        navigation_layout.setSpacing(0)
+
+        self.navigation_list = QListWidget(self.navigation_sidebar)
         self.navigation_list.setObjectName("NavigationList")
         self.navigation_list.setFixedWidth(self.SIDEBAR_WIDTH)
         self.navigation_list.setIconSize(QSize(22, 22))
@@ -771,7 +779,8 @@ class UtilityControlApp(
             QAbstractItemView.SelectionMode.SingleSelection
         )
         self.navigation_list.setAccessibleName("Sections")
-        body_layout.addWidget(self.navigation_list)
+        navigation_layout.addWidget(self.navigation_list, 1)
+        body_layout.addWidget(self.navigation_sidebar)
 
         self.page_stack = QStackedWidget(body)
         self.page_stack.setObjectName("PageStack")
@@ -953,7 +962,7 @@ class UtilityControlApp(
         content.setObjectName("PageContent")
         content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(38, 28, 38, 32)
+        layout.setContentsMargins(38, self.PAGE_TITLE_TOP_INSET, 38, 32)
         layout.setSpacing(16)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
