@@ -114,6 +114,10 @@ class AdvancedToolsPanel(QWidget):
     WINDOWS_UTILITIES_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH
     WINDOWS_UTILITIES_SECTION_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH + 8
     WINDOWS_UTILITIES_CONTENT_WIDTH = WINDOWS_UTILITIES_FRAME_WIDTH - 8
+    MAINTENANCE_CONTENT_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH - 4
+    MAINTENANCE_CONTROL_WIDTH = (
+        MAINTENANCE_CONTENT_WIDTH - styles.PAGE_CONTROL_GAP
+    ) // 2
     SIDEBAR_OUTPUT_CLEAR_MESSAGES = {
         "IP Configuration": "IP configuration output log cleared.",
         "Flush DNS": "Dns output log cleared.",
@@ -280,9 +284,12 @@ class AdvancedToolsPanel(QWidget):
         )
 
         self.sidebar_output_container = QWidget()
-        self.sidebar_output_container.setFixedHeight(285)
+        self.sidebar_output_container.setFixedSize(
+            self.MAINTENANCE_CONTENT_WIDTH,
+            285,
+        )
         self.sidebar_output_container.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
         )
         sidebar_output_layout = QGridLayout(self.sidebar_output_container)
@@ -290,6 +297,7 @@ class AdvancedToolsPanel(QWidget):
         sidebar_output_layout.setSpacing(0)
 
         self.sidebar_output = QTextEdit()
+        self.sidebar_output.setFixedWidth(self.MAINTENANCE_CONTENT_WIDTH)
         self.sidebar_output.setReadOnly(True)
         self.sidebar_output.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
@@ -331,7 +339,11 @@ class AdvancedToolsPanel(QWidget):
         self.sidebar_output_clear_btn.raise_()
         self._position_sidebar_output_clear_button()
         self._apply_sidebar_output_theme()
-        self.sidebar_utils_section.content_layout.addWidget(self.sidebar_output_container)
+        self.sidebar_utils_section.content_layout.addWidget(
+            self.sidebar_output_container,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
 
         self.display_space_section = CollapsibleSection(
             parent=self.side_frame,
@@ -1136,6 +1148,7 @@ class AdvancedToolsPanel(QWidget):
         parent_layout = self.sidebar_utils_section.content_layout
         dropdown_grid = QWidget()
         dropdown_grid.setProperty("centeredControlGrid", True)
+        dropdown_grid.setFixedWidth(self.MAINTENANCE_CONTENT_WIDTH)
         dropdown_grid.setSizePolicy(
             QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
@@ -1144,6 +1157,8 @@ class AdvancedToolsPanel(QWidget):
         grid_layout.setContentsMargins(0, 0, 0, 0)
         grid_layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
         grid_layout.setVerticalSpacing(10)
+        grid_layout.setColumnMinimumWidth(0, self.MAINTENANCE_CONTROL_WIDTH)
+        grid_layout.setColumnMinimumWidth(1, self.MAINTENANCE_CONTROL_WIDTH)
         parent_layout.addWidget(
             dropdown_grid,
             0,
@@ -1156,6 +1171,7 @@ class AdvancedToolsPanel(QWidget):
             0,
             "Cleanup / Quick Actions",
             self._sidebar_cleanup_actions(),
+            fixed_width=self.MAINTENANCE_CONTROL_WIDTH,
         )
         self._add_sidebar_dropdown(
             grid_layout,
@@ -1163,6 +1179,7 @@ class AdvancedToolsPanel(QWidget):
             1,
             "Network / Sys Quick Fix",
             self._sidebar_network_actions(),
+            fixed_width=self.MAINTENANCE_CONTROL_WIDTH,
         )
         self._add_sidebar_dropdown(
             grid_layout,
@@ -1170,6 +1187,7 @@ class AdvancedToolsPanel(QWidget):
             0,
             "Display And Sound",
             self._sidebar_quick_open_actions(),
+            fixed_width=self.MAINTENANCE_CONTROL_WIDTH,
         )
         self._add_sidebar_dropdown(
             grid_layout,
@@ -1177,6 +1195,7 @@ class AdvancedToolsPanel(QWidget):
             1,
             "Sys Integrity & Disk Health",
             self._sidebar_system_integrity_actions(),
+            fixed_width=self.MAINTENANCE_CONTROL_WIDTH,
         )
 
     def _sidebar_system_integrity_actions(self):
@@ -1575,7 +1594,16 @@ class AdvancedToolsPanel(QWidget):
 
         self._run_elevated_and_output(command)
 
-    def _add_sidebar_dropdown(self, parent_layout, row, column, title, actions_map):
+    def _add_sidebar_dropdown(
+        self,
+        parent_layout,
+        row,
+        column,
+        title,
+        actions_map,
+        *,
+        fixed_width: int | None = None,
+    ):
         placeholder = f" {title} "
         combo = QComboBox()
         combo.addItem(placeholder)
@@ -1589,6 +1617,12 @@ class AdvancedToolsPanel(QWidget):
             placeholder=placeholder,
             font_size=14,
         )
+        if fixed_width is not None:
+            styles.apply_page_control_size(
+                combo,
+                width=fixed_width,
+                role="maintenance",
+            )
         tooltip_key = self.SIDEBAR_DROPDOWN_TOOLTIP_KEYS.get(title)
         if tooltip_key:
             self.app.register_tooltip(combo, tooltip_text(tooltip_key))

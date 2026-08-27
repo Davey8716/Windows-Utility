@@ -717,6 +717,45 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
         qt_app.processEvents()
 
 
+def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.navigate_to_page("maintenance")
+        window.show()
+        qt_app.processEvents()
+
+        panel = window.right_tools_panel
+        maintenance_content = panel.sidebar_utils_section.content
+        selectors = maintenance_content.findChildren(QComboBox)
+        selector_grid = selectors[0].parentWidget()
+        maintenance_page = window.page_by_id["maintenance"]
+
+        assert len(selectors) == 4
+        assert all(selector.width() == 238 for selector in selectors)
+        assert selector_grid.width() == 488
+        assert panel.sidebar_output_container.width() == 488
+        assert panel.sidebar_output.width() == 488
+        assert panel.sidebar_output_container.height() == 285
+
+        grid_left = selector_grid.mapTo(maintenance_page, QPoint()).x()
+        output_left = panel.sidebar_output_container.mapTo(
+            maintenance_page,
+            QPoint(),
+        ).x()
+        assert grid_left == output_left
+        assert grid_left + selector_grid.width() == (
+            output_left + panel.sidebar_output_container.width()
+        )
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_master_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):
     saved_states = []
     monkeypatch.setattr(main, "save_state", lambda state: saved_states.append(dict(state)))
