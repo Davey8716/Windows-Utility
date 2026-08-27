@@ -349,6 +349,21 @@ def navigation_list_style() -> str:
         }}
     """
 
+
+def sidebar_version_label_style() -> str:
+    return f"""
+        QLabel#SidebarVersionLabel {{
+            background-color: {qcolor_css(SURFACE_BG)};
+            color: {qcolor_css(theme_muted_text_color())};
+            border: none;
+            border-right: 1px solid {qcolor_css(SURFACE_BORDER)};
+            padding: 12px 16px 16px;
+            font-size: 11px;
+            font-weight: 600;
+        }}
+    """
+
+
 def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
     font_size = coerce_font_size(font_size, 18) or 18
     return f"""

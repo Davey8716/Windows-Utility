@@ -74,6 +74,7 @@ class UtilityControlApp(
     DesktopOperationsMixin,
     QMainWindow,
 ):
+    APP_VERSION = "0.1.0"
     WINDOW_WIDTH = 1000
     WINDOW_HEIGHT = 800
     SIDEBAR_WIDTH = 220
@@ -528,6 +529,17 @@ class UtilityControlApp(
         )
         self.navigation_list.setAccessibleName("Sections")
         navigation_layout.addWidget(self.navigation_list, 1)
+
+        self.version_label = QLabel(
+            f"Windows Resurface  ·  v{self.APP_VERSION}",
+            self.navigation_sidebar,
+        )
+        self.version_label.setObjectName("SidebarVersionLabel")
+        self.version_label.setAccessibleName("Application version")
+        self.version_label.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        navigation_layout.addWidget(self.version_label)
         body_layout.addWidget(self.navigation_sidebar)
 
         self.page_stack = QStackedWidget(body)
@@ -815,6 +827,8 @@ class UtilityControlApp(
         if hasattr(self, "navigation_list"):
             self.navigation_list.setStyleSheet(styles.navigation_list_style())
             self._refresh_navigation_icons()
+        if hasattr(self, "version_label"):
+            self.version_label.setStyleSheet(styles.sidebar_version_label_style())
         for name in ("OverviewSummary", "MonitorRulesEmptyState"):
             for frame in self.findChildren(QFrame, name):
                 frame.setStyleSheet(styles.summary_frame_style())
