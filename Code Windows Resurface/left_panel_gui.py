@@ -6,7 +6,7 @@ from hotkeys import ACTION_LABELS, hotkey_to_display, normalize_hotkey
 from state_manager import save_state
 from tooltips import left_section_toggle_tooltip, tooltip_text
 from PySide6.QtCore import Qt, QTimer, QSize
-from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -331,50 +331,20 @@ class LeftPanelBuilder:
             button.setIcon(checked_icon if checked else unchecked_icon)
 
         update_state(button.isChecked())
+        button._update_toggle_icon = update_state
         button.toggled.connect(update_state)
 
-    def _create_theme_toggle_icon(self, mode: str, icon_size: int = 18) -> QIcon:
+    def _create_fluent_icon(self, glyph: str, icon_size: int = 16) -> QIcon:
         pixmap = QPixmap(icon_size, icon_size)
         pixmap.fill(Qt.GlobalColor.transparent)
 
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-
-        if mode == "dark":
-            moon_color = QColor(191, 205, 224)
-            cutout_color = QColor(0, 0, 0, 0)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.setBrush(moon_color)
-            painter.drawEllipse(3, 2, icon_size - 6, icon_size - 6)
-            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
-            painter.setBrush(cutout_color)
-            painter.drawEllipse(7, 2, icon_size - 6, icon_size - 6)
-        else:
-            sun_color = QColor(0, 0, 0)
-            pen = QPen(sun_color)
-            pen.setWidth(2)
-            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-            painter.setPen(pen)
-            painter.setBrush(sun_color)
-
-            center = icon_size / 2
-            ray_inner = 6
-            ray_outer = 8
-            painter.drawEllipse(5, 5, icon_size - 10, icon_size - 10)
-            painter.drawLine(int(center), ray_outer - 6, int(center), ray_outer - 2)
-            painter.drawLine(int(center), icon_size - (ray_outer - 6), int(center), icon_size - (ray_outer - 2))
-            painter.drawLine(ray_outer - 6, int(center), ray_outer - 2, int(center))
-            painter.drawLine(icon_size - (ray_outer - 6), int(center), icon_size - (ray_outer - 2), int(center))
-            painter.drawLine(ray_inner - 2, ray_inner - 2, ray_outer - 1, ray_outer - 1)
-            painter.drawLine(icon_size - (ray_inner - 2), ray_inner - 2, icon_size - (ray_outer - 1), ray_outer - 1)
-            painter.drawLine(ray_inner - 2, icon_size - (ray_inner - 2), ray_outer - 1, icon_size - (ray_outer - 1))
-            painter.drawLine(
-                icon_size - (ray_inner - 2),
-                icon_size - (ray_inner - 2),
-                icon_size - (ray_outer - 1),
-                icon_size - (ray_outer - 1),
-            )
-
+        font = QFont("Segoe Fluent Icons")
+        font.setPixelSize(icon_size)
+        painter.setFont(font)
+        painter.setPen(styles.control_text_color())
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
         painter.end()
         return QIcon(pixmap)
 
@@ -494,11 +464,12 @@ class LeftPanelBuilder:
             width=compact_toggle_width,
             font_size=10,
         )
+        app.dark_mode_btn = dark_mode_btn
         self._bind_toggle_icon_only(
             dark_mode_btn,
-            checked_icon_source=self._create_theme_toggle_icon("dark"),
-            unchecked_icon_source=self._create_theme_toggle_icon("light"),
-            icon_size=18,
+            checked_icon_source=self._create_fluent_icon("\ue708"),
+            unchecked_icon_source=self._create_fluent_icon("\ue706"),
+            icon_size=16,
         )
         compact_toggle_slot_layout.addWidget(dark_mode_btn)
         app.register_tooltip(dark_mode_btn, tooltip_text("dark_mode"))
@@ -511,18 +482,17 @@ class LeftPanelBuilder:
             save_state(state)
 
         desktop_zen_btn = self._make_compact_toggle_button(
-            "Zen Mode",
+            "",
             desktop_zen_mode_enabled,
             width=compact_toggle_width,
             font_size=10,
         )
         app.desktop_zen_btn = desktop_zen_btn
-        self._bind_toggle_state_text_with_checked_icon(
+        self._bind_toggle_icon_only(
             desktop_zen_btn,
-            "Zen Mode",
-            checked_icon_path=self.icons_root / "Zen Mode On.png",
-            unchecked_text="Off",
-            icon_size=18,
+            checked_icon_source=self._create_fluent_icon("\ued1a"),
+            unchecked_icon_source=self._create_fluent_icon("\ue890"),
+            icon_size=16,
         )
         compact_toggle_slot_layout.addWidget(desktop_zen_btn)
         app.register_tooltip(desktop_zen_btn, tooltip_text("desktop_zen_mode"))
@@ -663,6 +633,7 @@ class LeftPanelBuilder:
             desktop_zen_btn.blockSignals(True)
             desktop_zen_btn.setChecked(not checked)
             desktop_zen_btn.blockSignals(False)
+            desktop_zen_btn._update_toggle_icon(not checked)
             state["desktop_zen_mode_enabled"] = not checked
             save_state(state)
             app._show_timed_message(

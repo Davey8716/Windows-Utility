@@ -291,6 +291,61 @@ def test_navigation_restores_valid_page_and_falls_back_to_overview(monkeypatch):
         qt_app.processEvents()
 
 
+def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["theme_dark"] = True
+    state["desktop_zen_mode_enabled"] = False
+    monkeypatch.setattr(
+        main.UtilityActionsManager,
+        "desktop_zen_mode_toggle",
+        lambda _self, _enabled: True,
+    )
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.show()
+        qt_app.processEvents()
+
+        theme_button = window.dark_mode_btn
+        zen_button = window.desktop_zen_btn
+        for button in (theme_button, zen_button):
+            assert button.text() == ""
+            assert not button.icon().isNull()
+            assert button.iconSize().width() == button.iconSize().height() == 16
+
+        dark_icon_key = theme_button.icon().cacheKey()
+        theme_button.setChecked(False)
+        qt_app.processEvents()
+        assert window.state["theme_dark"] is False
+        assert theme_button.text() == ""
+        assert theme_button.icon().cacheKey() != dark_icon_key
+
+        zen_off_icon_key = zen_button.icon().cacheKey()
+        zen_button.setChecked(True)
+        qt_app.processEvents()
+        assert window.state["desktop_zen_mode_enabled"] is True
+        assert zen_button.text() == ""
+        assert zen_button.icon().cacheKey() != zen_off_icon_key
+
+        monkeypatch.setattr(
+            window.actions,
+            "desktop_zen_mode_toggle",
+            lambda _enabled: None,
+        )
+        monkeypatch.setattr(window, "_show_timed_message", lambda *_args: None)
+        zen_button.setChecked(False)
+        qt_app.processEvents()
+        assert zen_button.isChecked()
+        assert window.state["desktop_zen_mode_enabled"] is True
+        assert zen_button.icon().cacheKey() != zen_off_icon_key
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_overview_status_and_folder_quick_action(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
