@@ -354,28 +354,32 @@ class AdvancedToolsPanel(QWidget):
         parent_layout = self.windows_utility_section.content_layout
 
         row = QWidget()
-        row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        row.setProperty("centeredControlGrid", True)
+        row.setFixedWidth(
+            (styles.PAGE_CONTROL_WIDTH * 2) + styles.PAGE_CONTROL_GAP
+        )
+        row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(10)
-        parent_layout.addWidget(row)
+        row_layout.setSpacing(styles.PAGE_CONTROL_GAP)
+        parent_layout.addWidget(row, 0, Qt.AlignmentFlag.AlignHCenter)
 
         left_drop_col = QWidget()
-        left_drop_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        left_drop_col.setFixedWidth(styles.PAGE_CONTROL_WIDTH)
+        left_drop_col.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         left_drop_layout = QVBoxLayout(left_drop_col)
         left_drop_layout.setContentsMargins(0, 0, 0, 0)
         left_drop_layout.setSpacing(10)
 
         right_drop_col = QWidget()
-        right_drop_col.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        right_drop_col.setFixedWidth(styles.PAGE_CONTROL_WIDTH)
+        right_drop_col.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         right_drop_layout = QVBoxLayout(right_drop_col)
         right_drop_layout.setContentsMargins(0, 0, 0, 0)
         right_drop_layout.setSpacing(10)
 
         row_layout.addWidget(left_drop_col)
         row_layout.addWidget(right_drop_col)
-        row_layout.setStretch(0, 1)
-        row_layout.setStretch(1, 1)
         row_layout.setAlignment(left_drop_col, Qt.AlignmentFlag.AlignTop)
         row_layout.setAlignment(right_drop_col, Qt.AlignmentFlag.AlignTop)
 
@@ -399,6 +403,17 @@ class AdvancedToolsPanel(QWidget):
         self._add_windows_dropdown(
             right_drop_layout, "Startup & Power", self._startup_power_utilities()
         )
+        left_width = max(
+            widget.width()
+            for widget in left_drop_col.findChildren(QComboBox)
+        )
+        right_width = max(
+            widget.width()
+            for widget in right_drop_col.findChildren(QComboBox)
+        )
+        left_drop_col.setFixedWidth(left_width)
+        right_drop_col.setFixedWidth(right_width)
+        row.setFixedWidth(left_width + styles.PAGE_CONTROL_GAP + right_width)
 
     def _apply_sidebar_output_theme(self):
         self.sidebar_output.setStyleSheet(
@@ -467,20 +482,19 @@ class AdvancedToolsPanel(QWidget):
         drive_parent = self.display_space_section.content_layout
 
         button_row = QWidget()
-        button_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        button_row.setProperty("centeredControlGrid", True)
+        button_row.setFixedWidth(
+            (styles.PAGE_CONTROL_WIDTH * 2) + styles.PAGE_CONTROL_GAP
+        )
+        button_row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         button_row_layout = QHBoxLayout(button_row)
         button_row_layout.setContentsMargins(0, 0, 0, 0)
-        button_row_layout.setSpacing(10)
+        button_row_layout.setSpacing(styles.PAGE_CONTROL_GAP)
 
         this_pc_titles = ("This PC",)
         btn_this_pc = QPushButton("Open This PC")
         self.btn_this_pc = btn_this_pc
-        btn_this_pc.setMinimumWidth(styles.DEFAULT_BUTTON_WIDTH)
-        btn_this_pc.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        btn_this_pc.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
+        styles.apply_page_control_size(btn_this_pc)
         btn_this_pc.setProperty("styleFontSize", 14)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
@@ -503,17 +517,11 @@ class AdvancedToolsPanel(QWidget):
             tooltip_text("open_this_pc"),
         )
         button_row_layout.addWidget(btn_this_pc)
-        button_row_layout.setStretchFactor(btn_this_pc, 1)
 
         storage_sense_titles = ("Settings",)
         btn_storage_sense = QPushButton("Open Storage Sense")
         self.btn_storage_sense = btn_storage_sense
-        btn_storage_sense.setMinimumWidth(styles.DEFAULT_BUTTON_WIDTH)
-        btn_storage_sense.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        btn_storage_sense.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
+        styles.apply_page_control_size(btn_storage_sense)
         btn_storage_sense.setProperty("styleFontSize", 14)
         btn_storage_sense.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_storage_sense)
@@ -536,14 +544,13 @@ class AdvancedToolsPanel(QWidget):
             tooltip_text("open_storage_sense"),
         )
         button_row_layout.addWidget(btn_storage_sense)
-        button_row_layout.setStretchFactor(btn_storage_sense, 1)
         self._refresh_tracked_window_button_labels()
         if not self._tracked_window_button_refresh_timer.isActive():
             self._tracked_window_button_refresh_timer.start(
                 self.TRACKED_WINDOW_BUTTON_REFRESH_MS
             )
 
-        drive_parent.addWidget(button_row)
+        drive_parent.addWidget(button_row, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.drive_space_list = QListWidget()
         self.drive_space_list.setFixedHeight(120)
@@ -1055,14 +1062,17 @@ class AdvancedToolsPanel(QWidget):
     def _add_windows_dropdown(self, parent_layout, label, actions_map):
         placeholder = f" {label} "
         combo = QComboBox()
-        combo.setMinimumWidth(180)
-        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         combo.addItem(placeholder)
         combo.addItems(sorted(actions_map.keys()))
         combo.setCurrentText(placeholder)
         combo.view().setRowHidden(0, True)
         combo.setProperty("styleFontSize", 15)
         combo.setStyleSheet(styles.organizing_combo_style(15))
+        styles.fit_page_combo_width(
+            combo,
+            placeholder=placeholder,
+            font_size=15,
+        )
         tooltip_key = self.WINDOWS_DROPDOWN_TOOLTIP_KEYS.get(label)
         if tooltip_key:
             self.app.register_tooltip(combo, tooltip_text(tooltip_key))
@@ -1125,17 +1135,20 @@ class AdvancedToolsPanel(QWidget):
     def build_sidebar_utilities(self):
         parent_layout = self.sidebar_utils_section.content_layout
         dropdown_grid = QWidget()
+        dropdown_grid.setProperty("centeredControlGrid", True)
         dropdown_grid.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
         )
         grid_layout = QGridLayout(dropdown_grid)
         grid_layout.setContentsMargins(0, 0, 0, 0)
-        grid_layout.setHorizontalSpacing(10)
+        grid_layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
         grid_layout.setVerticalSpacing(10)
-        grid_layout.setColumnStretch(0, 1)
-        grid_layout.setColumnStretch(1, 1)
-        parent_layout.addWidget(dropdown_grid)
+        parent_layout.addWidget(
+            dropdown_grid,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
 
         self._add_sidebar_dropdown(
             grid_layout,
@@ -1565,14 +1578,17 @@ class AdvancedToolsPanel(QWidget):
     def _add_sidebar_dropdown(self, parent_layout, row, column, title, actions_map):
         placeholder = f" {title} "
         combo = QComboBox()
-        combo.setMinimumWidth(180)
-        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         combo.addItem(placeholder)
         combo.addItems(actions_map.keys())
         combo.setCurrentText(placeholder)
         combo.view().setRowHidden(0, True)
         combo.setProperty("styleFontSize", 14)
         combo.setStyleSheet(styles.organizing_combo_style(14))
+        styles.fit_page_combo_width(
+            combo,
+            placeholder=placeholder,
+            font_size=14,
+        )
         tooltip_key = self.SIDEBAR_DROPDOWN_TOOLTIP_KEYS.get(title)
         if tooltip_key:
             self.app.register_tooltip(combo, tooltip_text(tooltip_key))

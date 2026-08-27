@@ -1,9 +1,19 @@
 import copy
 
+import left_panel_gui
 import main
+from hotkeys import ACTION_LABELS
 from PySide6.QtCore import QPoint, Qt
-from PySide6.QtGui import QColor, QIcon, QKeySequence, QShortcut
-from PySide6.QtWidgets import QApplication, QComboBox, QMainWindow, QPushButton, QScrollArea
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QShortcut
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QWidget,
+)
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 
 
@@ -137,6 +147,7 @@ class FakeWindow:
 def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
     monkeypatch.setattr(main, "save_state", lambda _state: None)
+    monkeypatch.setattr(left_panel_gui, "save_state", lambda _state: None)
     monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
     monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
     monkeypatch.setattr(main, "TrayIconManager", FakeTrayManager)
@@ -445,9 +456,9 @@ def test_main_window_and_power_dropdown_are_wide_enough(monkeypatch):
         assert window.height() == 800
         assert window.navigation_list.width() == 220
         assert window.page_stack.width() == 780
-        assert power_combo.width() == 210
-        assert power_combo.minimumWidth() == 210
-        assert power_combo.maximumWidth() == 210
+        assert 250 <= power_combo.width() <= 300
+        assert power_combo.minimumWidth() == power_combo.width()
+        assert power_combo.maximumWidth() == power_combo.width()
 
         for text in ("Always on Top On", "Maximize All On"):
             assert window_x(button_with_text(text)) == left_column_x
@@ -457,12 +468,155 @@ def test_main_window_and_power_dropdown_are_wide_enough(monkeypatch):
             button_with_text("Minimize After Use On"),
         ):
             assert window_x(widget) == right_column_x
-            assert widget.width() == 210
+            assert widget.width() == 250
 
         assert window_x(compact_buttons[0]) == left_column_x
-        assert compact_buttons[0].width() == 85
-        assert compact_buttons[1].width() == 85
-        assert window_x(compact_buttons[1]) == left_column_x + 95
+        assert compact_buttons[0].width() == 119
+        assert compact_buttons[1].width() == 119
+        assert window_x(compact_buttons[1]) == left_column_x + 131
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.show()
+        qt_app.processEvents()
+
+        standard_controls = [
+            widget
+            for widget in window.findChildren(QWidget)
+            if widget.property("pageControlRole") == "standard"
+        ]
+        compact_controls = [
+            widget
+            for widget in window.findChildren(QWidget)
+            if widget.property("pageControlRole") == "compact"
+        ]
+        wide_controls = [
+            widget
+            for widget in window.findChildren(QWidget)
+            if widget.property("pageControlRole") == "wide"
+        ]
+
+        assert standard_controls
+        assert all(
+            widget.size().width() == 250 and widget.size().height() == 34
+            for widget in standard_controls
+        )
+        assert compact_controls
+        assert all(
+            widget.size().width() == 119 and widget.size().height() == 34
+            for widget in compact_controls
+        )
+        assert all(
+            250 < widget.size().width() <= 300
+            and widget.size().height() == 34
+            for widget in wide_controls
+        )
+
+        for combo in window.findChildren(QComboBox):
+            if combo.property("pageControlRole") not in {"standard", "wide"}:
+                continue
+            font_size = int(combo.property("styleFontSize") or 14)
+            metrics = QFontMetrics(
+                QFont(
+                    combo.font().family().strip() or "Segoe UI",
+                    max(1, round(font_size * 0.75)),
+                )
+            )
+            collapsed_required = metrics.horizontalAdvance(
+                combo.currentText().strip()
+            ) + 58
+            assert (
+                collapsed_required <= combo.width()
+                or combo.width() == 300
+            )
+            popup_width = int(combo.property("comboPopupWidth") or 0)
+            assert popup_width == combo.view().minimumWidth()
+            for row in range(combo.count()):
+                item_text = combo.itemText(row)
+                required = metrics.horizontalAdvance(item_text) + 42
+                assert required <= popup_width or popup_width == 420
+                assert combo.itemData(row, Qt.ItemDataRole.ToolTipRole) == item_text
+
+        window._refresh_connected_drive_status_label(
+            ("E:\\Example Removable Drive With A Long Volume Name",)
+        )
+        qt_app.processEvents()
+        connected_combo = window.connected_drives_field
+        connected_row = connected_combo.parentWidget()
+        assert connected_row.width() == 250 + 12 + connected_combo.width()
+        assert 250 <= connected_combo.width() <= 300
+        assert connected_combo.itemData(
+            0,
+            Qt.ItemDataRole.ToolTipRole,
+        ) == connected_combo.itemText(0)
+
+        for label_name in ("PageTitle", "PageDescription", "PageSectionHeading"):
+            labels = window.findChildren(QLabel, label_name)
+            assert labels
+            assert all(
+                label.alignment() & Qt.AlignmentFlag.AlignHCenter
+                for label in labels
+            )
+
+        marked_controls = standard_controls + compact_controls + wide_controls
+        size_snapshot = {
+            id(widget): (widget.width(), widget.height())
+            for widget in marked_controls
+        }
+        active_page_id = window.navigation_list.currentItem().data(
+            Qt.ItemDataRole.UserRole
+        )
+        for is_dark in (False, True):
+            window.apply_theme(is_dark)
+            qt_app.processEvents()
+            assert window.navigation_list.currentItem().data(
+                Qt.ItemDataRole.UserRole
+            ) == active_page_id
+            assert all(
+                (widget.width(), widget.height()) == size_snapshot[id(widget)]
+                for widget in marked_controls
+            )
+
+        for page_id in window.page_by_id:
+            window.navigate_to_page(page_id)
+            qt_app.processEvents()
+            viewport = window.page_scroll_areas[page_id].viewport()
+            grids = [
+                widget
+                for widget in window.page_by_id[page_id].findChildren(QWidget)
+                if widget.property("centeredControlGrid")
+            ]
+            for grid in grids:
+                grid_left = grid.mapTo(viewport, QPoint(0, 0)).x()
+                grid_center = grid_left + (grid.width() / 2)
+                assert abs(grid_center - (viewport.width() / 2)) <= 2
+
+        folder_page = window.page_by_id["folder_utilities"]
+        folder_creator = next(
+            button
+            for button in folder_page.findChildren(QPushButton)
+            if button.text() == "Folder Creator"
+        )
+        folder_desktop = next(
+            button
+            for button in folder_page.findChildren(QPushButton)
+            if button.text() == "Folder Desktop"
+        )
+        assert folder_creator.size().width() == folder_desktop.size().width() == 250
+        assert folder_creator.mapTo(folder_page, QPoint()).y() < window.folder_input.mapTo(
+            folder_page,
+            QPoint(),
+        ).y()
     finally:
         window._quit_requested = True
         window.close()
@@ -567,6 +721,124 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
             edit.keySequence().isEmpty()
             for edit in window.screen_mover_hotkey_edits.values()
         )
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["screen_mover_activation_button"] = "off"
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.navigate_to_page("screen_mover")
+        window.show()
+        qt_app.processEvents()
+
+        controls_row = window.screen_mover_controls_row
+        shortcuts_header = window.screen_mover_shortcuts_header
+        shortcuts_container = window.screen_mover_shortcuts_container
+        screen_page = window.page_by_id["screen_mover"]
+
+        def assert_blocks_aligned() -> None:
+            widgets = (controls_row, shortcuts_header, shortcuts_container)
+            widths = {widget.width() for widget in widgets}
+            left_edges = {
+                widget.mapTo(screen_page, QPoint()).x() for widget in widgets
+            }
+            right_edges = {
+                widget.mapTo(screen_page, QPoint()).x() + widget.width()
+                for widget in widgets
+            }
+            assert len(widths) == 1
+            assert len(left_edges) == 1
+            assert len(right_edges) == 1
+
+        assert_blocks_aligned()
+        assert controls_row.width() == (
+            window.screen_mover_enabled_btn.width()
+            + 12
+            + window.screen_move_button_combo.width()
+        )
+        assert shortcuts_header.y() >= controls_row.y() + controls_row.height()
+        assert shortcuts_container.y() >= (
+            shortcuts_header.y() + shortcuts_header.height()
+        )
+
+        shortcut_labels = [
+            label
+            for label in shortcuts_container.findChildren(QLabel)
+            if label.text() in ACTION_LABELS.values()
+        ]
+        shortcut_edits = list(window.screen_mover_hotkey_edits.values())
+        clear_buttons = [
+            button
+            for button in shortcuts_container.findChildren(QPushButton)
+            if button.text() == "Clear"
+        ]
+        assert len(shortcut_labels) == len(ACTION_LABELS)
+        assert len(shortcut_edits) == len(ACTION_LABELS)
+        assert len(clear_buttons) == len(ACTION_LABELS)
+        assert len({label.width() for label in shortcut_labels}) == 1
+        assert all(label.width() >= label.sizeHint().width() for label in shortcut_labels)
+        assert len({edit.width() for edit in shortcut_edits}) == 1
+        assert all(edit.height() == 34 for edit in shortcut_edits)
+        assert all(button.size().width() == 119 for button in clear_buttons)
+        assert all(button.size().height() == 34 for button in clear_buttons)
+        assert all(
+            button.mapTo(shortcuts_container, QPoint()).x() + button.width()
+            == shortcuts_container.width()
+            for button in clear_buttons
+        )
+
+        assert window.screen_mover_reset_btn.size().width() == 250
+        assert window.screen_mover_reset_btn.size().height() == 34
+        reset_left = window.screen_mover_reset_btn.mapTo(
+            shortcuts_container,
+            QPoint(),
+        ).x()
+        assert reset_left == (shortcuts_container.width() - 250) // 2
+
+        selection_widths = {}
+        for button_value in ("off", "left", "middle", "right"):
+            combo_index = window.screen_move_button_combo.findData(button_value)
+            window.screen_move_button_combo.setCurrentIndex(combo_index)
+            qt_app.processEvents()
+            selection_widths[button_value] = controls_row.width()
+            assert_blocks_aligned()
+        narrow_value = min(selection_widths, key=selection_widths.get)
+        wide_value = max(selection_widths, key=selection_widths.get)
+        standard_width = selection_widths[narrow_value]
+        assert selection_widths[wide_value] > standard_width
+        window.screen_move_button_combo.setCurrentIndex(
+            window.screen_move_button_combo.findData(wide_value)
+        )
+        qt_app.processEvents()
+        assert controls_row.width() == selection_widths[wide_value]
+        assert_blocks_aligned()
+
+        for is_dark in (False, True):
+            window.apply_theme(is_dark)
+            qt_app.processEvents()
+            assert_blocks_aligned()
+
+        narrow_index = window.screen_move_button_combo.findData(narrow_value)
+        window.screen_move_button_combo.setCurrentIndex(narrow_index)
+        qt_app.processEvents()
+        assert controls_row.width() == standard_width
+        window.reset_screen_mover_settings()
+        qt_app.processEvents()
+        assert window.screen_move_button_combo.currentData() == "middle"
+        assert controls_row.width() == (
+            window.screen_mover_enabled_btn.width()
+            + 12
+            + window.screen_move_button_combo.width()
+        )
+        assert_blocks_aligned()
     finally:
         window._quit_requested = True
         window.close()

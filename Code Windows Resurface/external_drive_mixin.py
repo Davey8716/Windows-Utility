@@ -101,6 +101,25 @@ class ExternalDriveMixin:
                 chosen_font_family,
             )
         )
+        styles.fit_page_combo_width(
+            combo,
+            placeholder=visible_text,
+            font_size=chosen_font_size,
+        )
+        control_row = combo.parentWidget()
+        if (
+            control_row is not None
+            and control_row.property("centeredControlGrid")
+        ):
+            empty_label = getattr(self, "connected_drives_empty_label", None)
+            status_width = combo.width()
+            if combo.isHidden() and empty_label is not None:
+                status_width = empty_label.width()
+            control_row.setFixedWidth(
+                styles.PAGE_CONTROL_WIDTH
+                + styles.PAGE_CONTROL_GAP
+                + status_width
+            )
 
     def _refresh_connected_drive_status_label(self, drives=None):
         if not hasattr(self, "connected_drives_field"):

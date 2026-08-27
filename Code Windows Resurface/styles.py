@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFont, QFontMetrics
 
 TEXT_LIGHT = QColor(255, 255, 255)
 TEXT_DARK = QColor(17, 24, 32)
@@ -32,6 +32,12 @@ ORGANIZE_BUTTON_BORDER = QColor(138, 198, 246)
 
 DEFAULT_BUTTON_WIDTH = 180
 DEFAULT_BUTTON_HEIGHT = 30
+PAGE_CONTROL_WIDTH = 250
+PAGE_CONTROL_HEIGHT = 34
+PAGE_CONTROL_GAP = 12
+PAGE_COMPACT_CONTROL_WIDTH = 119
+PAGE_WIDE_CONTROL_MAX_WIDTH = 300
+PAGE_COMBO_POPUP_MAX_WIDTH = 420
 LEFT_SECTION_MAX_WIDTH = 420
 RIGHT_SECTION_MAX_WIDTH = 492
 POPUP_CORNER_RADIUS = 0
@@ -971,3 +977,48 @@ def apply_default_button_size(
     height: int = DEFAULT_BUTTON_HEIGHT,
 ) -> None:
     button.setFixedSize(width, height)
+
+
+def apply_page_control_size(
+    widget,
+    *,
+    width: int = PAGE_CONTROL_WIDTH,
+    height: int = PAGE_CONTROL_HEIGHT,
+    role: str = "standard",
+) -> None:
+    widget.setFixedSize(int(width), int(height))
+    widget.setProperty("pageControlRole", role)
+
+
+def fit_page_combo_width(
+    combo,
+    *,
+    placeholder: str | None = None,
+    font_size: int | None = None,
+) -> int:
+    """Size a page combo predictably and expose every item through its popup."""
+    font_size = coerce_font_size(
+        font_size if font_size is not None else combo.property("styleFontSize"),
+        14,
+    ) or 14
+    metrics = QFontMetrics(
+        QFont(combo.font().family().strip() or "Segoe UI", max(1, round(font_size * 0.75)))
+    )
+    collapsed_text = placeholder if placeholder is not None else combo.currentText()
+    collapsed_needed = metrics.horizontalAdvance(collapsed_text.strip()) + 58
+    width = min(
+        PAGE_WIDE_CONTROL_MAX_WIDTH,
+        max(PAGE_CONTROL_WIDTH, collapsed_needed),
+    )
+    role = "wide" if width > PAGE_CONTROL_WIDTH else "standard"
+    apply_page_control_size(combo, width=width, role=role)
+
+    popup_needed = width
+    for row in range(combo.count()):
+        item_text = combo.itemText(row)
+        popup_needed = max(popup_needed, metrics.horizontalAdvance(item_text) + 42)
+        combo.setItemData(row, item_text, Qt.ItemDataRole.ToolTipRole)
+    popup_width = min(PAGE_COMBO_POPUP_MAX_WIDTH, popup_needed)
+    combo.view().setMinimumWidth(popup_width)
+    combo.setProperty("comboPopupWidth", popup_width)
+    return width

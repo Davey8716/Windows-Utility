@@ -612,6 +612,13 @@ class UtilityControlApp(
             combo.setProperty("persistPressed", True)
             combo.style().unpolish(combo)
             combo.style().polish(combo)
+            sync_screen_mover_widths = getattr(
+                self,
+                "_sync_screen_mover_control_widths",
+                None,
+            )
+            if callable(sync_screen_mover_widths):
+                sync_screen_mover_widths()
 
         for edit in getattr(self, "screen_mover_hotkey_edits", {}).values():
             edit.blockSignals(True)
@@ -912,10 +919,12 @@ class UtilityControlApp(
 
         title = QLabel(title_text, content)
         title.setObjectName("PageTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         title.setStyleSheet(styles.page_title_style())
         description_label = QLabel(description, content)
         description_label.setObjectName("PageDescription")
         description_label.setWordWrap(True)
+        description_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         description_label.setStyleSheet(styles.page_description_style())
         layout.addWidget(title)
         layout.addWidget(description_label)
@@ -932,11 +941,15 @@ class UtilityControlApp(
         content_layout = content.layout()
         if content_layout is not None:
             content_layout.setContentsMargins(0, 0, 0, 0)
+            content_layout.setAlignment(
+                Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
+            )
         self.page_content_layouts[page_id].addWidget(content)
 
     def _add_page_subheading(self, page_id: str, text: str) -> None:
         label = QLabel(text)
         label.setObjectName("PageSectionHeading")
+        label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         label.setStyleSheet(styles.page_section_heading_style())
         self.page_content_layouts[page_id].addSpacing(8)
         self.page_content_layouts[page_id].addWidget(label)
@@ -974,9 +987,14 @@ class UtilityControlApp(
 
         self._add_page_subheading("overview", "Quick actions")
         quick_row = QWidget()
+        quick_row.setProperty("centeredControlGrid", True)
+        quick_row.setFixedWidth(
+            (styles.PAGE_CONTROL_WIDTH * 2) + styles.PAGE_CONTROL_GAP
+        )
+        quick_row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         quick_layout = QGridLayout(quick_row)
         quick_layout.setContentsMargins(0, 0, 0, 0)
-        quick_layout.setHorizontalSpacing(12)
+        quick_layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
         quick_layout.setVerticalSpacing(12)
         actions = (
             ("Desktop Screenshot", self.take_desktop_screenshot),
@@ -986,13 +1004,12 @@ class UtilityControlApp(
         )
         for index, (text, callback) in enumerate(actions):
             button = QPushButton(text)
-            styles.apply_default_button_size(button, width=220)
+            styles.apply_page_control_size(button)
             button.setProperty("styleFontSize", 13)
             button.setStyleSheet(styles.organizing_button_style(13))
             button.clicked.connect(callback)
             quick_layout.addWidget(button, index // 2, index % 2)
-        quick_layout.setColumnStretch(2, 1)
-        layout.addWidget(quick_row)
+        layout.addWidget(quick_row, 0, Qt.AlignmentFlag.AlignHCenter)
         self.refresh_overview()
 
     def _build_monitor_rules_page(self) -> None:
@@ -1004,6 +1021,7 @@ class UtilityControlApp(
         empty_layout.setSpacing(12)
         heading = QLabel("Application placement rules are planned")
         heading.setObjectName("PageSectionHeading")
+        heading.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         heading.setStyleSheet(styles.page_section_heading_style())
         explanation = QLabel(
             "A future update will let you assign applications to monitors, "
@@ -1011,16 +1029,17 @@ class UtilityControlApp(
             "reapply placement when a window is moved."
         )
         explanation.setWordWrap(True)
+        explanation.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         explanation.setStyleSheet(styles.page_description_style())
         add_rule = QPushButton("Add rule")
         add_rule.setEnabled(False)
         add_rule.setAccessibleDescription("Monitor Rules is not available yet")
-        styles.apply_default_button_size(add_rule)
+        styles.apply_page_control_size(add_rule)
         add_rule.setStyleSheet(styles.organizing_button_style(13))
         empty_layout.addWidget(heading)
         empty_layout.addWidget(explanation)
         empty_layout.addSpacing(4)
-        empty_layout.addWidget(add_rule, 0, Qt.AlignmentFlag.AlignLeft)
+        empty_layout.addWidget(add_rule, 0, Qt.AlignmentFlag.AlignHCenter)
         self.monitor_rules_add_button = add_rule
         layout.addWidget(empty_state)
 

@@ -25,9 +25,9 @@ from PySide6.QtWidgets import (
 
 
 class LeftPanelBuilder:
-    LEFT_CONTROL_COLUMN_WIDTH = styles.DEFAULT_BUTTON_WIDTH
-    RIGHT_CONTROL_COLUMN_WIDTH = 210
-    CONTROL_COLUMN_GAP = 10
+    LEFT_CONTROL_COLUMN_WIDTH = styles.PAGE_CONTROL_WIDTH
+    RIGHT_CONTROL_COLUMN_WIDTH = styles.PAGE_CONTROL_WIDTH
+    CONTROL_COLUMN_GAP = styles.PAGE_CONTROL_GAP
     CONTROL_ROW_WIDTH = (
         LEFT_CONTROL_COLUMN_WIDTH + CONTROL_COLUMN_GAP + RIGHT_CONTROL_COLUMN_WIDTH
     )
@@ -197,7 +197,7 @@ class LeftPanelBuilder:
         button.setCheckable(True)
         button.setChecked(checked)
         button.setCursor(Qt.CursorShape.ArrowCursor)
-        styles.apply_default_button_size(button)
+        styles.apply_page_control_size(button)
         button.setProperty("styleFontSize", 14)
         button.setStyleSheet(styles.toggle_button_style(font_size=14))
         return button
@@ -211,13 +211,14 @@ class LeftPanelBuilder:
         font_size: int = 11,
     ) -> QPushButton:
         button = self._make_toggle_button(text, checked)
-        styles.apply_default_button_size(button, width=width)
+        styles.apply_page_control_size(button, width=width, role="compact")
         button.setProperty("styleFontSize", font_size)
         button.setStyleSheet(styles.toggle_button_style(font_size=font_size))
         return button
 
     def _make_two_column_control_row(self) -> tuple[QWidget, QGridLayout]:
         row = QWidget()
+        row.setProperty("centeredControlGrid", True)
         row.setFixedWidth(self.CONTROL_ROW_WIDTH)
         row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
@@ -238,11 +239,18 @@ class LeftPanelBuilder:
         right_widget: QWidget,
     ) -> QWidget:
         row, row_layout = self._make_two_column_control_row()
-        left_widget.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
-        right_widget.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
+        if left_widget.property("pageControlRole") != "wide":
+            left_widget.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
+        if right_widget.property("pageControlRole") != "wide":
+            right_widget.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
+        left_width = left_widget.width()
+        right_width = right_widget.width()
+        row.setFixedWidth(left_width + self.CONTROL_COLUMN_GAP + right_width)
+        row_layout.setColumnMinimumWidth(0, left_width)
+        row_layout.setColumnMinimumWidth(1, right_width)
         row_layout.addWidget(left_widget, 0, 0)
         row_layout.addWidget(right_widget, 0, 1)
-        parent_layout.addWidget(row)
+        parent_layout.addWidget(row, 0, Qt.AlignmentFlag.AlignHCenter)
         return row
 
     def _bind_toggle_state_text(
@@ -400,7 +408,7 @@ class LeftPanelBuilder:
         button.setCheckable(False)
         button.setAutoExclusive(False)
         button.setCursor(Qt.CursorShape.ArrowCursor)
-        styles.apply_default_button_size(button)
+        styles.apply_page_control_size(button)
         button.setProperty("styleFontSize", 14)
         button.setStyleSheet(styles.organizing_button_style(font_size=14))
         self._install_green_flash(button)
@@ -420,7 +428,7 @@ class LeftPanelBuilder:
         combo.setCurrentText(placeholder)
         combo.view().setRowHidden(0, True)
         combo.setCursor(Qt.CursorShape.ArrowCursor)
-        styles.apply_default_button_size(combo)
+        styles.apply_page_control_size(combo)
         combo.setProperty("styleFontSize", 14)
         if power_action_style:
             combo.setProperty("powerActionStyle", True)
@@ -429,6 +437,11 @@ class LeftPanelBuilder:
             self.app._apply_power_action_dropdown_style(combo)
         else:
             combo.setStyleSheet(styles.organizing_combo_style(14))
+        styles.fit_page_combo_width(
+            combo,
+            placeholder=placeholder,
+            font_size=14,
+        )
 
         def run_action(text: str):
             if text == placeholder:
@@ -446,9 +459,10 @@ class LeftPanelBuilder:
         combo.addItems(values)
         combo.setCurrentText(current_value if current_value in values else values[0])
         combo.setCursor(Qt.CursorShape.ArrowCursor)
-        styles.apply_default_button_size(combo)
+        styles.apply_page_control_size(combo)
         combo.setProperty("styleFontSize", 14)
         combo.setStyleSheet(styles.organizing_combo_style(14))
+        styles.fit_page_combo_width(combo, font_size=14)
         return combo
 
     def _build_user_interface_section(self) -> None:
@@ -539,7 +553,6 @@ class LeftPanelBuilder:
                 "Shutdown": "red",
             },
         )
-        power_dropdown.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
         ui_top_row_layout.addWidget(compact_toggle_slot, 0, 0)
         ui_top_row_layout.addWidget(power_dropdown, 0, 1)
         app.register_tooltip(power_dropdown, tooltip_text("power_options"))
@@ -664,11 +677,13 @@ class LeftPanelBuilder:
         screen_section, screen_layout = self._make_section("Screen Mover", "screen_mover")
 
         screen_row = QWidget(screen_section.content)
-        screen_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        screen_row.setProperty("centeredControlGrid", True)
+        screen_row.setFixedWidth(self.CONTROL_ROW_WIDTH)
+        screen_row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         screen_row_layout = QHBoxLayout(screen_row)
         screen_row_layout.setContentsMargins(0, 0, 0, 0)
-        screen_row_layout.setSpacing(10)
-        screen_layout.addWidget(screen_row)
+        screen_row_layout.setSpacing(self.CONTROL_COLUMN_GAP)
+        screen_layout.addWidget(screen_row, 0, Qt.AlignmentFlag.AlignHCenter)
 
         screen_mover_enabled_btn = self._make_toggle_button(
             "Screen Mover",
@@ -690,12 +705,31 @@ class LeftPanelBuilder:
         screen_move_button_combo.addItem("Middle Mouse Button", "middle")
         screen_move_button_combo.addItem("Right Mouse Button", "right")
         screen_move_button_combo.setCursor(Qt.CursorShape.ArrowCursor)
-        styles.apply_default_button_size(screen_move_button_combo)
+        styles.apply_page_control_size(screen_move_button_combo)
         screen_move_button_combo.setProperty("styleFontSize", 14)
         screen_move_button_combo.setStyleSheet(styles.organizing_combo_style(14))
         app.screen_move_button_combo = screen_move_button_combo
 
+        aligned_screen_mover_widgets = [screen_row]
+
+        def sync_screen_mover_control_widths() -> None:
+            styles.fit_page_combo_width(
+                screen_move_button_combo,
+                placeholder=screen_move_button_combo.currentText(),
+                font_size=14,
+            )
+            aligned_width = (
+                screen_mover_enabled_btn.width()
+                + self.CONTROL_COLUMN_GAP
+                + screen_move_button_combo.width()
+            )
+            for widget in aligned_screen_mover_widgets:
+                widget.setFixedWidth(aligned_width)
+
+        app._sync_screen_mover_control_widths = sync_screen_mover_control_widths
+
         def update_screen_move_combo_state() -> None:
+            sync_screen_mover_control_widths()
             screen_move_button_combo.setProperty(
                 "persistPressed",
                 screen_move_button_combo.currentData() != "off",
@@ -720,7 +754,6 @@ class LeftPanelBuilder:
             screen_move_button_combo,
             tooltip_text("screen_move_button"),
         )
-        screen_row_layout.addStretch()
 
         def on_screen_move_button_changed(_text: str):
             button_value = screen_move_button_combo.currentData()
@@ -735,14 +768,16 @@ class LeftPanelBuilder:
         )
 
         shortcuts_header = QWidget(screen_section.content)
+        shortcuts_header.setProperty("centeredControlGrid", True)
         shortcuts_header.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
         )
         shortcuts_header_layout = QHBoxLayout(shortcuts_header)
         shortcuts_header_layout.setContentsMargins(0, 0, 0, 0)
 
         shortcut_title = QLabel("Keyboard Shortcuts", shortcuts_header)
+        shortcut_title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         shortcut_title.setStyleSheet(styles.label_style(font_size=14))
 
         shortcut_toggle = QToolButton(shortcuts_header)
@@ -776,17 +811,32 @@ class LeftPanelBuilder:
         shortcuts_header_layout.addWidget(shortcut_title)
         shortcuts_header_layout.addStretch()
         shortcuts_header_layout.addWidget(shortcut_toggle)
-        screen_layout.addWidget(shortcuts_header)
+        screen_layout.addWidget(
+            shortcuts_header,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
 
         shortcuts_container = QWidget(screen_section.content)
+        shortcuts_container.setProperty("centeredControlGrid", True)
         shortcuts_container.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
         )
         shortcuts_layout = QVBoxLayout(shortcuts_container)
         shortcuts_layout.setContentsMargins(0, 0, 0, 0)
         shortcuts_layout.setSpacing(6)
-        screen_layout.addWidget(shortcuts_container)
+        screen_layout.addWidget(
+            shortcuts_container,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
+        aligned_screen_mover_widgets.extend(
+            (shortcuts_header, shortcuts_container)
+        )
+        sync_screen_mover_control_widths()
+        app.screen_mover_controls_row = screen_row
+        app.screen_mover_shortcuts_header = shortcuts_header
         app.screen_mover_shortcuts_container = shortcuts_container
         app.screen_mover_shortcuts_toggle_btn = shortcut_toggle
 
@@ -817,7 +867,7 @@ class LeftPanelBuilder:
 
         shortcut_grid = QGridLayout()
         shortcut_grid.setContentsMargins(0, 0, 0, 0)
-        shortcut_grid.setHorizontalSpacing(8)
+        shortcut_grid.setHorizontalSpacing(self.CONTROL_COLUMN_GAP)
         shortcut_grid.setVerticalSpacing(6)
         shortcut_grid.setColumnStretch(1, 1)
         shortcuts_layout.addLayout(shortcut_grid)
@@ -861,13 +911,23 @@ class LeftPanelBuilder:
             save_state(state)
             app.apply_screen_mover_settings()
 
+        shortcut_labels = []
         for row, (action, label_text) in enumerate(ACTION_LABELS.items()):
             label = QLabel(label_text, shortcuts_container)
+            label.setAlignment(
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+            )
             label.setStyleSheet(styles.label_style(font_size=12))
+            shortcut_labels.append(label)
 
             edit = QKeySequenceEdit(shortcuts_container)
             if hasattr(edit, "setMaximumSequenceLength"):
                 edit.setMaximumSequenceLength(1)
+            edit.setFixedHeight(styles.PAGE_CONTROL_HEIGHT)
+            edit.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
             edit.setKeySequence(
                 QKeySequence(hotkey_to_display(hotkey_values.get(action, "")))
             )
@@ -879,6 +939,11 @@ class LeftPanelBuilder:
 
             clear_button = QPushButton("Clear", shortcuts_container)
             clear_button.setCursor(Qt.CursorShape.ArrowCursor)
+            styles.apply_page_control_size(
+                clear_button,
+                width=styles.PAGE_COMPACT_CONTROL_WIDTH,
+                role="compact",
+            )
             clear_button.setProperty("styleFontSize", 11)
             clear_button.setStyleSheet(styles.organizing_button_style(11))
             clear_button.clicked.connect(
@@ -897,11 +962,23 @@ class LeftPanelBuilder:
                 tooltip_text("screen_mover_hotkey_clear"),
             )
 
+        shortcut_label_width = max(
+            label.sizeHint().width() for label in shortcut_labels
+        )
+        for label in shortcut_labels:
+            label.setFixedWidth(shortcut_label_width)
+        shortcut_grid.setColumnMinimumWidth(0, shortcut_label_width)
+        shortcut_grid.setColumnMinimumWidth(
+            2,
+            styles.PAGE_COMPACT_CONTROL_WIDTH,
+        )
+
         reset_button = QPushButton(
             "Reset Screen Mover Defaults",
             shortcuts_container,
         )
         reset_button.setCursor(Qt.CursorShape.ArrowCursor)
+        styles.apply_page_control_size(reset_button)
         reset_button.setProperty("styleFontSize", 12)
         reset_button.setStyleSheet(styles.organizing_button_style(12))
 
@@ -909,7 +986,11 @@ class LeftPanelBuilder:
             app.reset_screen_mover_settings()
 
         reset_button.clicked.connect(reset_screen_mover_defaults)
-        shortcuts_layout.addWidget(reset_button)
+        shortcuts_layout.addWidget(
+            reset_button,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
         app.screen_mover_reset_btn = reset_button
         app.register_tooltip(
             reset_button,
@@ -930,20 +1011,21 @@ class LeftPanelBuilder:
         )
 
         leave_reminder_row = QWidget()
+        leave_reminder_row.setProperty("centeredControlGrid", True)
+        leave_reminder_row.setFixedWidth(self.CONTROL_ROW_WIDTH)
         leave_reminder_row.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
         )
         leave_reminder_row_layout = QHBoxLayout(leave_reminder_row)
         leave_reminder_row_layout.setContentsMargins(0, 0, 0, 0)
-        leave_reminder_row_layout.setSpacing(10)
+        leave_reminder_row_layout.setSpacing(self.CONTROL_COLUMN_GAP)
 
         leave_reminder_btn = self._make_toggle_button(
             "Drive Leave Reminder Off",
             state.get("usb_idle_enabled", True),
         )
         self._bind_toggle_state_text(leave_reminder_btn, "Drive Leave Reminder")
-        leave_reminder_btn.setFixedSize(190, styles.DEFAULT_BUTTON_HEIGHT)
         leave_reminder_row_layout.addWidget(leave_reminder_btn)
         app.register_tooltip(
             leave_reminder_btn,
@@ -953,11 +1035,7 @@ class LeftPanelBuilder:
         app.connected_drives_field = QComboBox()
         app.connected_drives_field.setEditable(False)
         app.connected_drives_field.setCursor(Qt.CursorShape.ArrowCursor)
-        app.connected_drives_field.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        app.connected_drives_field.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
+        styles.apply_page_control_size(app.connected_drives_field)
         app.connected_drives_field.setMinimumContentsLength(
             len("No Drives Connected")
         )
@@ -985,12 +1063,15 @@ class LeftPanelBuilder:
         app.connected_drives_empty_label.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
-        app.connected_drives_empty_label.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        app.connected_drives_empty_label.setFixedSize(
+            styles.PAGE_CONTROL_WIDTH,
+            styles.PAGE_CONTROL_HEIGHT,
+        )
         app.connected_drives_empty_label.hide()
 
         leave_reminder_row_layout.addWidget(app.connected_drives_field)
         leave_reminder_row_layout.addWidget(app.connected_drives_empty_label)
-        usb_layout.addWidget(leave_reminder_row)
+        usb_layout.addWidget(leave_reminder_row, 0, Qt.AlignmentFlag.AlignHCenter)
         app._refresh_connected_drive_status_label()
 
         def on_leave_reminder_changed(checked: bool):
@@ -1008,7 +1089,7 @@ class LeftPanelBuilder:
                 ("Show plug and unplug notifications", "on"),
             ],
         )
-        usb_layout.addWidget(plug_combo)
+        usb_layout.addWidget(plug_combo, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._attach_left_section(
             usb_section,
@@ -1026,14 +1107,14 @@ class LeftPanelBuilder:
         for text, value in items:
             combo.addItem(text, value)
         combo.setCursor(Qt.CursorShape.ArrowCursor)
-        combo.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        combo.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
+        combo.setProperty("styleFontSize", 14)
         combo.setStyleSheet(styles.organizing_combo_style(14))
-
         def update_combo_state() -> None:
+            styles.fit_page_combo_width(
+                combo,
+                placeholder=combo.currentText(),
+                font_size=14,
+            )
             combo.setProperty("persistPressed", combo.currentData() != "off")
             combo.style().unpolish(combo)
             combo.style().polish(combo)
@@ -1150,15 +1231,8 @@ class LeftPanelBuilder:
             "folder_utilities",
         )
 
-        folder_row = QWidget()
-        folder_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        folder_row_layout = QHBoxLayout(folder_row)
-        folder_row_layout.setContentsMargins(0, 0, 0, 0)
-        folder_row_layout.setSpacing(10)
-
         folder_creator_btn = QPushButton("Folder Creator")
         self._style_organizing_button(folder_creator_btn)
-        styles.apply_default_button_size(folder_creator_btn, width=118)
         app.register_tooltip(
             folder_creator_btn,
             tooltip_text("folder_creator_launcher"),
@@ -1166,7 +1240,6 @@ class LeftPanelBuilder:
 
         folder_btn = QPushButton("Folder Desktop")
         self._style_organizing_button(folder_btn)
-        styles.apply_default_button_size(folder_btn, width=122)
         app.register_tooltip(folder_btn, tooltip_text("folder_to_desktop"))
 
         folder_input = QLineEdit()
@@ -1174,15 +1247,35 @@ class LeftPanelBuilder:
         folder_input.setPlaceholderText("Folder name")
         folder_input.setText(state.get("folder_to_desktop_name", ""))
         folder_input.setReadOnly(False)
-        folder_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
+        folder_input.setFixedSize(300, styles.PAGE_CONTROL_HEIGHT)
         folder_input.setProperty("framelessSurfaceFieldStyle", True)
         folder_input.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
         app.register_tooltip(folder_input, tooltip_text("folder_name_input"))
 
-        folder_row_layout.addWidget(folder_creator_btn)
-        folder_row_layout.addWidget(folder_input)
-        folder_row_layout.addWidget(folder_btn)
-        folder_layout.addWidget(folder_row)
+        folder_layout.addWidget(
+            folder_creator_btn,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
+        folder_create_row = QWidget()
+        folder_create_row.setProperty("centeredControlGrid", True)
+        folder_create_row.setFixedWidth(
+            300 + self.CONTROL_COLUMN_GAP + styles.PAGE_CONTROL_WIDTH
+        )
+        folder_create_row.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed,
+        )
+        folder_create_row_layout = QHBoxLayout(folder_create_row)
+        folder_create_row_layout.setContentsMargins(0, 0, 0, 0)
+        folder_create_row_layout.setSpacing(self.CONTROL_COLUMN_GAP)
+        folder_create_row_layout.addWidget(folder_input)
+        folder_create_row_layout.addWidget(folder_btn)
+        folder_layout.addWidget(
+            folder_create_row,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
 
         def on_folder_name_changed(text: str):
             state["folder_to_desktop_name"] = text
@@ -1211,6 +1304,7 @@ class LeftPanelBuilder:
         )
 
         recycle_bin_controls = QWidget()
+        recycle_bin_controls.setProperty("centeredControlGrid", True)
         recycle_bin_controls.setFixedWidth(self.CONTROL_ROW_WIDTH)
         recycle_bin_controls.setSizePolicy(
             QSizePolicy.Policy.Fixed,
@@ -1237,7 +1331,8 @@ class LeftPanelBuilder:
                 "Empty Recycle Bin": app.empty_recycle_bin,
             },
         )
-        cleanup_actions_combo.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
+        if cleanup_actions_combo.property("pageControlRole") != "wide":
+            cleanup_actions_combo.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
         empty_row = cleanup_actions_combo.findText("Empty Recycle Bin")
         if empty_row >= 0:
             danger = QColor(164, 56, 56) if styles.THEME_IS_DARK else QColor(190, 66, 66)
@@ -1286,7 +1381,8 @@ class LeftPanelBuilder:
         recycle_bin_age_rule_row_layout.setHorizontalSpacing(self.CONTROL_COLUMN_GAP)
         recycle_bin_age_rule_row_layout.setVerticalSpacing(0)
         recycle_bin_age_rule_row_layout.addWidget(cleanup_rule_label, 0, 0)
-        recycle_bin_age_rule_combo.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
+        if recycle_bin_age_rule_combo.property("pageControlRole") != "wide":
+            recycle_bin_age_rule_combo.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
         recycle_bin_age_rule_row_layout.addWidget(recycle_bin_age_rule_combo, 0, 1)
         recycle_bin_age_rule_row_layout.setColumnMinimumWidth(
             0,
@@ -1312,6 +1408,14 @@ class LeftPanelBuilder:
         set_recycle_bin_age_rule_row_visible(recycle_bin_auto_clean_enabled)
         recycle_bin_controls_layout.setColumnStretch(0, 1)
         recycle_bin_controls_layout.setColumnStretch(1, 1)
+        recycle_bin_controls.setFixedWidth(
+            max(cleanup_actions_combo.width(), cleanup_rule_label.width())
+            + self.CONTROL_COLUMN_GAP
+            + max(
+                recycle_bin_auto_clean_btn.width(),
+                recycle_bin_age_rule_combo.width(),
+            )
+        )
         recycle_bin_layout.addWidget(recycle_bin_controls)
 
         def on_recycle_bin_auto_clean_changed(checked: bool):
