@@ -118,6 +118,10 @@ class AdvancedToolsPanel(QWidget):
     MAINTENANCE_CONTROL_WIDTH = (
         MAINTENANCE_CONTENT_WIDTH - styles.PAGE_CONTROL_GAP
     ) // 2
+    DRIVE_SPACE_CONTENT_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH - 4
+    DRIVE_SPACE_CONTROL_WIDTH = (
+        DRIVE_SPACE_CONTENT_WIDTH - styles.PAGE_CONTROL_GAP
+    ) // 2
     SIDEBAR_OUTPUT_CLEAR_MESSAGES = {
         "IP Configuration": "IP configuration output log cleared.",
         "Flush DNS": "Dns output log cleared.",
@@ -495,9 +499,7 @@ class AdvancedToolsPanel(QWidget):
 
         button_row = QWidget()
         button_row.setProperty("centeredControlGrid", True)
-        button_row.setFixedWidth(
-            (styles.PAGE_CONTROL_WIDTH * 2) + styles.PAGE_CONTROL_GAP
-        )
+        button_row.setFixedWidth(self.DRIVE_SPACE_CONTENT_WIDTH)
         button_row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         button_row_layout = QHBoxLayout(button_row)
         button_row_layout.setContentsMargins(0, 0, 0, 0)
@@ -506,7 +508,10 @@ class AdvancedToolsPanel(QWidget):
         this_pc_titles = ("This PC",)
         btn_this_pc = QPushButton("Open This PC")
         self.btn_this_pc = btn_this_pc
-        styles.apply_page_control_size(btn_this_pc)
+        styles.apply_page_control_size(
+            btn_this_pc,
+            width=self.DRIVE_SPACE_CONTROL_WIDTH,
+        )
         btn_this_pc.setProperty("styleFontSize", 14)
         btn_this_pc.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_this_pc)
@@ -533,7 +538,10 @@ class AdvancedToolsPanel(QWidget):
         storage_sense_titles = ("Settings",)
         btn_storage_sense = QPushButton("Open Storage Sense")
         self.btn_storage_sense = btn_storage_sense
-        styles.apply_page_control_size(btn_storage_sense)
+        styles.apply_page_control_size(
+            btn_storage_sense,
+            width=self.DRIVE_SPACE_CONTROL_WIDTH,
+        )
         btn_storage_sense.setProperty("styleFontSize", 14)
         btn_storage_sense.setStyleSheet(styles.button_text_style(14))
         self._install_green_flash(btn_storage_sense)
@@ -565,7 +573,11 @@ class AdvancedToolsPanel(QWidget):
         drive_parent.addWidget(button_row, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.drive_space_list = QListWidget()
-        self.drive_space_list.setFixedHeight(120)
+        self.drive_space_list.setFixedSize(self.DRIVE_SPACE_CONTENT_WIDTH, 120)
+        self.drive_space_list.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed,
+        )
         self.drive_space_list.setSpacing(0)
         self.drive_space_list.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
@@ -585,7 +597,11 @@ class AdvancedToolsPanel(QWidget):
         self.drive_space_list.customContextMenuRequested.connect(
             self._show_drive_context_menu
         )
-        drive_parent.addWidget(self.drive_space_list)
+        drive_parent.addWidget(
+            self.drive_space_list,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
 
         self._refresh_drive_space_display()
         self.drive_refresh_timer = QTimer(self)

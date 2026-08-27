@@ -756,6 +756,39 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         qt_app.processEvents()
 
 
+def test_external_drive_controls_and_output_share_the_inner_frame_width(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.navigate_to_page("external_drives")
+        window.show()
+        qt_app.processEvents()
+
+        panel = window.right_tools_panel
+        drive_page = window.page_by_id["external_drives"]
+        button_row = panel.btn_this_pc.parentWidget()
+
+        assert panel.btn_this_pc.width() == 238
+        assert panel.btn_storage_sense.width() == 238
+        assert button_row.width() == 488
+        assert panel.drive_space_list.width() == 488
+        assert panel.drive_space_list.height() == 120
+
+        button_row_left = button_row.mapTo(drive_page, QPoint()).x()
+        output_left = panel.drive_space_list.mapTo(drive_page, QPoint()).x()
+        assert button_row_left == output_left
+        assert button_row_left + button_row.width() == (
+            output_left + panel.drive_space_list.width()
+        )
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_master_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):
     saved_states = []
     monkeypatch.setattr(main, "save_state", lambda state: saved_states.append(dict(state)))
