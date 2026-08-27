@@ -1301,14 +1301,6 @@ class LeftPanelBuilder:
         )
         if cleanup_actions_combo.property("pageControlRole") != "wide":
             cleanup_actions_combo.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
-        empty_row = cleanup_actions_combo.findText("Empty Recycle Bin")
-        if empty_row >= 0:
-            danger = QColor(164, 56, 56) if styles.THEME_IS_DARK else QColor(190, 66, 66)
-            cleanup_actions_combo.setItemData(
-                empty_row,
-                danger,
-                Qt.ItemDataRole.ForegroundRole,
-            )
         recycle_bin_controls_layout.addWidget(cleanup_actions_combo, 0, 0)
         app.register_tooltip(cleanup_actions_combo, tooltip_text("cleanup_actions"))
 

@@ -543,6 +543,25 @@ def test_live_theme_switch_preserves_blue_and_power_dropdown_roles(monkeypatch):
         qt_app.processEvents()
 
 
+def test_cleanup_actions_use_native_theme_text(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    window = _build_offscreen_window(monkeypatch, copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS))
+
+    try:
+        cleanup_combo = next(
+            combo
+            for combo in window.findChildren(QComboBox)
+            if combo.findText("Empty Recycle Bin") >= 0
+        )
+        empty_row = cleanup_combo.findText("Empty Recycle Bin")
+        assert cleanup_combo.itemData(empty_row, Qt.ItemDataRole.ForegroundRole) is None
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_main_window_and_power_dropdown_are_wide_enough(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
