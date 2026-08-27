@@ -648,6 +648,7 @@ class LeftPanelBuilder:
         app = self.app
         state = self.state
         screen_section, screen_layout = self._make_section("Screen Mover", "screen_mover")
+        screen_layout.setSpacing(16)
 
         screen_row = QWidget(screen_section.content)
         screen_row.setProperty("centeredControlGrid", True)
@@ -1062,7 +1063,7 @@ class LeftPanelBuilder:
 
         leave_reminder_btn.toggled.connect(on_leave_reminder_changed)
 
-        plug_notification_label = QLabel("Plug/unplug notifications")
+        plug_notification_label = QLabel("Plug/unplug notifications:")
         plug_notification_label.setStyleSheet(styles.label_style(font_size=14))
         plug_notification_label.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft

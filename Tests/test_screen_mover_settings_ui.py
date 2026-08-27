@@ -914,6 +914,14 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         assert grid_left + selector_grid.width() == (
             output_left + panel.sidebar_output_container.width()
         )
+        grid_bottom = selector_grid.mapTo(maintenance_page, QPoint()).y() + (
+            selector_grid.height()
+        )
+        output_top = panel.sidebar_output_container.mapTo(
+            maintenance_page,
+            QPoint(),
+        ).y()
+        assert output_top - grid_bottom == 16
     finally:
         window._quit_requested = True
         window.close()
@@ -1169,6 +1177,32 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
             + window.screen_move_button_combo.width()
         )
         assert_blocks_aligned()
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_screen_mover_shortcuts_have_balanced_heading_spacing(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.navigate_to_page("screen_mover")
+        window.show()
+        qt_app.processEvents()
+
+        controls_row = window.screen_mover_controls_row
+        shortcuts_header = window.screen_mover_shortcuts_header
+        shortcuts_container = window.screen_mover_shortcuts_container
+        assert shortcuts_header.y() - (
+            controls_row.y() + controls_row.height()
+        ) == 16
+        assert shortcuts_container.y() - (
+            shortcuts_header.y() + shortcuts_header.height()
+        ) == 16
     finally:
         window._quit_requested = True
         window.close()

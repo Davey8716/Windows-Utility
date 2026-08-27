@@ -840,7 +840,7 @@ class UtilityControlApp(
                 section.content,
             )
 
-        self._add_page_subheading("external_drives", "Storage and eject")
+        self._add_page_subheading("external_drives", "Storage")
         self._mount_page_content(
             "external_drives",
             self.right_tools_panel.display_space_section.content,

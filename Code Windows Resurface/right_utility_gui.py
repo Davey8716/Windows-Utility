@@ -280,6 +280,7 @@ class AdvancedToolsPanel(QWidget):
         self.app.collapsible_sections.append(self.sidebar_utils_section)
         self.side_layout.addWidget(self.sidebar_utils_section)
         self.build_sidebar_utilities()
+        self.sidebar_utils_section.content_layout.setSpacing(16)
         self.app.register_tooltip(
             self.sidebar_utils_section.toggle_btn,
             tooltip_text("maintenance_quick_actions_toggle"),
