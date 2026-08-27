@@ -315,15 +315,20 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
             window.TITLE_TEXT_ROW_HEIGHT + window.TITLE_CONTROL_ROW_HEIGHT
         )
         assert window.window_title_label.text() == "Windows Resurface"
-        assert "font-size: 20px" in window.window_title_label.styleSheet()
+        assert "font-size: 25px" in window.window_title_label.styleSheet()
         assert window.window_minimize_btn.parent() is window.window_title_bar
         assert window.window_close_btn.parent() is window.window_title_bar
         assert not window.window_minimize_btn.icon().isNull()
         assert not window.window_close_btn.icon().isNull()
 
-        assert window_center_x(window.window_title_label) == window.width() // 2
-        assert window_y(window.window_title_label) == 0
-        assert window.window_title_label.height() == window.TITLE_TEXT_ROW_HEIGHT
+        assert window_center_x(window.window_title_label) == (
+            window.page_stack.mapTo(window, QPoint(0, 0)).x()
+            + (window.page_stack.width() // 2)
+        )
+        assert window_y(window.window_title_label) == window.TITLE_TEXT_TOP_PADDING
+        assert window.window_title_label.height() == (
+            window.TITLE_TEXT_ROW_HEIGHT - window.TITLE_TEXT_TOP_PADDING
+        )
         assert window_y(window.window_minimize_btn) == 0
         assert window_y(window.window_close_btn) == 0
         assert window.window_minimize_btn.height() == window.TITLE_TEXT_ROW_HEIGHT
@@ -336,6 +341,7 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         assert minimize_calls == [window]
 
         window.apply_theme(False)
+        assert "font-size: 25px" in window.window_title_label.styleSheet()
         assert "font-size: 18px" in window.window_minimize_btn.styleSheet()
         assert "font-size: 18px" in window.window_close_btn.styleSheet()
         assert window.state["left_section_states"] == left_states

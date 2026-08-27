@@ -297,6 +297,7 @@ class UtilityControlApp(
     WINDOW_HEIGHT = 800
     SIDEBAR_WIDTH = 220
     TITLE_TEXT_ROW_HEIGHT = 40
+    TITLE_TEXT_TOP_PADDING = 6
     TITLE_CONTROL_ROW_HEIGHT = 0
     TITLE_BAR_HEIGHT = 40
     MAIN_PANEL_WIDTH = 480
@@ -867,10 +868,10 @@ class UtilityControlApp(
             self.TITLE_TEXT_ROW_HEIGHT,
         )
         self.window_title_label.setGeometry(
-            0,
-            0,
-            self.width(),
-            self.TITLE_TEXT_ROW_HEIGHT,
+            self.SIDEBAR_WIDTH,
+            self.TITLE_TEXT_TOP_PADDING,
+            max(0, self.width() - self.SIDEBAR_WIDTH),
+            self.TITLE_TEXT_ROW_HEIGHT - self.TITLE_TEXT_TOP_PADDING,
         )
         close_x = self.width() - self.window_close_btn.width()
         minimize_x = close_x - self.window_minimize_btn.width()
