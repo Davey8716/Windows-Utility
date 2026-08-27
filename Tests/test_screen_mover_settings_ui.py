@@ -753,13 +753,44 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
         folder_desktop = next(
             button
             for button in folder_page.findChildren(QPushButton)
-            if button.text() == "Folder Desktop"
+            if button.text() == "Folder To Desktop"
         )
         assert folder_creator.size().width() == folder_desktop.size().width() == 250
-        assert folder_creator.mapTo(folder_page, QPoint()).y() < window.folder_input.mapTo(
-            folder_page,
-            QPoint(),
-        ).y()
+        folder_row = window.folder_input.parentWidget()
+        assert folder_creator.mapTo(folder_page, QPoint()).y() == (
+            folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
+        )
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_folder_utilities_places_creator_below_quick_folder_action(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        window.navigate_to_page("folder_utilities")
+        window.show()
+        qt_app.processEvents()
+
+        folder_page = window.page_by_id["folder_utilities"]
+        folder_creator = next(
+            button
+            for button in folder_page.findChildren(QPushButton)
+            if button.text() == "Folder Creator"
+        )
+        folder_row = window.folder_input.parentWidget()
+        folder_desktop = folder_row.findChild(QPushButton)
+
+        assert folder_desktop is not None
+        assert folder_creator.width() == folder_desktop.width() == 250
+        assert folder_creator.mapTo(folder_page, QPoint()).y() == (
+            folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
+        )
     finally:
         window._quit_requested = True
         window.close()

@@ -1249,6 +1249,7 @@ class LeftPanelBuilder:
             "Folder Utilities",
             "folder_utilities",
         )
+        folder_layout.setSpacing(16)
 
         folder_creator_btn = QPushButton("Folder Creator")
         self._style_organizing_button(folder_creator_btn)
@@ -1271,11 +1272,6 @@ class LeftPanelBuilder:
         folder_input.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
         app.register_tooltip(folder_input, tooltip_text("folder_name_input"))
 
-        folder_layout.addWidget(
-            folder_creator_btn,
-            0,
-            Qt.AlignmentFlag.AlignHCenter,
-        )
         folder_create_row = QWidget()
         folder_create_row.setProperty("centeredControlGrid", True)
         folder_create_row.setFixedWidth(
@@ -1292,6 +1288,11 @@ class LeftPanelBuilder:
         folder_create_row_layout.addWidget(folder_btn)
         folder_layout.addWidget(
             folder_create_row,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
+        )
+        folder_layout.addWidget(
+            folder_creator_btn,
             0,
             Qt.AlignmentFlag.AlignHCenter,
         )
