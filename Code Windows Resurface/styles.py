@@ -164,6 +164,16 @@ def control_text_color() -> QColor:
     return TEXT_LIGHT
 
 
+def dropdown_text_color() -> QColor:
+    """Return the selected-value color used by shared combo-box controls."""
+    return TEXT_LIGHT if THEME_IS_DARK else theme_text_color()
+
+
+def button_text_color() -> QColor:
+    """Return the enabled text color for standard action buttons."""
+    return TEXT_LIGHT if THEME_IS_DARK else QColor(0, 0, 0)
+
+
 def contrasting_text_color(background: QColor) -> QColor:
     def linear_channel(channel: int) -> float:
         normalized = channel / 255.0
@@ -221,12 +231,15 @@ def dropdown_chevron_path() -> Path:
         roots.append(Path(bundle_root))
     roots.append(Path(__file__).resolve().parent.parent)
 
+    chevron_name = (
+        "Dropdown Chevron.svg" if THEME_IS_DARK else "Dropdown Chevron Light.svg"
+    )
     for root in roots:
-        candidate = root / "App Icons" / "Dropdown Chevron.svg"
+        candidate = root / "App Icons" / chevron_name
         if candidate.is_file():
             return candidate
 
-    return roots[-1] / "App Icons" / "Dropdown Chevron.svg"
+    return roots[-1] / "App Icons" / chevron_name
 
 
 def coerce_font_size(
@@ -517,13 +530,20 @@ def themed_button_disabled_border() -> QColor:
 def organizing_button_style(font_size: int | None = None) -> str:
     font_size = coerce_font_size(font_size)
     font_rule = f"font-size: {font_size}px;" if font_size is not None else ""
+    placeholder_disabled_override = ""
+    if not THEME_IS_DARK:
+        placeholder_disabled_override = f"""
+        QPushButton[lightModePlaceholderButton=\"true\"]:disabled {{
+            color: {qcolor_css(theme_text_color())};
+        }}
+        """
     return f"""
         QPushButton {{
             text-align: center;
             padding: 4px 8px;
             {font_rule}
             font-weight: bold;
-            color: {qcolor_css(control_text_color())};
+            color: {qcolor_css(button_text_color())};
             border: 1px solid {qcolor_css(themed_button_border())};
             border-radius: 3px;
             background-color: {qcolor_css(themed_button_bg())};
@@ -545,6 +565,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             border: 1px solid {qcolor_css(themed_button_disabled_border())};
             background-color: {qcolor_css(themed_button_disabled_bg())};
         }}
+        {placeholder_disabled_override}
     """
 
 def toggle_button_style(font_size: int | None = None) -> str:
@@ -828,7 +849,7 @@ def surfaced_combo_style(font_size: int) -> str:
         pressed=themed_button_pressed(),
         pressed_hover=themed_button_pressed_hover(),
         border=themed_button_border(),
-        text=control_text_color(),
+        text=dropdown_text_color(),
     )
 
 
@@ -840,7 +861,7 @@ def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") 
         pressed=themed_button_pressed(),
         pressed_hover=themed_button_pressed_hover(),
         border=themed_button_border(),
-        text=control_text_color(),
+        text=dropdown_text_color(),
         font_family=font_family,
     )
 
@@ -866,7 +887,7 @@ def power_combo_style(font_size: int) -> str:
         pressed=power_pressed,
         pressed_hover=power_pressed_hover,
         border=power_border,
-        text=control_text_color(),
+        text=dropdown_text_color(),
         popup_background=SURFACE_BG,
         popup_text=theme_text_color(),
         disabled_text=QColor(211, 216, 223),
@@ -899,7 +920,7 @@ def combo_style(font_size: int) -> str:
         pressed=themed_button_pressed(),
         pressed_hover=themed_button_pressed_hover(),
         border=themed_button_border(),
-        text=control_text_color(),
+        text=dropdown_text_color(),
     )
 
 
@@ -973,7 +994,7 @@ def organizing_combo_style(font_size: int) -> str:
         pressed=themed_button_pressed(),
         pressed_hover=themed_button_pressed_hover(),
         border=themed_button_border(),
-        text=control_text_color(),
+        text=dropdown_text_color(),
     )
 
 def apply_default_button_size(

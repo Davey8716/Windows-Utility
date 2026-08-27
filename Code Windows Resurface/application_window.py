@@ -746,6 +746,7 @@ class UtilityControlApp(
         explanation.setStyleSheet(styles.page_description_style())
         add_rule = QPushButton("Add rule")
         add_rule.setEnabled(False)
+        add_rule.setProperty("lightModePlaceholderButton", True)
         add_rule.setAccessibleDescription("Monitor Rules is not available yet")
         styles.apply_page_control_size(add_rule)
         add_rule.setStyleSheet(styles.organizing_button_style(13))
@@ -1009,6 +1010,13 @@ class UtilityControlApp(
                 14,
             ) or 14
             button.setStyleSheet(styles.organizing_button_style(font_size=font_size))
+
+        for button_name in ("dark_mode_btn", "desktop_zen_btn"):
+            refresh_icon = getattr(
+                getattr(self, button_name, None), "_refresh_toggle_icon", None
+            )
+            if callable(refresh_icon):
+                refresh_icon()
 
         for combo in self.findChildren(QComboBox):
             font_size = styles.coerce_font_size(

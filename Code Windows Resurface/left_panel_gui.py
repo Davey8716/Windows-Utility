@@ -312,6 +312,8 @@ class LeftPanelBuilder:
         button.toggled.connect(update_state)
 
     def _coerce_icon(self, icon_source: Path | QIcon) -> QIcon:
+        if callable(icon_source):
+            icon_source = icon_source()
         return icon_source if isinstance(icon_source, QIcon) else QIcon(str(icon_source))
 
     def _bind_toggle_icon_only(
@@ -322,16 +324,16 @@ class LeftPanelBuilder:
         unchecked_icon_source: Path | QIcon,
         icon_size: int = 18,
     ) -> None:
-        checked_icon = self._coerce_icon(checked_icon_source)
-        unchecked_icon = self._coerce_icon(unchecked_icon_source)
         button.setIconSize(QSize(icon_size, icon_size))
 
         def update_state(checked: bool) -> None:
             button.setText("")
-            button.setIcon(checked_icon if checked else unchecked_icon)
+            icon_source = checked_icon_source if checked else unchecked_icon_source
+            button.setIcon(self._coerce_icon(icon_source))
 
         update_state(button.isChecked())
         button._update_toggle_icon = update_state
+        button._refresh_toggle_icon = lambda: update_state(button.isChecked())
         button.toggled.connect(update_state)
 
     def _create_fluent_icon(self, glyph: str, icon_size: int = 16) -> QIcon:
@@ -343,7 +345,7 @@ class LeftPanelBuilder:
         font = QFont("Segoe Fluent Icons")
         font.setPixelSize(icon_size)
         painter.setFont(font)
-        painter.setPen(styles.control_text_color())
+        painter.setPen(styles.button_text_color())
         painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
         painter.end()
         return QIcon(pixmap)
@@ -467,8 +469,8 @@ class LeftPanelBuilder:
         app.dark_mode_btn = dark_mode_btn
         self._bind_toggle_icon_only(
             dark_mode_btn,
-            checked_icon_source=self._create_fluent_icon("\ue708"),
-            unchecked_icon_source=self._create_fluent_icon("\ue706"),
+            checked_icon_source=lambda: self._create_fluent_icon("\ue708"),
+            unchecked_icon_source=lambda: self._create_fluent_icon("\ue706"),
             icon_size=16,
         )
         compact_toggle_slot_layout.addWidget(dark_mode_btn)
@@ -490,8 +492,8 @@ class LeftPanelBuilder:
         app.desktop_zen_btn = desktop_zen_btn
         self._bind_toggle_icon_only(
             desktop_zen_btn,
-            checked_icon_source=self._create_fluent_icon("\ued1a"),
-            unchecked_icon_source=self._create_fluent_icon("\ue890"),
+            checked_icon_source=lambda: self._create_fluent_icon("\ued1a"),
+            unchecked_icon_source=lambda: self._create_fluent_icon("\ue890"),
             icon_size=16,
         )
         compact_toggle_slot_layout.addWidget(desktop_zen_btn)

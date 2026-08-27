@@ -314,11 +314,13 @@ def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkey
             assert button.iconSize().width() == button.iconSize().height() == 16
 
         dark_icon_key = theme_button.icon().cacheKey()
+        dark_zen_icon_key = zen_button.icon().cacheKey()
         theme_button.setChecked(False)
         qt_app.processEvents()
         assert window.state["theme_dark"] is False
         assert theme_button.text() == ""
         assert theme_button.icon().cacheKey() != dark_icon_key
+        assert zen_button.icon().cacheKey() != dark_zen_icon_key
 
         zen_off_icon_key = zen_button.icon().cacheKey()
         zen_button.setChecked(True)

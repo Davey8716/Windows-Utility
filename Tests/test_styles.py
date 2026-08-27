@@ -18,10 +18,10 @@ def restore_dark_theme():
 
 
 @pytest.mark.parametrize(
-    ("is_dark", "window_color", "surface_color", "button_color"),
+    ("is_dark", "window_color", "surface_color", "button_color", "button_text"),
     [
-        (True, "#171b24", "#222a36", "#1c66c4"),
-        (False, "#dde3ea", "#eef2f6", "#2d73c8"),
+        (True, "#171b24", "#222a36", "#1c66c4", "#ffffff"),
+        (False, "#dde3ea", "#eef2f6", "#2d73c8", "#000000"),
     ],
 )
 def test_shared_palette_uses_darker_canvas_and_blue_controls(
@@ -29,6 +29,7 @@ def test_shared_palette_uses_darker_canvas_and_blue_controls(
     window_color,
     surface_color,
     button_color,
+    button_text,
 ):
     styles.set_theme(is_dark)
 
@@ -36,7 +37,13 @@ def test_shared_palette_uses_darker_canvas_and_blue_controls(
     assert styles.qcolor_css(styles.SURFACE_BG) == surface_color
     assert styles.qcolor_css(styles.themed_button_bg()) == button_color
     assert styles.control_text_color() == QColor(255, 255, 255)
-    assert f"background-color: {button_color};" in styles.organizing_button_style(14)
+    button_style = styles.organizing_button_style(14)
+    assert f"background-color: {button_color};" in button_style
+    assert f"color: {button_text};" in button_style
+    assert (
+        f"color: {styles.qcolor_css(styles.themed_button_disabled_text())};"
+        in button_style
+    )
 
 
 @pytest.mark.parametrize(
@@ -49,19 +56,20 @@ def test_shared_palette_uses_darker_canvas_and_blue_controls(
     ],
 )
 @pytest.mark.parametrize(
-    ("is_dark", "button_color"),
-    [(True, "#1c66c4"), (False, "#2d73c8")],
+    ("is_dark", "button_color", "text_color"),
+    [(True, "#1c66c4", "#ffffff"), (False, "#2d73c8", "#111820")],
 )
 def test_standard_dropdown_categories_share_modern_blue_treatment(
     style_factory,
     is_dark,
     button_color,
+    text_color,
 ):
     styles.set_theme(is_dark)
     stylesheet = style_factory(14)
 
     assert f"background-color: {button_color};" in stylesheet
-    assert "color: #ffffff;" in stylesheet
+    assert f"color: {text_color};" in stylesheet
     assert "border-radius: 6px;" in stylesheet
     assert "padding: 4px 34px 4px 10px;" in stylesheet
     assert "width: 28px;" in stylesheet
@@ -75,10 +83,10 @@ def test_standard_dropdown_categories_share_modern_blue_treatment(
 
 
 @pytest.mark.parametrize(
-    ("is_dark", "power_color", "standard_color", "popup_color"),
+    ("is_dark", "power_color", "standard_color", "popup_color", "text_color"),
     [
-        (True, "#2b313c", "#1c66c4", "#222a36"),
-        (False, "#46515f", "#2d73c8", "#eef2f6"),
+        (True, "#2b313c", "#1c66c4", "#222a36", "#ffffff"),
+        (False, "#46515f", "#2d73c8", "#eef2f6", "#111820"),
     ],
 )
 def test_power_dropdown_is_charcoal_with_modern_popup_geometry(
@@ -86,6 +94,7 @@ def test_power_dropdown_is_charcoal_with_modern_popup_geometry(
     power_color,
     standard_color,
     popup_color,
+    text_color,
 ):
     styles.set_theme(is_dark)
     stylesheet = styles.power_combo_style(14)
@@ -93,9 +102,22 @@ def test_power_dropdown_is_charcoal_with_modern_popup_geometry(
     assert f"background-color: {power_color};" in stylesheet
     assert f"background-color: {standard_color};" not in stylesheet
     assert f"background-color: {popup_color};" in stylesheet
+    assert f"color: {text_color};" in stylesheet
     assert "border-radius: 6px;" in stylesheet
     assert "width: 28px;" in stylesheet
     assert "padding: 6px 10px;" in stylesheet
+
+
+def test_light_mode_placeholder_button_overrides_only_its_disabled_text_color():
+    styles.set_theme(False)
+    light_style = styles.organizing_button_style(14)
+    assert 'QPushButton[lightModePlaceholderButton="true"]:disabled' in light_style
+    assert "color: #111820;" in light_style
+    assert f"color: {styles.qcolor_css(styles.themed_button_disabled_text())};" in light_style
+
+    styles.set_theme(True)
+    dark_style = styles.organizing_button_style(14)
+    assert 'QPushButton[lightModePlaceholderButton="true"]:disabled' not in dark_style
 
 
 def test_contrasting_text_color_favors_readable_severity_foregrounds():
@@ -127,7 +149,15 @@ def test_surfaced_output_boxes_use_thin_rounded_borders(is_dark):
 
 
 def test_dropdown_chevron_asset_is_available():
+    styles.set_theme(True)
+    assert styles.dropdown_chevron_path().name == "Dropdown Chevron.svg"
     assert styles.dropdown_chevron_path().is_file()
+    assert "#FFFFFF" in styles.dropdown_chevron_path().read_text(encoding="utf-8")
+
+    styles.set_theme(False)
+    assert styles.dropdown_chevron_path().name == "Dropdown Chevron Light.svg"
+    assert styles.dropdown_chevron_path().is_file()
+    assert "#000000" in styles.dropdown_chevron_path().read_text(encoding="utf-8")
 
 
 def test_folder_creator_uses_shared_palette_and_modern_combo_rules():
