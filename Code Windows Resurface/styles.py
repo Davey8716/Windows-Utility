@@ -1002,7 +1002,10 @@ def fit_page_combo_width(
         14,
     ) or 14
     metrics = QFontMetrics(
-        QFont(combo.font().family().strip() or "Segoe UI", max(1, round(font_size * 0.75)))
+        QFont(
+            combo.font().family().strip() or "Segoe UI",
+            max(1, round(font_size * 0.75)),
+        )
     )
     collapsed_text = placeholder if placeholder is not None else combo.currentText()
     collapsed_needed = metrics.horizontalAdvance(collapsed_text.strip()) + 58

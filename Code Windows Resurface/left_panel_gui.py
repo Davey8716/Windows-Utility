@@ -1080,16 +1080,27 @@ class LeftPanelBuilder:
 
         leave_reminder_btn.toggled.connect(on_leave_reminder_changed)
 
+        plug_notification_label = QLabel("Plug/unplug notifications")
+        plug_notification_label.setStyleSheet(styles.label_style(font_size=14))
+        plug_notification_label.setAlignment(
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        )
+
         plug_combo = self._create_drive_reminder_combo(
             "plug_unplug_notify",
             "usb_plug_notify_mode",
             "usb_plug_enabled",
             [
-                ("Plug / Unplug Notify: Off", "off"),
-                ("Show plug and unplug notifications", "on"),
+                ("Off", "off"),
+                ("On", "on"),
             ],
         )
-        usb_layout.addWidget(plug_combo, 0, Qt.AlignmentFlag.AlignHCenter)
+        plug_combo.setProperty("plugUnplugNotificationCombo", True)
+        self._add_two_column_control_row(
+            usb_layout,
+            plug_notification_label,
+            plug_combo,
+        )
 
         self._attach_left_section(
             usb_section,
@@ -1102,6 +1113,8 @@ class LeftPanelBuilder:
         state_key: str,
         legacy_enabled_key: str,
         items: list[tuple[str, str]],
+        *,
+        fixed_width: int | None = None,
     ) -> QComboBox:
         combo = QComboBox()
         for text, value in items:
@@ -1115,6 +1128,12 @@ class LeftPanelBuilder:
                 placeholder=combo.currentText(),
                 font_size=14,
             )
+            if fixed_width is not None:
+                styles.apply_page_control_size(
+                    combo,
+                    width=fixed_width,
+                    role="wide",
+                )
             combo.setProperty("persistPressed", combo.currentData() != "off")
             combo.style().unpolish(combo)
             combo.style().polish(combo)

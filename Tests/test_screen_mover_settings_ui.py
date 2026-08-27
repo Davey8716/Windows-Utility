@@ -624,6 +624,98 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
         qt_app.processEvents()
 
 
+def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+    saved_states = []
+    monkeypatch.setattr(
+        left_panel_gui,
+        "save_state",
+        lambda saved_state: saved_states.append(dict(saved_state)),
+    )
+
+    try:
+        window.navigate_to_page("external_drives")
+        window.show()
+        qt_app.processEvents()
+
+        notification_combo = next(
+            combo
+            for combo in window.findChildren(QComboBox)
+            if combo.property("plugUnplugNotificationCombo")
+        )
+        notification_label = next(
+            label
+            for label in window.findChildren(QLabel)
+            if label.text() == "Plug/unplug notifications"
+        )
+        leave_reminder_button = next(
+            button
+            for button in window.findChildren(QPushButton)
+            if button.text().startswith("Drive Leave Reminder")
+        )
+        assert [
+            notification_combo.itemText(row)
+            for row in range(notification_combo.count())
+        ] == ["Off", "On"]
+        assert notification_combo.width() == (
+            left_panel_gui.LeftPanelBuilder.RIGHT_CONTROL_COLUMN_WIDTH
+        )
+        assert notification_combo.height() == 34
+        assert notification_label.width() == (
+            left_panel_gui.LeftPanelBuilder.LEFT_CONTROL_COLUMN_WIDTH
+        )
+
+        external_viewport = window.page_scroll_areas["external_drives"].viewport()
+
+        def assert_centered() -> None:
+            control_row = notification_combo.parentWidget()
+            row_left = control_row.mapTo(
+                external_viewport,
+                QPoint(),
+            ).x()
+            assert abs(
+                row_left
+                + (control_row.width() / 2)
+                - (external_viewport.width() / 2)
+            ) <= 2
+
+        stable_width = notification_combo.width()
+        assert window.state["usb_idle_enabled"] is True
+        assert leave_reminder_button.isChecked() is True
+        for selected_value in ("off", "on"):
+            notification_combo.setCurrentIndex(
+                notification_combo.findData(selected_value)
+            )
+            qt_app.processEvents()
+            assert notification_combo.width() == stable_width
+            assert window.state["usb_plug_notify_mode"] == selected_value
+            assert window.state["usb_plug_enabled"] is (selected_value == "on")
+            assert window.state["usb_idle_enabled"] is True
+            assert_centered()
+        assert [
+            saved_state["usb_plug_notify_mode"] for saved_state in saved_states
+        ] == ["off", "on"]
+
+        for row in range(notification_combo.count()):
+            assert notification_combo.itemData(
+                row,
+                Qt.ItemDataRole.ToolTipRole,
+            ) == notification_combo.itemText(row)
+
+        for is_dark in (False, True):
+            window.apply_theme(is_dark)
+            qt_app.processEvents()
+            assert notification_combo.width() == stable_width
+            assert_centered()
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_master_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):
     saved_states = []
     monkeypatch.setattr(main, "save_state", lambda state: saved_states.append(dict(state)))
