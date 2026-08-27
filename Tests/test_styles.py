@@ -113,6 +113,19 @@ def test_navigation_panel_joins_its_top_and_right_accent_lines(is_dark):
     assert f"border-right: 1px solid {border};" in stylesheet
 
 
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_surfaced_output_boxes_use_thin_rounded_borders(is_dark):
+    styles.set_theme(is_dark)
+    border = styles.qcolor_css(styles.themed_surface_field_border())
+
+    for stylesheet in (
+        styles.surfaced_text_edit_style("Consolas", 15),
+        styles.surfaced_list_widget_style("Consolas", 15),
+    ):
+        assert f"border: 1px solid {border};" in stylesheet
+        assert "border-radius: 6px;" in stylesheet
+
+
 def test_dropdown_chevron_asset_is_available():
     assert styles.dropdown_chevron_path().is_file()
 

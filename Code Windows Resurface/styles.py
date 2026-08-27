@@ -590,8 +590,8 @@ def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
                 font_family=font_family,
             )}
             background-color: {qcolor_css(themed_surface_field_bg())};
-            border: 2px solid {qcolor_css(themed_surface_field_border())};
-            border-radius: 0px;
+            border: 1px solid {qcolor_css(themed_surface_field_border())};
+            border-radius: 6px;
             selection-background-color: {qcolor_css(PANEL_HOVER)};
         }}
     """
@@ -910,8 +910,8 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
             %s
             background-color: %s;
             color: %s;
-            border: 2px solid %s;
-            border-radius: 0px;
+            border: 1px solid %s;
+            border-radius: 6px;
             padding: 6px;
         }
         QListWidget::item {
