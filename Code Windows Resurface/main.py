@@ -428,6 +428,23 @@ class UtilityControlApp(
             0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
         )
+        self._apply_native_window_corner_preference()
+
+    def _apply_native_window_corner_preference(self):
+        hwnd = int(self.winId())
+        if not hwnd:
+            return
+
+        try:
+            corner_preference = ctypes.c_int(2)  # DWMWCP_ROUND
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                33,  # DWMWA_WINDOW_CORNER_PREFERENCE
+                ctypes.byref(corner_preference),
+                ctypes.sizeof(corner_preference),
+            )
+        except Exception:
+            return
 
     def showEvent(self, event):
         super().showEvent(event)

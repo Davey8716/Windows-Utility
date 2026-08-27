@@ -1,4 +1,5 @@
 import copy
+import ctypes
 
 import left_panel_gui
 import main
@@ -184,6 +185,45 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
             lambda _self: window_height,
         )
     return main.UtilityControlApp()
+
+
+def test_native_window_corner_preference_uses_standard_dwm_rounding(monkeypatch):
+    calls = []
+
+    class FakeDwmApi:
+        def DwmSetWindowAttribute(self, hwnd, attribute, value, value_size):
+            preference = ctypes.cast(
+                value,
+                ctypes.POINTER(ctypes.c_int),
+            ).contents.value
+            calls.append((hwnd, attribute, preference, value_size))
+            return 0
+
+    class FakeWindll:
+        dwmapi = FakeDwmApi()
+
+    class Window:
+        def winId(self):
+            return 1234
+
+    monkeypatch.setattr(main.ctypes, "windll", FakeWindll())
+
+    main.UtilityControlApp._apply_native_window_corner_preference(Window())
+
+    assert calls == [(1234, 33, 2, ctypes.sizeof(ctypes.c_int))]
+
+
+def test_native_window_corner_preference_ignores_missing_dwm_api(monkeypatch):
+    class FakeWindll:
+        pass
+
+    class Window:
+        def winId(self):
+            return 1234
+
+    monkeypatch.setattr(main.ctypes, "windll", FakeWindll())
+
+    main.UtilityControlApp._apply_native_window_corner_preference(Window())
 
 
 def test_fixed_sidebar_shell_builds_ten_scrollable_pages(monkeypatch):
