@@ -106,6 +106,11 @@ class ExternalDriveMixin:
             placeholder=visible_text,
             font_size=chosen_font_size,
         )
+        styles.apply_page_control_size(
+            combo,
+            width=styles.EXTERNAL_DRIVES_CONTROL_WIDTH,
+            role="externalDrive",
+        )
         control_row = combo.parentWidget()
         if (
             control_row is not None
@@ -116,7 +121,7 @@ class ExternalDriveMixin:
             if combo.isHidden() and empty_label is not None:
                 status_width = empty_label.width()
             control_row.setFixedWidth(
-                styles.PAGE_CONTROL_WIDTH
+                styles.EXTERNAL_DRIVES_CONTROL_WIDTH
                 + styles.PAGE_CONTROL_GAP
                 + status_width
             )

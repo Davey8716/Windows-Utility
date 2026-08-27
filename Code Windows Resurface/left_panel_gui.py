@@ -31,6 +31,8 @@ class LeftPanelBuilder:
     CONTROL_ROW_WIDTH = (
         LEFT_CONTROL_COLUMN_WIDTH + CONTROL_COLUMN_GAP + RIGHT_CONTROL_COLUMN_WIDTH
     )
+    EXTERNAL_DRIVE_CONTROL_WIDTH = styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+    EXTERNAL_DRIVE_ROW_WIDTH = styles.EXTERNAL_DRIVES_CONTENT_WIDTH
 
     def __init__(self, app):
         self.app = app
@@ -1012,7 +1014,7 @@ class LeftPanelBuilder:
 
         leave_reminder_row = QWidget()
         leave_reminder_row.setProperty("centeredControlGrid", True)
-        leave_reminder_row.setFixedWidth(self.CONTROL_ROW_WIDTH)
+        leave_reminder_row.setFixedWidth(self.EXTERNAL_DRIVE_ROW_WIDTH)
         leave_reminder_row.setSizePolicy(
             QSizePolicy.Policy.Fixed,
             QSizePolicy.Policy.Fixed,
@@ -1025,6 +1027,11 @@ class LeftPanelBuilder:
             "Drive Leave Reminder Off",
             state.get("usb_idle_enabled", True),
         )
+        styles.apply_page_control_size(
+            leave_reminder_btn,
+            width=self.EXTERNAL_DRIVE_CONTROL_WIDTH,
+            role="externalDrive",
+        )
         self._bind_toggle_state_text(leave_reminder_btn, "Drive Leave Reminder")
         leave_reminder_row_layout.addWidget(leave_reminder_btn)
         app.register_tooltip(
@@ -1035,7 +1042,11 @@ class LeftPanelBuilder:
         app.connected_drives_field = QComboBox()
         app.connected_drives_field.setEditable(False)
         app.connected_drives_field.setCursor(Qt.CursorShape.ArrowCursor)
-        styles.apply_page_control_size(app.connected_drives_field)
+        styles.apply_page_control_size(
+            app.connected_drives_field,
+            width=self.EXTERNAL_DRIVE_CONTROL_WIDTH,
+            role="externalDrive",
+        )
         app.connected_drives_field.setMinimumContentsLength(
             len("No Drives Connected")
         )
@@ -1064,7 +1075,7 @@ class LeftPanelBuilder:
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
         app.connected_drives_empty_label.setFixedSize(
-            styles.PAGE_CONTROL_WIDTH,
+            self.EXTERNAL_DRIVE_CONTROL_WIDTH,
             styles.PAGE_CONTROL_HEIGHT,
         )
         app.connected_drives_empty_label.hide()
@@ -1085,6 +1096,10 @@ class LeftPanelBuilder:
         plug_notification_label.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
+        plug_notification_label.setFixedSize(
+            self.EXTERNAL_DRIVE_CONTROL_WIDTH,
+            styles.PAGE_CONTROL_HEIGHT,
+        )
 
         plug_combo = self._create_drive_reminder_combo(
             "plug_unplug_notify",
@@ -1094,12 +1109,25 @@ class LeftPanelBuilder:
                 ("Off", "off"),
                 ("On", "on"),
             ],
+            fixed_width=self.EXTERNAL_DRIVE_CONTROL_WIDTH,
         )
         plug_combo.setProperty("plugUnplugNotificationCombo", True)
-        self._add_two_column_control_row(
-            usb_layout,
-            plug_notification_label,
-            plug_combo,
+        plug_notification_row = QWidget()
+        plug_notification_row.setProperty("centeredControlGrid", True)
+        plug_notification_row.setFixedWidth(self.EXTERNAL_DRIVE_ROW_WIDTH)
+        plug_notification_row.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed,
+        )
+        plug_notification_row_layout = QHBoxLayout(plug_notification_row)
+        plug_notification_row_layout.setContentsMargins(0, 0, 0, 0)
+        plug_notification_row_layout.setSpacing(self.CONTROL_COLUMN_GAP)
+        plug_notification_row_layout.addWidget(plug_notification_label)
+        plug_notification_row_layout.addWidget(plug_combo)
+        usb_layout.addWidget(
+            plug_notification_row,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
         )
 
         self._attach_left_section(

@@ -118,10 +118,8 @@ class AdvancedToolsPanel(QWidget):
     MAINTENANCE_CONTROL_WIDTH = (
         MAINTENANCE_CONTENT_WIDTH - styles.PAGE_CONTROL_GAP
     ) // 2
-    DRIVE_SPACE_CONTENT_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH - 4
-    DRIVE_SPACE_CONTROL_WIDTH = (
-        DRIVE_SPACE_CONTENT_WIDTH - styles.PAGE_CONTROL_GAP
-    ) // 2
+    DRIVE_SPACE_CONTENT_WIDTH = styles.EXTERNAL_DRIVES_CONTENT_WIDTH
+    DRIVE_SPACE_CONTROL_WIDTH = styles.EXTERNAL_DRIVES_CONTROL_WIDTH
     SIDEBAR_OUTPUT_CLEAR_MESSAGES = {
         "IP Configuration": "IP configuration output log cleared.",
         "Flush DNS": "Dns output log cleared.",

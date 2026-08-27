@@ -3,6 +3,7 @@ import ctypes
 
 import left_panel_gui
 import main
+import styles
 from hotkeys import ACTION_LABELS
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QShortcut
@@ -624,6 +625,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             assert (
                 collapsed_required <= combo.width()
                 or combo.width() == 300
+                or combo.property("pageControlRole") == "externalDrive"
             )
             popup_width = int(combo.property("comboPopupWidth") or 0)
             assert popup_width == combo.view().minimumWidth()
@@ -639,8 +641,8 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
         qt_app.processEvents()
         connected_combo = window.connected_drives_field
         connected_row = connected_combo.parentWidget()
-        assert connected_row.width() == 250 + 12 + connected_combo.width()
-        assert 250 <= connected_combo.width() <= 300
+        assert connected_row.width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
+        assert connected_combo.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
         assert connected_combo.itemData(
             0,
             Qt.ItemDataRole.ToolTipRole,
@@ -745,12 +747,14 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
             notification_combo.itemText(row)
             for row in range(notification_combo.count())
         ] == ["Off", "On"]
-        assert notification_combo.width() == (
-            left_panel_gui.LeftPanelBuilder.RIGHT_CONTROL_COLUMN_WIDTH
-        )
+        assert notification_combo.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
         assert notification_combo.height() == 34
-        assert notification_label.width() == (
-            left_panel_gui.LeftPanelBuilder.LEFT_CONTROL_COLUMN_WIDTH
+        assert notification_label.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+        assert leave_reminder_button.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+        assert window.connected_drives_field.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+        assert notification_combo.parentWidget().width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
+        assert leave_reminder_button.parentWidget().width() == (
+            styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         )
 
         external_viewport = window.page_scroll_areas["external_drives"].viewport()
@@ -764,6 +768,16 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
             assert abs(
                 row_left
                 + (control_row.width() / 2)
+                - (external_viewport.width() / 2)
+            ) <= 2
+            reminder_row = leave_reminder_button.parentWidget()
+            reminder_row_left = reminder_row.mapTo(
+                external_viewport,
+                QPoint(),
+            ).x()
+            assert abs(
+                reminder_row_left
+                + (reminder_row.width() / 2)
                 - (external_viewport.width() / 2)
             ) <= 2
 
@@ -790,10 +804,21 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
                 Qt.ItemDataRole.ToolTipRole,
             ) == notification_combo.itemText(row)
 
+        window._refresh_connected_drive_status_label(
+            ("E:\\Example Removable Drive With A Long Volume Name",)
+        )
+        qt_app.processEvents()
+        assert window.connected_drives_field.width() == stable_width
+        assert window.connected_drives_field.parentWidget().width() == (
+            styles.EXTERNAL_DRIVES_CONTENT_WIDTH
+        )
+
         for is_dark in (False, True):
             window.apply_theme(is_dark)
             qt_app.processEvents()
             assert notification_combo.width() == stable_width
+            assert window.connected_drives_field.width() == stable_width
+            assert leave_reminder_button.width() == stable_width
             assert_centered()
     finally:
         window._quit_requested = True
@@ -855,10 +880,10 @@ def test_external_drive_controls_and_output_share_the_inner_frame_width(monkeypa
         drive_page = window.page_by_id["external_drives"]
         button_row = panel.btn_this_pc.parentWidget()
 
-        assert panel.btn_this_pc.width() == 238
-        assert panel.btn_storage_sense.width() == 238
-        assert button_row.width() == 488
-        assert panel.drive_space_list.width() == 488
+        assert panel.btn_this_pc.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+        assert panel.btn_storage_sense.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+        assert button_row.width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
+        assert panel.drive_space_list.width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         assert panel.drive_space_list.height() == 120
 
         button_row_left = button_row.mapTo(drive_page, QPoint()).x()
