@@ -308,6 +308,7 @@ def navigation_list_style() -> str:
             background-color: {qcolor_css(SURFACE_BG)};
             color: {qcolor_css(theme_text_color())};
             border: none;
+            border-top: 1px solid {qcolor_css(SURFACE_BORDER)};
             border-right: 1px solid {qcolor_css(SURFACE_BORDER)};
             outline: none;
             padding: 12px 8px;

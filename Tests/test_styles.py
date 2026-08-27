@@ -103,6 +103,16 @@ def test_contrasting_text_color_favors_readable_severity_foregrounds():
     assert styles.contrasting_text_color(QColor(176, 38, 38)) == styles.TEXT_LIGHT
 
 
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_navigation_panel_joins_its_top_and_right_accent_lines(is_dark):
+    styles.set_theme(is_dark)
+    border = styles.qcolor_css(styles.SURFACE_BORDER)
+    stylesheet = styles.navigation_list_style()
+
+    assert f"border-top: 1px solid {border};" in stylesheet
+    assert f"border-right: 1px solid {border};" in stylesheet
+
+
 def test_dropdown_chevron_asset_is_available():
     assert styles.dropdown_chevron_path().is_file()
 
