@@ -153,7 +153,7 @@ class AdvancedToolsPanel(QWidget):
         "Network / Sys Quick Fix": "sidebar_dropdown_network_fix",
         "Cleanup / Quick Actions": "sidebar_dropdown_cleanup",
         "Display And Sound": "sidebar_dropdown_quick_open",
-        "Sys Integrity & Disk Health": "sidebar_dropdown_integrity",
+        "Sys Integrity / Disk": "sidebar_dropdown_integrity",
     }
     SIDE_FRAME_WIDTH = styles.RIGHT_SECTION_MAX_WIDTH + (OUTER_SIDE_PADDING * 2)
 
@@ -1209,7 +1209,7 @@ class AdvancedToolsPanel(QWidget):
             grid_layout,
             1,
             1,
-            "Sys Integrity & Disk Health",
+            "Sys Integrity / Disk",
             self._sidebar_system_integrity_actions(),
             fixed_width=self.MAINTENANCE_CONTROL_WIDTH,
         )
