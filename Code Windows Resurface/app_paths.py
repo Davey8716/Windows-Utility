@@ -103,6 +103,9 @@ class MasterBackupPathsMixin:
         tooltip_text = self._get_master_backup_path_tooltip_text()
         if display_widget.toolTip() != tooltip_text:
             display_widget.setToolTip(tooltip_text)
+        refresh_overview = getattr(self, "refresh_overview", None)
+        if refresh_overview is not None:
+            refresh_overview()
 
     def _build_master_output_path(self, filename: str) -> str:
         path_type = self._get_app_module_attr("Path", Path)

@@ -2,8 +2,8 @@ import copy
 
 import main
 from PySide6.QtCore import QPoint, Qt
-from PySide6.QtGui import QColor, QIcon, QKeySequence
-from PySide6.QtWidgets import QApplication, QComboBox, QPushButton
+from PySide6.QtGui import QColor, QIcon, QKeySequence, QShortcut
+from PySide6.QtWidgets import QApplication, QComboBox, QMainWindow, QPushButton, QScrollArea
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 
 
@@ -175,71 +175,103 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     return main.UtilityControlApp()
 
 
-def test_window_height_resolver_uses_preferred_or_available_work_area():
-    resolver = main.UtilityControlApp._height_for_available_height
-
-    assert main.UtilityControlApp.PREFERRED_WINDOW_HEIGHT == 1216
-    assert resolver(None) == 1216
-    assert resolver(1440) == 1216
-    assert resolver(1216) == 1216
-    assert resolver(1180) == 1180
-    assert resolver(900) == 900
-
-
-def test_window_height_resolver_reads_screen_available_geometry():
-    class FakeGeometry:
-        def __init__(self, height):
-            self._height = height
-
-        def height(self):
-            return self._height
-
-    class FakeScreen:
-        def __init__(self, height):
-            self._geometry = FakeGeometry(height)
-
-        def availableGeometry(self):
-            return self._geometry
-
-    class HeightResolverWindow:
-        def __init__(self, height):
-            self._screen = FakeScreen(height)
-
-        def screen(self):
-            return self._screen
-
-        @staticmethod
-        def _height_for_available_height(available_height):
-            return main.UtilityControlApp._height_for_available_height(available_height)
-
-    assert main.UtilityControlApp._resolve_window_height(HeightResolverWindow(1440)) == 1216
-    assert main.UtilityControlApp._resolve_window_height(HeightResolverWindow(900)) == 900
-
-
-def test_left_panel_scrollbar_policy_tracks_available_height(monkeypatch):
+def test_fixed_sidebar_shell_builds_ten_scrollable_pages(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
-    tall_window = _build_offscreen_window(monkeypatch, state, window_height=1216)
+    window = _build_offscreen_window(monkeypatch, state)
 
     try:
-        assert tall_window.main_scroll.verticalScrollBarPolicy() == (
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        assert isinstance(window, QMainWindow)
+        assert window.size().width() == 1000
+        assert window.size().height() == 800
+        assert window.minimumSize() == window.maximumSize()
+        assert window.navigation_list.width() == 220
+        assert window.navigation_list.count() == 10
+        assert window.page_stack.count() == 10
+        assert list(window.page_by_id) == [
+            "overview",
+            "user_interface",
+            "screen_mover",
+            "monitor_rules",
+            "external_drives",
+            "organising_utilities",
+            "folder_utilities",
+            "recycle_bin",
+            "windows_utilities",
+            "maintenance",
+        ]
+        assert len(window.page_scroll_areas) == 10
+        assert all(
+            isinstance(scroll, QScrollArea)
+            and scroll.verticalScrollBarPolicy()
+            == Qt.ScrollBarPolicy.ScrollBarAsNeeded
+            for scroll in window.page_scroll_areas.values()
         )
+        assert not hasattr(window, "advanced_settings_toggle")
+        assert not hasattr(window, "master_collapse_btn_left")
     finally:
-        tall_window._quit_requested = True
-        tall_window.close()
-        tall_window.deleteLater()
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
         qt_app.processEvents()
 
-    constrained_window = _build_offscreen_window(monkeypatch, state, window_height=800)
+
+def test_navigation_restores_valid_page_and_falls_back_to_overview(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["last_opened_page"] = "maintenance"
+    window = _build_offscreen_window(monkeypatch, state)
     try:
-        assert constrained_window.main_scroll.verticalScrollBarPolicy() == (
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
+        assert window.navigation_list.currentItem().data(Qt.ItemDataRole.UserRole) == "maintenance"
+        window.navigate_to_page("screen_mover")
+        assert window.state["last_opened_page"] == "screen_mover"
+        assert window.page_stack.currentWidget() is window.page_by_id["screen_mover"]
+        window.navigate_to_page("not-a-page")
+        assert window.state["last_opened_page"] == "overview"
+        assert window.page_stack.currentWidget() is window.page_by_id["overview"]
+        assert not window.monitor_rules_add_button.isEnabled()
+        assert "monitor_rules" not in window.state
+        assert window.findChildren(QShortcut) == []
     finally:
-        constrained_window._quit_requested = True
-        constrained_window.close()
-        constrained_window.deleteLater()
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_overview_status_and_folder_quick_action(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["title_bar_dock_enabled"] = False
+    state["recycle_bin_auto_clean_enabled"] = True
+    state["master_backup_output_path"] = r"C:\Backups"
+    window = _build_offscreen_window(monkeypatch, state)
+    window._overview_connected_drives = {"E:\\", "F:\\"}
+
+    try:
+        window.show()
+        qt_app.processEvents()
+        window.refresh_overview()
+        assert window.overview_status_labels["screen_mover"].text() == "Off"
+        assert window.overview_status_labels["drives"].text() == "2 connected"
+        assert window.overview_status_labels["backup_path"].text() == r"C:\Backups"
+        assert window.overview_status_labels["recycle"].text() == "On"
+
+        overview = window.page_by_id["overview"]
+        folder_action = next(
+            button
+            for button in overview.findChildren(QPushButton)
+            if button.text() == "Create Desktop Folder"
+        )
+        folder_action.click()
+        qt_app.processEvents()
+        assert window.state["last_opened_page"] == "folder_utilities"
+        assert window.page_stack.currentWidget() is window.page_by_id["folder_utilities"]
+        assert window.folder_input.hasFocus()
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
         qt_app.processEvents()
 
 
@@ -256,6 +288,7 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
     window = _build_offscreen_window(monkeypatch, state)
 
     try:
+        window.navigate_to_page("user_interface")
         window.show()
         qt_app.processEvents()
 
@@ -271,17 +304,11 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
             window.TITLE_TEXT_ROW_HEIGHT + window.TITLE_CONTROL_ROW_HEIGHT
         )
         assert window.window_title_label.text() == "Windows Resurface"
-        assert window.master_collapse_btn_left.parent() is window.window_title_bar
         assert window.window_minimize_btn.parent() is window.window_title_bar
         assert window.window_close_btn.parent() is window.window_title_bar
         assert not window.window_minimize_btn.icon().isNull()
         assert not window.window_close_btn.icon().isNull()
 
-        user_interface_section = next(
-            section
-            for section in window.left_sections
-            if section.section_id == "user_interface"
-        )
         assert window_center_x(window.window_title_label) == window.width() // 2
         assert window_y(window.window_title_label) == 0
         assert window.window_title_label.height() == window.TITLE_TEXT_ROW_HEIGHT
@@ -289,15 +316,8 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         assert window_y(window.window_close_btn) == 0
         assert window.window_minimize_btn.height() == window.TITLE_TEXT_ROW_HEIGHT
         assert window.window_close_btn.height() == window.TITLE_TEXT_ROW_HEIGHT
-        assert window.master_collapse_btn_left.x() < window.MAIN_PANEL_WIDTH
-        assert window.window_minimize_btn.x() > window.MAIN_PANEL_WIDTH
+        assert window.window_minimize_btn.x() > window.SIDEBAR_WIDTH
         assert window.window_close_btn.x() > window.window_minimize_btn.x()
-        assert window_y(window.master_collapse_btn_left) == window.TITLE_TEXT_ROW_HEIGHT
-        assert window_center_x(window.master_collapse_btn_left) == window_center_x(
-            user_interface_section.toggle_btn
-        )
-        assert window.main_scroll.y() == window.TITLE_BAR_HEIGHT
-        assert window.advanced_settings_panel.y() == window.TITLE_BAR_HEIGHT
 
         left_states = copy.deepcopy(window.state["left_section_states"])
         window.window_minimize_btn.click()
@@ -385,6 +405,7 @@ def test_main_window_and_power_dropdown_are_wide_enough(monkeypatch):
     window = _build_offscreen_window(monkeypatch, state)
 
     try:
+        window.navigate_to_page("user_interface")
         window.show()
         qt_app.processEvents()
 
@@ -419,29 +440,21 @@ def test_main_window_and_power_dropdown_are_wide_enough(monkeypatch):
         left_column_x = window_x(button_with_text("Always on Top On"))
         right_column_x = window_x(power_combo)
 
-        assert window.COLLAPSED_WIDTH == 500
-        assert window.MAIN_PANEL_WIDTH == 480
-        assert window.width() == 500
-        assert window.main_scroll.width() == 480
+        assert window.COLLAPSED_WIDTH == 1000
+        assert window.width() == 1000
+        assert window.height() == 800
+        assert window.navigation_list.width() == 220
+        assert window.page_stack.width() == 780
         assert power_combo.width() == 210
         assert power_combo.minimumWidth() == 210
         assert power_combo.maximumWidth() == 210
 
-        for text in (
-            "Always on Top On",
-            "Maximize All On",
-            "Desktop Screenshot",
-            "Export Bookmarks",
-            "Master Backup Path",
-        ):
+        for text in ("Always on Top On", "Maximize All On"):
             assert window_x(button_with_text(text)) == left_column_x
 
         for widget in (
             button_with_text("Tooltips On"),
             button_with_text("Minimize After Use On"),
-            combo_with_placeholder("Desktop Actions"),
-            combo_with_placeholder("Taskbar Actions"),
-            window.backup_path_input,
         ):
             assert window_x(widget) == right_column_x
             assert widget.width() == 210

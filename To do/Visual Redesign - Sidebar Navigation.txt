@@ -1,0 +1,61 @@
+Visual Redesign - Sidebar Navigation
+
+Reason for the redesign
+The current collapsible-section layout technically reduces the amount of visible content, but still makes the app feel busy: all features remain represented on one long page and the result looks like a settings accordion. With approximately ten distinct sections, the application would benefit from a clearer navigation model.
+
+Proposed layout
+Use a permanent vertical sidebar on the left and one large content area on the right.
+
+The sidebar contains one simple tab per top-level feature. Selecting a tab replaces the content displayed on the right rather than expanding/collapsing a section in one shared page.
+
+Suggested Qt Designer structure
+- QMainWindow as the application shell.
+- A left QToolButton column or QListWidget for the section navigation.
+- A QStackedWidget on the right, with one page for each top-level section.
+- A QScrollArea within each page so that pages can have generous spacing without forcing the main window to become large.
+- QGroupBox or collapsible panels only inside a page for optional advanced settings, not as the app's main navigation.
+- QTableView or QTreeView for saved application-monitor rules.
+
+Suggested page list
+The exact section names can be refined during the redesign, but every current major tool and the new Monitor Rules feature should have a distinct home in the sidebar.
+
+Visual direction
+- Inspired by Windows 11 Settings: stable navigation, a calm and focused work area, large page title, brief explanation, then relevant controls.
+- Keep the sidebar around 200-240 px wide.
+- Use an icon and short label for each section.
+- Highlight the active section with a soft accent background and/or a thin blue left indicator.
+- Use spacing, headings, and descriptions rather than putting every control in a border or card.
+- Reserve cards for summaries or important actions; do not create a card for every control.
+- Keep destructive actions such as Delete restrained and visibly distinct.
+- Consider small clickable monitor-layout previews instead of relying only on Monitor 1/2/3 dropdowns.
+
+Keyboard navigation
+Do not use plain Tab to switch sections. Users expect Tab and Shift+Tab to move through fields, buttons, switches, and lists on the current page; preserving that behavior also helps accessibility.
+
+Preferred shortcuts:
+- Ctrl+Tab: next section.
+- Ctrl+Shift+Tab: previous section.
+- Alt+1 through Alt+0: jump directly to sections 1-10.
+- Ctrl+F: focus a future settings search box.
+
+Reducing the extra-click cost
+The sidebar adds one click to reach a feature, but this is an acceptable trade-off for a cleaner app. Reduce the impact by:
+- Providing an Overview page with common actions and useful status.
+- Remembering the last opened section between sessions.
+- Offering keyboard shortcuts for frequently used tools.
+- Optionally adding Recent or Pinned sections later.
+
+Example page structure
+Monitor Rules
+Automatically place chosen apps on chosen monitors.
+
+[ Add rule ]
+
+Saved rules
+[ application / monitor / size-position / maximize / enforce / enabled table ]
+
+Advanced enforcement options (collapsible)
+Troubleshooting and excluded windows (collapsible)
+
+Migration note
+Qt Designer is intended for a Qt UI. If Windows Resurface currently uses a different UI toolkit, this is a deliberate interface-layer rewrite in PySide6 or PyQt, rather than a cosmetic skin applied to the existing layout.

@@ -42,7 +42,7 @@ class LeftPanelBuilder:
         return Path(__file__).resolve().parent.parent / "App Icons"
 
     def build(self) -> None:
-        self.master_btn = self.app.master_collapse_btn_left
+        self.master_btn = getattr(self.app, "master_collapse_btn_left", None)
         self.app.left_sections = []
         self.app.master_toggle_left_state = bool(
             self.state.get("master_toggle_left", True)
@@ -56,7 +56,8 @@ class LeftPanelBuilder:
         self._build_recycle_bin_section()
 
         self.app.main_layout.addStretch(1)
-        self._wire_master_toggle()
+        if self.master_btn is not None:
+            self._wire_master_toggle()
 
     def _add_left_section_spacer(self, height: int):
         self.app.main_layout.addSpacing(height)
@@ -162,7 +163,11 @@ class LeftPanelBuilder:
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Fixed,
         )
-        initial_open = app.state.get("left_section_states", {}).get(section_id, True)
+        initial_open = (
+            True
+            if getattr(app, "sidebar_navigation_mode", False)
+            else app.state.get("left_section_states", {}).get(section_id, True)
+        )
         section.is_open = bool(initial_open)
         content.setVisible(initial_open)
         frame.setVisible(initial_open)
@@ -1165,6 +1170,7 @@ class LeftPanelBuilder:
         app.register_tooltip(folder_btn, tooltip_text("folder_to_desktop"))
 
         folder_input = QLineEdit()
+        app.folder_input = folder_input
         folder_input.setPlaceholderText("Folder name")
         folder_input.setText(state.get("folder_to_desktop_name", ""))
         folder_input.setReadOnly(False)
@@ -1232,6 +1238,14 @@ class LeftPanelBuilder:
             },
         )
         cleanup_actions_combo.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
+        empty_row = cleanup_actions_combo.findText("Empty Recycle Bin")
+        if empty_row >= 0:
+            danger = QColor(164, 56, 56) if styles.THEME_IS_DARK else QColor(190, 66, 66)
+            cleanup_actions_combo.setItemData(
+                empty_row,
+                danger,
+                Qt.ItemDataRole.ForegroundRole,
+            )
         recycle_bin_controls_layout.addWidget(cleanup_actions_combo, 0, 0)
         app.register_tooltip(cleanup_actions_combo, tooltip_text("cleanup_actions"))
 
@@ -1304,6 +1318,7 @@ class LeftPanelBuilder:
             state["recycle_bin_auto_clean_enabled"] = checked
             set_recycle_bin_age_rule_row_visible(checked)
             save_state(state)
+            app.refresh_overview()
 
         def on_recycle_bin_age_rule_changed(text: str):
             try:

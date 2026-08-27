@@ -693,9 +693,6 @@ class AdvancedToolsPanel(QWidget):
         return labels.get(state, labels["closed"])
 
     def _refresh_tracked_window_button_labels(self):
-        if not self.isVisible():
-            return
-
         for key in self._tracked_window_buttons:
             self._refresh_tracked_window_button_label(key)
 

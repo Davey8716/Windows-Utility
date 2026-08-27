@@ -112,6 +112,7 @@ class ExternalDriveMixin:
             drives = tuple(sorted(self._current_external_drives()))
         elif not isinstance(drives, tuple):
             drives = tuple(sorted(drives))
+        self._overview_connected_drives = set(drives)
 
         self.connected_drives_field.clear()
         if drives:
@@ -141,6 +142,9 @@ class ExternalDriveMixin:
 
         self._apply_connected_drives_field_style()
         QTimer.singleShot(0, self._apply_connected_drives_field_style)
+        refresh_overview = getattr(self, "refresh_overview", None)
+        if refresh_overview is not None:
+            refresh_overview()
 
     def _open_connected_drive_from_index(self, index: QModelIndex) -> None:
         if not hasattr(self, "connected_drives_field") or not index.isValid():

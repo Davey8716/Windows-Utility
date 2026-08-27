@@ -255,6 +255,76 @@ def label_style(font_size: int | None = None, bold: bool = True, color: QColor |
         parts.append(f"color: {qcolor_css(color)};")
     return " ".join(parts)
 
+
+def theme_muted_text_color() -> QColor:
+    return QColor(176, 188, 204) if THEME_IS_DARK else QColor(76, 88, 104)
+
+
+def page_title_style() -> str:
+    return label_style(font_size=28, bold=True, color=theme_text_color())
+
+
+def page_description_style() -> str:
+    return label_style(font_size=14, bold=False, color=theme_muted_text_color())
+
+
+def page_section_heading_style() -> str:
+    return label_style(font_size=17, bold=True, color=theme_text_color())
+
+
+def summary_label_style() -> str:
+    return label_style(font_size=13, bold=False, color=theme_muted_text_color())
+
+
+def summary_value_style() -> str:
+    return label_style(font_size=13, bold=True, color=theme_text_color())
+
+
+def summary_frame_style() -> str:
+    return f"""
+        QFrame#OverviewSummary, QFrame#MonitorRulesEmptyState {{
+            background-color: {qcolor_css(SURFACE_BG)};
+            border: 1px solid {qcolor_css(SURFACE_BORDER)};
+            border-radius: 8px;
+        }}
+        QFrame#OverviewSummary QLabel, QFrame#MonitorRulesEmptyState QLabel {{
+            border: none;
+            background: transparent;
+        }}
+    """
+
+
+def navigation_list_style() -> str:
+    selected = QColor(43, 68, 98) if THEME_IS_DARK else QColor(202, 222, 244)
+    hover = QColor(38, 48, 63) if THEME_IS_DARK else QColor(226, 234, 243)
+    return f"""
+        QListWidget#NavigationList {{
+            background-color: {qcolor_css(SURFACE_BG)};
+            color: {qcolor_css(theme_text_color())};
+            border: none;
+            border-right: 1px solid {qcolor_css(SURFACE_BORDER)};
+            outline: none;
+            padding: 12px 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }}
+        QListWidget#NavigationList::item {{
+            border: none;
+            border-left: 3px solid transparent;
+            border-radius: 5px;
+            padding: 0px 10px;
+            margin: 1px 0px;
+        }}
+        QListWidget#NavigationList::item:hover {{
+            background-color: {qcolor_css(hover)};
+        }}
+        QListWidget#NavigationList::item:selected {{
+            background-color: {qcolor_css(selected)};
+            color: {qcolor_css(theme_text_color())};
+            border-left: 3px solid {qcolor_css(STATUS_ACCENT)};
+        }}
+    """
+
 def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
     font_size = coerce_font_size(font_size, 18) or 18
     return f"""

@@ -11,6 +11,7 @@ FOLDER_CREATOR_DEFAULTS = {
 }
 
 WINDOWS_RESURFACE_DEFAULTS = {
+    "last_opened_page": "overview",
     "theme_dark": True,
     "main_always_on_top_enabled": True,
     "tooltips_enabled": True,
