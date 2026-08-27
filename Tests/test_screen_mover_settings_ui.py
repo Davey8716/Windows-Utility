@@ -2,7 +2,7 @@ import copy
 import ctypes
 
 import left_panel_gui
-import main
+import application_window as main
 import styles
 from hotkeys import ACTION_LABELS
 from PySide6.QtCore import QPoint, Qt

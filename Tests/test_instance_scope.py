@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import main as resurface_main
+import instance_runtime as resurface_main
 
 
 class FakeProcess:
