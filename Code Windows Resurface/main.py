@@ -886,7 +886,7 @@ class UtilityControlApp(
             "QFrame#WindowTitleBar "
             f"{{ background-color: {styles.qcolor_css(styles.WINDOW_BG)}; }}"
         )
-        self.window_title_label.setStyleSheet(styles.label_style(font_size=16))
+        self.window_title_label.setStyleSheet(styles.label_style(font_size=25))
         self.window_minimize_btn.setStyleSheet(styles.title_bar_control_style())
         self.window_minimize_btn.setIcon(self._title_bar_icon("minimize"))
         self.window_close_btn.setStyleSheet(

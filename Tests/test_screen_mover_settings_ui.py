@@ -315,6 +315,7 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
             window.TITLE_TEXT_ROW_HEIGHT + window.TITLE_CONTROL_ROW_HEIGHT
         )
         assert window.window_title_label.text() == "Windows Resurface"
+        assert "font-size: 20px" in window.window_title_label.styleSheet()
         assert window.window_minimize_btn.parent() is window.window_title_bar
         assert window.window_close_btn.parent() is window.window_title_bar
         assert not window.window_minimize_btn.icon().isNull()
