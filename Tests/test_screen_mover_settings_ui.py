@@ -309,6 +309,20 @@ def test_overview_status_and_folder_quick_action(monkeypatch):
         assert window.overview_status_labels["recycle"].text() == "On"
 
         overview = window.page_by_id["overview"]
+        summary = overview.findChild(QWidget, "OverviewSummary")
+        quick_actions = next(
+            widget
+            for widget in overview.findChildren(QWidget)
+            if widget.property("centeredControlGrid")
+        )
+        assert summary is not None
+        assert summary.width() == quick_actions.width() == 512
+        summary_center = summary.mapTo(overview, QPoint()).x() + (summary.width() / 2)
+        actions_center = quick_actions.mapTo(overview, QPoint()).x() + (
+            quick_actions.width() / 2
+        )
+        assert abs(summary_center - actions_center) <= 1
+
         folder_action = next(
             button
             for button in overview.findChildren(QPushButton)

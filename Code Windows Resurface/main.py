@@ -974,8 +974,12 @@ class UtilityControlApp(
 
     def _build_overview_page(self) -> None:
         layout = self.page_content_layouts["overview"]
+        overview_content_width = (
+            styles.PAGE_CONTROL_WIDTH * 2
+        ) + styles.PAGE_CONTROL_GAP
         summary = QFrame()
         summary.setObjectName("OverviewSummary")
+        summary.setFixedWidth(overview_content_width)
         summary_layout = QGridLayout(summary)
         summary_layout.setContentsMargins(20, 18, 20, 18)
         summary_layout.setHorizontalSpacing(24)
@@ -1001,14 +1005,12 @@ class UtilityControlApp(
             summary_layout.addWidget(value, row, 1)
             self.overview_status_labels[key] = value
         summary_layout.setColumnStretch(1, 1)
-        layout.addWidget(summary)
+        layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._add_page_subheading("overview", "Quick actions")
         quick_row = QWidget()
         quick_row.setProperty("centeredControlGrid", True)
-        quick_row.setFixedWidth(
-            (styles.PAGE_CONTROL_WIDTH * 2) + styles.PAGE_CONTROL_GAP
-        )
+        quick_row.setFixedWidth(overview_content_width)
         quick_row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         quick_layout = QGridLayout(quick_row)
         quick_layout.setContentsMargins(0, 0, 0, 0)
