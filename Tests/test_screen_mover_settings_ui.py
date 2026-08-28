@@ -1,10 +1,10 @@
 import copy
 import ctypes
 
-import left_panel_gui
-import application_window as main
-import styles
-from hotkeys import ACTION_LABELS
+from resurface.ui import application_window as main
+from resurface.ui import left_panel_gui, styles
+from resurface.ui import navigation_shell
+from resurface.features.screen_mover.hotkeys import ACTION_LABELS
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
@@ -150,6 +150,7 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
     monkeypatch.setattr(main, "save_state", lambda _state: None)
     monkeypatch.setattr(left_panel_gui, "save_state", lambda _state: None)
+    monkeypatch.setattr(navigation_shell, "save_state", lambda _state: None)
     monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
     monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
     monkeypatch.setattr(main, "TrayIconManager", FakeTrayManager)

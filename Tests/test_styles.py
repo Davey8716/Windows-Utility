@@ -4,11 +4,13 @@ from pathlib import Path
 import pytest
 from PySide6.QtGui import QColor
 
-import styles
+from resurface.ui import styles
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-FOLDER_CREATOR_STYLES_PATH = PROJECT_ROOT / "Code Folder Creator" / "styles.py"
+FOLDER_CREATOR_STYLES_PATH = (
+    PROJECT_ROOT / "Code Folder Creator" / "folder_creator" / "ui" / "styles.py"
+)
 
 
 @pytest.fixture(autouse=True)

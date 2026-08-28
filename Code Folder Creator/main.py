@@ -3,11 +3,11 @@ import os
 import sys
 from ctypes import wintypes
 
-from app_service import AppService
-from nested_ui_controller import NestedUIController
-from smart_tree_widget import SmartTreeWidget
-from status_controller import StatusController
-from ui_state_controller import UIStateController
+from folder_creator.core.app_service import AppService
+from folder_creator.ui.nested_ui_controller import NestedUIController
+from folder_creator.ui.smart_tree_widget import SmartTreeWidget
+from folder_creator.ui.status_controller import StatusController
+from folder_creator.ui.ui_state_controller import UIStateController
 from PySide6.QtCore import QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QApplication,
@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
 )
 
-import styles
+from folder_creator.ui import styles
 
 MAX_NESTED_FOLDER_NAME_LENGTH = 64
 WINDOWS_RESURFACE_EXPANDED_WIDTH = 985

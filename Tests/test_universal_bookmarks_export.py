@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from universal_bookmarks_export import BraveBookmarksExporter
+from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
 
 
 @pytest.mark.parametrize(

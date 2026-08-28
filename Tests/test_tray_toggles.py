@@ -9,7 +9,7 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QApplication
 
-from tray_toggles import (
+from resurface.core.tray_toggles import (
     TRAY_ICON_BUNDLE_NAME,
     TRAY_ICON_ENV_VAR,
     TrayIconManager,

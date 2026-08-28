@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
-import screen_mover
+from resurface.features.screen_mover import screen_mover
 
 
 def wait_until(predicate, timeout=1.5, interval=0.01):
@@ -548,7 +548,7 @@ def test_dock_icon_theme_uses_contrast_with_hysteresis():
 
 
 def test_dock_icon_paths_include_windows_resurface_asset_tree():
-    project_root = Path(screen_mover.__file__).resolve().parent.parent
+    project_root = Path(screen_mover.__file__).resolve().parents[4]
     directories = screen_mover._dock_icon_directories("Black")
 
     assert project_root / "Icon Pngs" / "Black" in directories

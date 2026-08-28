@@ -1,4 +1,4 @@
-from hotkeys import (
+from resurface.features.screen_mover.hotkeys import (
     GlobalHotkeyManager,
     active_hotkeys,
     hotkey_to_display,
@@ -78,4 +78,3 @@ def test_global_hotkey_manager_starts_dispatches_reconfigures_and_stops():
     manager.update_hotkeys({"RIGHT": "Ctrl+Right"}, enabled=False)
     assert listeners[1].stopped
     assert manager.listener is None
-

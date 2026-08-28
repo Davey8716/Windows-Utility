@@ -118,8 +118,8 @@ The master backup path is configurable inside the app and defaults to your home 
 
 ## Project Structure
 
-- `Code Windows Resurface/` main app source
+- `Code Windows Resurface/main.py` main app launcher; `resurface/` contains core, UI, and feature packages
 - `Icon Pngs/` black and white Screen Mover dock actions
-- `Code Folder Creator/` optional companion tool opened by the app
+- `Code Folder Creator/main.py` companion launcher; `folder_creator/` contains core, UI, and feature packages
 - `Shared/` shared app state defaults and JSON state manager
 - `Tests/` automated tests for shared state handling and screen mover behavior

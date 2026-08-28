@@ -4,7 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from desktop_operations import DesktopOperationsMixin, PROJECT_ROOT_ENV_VAR
+from resurface.features.desktop.desktop_operations import (
+    DesktopOperationsMixin,
+    PROJECT_ROOT_ENV_VAR,
+)
 
 
 class FakeActions:
@@ -120,7 +123,7 @@ def test_python_script_command_uses_python_when_packaged_exe_is_current_process(
     script_path = tmp_path / "Win-11-Resurface" / "Code Folder Creator" / "main.py"
     monkeypatch.setattr(sys, "executable", str(packaged_exe))
     monkeypatch.setattr(
-        "desktop_operations.shutil.which",
+        "resurface.features.desktop.desktop_operations.shutil.which",
         lambda command: str(python_exe) if command == "python" else None,
     )
 
@@ -160,7 +163,10 @@ def test_open_folder_creator_missing_main_py_does_not_open_folder(monkeypatch):
     def fail_startfile(path):
         pytest.fail(f"folder fallback should not open: {path}")
 
-    monkeypatch.setattr("desktop_operations.os.startfile", fail_startfile)
+    monkeypatch.setattr(
+        "resurface.features.desktop.desktop_operations.os.startfile",
+        fail_startfile,
+    )
 
     harness.open_folder_creator()
 

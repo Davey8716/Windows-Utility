@@ -17,16 +17,19 @@ from unittest.mock import patch
 
 BENCHMARK_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BENCHMARK_DIR.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+APP_DIR = PROJECT_ROOT / "Code Windows Resurface"
+for path in (PROJECT_ROOT, APP_DIR):
+    path_str = str(path)
+    if path_str not in sys.path:
+        sys.path.insert(0, path_str)
 
-import external_drive_mixin
-import right_utility_gui
-import utility_toggles
-from desktop_operations import DesktopOperationsMixin
-from external_drive_mixin import ExternalDriveMixin
-from universal_bookmarks_export import BraveBookmarksExporter
-from utility_toggles import UtilityActionsManager
+from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
+from resurface.features.drives import external_drive_mixin
+from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
+from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
+from resurface.features.system import utility_toggles
+from resurface.features.system.utility_toggles import UtilityActionsManager
+from resurface.ui import right_utility_gui
 
 
 POWERSHELL = "powershell.exe"

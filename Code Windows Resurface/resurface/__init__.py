@@ -1,0 +1,1 @@
+"""Windows Resurface application package."""

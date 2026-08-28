@@ -5,8 +5,8 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
-from application_window import UtilityControlApp
-from instance_runtime import ensure_single_instance
+from resurface.core.instance_runtime import ensure_single_instance
+from resurface.ui.application_window import UtilityControlApp
 
 
 def main() -> int:

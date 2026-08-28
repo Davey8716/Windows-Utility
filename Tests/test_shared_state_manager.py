@@ -1,7 +1,7 @@
 import json
 import threading
 
-import state_manager
+from resurface.core import state_manager
 from Shared.shared_state_manager import JsonStateManager
 
 

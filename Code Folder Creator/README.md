@@ -131,19 +131,13 @@ https://github.com/Davey8716/Win-11-Python-EXE-Builder
 
 ## Project Structure
 
-Build/
-    main.py                     App entry point and main window
-    app_service.py              Coordinates managers and persistent state
-    nested_folder_manager.py    Tree serialization, parsing, and folder building
-    nested_ui_controller.py     Nested builder UI behavior
-    system_paths.py             Windows path helpers
-    smart_tree_widget.py        Drag/drop and keyboard-enabled tree widget
-    template_IO_layer.py        Template loading and saving
-    state_manager.py            Persistent app state
-    styles.py                   Theme loading and application
-    Default Templates/          Bundled starter templates
-    Icons/                      App icons
-    themes/                     Theme files
+Code Folder Creator/
+    main.py                     App entry point
+    folder_creator/
+        core/                   App coordination, state, and Windows paths
+        ui/                     Tree UI, status, and theme components
+        features/tree/          Tree parsing, serialization, and folder building
+        features/templates/     Template loading and saving
 
 
 ## Notes

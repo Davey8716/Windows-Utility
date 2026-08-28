@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 from PySide6.QtWidgets import QMessageBox
 
-import right_utility_gui
-from right_utility_gui import AdvancedToolsPanel
+from resurface.ui import right_utility_gui
+from resurface.ui.right_utility_gui import AdvancedToolsPanel
 
 
 class FakeExporter:
