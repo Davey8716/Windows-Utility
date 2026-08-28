@@ -373,10 +373,11 @@ class MonitorRulesPage(QFrame):
         # summary.setStyleSheet(styles.page_description_style())
         self.add_button = QPushButton("Add Rule", self)
         self.add_button.setToolTip("Create an automatic application placement rule")
+        self.alphabet_sort_button = QPushButton("A–Z", self)
         self.turn_off_all_button = QPushButton("Turn Off All", self)
         self.delete_all_button = QPushButton("Delete All", self)
         self.delete_all_button.setToolTip("Delete all monitor rules")
-        self.alphabet_sort_button = QPushButton("A–Z", self)
+
         self.alphabet_sort_button.setAccessibleName("Sort monitor rules alphabetically")
         self.alphabet_sort_button.setToolTip("Sort rules A to Z")
         _style_button(self.add_button)
@@ -388,10 +389,12 @@ class MonitorRulesPage(QFrame):
         self.delete_all_button.clicked.connect(self._delete_all_rules)
         self.alphabet_sort_button.clicked.connect(self._sort_alphabetically)
         # top_row.addWidget(summary, 1)
+        top_row.addWidget(self.alphabet_sort_button)
+        top_row.addWidget(self.add_button)
         top_row.addWidget(self.turn_off_all_button)
         top_row.addWidget(self.delete_all_button)
-        top_row.addWidget(self.add_button)
-        top_row.addWidget(self.alphabet_sort_button)
+       
+      
         root.addLayout(top_row)
 
         self.rule_list = QWidget(self)
