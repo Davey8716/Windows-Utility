@@ -345,3 +345,137 @@ def test_rule_changes_cancel_pending_matches_and_request_a_fresh_baseline():
 
     assert watcher._pending == {}
     assert watcher._baseline_pending is True
+
+
+def _matching_window_details(hwnd=1):
+    return {
+        "hwnd": hwnd,
+        "title": "Discord",
+        "class_name": "Main",
+        "executable_name": "discord.exe",
+        "executable_path": "",
+        "process_id": 10,
+        "process_started_at": 100.0,
+    }
+
+
+def _running_watcher_with_rule(rule):
+    watcher = monitor_rules.MonitorRuleWatcher()
+    watcher._rules = [monitor_rules.normalize_monitor_rule(rule)]
+    watcher._thread = type("Thread", (), {"is_alive": lambda self: True})()
+    return watcher
+
+
+def test_enabling_reapply_enrolls_an_existing_correctly_placed_window(monkeypatch):
+    watcher = _running_watcher_with_rule(
+        make_rule(match_exact_path=False, reapply_if_moved=False)
+    )
+    enabled_rule = make_rule(match_exact_path=False, reapply_if_moved=True)
+    details = _matching_window_details()
+    placed = []
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [copy.deepcopy(details)],
+    )
+    monkeypatch.setattr(monitor_rules.win32gui, "IsWindow", lambda _hwnd: True)
+    monkeypatch.setattr(
+        monitor_rules,
+        "window_monitor_device",
+        lambda _hwnd: enabled_rule["target_device"],
+    )
+    monkeypatch.setattr(
+        monitor_rules,
+        "apply_monitor_rule",
+        lambda hwnd, _rule: placed.append(hwnd) or True,
+    )
+
+    watcher.update_rules([enabled_rule])
+    watcher._scan_once()
+
+    assert watcher._managed == {1: "rule-1"}
+    assert watcher._enroll_rule_ids == set()
+    assert placed == []
+
+
+def test_enabling_reapply_moves_existing_off_target_window_after_settle(monkeypatch):
+    watcher = _running_watcher_with_rule(
+        make_rule(match_exact_path=False, reapply_if_moved=False)
+    )
+    enabled_rule = make_rule(match_exact_path=False, reapply_if_moved=True)
+    details = _matching_window_details()
+    placed = []
+    current_time = [10.0]
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [copy.deepcopy(details)],
+    )
+    monkeypatch.setattr(monitor_rules.win32gui, "IsWindow", lambda _hwnd: True)
+    monkeypatch.setattr(
+        monitor_rules,
+        "window_monitor_device",
+        lambda _hwnd: r"\\.\DISPLAY1",
+    )
+    monkeypatch.setattr(monitor_rules, "_left_mouse_pressed", lambda: False)
+    monkeypatch.setattr(monitor_rules.time, "monotonic", lambda: current_time[0])
+    monkeypatch.setattr(
+        monitor_rules,
+        "apply_monitor_rule",
+        lambda hwnd, _rule: placed.append(hwnd) or True,
+    )
+
+    watcher.update_rules([enabled_rule])
+    watcher._scan_once()
+    assert placed == []
+    current_time[0] += monitor_rules.REAPPLY_SETTLE_SECONDS + 0.1
+    watcher._scan_once()
+    assert placed == [1]
+
+
+def test_disabling_reapply_immediately_clears_management_and_enrollment():
+    watcher = _running_watcher_with_rule(
+        make_rule(match_exact_path=False, reapply_if_moved=True)
+    )
+    watcher._managed[1] = "rule-1"
+    watcher._off_target_since[1] = 10.0
+    watcher._enroll_rule_ids.add("rule-1")
+
+    watcher.update_rules(
+        [make_rule(match_exact_path=False, reapply_if_moved=False)]
+    )
+
+    assert watcher._managed == {}
+    assert watcher._off_target_since == {}
+    assert watcher._enroll_rule_ids == set()
+
+
+def test_reapply_enrollment_respects_ordered_first_match(monkeypatch):
+    first = monitor_rules.normalize_monitor_rule(
+        make_rule(id="first", match_exact_path=False, reapply_if_moved=True)
+    )
+    second = monitor_rules.normalize_monitor_rule(
+        make_rule(id="second", match_exact_path=False, reapply_if_moved=True)
+    )
+    watcher = monitor_rules.MonitorRuleWatcher()
+    watcher._rules = [first, second]
+    watcher._enroll_rule_ids = {"second"}
+
+    watcher._enroll_existing_windows(
+        {1: _matching_window_details()},
+        {"second"},
+    )
+
+    assert watcher._managed == {}
+    assert watcher._enroll_rule_ids == set()
+
+
+def test_initial_reapply_rule_does_not_queue_existing_window_enrollment(monkeypatch):
+    watcher = monitor_rules.MonitorRuleWatcher()
+    monkeypatch.setattr(watcher, "start", lambda: None)
+
+    watcher.update_rules(
+        [make_rule(match_exact_path=False, reapply_if_moved=True)]
+    )
+
+    assert watcher._enroll_rule_ids == set()

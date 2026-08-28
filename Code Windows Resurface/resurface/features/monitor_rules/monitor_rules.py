@@ -371,6 +371,7 @@ class MonitorRuleWatcher:
         self._pending: dict[int, float] = {}
         self._managed: dict[int, str] = {}
         self._off_target_since: dict[int, float] = {}
+        self._enroll_rule_ids: set[str] = set()
 
     @property
     def is_running(self) -> bool:
@@ -396,12 +397,25 @@ class MonitorRuleWatcher:
                 if rule_id in changed_ids:
                     self._managed.pop(hwnd, None)
                     self._off_target_since.pop(hwnd, None)
+            for rule_id in changed_ids:
+                old_rule = old_by_id.get(rule_id)
+                new_rule = new_by_id.get(rule_id)
+                if (
+                    old_rule is not None
+                    and new_rule is not None
+                    and new_rule.get("reapply_if_moved")
+                ):
+                    self._enroll_rule_ids.add(rule_id)
+                else:
+                    self._enroll_rule_ids.discard(rule_id)
             if changed_ids and running:
                 # Saving or enabling a rule must not retroactively move windows
                 # that are already open. The next pass becomes a fresh baseline.
                 self._pending.clear()
                 self._baseline_pending = True
             should_start = bool(enabled)
+            if not should_start:
+                self._enroll_rule_ids.clear()
             if should_start and not running:
                 self._baseline_pending = True
 
@@ -441,7 +455,11 @@ class MonitorRuleWatcher:
 
     def _snapshot(self):
         with self._lock:
-            return copy.deepcopy(self._rules), self._app_hwnd
+            return (
+                copy.deepcopy(self._rules),
+                self._app_hwnd,
+                set(self._enroll_rule_ids),
+            )
 
     def _run(self) -> None:
         try:
@@ -456,7 +474,7 @@ class MonitorRuleWatcher:
                     self._thread = None
 
     def _scan_once(self) -> None:
-        rules, app_hwnd = self._snapshot()
+        rules, app_hwnd, enroll_rule_ids = self._snapshot()
         if not rules:
             return
         details_by_hwnd = {
@@ -508,7 +526,36 @@ class MonitorRuleWatcher:
                 with self._lock:
                     self._pending.pop(hwnd, None)
 
+        if enroll_rule_ids:
+            rules = self._enroll_existing_windows(
+                details_by_hwnd,
+                enroll_rule_ids,
+            )
         self._enforce_managed_windows(rules, now)
+
+    def _enroll_existing_windows(
+        self,
+        details_by_hwnd: dict[int, dict],
+        requested_rule_ids: set[str],
+    ) -> list[dict]:
+        with self._lock:
+            active_requests = requested_rule_ids & self._enroll_rule_ids
+            current_rules = copy.deepcopy(self._rules)
+            if not active_requests:
+                return current_rules
+
+            for hwnd, details in details_by_hwnd.items():
+                rule = first_matching_rule(current_rules, details)
+                if (
+                    rule is not None
+                    and rule["id"] in active_requests
+                    and rule.get("reapply_if_moved")
+                ):
+                    self._managed[hwnd] = rule["id"]
+                    self._off_target_since.pop(hwnd, None)
+
+            self._enroll_rule_ids.difference_update(active_requests)
+            return current_rules
 
     def _enforce_managed_windows(self, rules: list[dict], now: float) -> None:
         by_id = {rule["id"]: rule for rule in rules}
