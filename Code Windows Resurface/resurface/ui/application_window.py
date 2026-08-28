@@ -111,13 +111,6 @@ class UtilityControlApp(
         self._taskbar_backup_folder_open = False
         self._quit_requested = False
         self._shutdown_complete = False
-        self._folder_creator_title_candidates = (
-            "Folder Generator",
-            "Folder Creator",
-            "Code Folder Creator",
-        )
-        self._folder_creator_z_order_managed = False
-        self._folder_creator_restore_topmost = False
         self.actions = UtilityActionsManager(self)
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
@@ -128,10 +121,6 @@ class UtilityControlApp(
         self.window_chrome = WindowChrome(self)
 
         self._build_ui()
-        self._folder_creator_monitor_timer = QTimer(self)
-        self._folder_creator_monitor_timer.timeout.connect(
-            self._monitor_folder_creator_window
-        )
         self._known_external_drives = self._current_external_drives()
         self._drive_change_timer = QTimer(self)
         self._drive_change_timer.timeout.connect(self._check_external_drive_changes)
@@ -225,68 +214,6 @@ class UtilityControlApp(
             )
         except Exception as exc:
             print(f"[TOPMOST] Failed to apply topmost={enabled}: {exc}")
-
-    def _begin_folder_creator_z_order_handoff(
-        self,
-        title_candidates: list[str] | tuple[str, ...],
-    ) -> None:
-        self._folder_creator_title_candidates = tuple(title_candidates)
-        self._folder_creator_restore_topmost = bool(
-            self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
-        )
-        self._folder_creator_z_order_managed = True
-
-        if self._folder_creator_restore_topmost:
-            self._set_main_window_topmost_state(False)
-
-        if not self._folder_creator_monitor_timer.isActive():
-            self._folder_creator_monitor_timer.start(250)
-
-    def _focus_folder_creator_window(
-        self,
-        title_candidates: list[str] | tuple[str, ...] | None = None,
-        *,
-        attempt: int = 0,
-        max_attempts: int = 20,
-    ) -> None:
-        candidates = tuple(title_candidates or self._folder_creator_title_candidates)
-        if self.actions.focus_window_titles(candidates):
-            return
-
-        if attempt >= max_attempts:
-            return
-
-        QTimer.singleShot(
-            150,
-            lambda: self._focus_folder_creator_window(
-                candidates,
-                attempt=attempt + 1,
-                max_attempts=max_attempts,
-            ),
-        )
-
-    def _restore_folder_creator_parent_topmost(self) -> None:
-        if self._folder_creator_monitor_timer.isActive():
-            self._folder_creator_monitor_timer.stop()
-
-        should_restore = bool(self._folder_creator_restore_topmost)
-        self._folder_creator_z_order_managed = False
-        self._folder_creator_restore_topmost = False
-
-        if should_restore:
-            self._set_main_window_topmost_state(True)
-
-    def _monitor_folder_creator_window(self) -> None:
-        if not self._folder_creator_z_order_managed:
-            if self._folder_creator_monitor_timer.isActive():
-                self._folder_creator_monitor_timer.stop()
-            return
-
-        window_state = self.actions.get_window_titles_state(
-            self._folder_creator_title_candidates
-        )
-        if window_state == "closed":
-            self._restore_folder_creator_parent_topmost()
 
     def nativeEvent(self, eventType, message):
         try:

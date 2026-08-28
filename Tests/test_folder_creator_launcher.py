@@ -39,9 +39,12 @@ class FolderCreatorHarness(DesktopOperationsMixin):
         self.actions = FakeActions()
         self.launch_target = launch_target
         self.warning_messages = []
-        self.restored_topmost = False
-        self.focused_titles = []
-        self.handoff_titles = []
+        self.minimize_calls = 0
+        self.show_normal_calls = 0
+        self.raise_calls = 0
+        self.activate_calls = 0
+        self.focus_existing = False
+        self.focus_calls = []
 
     def _should_minimize_after_use(self):
         return False
@@ -51,17 +54,21 @@ class FolderCreatorHarness(DesktopOperationsMixin):
             return super()._resolve_folder_creator_launch_target(project_dir)
         return self.launch_target
 
-    def _begin_folder_creator_z_order_handoff(self, title_candidates):
-        self.handoff_titles.append(tuple(title_candidates))
+    def showMinimized(self):
+        self.minimize_calls += 1
 
-    def _focus_folder_creator_window(self, title_candidates=None):
-        self.focused_titles.append(tuple(title_candidates or ()))
+    def showNormal(self):
+        self.show_normal_calls += 1
 
-    def _monitor_folder_creator_window(self):
-        pass
+    def raise_(self):
+        self.raise_calls += 1
 
-    def _restore_folder_creator_parent_topmost(self):
-        self.restored_topmost = True
+    def activateWindow(self):
+        self.activate_calls += 1
+
+    def _focus_folder_creator_window_handles(self, title_candidates, launch_target):
+        self.focus_calls.append((tuple(title_candidates), launch_target))
+        return self.focus_existing
 
     def _message_box_icon(self, icon_name):
         return icon_name
@@ -146,6 +153,11 @@ def test_open_folder_creator_launches_main_py_without_folder_fallback(monkeypatc
         return FakeProcess()
 
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    scheduled = []
+    monkeypatch.setattr(
+        "resurface.features.desktop.desktop_operations.QTimer.singleShot",
+        lambda delay, callback: scheduled.append((delay, callback)),
+    )
 
     harness.open_folder_creator()
 
@@ -155,6 +167,43 @@ def test_open_folder_creator_launches_main_py_without_folder_fallback(monkeypatc
     assert popen_calls[0][0] == [sys.executable, str(launch_target)]
     assert popen_calls[0][1]["stdout"] == subprocess.DEVNULL
     assert popen_calls[0][1]["stderr"] == subprocess.DEVNULL
+    assert harness.minimize_calls == 1
+    assert harness.focus_calls
+    assert scheduled and scheduled[0][0] == 100
+
+
+def test_open_folder_creator_focuses_existing_window_without_relaunch(monkeypatch):
+    launch_target = Path(__file__).resolve()
+    harness = FolderCreatorHarness(launch_target=launch_target)
+    harness.focus_existing = True
+    monkeypatch.setattr(
+        subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: pytest.fail("existing window should not relaunch"),
+    )
+
+    harness.open_folder_creator()
+
+    assert harness.minimize_calls == 1
+    assert len(harness.focus_calls) == 1
+
+
+def test_open_folder_creator_restores_parent_when_launch_fails(monkeypatch):
+    launch_target = Path(__file__).resolve()
+    harness = FolderCreatorHarness(launch_target=launch_target)
+    monkeypatch.setattr(
+        subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("launch failed")),
+    )
+
+    harness.open_folder_creator()
+
+    assert harness.minimize_calls == 1
+    assert harness.show_normal_calls == 1
+    assert harness.raise_calls == 1
+    assert harness.activate_calls == 1
+    assert harness.warning_messages[0][1] == "Folder Creator"
 
 
 def test_open_folder_creator_missing_main_py_does_not_open_folder(monkeypatch):
@@ -174,3 +223,4 @@ def test_open_folder_creator_missing_main_py_does_not_open_folder(monkeypatch):
     assert harness.actions.folder_path_calls == []
     assert harness.warning_messages
     assert harness.warning_messages[0][1] == "Folder Creator"
+    assert harness.minimize_calls == 0

@@ -18,9 +18,7 @@ from resurface.core.state_manager import save_state
 from resurface.core.saved_folder_names import add_saved_folder_name
 from resurface.features.system.utility_toggles import (
     _should_skip,
-    close_window_handles,
     focus_window_handles,
-    get_window_state_for_handles,
 )
 
 
@@ -677,58 +675,72 @@ class DesktopOperationsMixin:
         ]
         launch_target = self._resolve_folder_creator_launch_target(project_dir)
 
-        def launch():
-            subprocess.Popen(
-                self._python_script_command(launch_target),
-                cwd=str(project_dir),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-
-        def action():
-            if launch_target is None:
-                opened = False
-            else:
-                window_handles = self._folder_creator_window_handles(
-                    title_candidates,
-                    launch_target,
-                )
-                window_state = get_window_state_for_handles(window_handles)
-                if window_state != "closed":
-                    closed = close_window_handles(window_handles)
-                    if closed:
-                        QTimer.singleShot(
-                            300,
-                            self._monitor_folder_creator_window,
-                        )
-                        return
-
-                self._begin_folder_creator_z_order_handoff(title_candidates)
-                opened = self._open_or_focus_folder_creator_window(
-                    title_candidates,
-                    launch_target,
-                    launch,
-                )
-
-                if opened:
-                    self._focus_folder_creator_window_handles(
-                        title_candidates,
-                        launch_target,
-                    )
-                    return
-
-            if opened:
-                return
-
-            self._restore_folder_creator_parent_topmost()
+        if launch_target is None:
             self._show_organizing_timed_message(
                 self._message_box_icon("Warning"),
                 "Folder Creator",
                 f"Could not open Folder Creator from:\n{project_dir}",
                 show_close_now_button=True,
             )
+            return
 
-        self._run_with_optional_minimize(action)
+        self.showMinimized()
+
+        if self._focus_folder_creator_window_handles(title_candidates, launch_target):
+            return
+
+        try:
+            subprocess.Popen(
+                self._python_script_command(launch_target),
+                cwd=str(project_dir),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as exc:
+            print(f"[DEBUG] open_folder_creator failed for {launch_target}: {exc}")
+            self._restore_after_folder_creator_launch_failure()
+            self._show_organizing_timed_message(
+                self._message_box_icon("Warning"),
+                "Folder Creator",
+                f"Could not open Folder Creator from:\n{project_dir}",
+                show_close_now_button=True,
+            )
+            return
+
+        QTimer.singleShot(
+            100,
+            lambda: self._focus_folder_creator_window_with_retry(
+                title_candidates,
+                launch_target,
+            ),
+        )
+
+    def _focus_folder_creator_window_with_retry(
+        self,
+        title_candidates: list[str] | tuple[str, ...],
+        launch_target: Path,
+        *,
+        attempt: int = 0,
+        max_attempts: int = 20,
+    ) -> None:
+        if self._focus_folder_creator_window_handles(title_candidates, launch_target):
+            return
+        if attempt >= max_attempts:
+            return
+        QTimer.singleShot(
+            150,
+            lambda: self._focus_folder_creator_window_with_retry(
+                title_candidates,
+                launch_target,
+                attempt=attempt + 1,
+                max_attempts=max_attempts,
+            ),
+        )
+
+    def _restore_after_folder_creator_launch_failure(self) -> None:
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     def _resolve_folder_creator_launch_target(
         self,
@@ -738,22 +750,6 @@ class DesktopOperationsMixin:
         if main_path.is_file():
             return main_path
         return None
-
-    def _open_or_focus_folder_creator_window(
-        self,
-        title_candidates: list[str] | tuple[str, ...],
-        launch_target: Path,
-        launch,
-    ) -> bool:
-        if self._focus_folder_creator_window_handles(title_candidates, launch_target):
-            return True
-
-        try:
-            launch()
-            return True
-        except Exception as e:
-            print(f"[DEBUG] open_folder_creator failed for {launch_target}: {e}")
-            return False
 
     def _focus_folder_creator_window_handles(
         self,
