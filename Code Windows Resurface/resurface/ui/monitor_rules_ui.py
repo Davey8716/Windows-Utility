@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -378,7 +379,10 @@ class MonitorRulesPage(QFrame):
         root = QVBoxLayout(self)
         root.setContentsMargins(24, 24, 24, 24)
         root.setSpacing(12)
-        top_row = QHBoxLayout()
+        action_grid = QGridLayout()
+        action_grid.setContentsMargins(0, 0, 0, 0)
+        action_grid.setHorizontalSpacing(6)
+        action_grid.setVerticalSpacing(root.spacing())
         # summary = QLabel(
         #     "Rules are checked from top to bottom. The first complete match wins.", self
         # )
@@ -401,15 +405,10 @@ class MonitorRulesPage(QFrame):
         self.turn_off_all_button.clicked.connect(self._toggle_all)
         self.delete_all_button.clicked.connect(self._delete_all_rules)
         self.alphabet_sort_button.clicked.connect(self._sort_alphabetically)
-        # top_row.addWidget(summary, 1)
-        top_row.addWidget(self.alphabet_sort_button)
-        top_row.addWidget(self.add_button)
-        top_row.addWidget(self.turn_off_all_button)
-        top_row.addWidget(self.delete_all_button)
-        root.addLayout(top_row)
-
-        backup_row = QHBoxLayout()
-        backup_row.addStretch(1)
+        action_grid.addWidget(self.alphabet_sort_button, 0, 0)
+        action_grid.addWidget(self.add_button, 0, 1)
+        action_grid.addWidget(self.turn_off_all_button, 0, 2)
+        action_grid.addWidget(self.delete_all_button, 0, 3)
         self.export_rules_button = QPushButton("Export Rules", self)
         self.export_rules_button.setToolTip(
             "Export monitor rules to the Master Backup Path"
@@ -422,9 +421,21 @@ class MonitorRulesPage(QFrame):
         _style_button(self.import_rules_button)
         self.export_rules_button.clicked.connect(self._export_rules)
         self.import_rules_button.clicked.connect(self._import_rules)
-        backup_row.addWidget(self.export_rules_button)
-        backup_row.addWidget(self.import_rules_button)
-        root.addLayout(backup_row)
+        action_grid.addWidget(self.export_rules_button, 1, 2)
+        action_grid.addWidget(self.import_rules_button, 1, 3)
+        minimum_column_width = max(
+            button.sizeHint().width()
+            for button in (
+                self.alphabet_sort_button,
+                self.add_button,
+                self.turn_off_all_button,
+                self.delete_all_button,
+            )
+        )
+        for column in range(4):
+            action_grid.setColumnMinimumWidth(column, minimum_column_width)
+            action_grid.setColumnStretch(column, 1)
+        root.addLayout(action_grid)
 
         self.rule_list = QWidget(self)
         self.rule_list_layout = QVBoxLayout(self.rule_list)

@@ -77,6 +77,26 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         assert page.delete_all_button.text() == "Delete All"
         assert page.alphabet_sort_button.isEnabled()
         assert page.alphabet_sort_button.text() == "A–Z"
+        page.resize(760, page.sizeHint().height())
+        page.show()
+        app.processEvents()
+        top_buttons = (
+            page.alphabet_sort_button,
+            page.add_button,
+            page.turn_off_all_button,
+            page.delete_all_button,
+        )
+        assert page.export_rules_button.width() == page.turn_off_all_button.width()
+        assert page.export_rules_button.x() == page.turn_off_all_button.x()
+        assert page.import_rules_button.width() == page.delete_all_button.width()
+        assert page.import_rules_button.x() == page.delete_all_button.x()
+
+        page.resize(900, page.height())
+        app.processEvents()
+        assert page.export_rules_button.geometry().x() == page.turn_off_all_button.geometry().x()
+        assert page.export_rules_button.width() == page.turn_off_all_button.width()
+        assert page.import_rules_button.geometry().x() == page.delete_all_button.geometry().x()
+        assert page.import_rules_button.width() == page.delete_all_button.width()
         initial_cards = [
             page.rule_list_layout.itemAt(index).widget()
             for index in range(page.rule_list_layout.count())
