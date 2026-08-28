@@ -12,8 +12,6 @@ Threading/lag
 
 Do icons for the last list made in codex, plus do proper icons for the arrow < collapsible section/panel buttons
 
-Make light and dark mode versions of the icons that where made
-
 Button Sizes in general, colours relative to state
 
 A hook for workspace builder ?

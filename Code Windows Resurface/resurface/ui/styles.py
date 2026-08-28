@@ -174,9 +174,10 @@ def dropdown_chevron_path() -> Path:
         "Dropdown Chevron.svg" if THEME_IS_DARK else "Dropdown Chevron Light.svg"
     )
     for root in roots:
-        candidate = root / "App Icons" / chevron_name
-        if candidate.is_file():
-            return candidate
+        for icon_dir in (root / "App Icons", root / "App Icons" / "Light Theme"):
+            candidate = icon_dir / chevron_name
+            if candidate.is_file():
+                return candidate
 
     return roots[-1] / "App Icons" / chevron_name
 

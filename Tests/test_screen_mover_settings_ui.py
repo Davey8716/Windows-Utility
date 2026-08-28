@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QPushButton,
     QScrollArea,
@@ -187,6 +188,36 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
             lambda _self: window_height,
         )
     return main.UtilityControlApp()
+
+
+def test_folder_to_desktop_starts_empty_and_saved_selection_populates_input(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["folder_to_desktop_name"] = "Legacy Name"
+    monkeypatch.setattr(
+        left_panel_gui,
+        "load_saved_folder_names",
+        lambda: ["Reports", "Invoices"],
+    )
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        assert window.folder_input.text() == ""
+        assert window.folder_name_combo.isEditable()
+        assert [
+            window.folder_name_combo.itemText(index)
+            for index in range(window.folder_name_combo.count())
+        ] == ["Reports", "Invoices"]
+        window.folder_name_combo.setCurrentIndex(1)
+        assert window.folder_input.text() == "Invoices"
+        assert window.save_folder_name_toggle.isCheckable()
+        assert not window.save_folder_name_toggle.isChecked()
+        assert window.save_folder_name_toggle.width() == 250
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
 
 
 def test_native_window_corner_preference_uses_standard_dwm_rounding(monkeypatch):
@@ -810,7 +841,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             if button.text() == "Folder To Desktop"
         )
         assert folder_creator.size().width() == folder_desktop.size().width() == 250
-        folder_row = window.folder_input.parentWidget()
+        folder_row = window.folder_name_combo.parentWidget()
         assert folder_creator.mapTo(folder_page, QPoint()).y() == (
             folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
         )
@@ -837,7 +868,7 @@ def test_folder_utilities_places_creator_below_quick_folder_action(monkeypatch):
             for button in folder_page.findChildren(QPushButton)
             if button.text() == "Folder Creator"
         )
-        folder_row = window.folder_input.parentWidget()
+        folder_row = window.folder_name_combo.parentWidget()
         folder_desktop = folder_row.findChild(QPushButton)
 
         assert folder_desktop is not None

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from resurface.core.saved_folder_names import load_saved_folder_names
 
 
 class LeftPanelBuilder:
@@ -1067,15 +1068,39 @@ class LeftPanelBuilder:
         self._style_organizing_button(folder_btn)
         app.register_tooltip(folder_btn, tooltip_text("folder_to_desktop"))
 
-        folder_input = QLineEdit()
+        folder_name_combo = QComboBox()
+        folder_name_combo.setEditable(True)
+        folder_name_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        folder_name_combo.setFixedSize(300, styles.PAGE_CONTROL_HEIGHT)
+        folder_name_combo.setCursor(Qt.CursorShape.ArrowCursor)
+        folder_name_combo.setStyleSheet(styles.organizing_combo_style(15))
+        folder_name_combo.setProperty("styleFontSize", 15)
+        folder_input = folder_name_combo.lineEdit()
         app.folder_input = folder_input
+        app.folder_name_combo = folder_name_combo
         folder_input.setPlaceholderText("Folder name")
-        folder_input.setText(state.get("folder_to_desktop_name", ""))
         folder_input.setReadOnly(False)
-        folder_input.setFixedSize(300, styles.PAGE_CONTROL_HEIGHT)
-        folder_input.setProperty("framelessSurfaceFieldStyle", True)
-        folder_input.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
         app.register_tooltip(folder_input, tooltip_text("folder_name_input"))
+
+        def refresh_saved_folder_names(names: list[str] | None = None):
+            current_names = load_saved_folder_names() if names is None else names
+            current_text = folder_input.text()
+            folder_name_combo.blockSignals(True)
+            folder_name_combo.clear()
+            folder_name_combo.addItems(current_names)
+            folder_name_combo.setCurrentIndex(-1)
+            folder_name_combo.setEditText(current_text)
+            folder_name_combo.blockSignals(False)
+
+        refresh_saved_folder_names()
+        app.refresh_saved_folder_names = refresh_saved_folder_names
+
+        save_name_toggle = self._make_toggle_button("Save Name")
+        app.save_folder_name_toggle = save_name_toggle
+        app.register_tooltip(
+            save_name_toggle,
+            "Save the next successfully created folder name for future use.",
+        )
 
         folder_create_row = QWidget()
         folder_create_row.setProperty("centeredControlGrid", True)
@@ -1089,23 +1114,21 @@ class LeftPanelBuilder:
         folder_create_row_layout = QHBoxLayout(folder_create_row)
         folder_create_row_layout.setContentsMargins(0, 0, 0, 0)
         folder_create_row_layout.setSpacing(self.CONTROL_COLUMN_GAP)
-        folder_create_row_layout.addWidget(folder_input)
+        folder_create_row_layout.addWidget(folder_name_combo)
         folder_create_row_layout.addWidget(folder_btn)
         folder_layout.addWidget(
             folder_create_row,
             0,
             Qt.AlignmentFlag.AlignHCenter,
         )
-        folder_layout.addWidget(
-            folder_creator_btn,
-            0,
-            Qt.AlignmentFlag.AlignHCenter,
-        )
+        secondary_row = self._make_two_column_control_row()[0]
+        secondary_layout = secondary_row.layout()
+        secondary_layout.addWidget(save_name_toggle, 0, 0)
+        secondary_layout.addWidget(folder_creator_btn, 0, 1)
+        folder_layout.addWidget(secondary_row, 0, Qt.AlignmentFlag.AlignHCenter)
 
         def on_folder_name_changed(text: str):
-            state["folder_to_desktop_name"] = text
             folder_btn.setEnabled(bool(text.strip()))
-            save_state(state)
 
         def on_create_folder_clicked():
             app._create_desktop_folder(folder_input)

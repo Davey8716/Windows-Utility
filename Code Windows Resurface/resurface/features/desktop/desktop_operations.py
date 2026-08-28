@@ -15,6 +15,7 @@ import win32gui
 import win32process
 
 from resurface.core.state_manager import save_state
+from resurface.core.saved_folder_names import add_saved_folder_name
 from resurface.features.system.utility_toggles import (
     _should_skip,
     close_window_handles,
@@ -620,7 +621,6 @@ class DesktopOperationsMixin:
 
     def _create_desktop_folder(self, folder_input: QLineEdit):
         path_type = self._get_app_module_attr("Path", Path)
-        save_state_fn = self._get_app_module_attr("save_state", save_state)
         folder_name = folder_input.text().strip()
         if not folder_name:
             return
@@ -640,12 +640,16 @@ class DesktopOperationsMixin:
                     return
 
                 new_path.mkdir(parents=True, exist_ok=False)
+                save_name_toggle = getattr(self, "save_folder_name_toggle", None)
+                if save_name_toggle is not None and save_name_toggle.isChecked():
+                    saved_names = add_saved_folder_name(folder_name)
+                    refresh_saved_names = getattr(
+                        self, "refresh_saved_folder_names", None
+                    )
+                    if callable(refresh_saved_names):
+                        refresh_saved_names(saved_names)
+                    save_name_toggle.setChecked(False)
                 folder_input.clear()
-                self.state["folder_to_desktop_name"] = ""
-                try:
-                    save_state_fn(self.state)
-                except Exception as exc:
-                    print(f"[STATE] Save failed: {exc}")
                 self._show_organizing_timed_message(
                     self._message_box_icon("Information"),
                     "Folder to Desktop",
