@@ -18,6 +18,12 @@ class NavigationShell:
         ("recycle_bin", "Recycle Bin", "\ue74d", "Open, empty, and automatically clean the Recycle Bin."),
         ("windows_utilities", "Windows Utilities", "\ue770", "Open useful Windows settings and management tools."),
         ("maintenance", "Maintenance", "\ue90f", "Run quick maintenance, repair, and networking actions."),
+        (
+            "hover_window_controls",
+            "Hover Window Controls",
+            "\ue7f4",
+            "Coming soon — configure floating window controls and hover actions.",
+        ),
     )
 
     def __init__(self, app):

@@ -510,6 +510,7 @@ class UtilityControlApp(
         )
         self._build_overview_page()
         self._build_monitor_rules_page()
+        self._build_hover_window_controls_placeholder()
 
         for layout in self.page_content_layouts.values():
             layout.addStretch(1)
@@ -524,6 +525,32 @@ class UtilityControlApp(
 
     def _build_title_bar(self) -> None:
         self.window_chrome.build()
+
+    def _build_hover_window_controls_placeholder(self) -> None:
+        frame = QFrame(self.page_by_id["hover_window_controls"])
+        frame.setObjectName("HoverWindowControlsPlaceholder")
+        frame_layout = QVBoxLayout(frame)
+        frame_layout.setContentsMargins(24, 28, 24, 28)
+        frame_layout.setSpacing(10)
+
+        status = QLabel("COMING SOON", frame)
+        status.setObjectName("HoverWindowControlsStatus")
+        status.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        status.setStyleSheet(styles.page_section_heading_style())
+
+        message = QLabel(
+            "This section will provide settings for floating window controls "
+            "and hover actions.",
+            frame,
+        )
+        message.setObjectName("HoverWindowControlsMessage")
+        message.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        message.setWordWrap(True)
+        message.setStyleSheet(styles.page_description_style())
+
+        frame_layout.addWidget(status)
+        frame_layout.addWidget(message)
+        self.page_content_layouts["hover_window_controls"].addWidget(frame)
 
     def _position_title_bar_controls(self) -> None:
         self.window_chrome.position_controls()
@@ -720,7 +747,11 @@ class UtilityControlApp(
             self._refresh_navigation_icons()
         if hasattr(self, "version_label"):
             self.version_label.setStyleSheet(styles.sidebar_version_label_style())
-        for name in ("OverviewSummary", "MonitorRulesEmptyState"):
+        for name in (
+            "OverviewSummary",
+            "MonitorRulesEmptyState",
+            "HoverWindowControlsPlaceholder",
+        ):
             for frame in self.findChildren(QFrame, name):
                 frame.setStyleSheet(styles.summary_frame_style())
 

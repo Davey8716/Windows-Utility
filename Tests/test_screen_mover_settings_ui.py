@@ -11,6 +11,7 @@ from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QSho
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
+    QFrame,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -266,7 +267,7 @@ def test_native_window_corner_preference_ignores_missing_dwm_api(monkeypatch):
     main.UtilityControlApp._apply_native_window_corner_preference(Window())
 
 
-def test_fixed_sidebar_shell_builds_ten_scrollable_pages(monkeypatch):
+def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     window = _build_offscreen_window(monkeypatch, state)
@@ -277,8 +278,8 @@ def test_fixed_sidebar_shell_builds_ten_scrollable_pages(monkeypatch):
         assert window.size().height() == 800
         assert window.minimumSize() == window.maximumSize()
         assert window.navigation_list.width() == 220
-        assert window.navigation_list.count() == 10
-        assert window.page_stack.count() == 10
+        assert window.navigation_list.count() == 11
+        assert window.page_stack.count() == 11
         assert list(window.page_by_id) == [
             "overview",
             "user_interface",
@@ -290,8 +291,9 @@ def test_fixed_sidebar_shell_builds_ten_scrollable_pages(monkeypatch):
             "recycle_bin",
             "windows_utilities",
             "maintenance",
+            "hover_window_controls",
         ]
-        assert len(window.page_scroll_areas) == 10
+        assert len(window.page_scroll_areas) == 11
         assert all(
             isinstance(scroll, QScrollArea)
             and scroll.verticalScrollBarPolicy()
@@ -321,6 +323,17 @@ def test_fixed_sidebar_shell_builds_ten_scrollable_pages(monkeypatch):
             window.page_by_id[page_id].isAncestorOf(content)
             for page_id, content in mounted_content.items()
         )
+        hover_item = window.navigation_list.item(10)
+        assert hover_item.text() == "Hover Window Controls"
+        assert hover_item.data(Qt.ItemDataRole.UserRole) == "hover_window_controls"
+        window.navigate_to_page("hover_window_controls")
+        placeholder = window.page_by_id["hover_window_controls"].findChild(
+            QFrame, "HoverWindowControlsPlaceholder"
+        )
+        assert placeholder is not None
+        assert placeholder.findChild(
+            QLabel, "HoverWindowControlsStatus"
+        ).text() == "COMING SOON"
     finally:
         window._quit_requested = True
         window.close()

@@ -253,12 +253,14 @@ def summary_value_style() -> str:
 
 def summary_frame_style() -> str:
     return f"""
-        QFrame#OverviewSummary, QFrame#MonitorRulesEmptyState {{
+        QFrame#OverviewSummary, QFrame#MonitorRulesEmptyState,
+        QFrame#HoverWindowControlsPlaceholder {{
             background-color: {qcolor_css(SURFACE_BG)};
             border: 1px solid {qcolor_css(SURFACE_BORDER)};
             border-radius: 8px;
         }}
-        QFrame#OverviewSummary QLabel, QFrame#MonitorRulesEmptyState QLabel {{
+        QFrame#OverviewSummary QLabel, QFrame#MonitorRulesEmptyState QLabel,
+        QFrame#HoverWindowControlsPlaceholder QLabel {{
             border: none;
             background: transparent;
         }}
