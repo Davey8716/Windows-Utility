@@ -1,3 +1,7 @@
+Wont move msvisual code coz I think it needs admin permissions
+
+Dosnt recognise itself in the app list to to move e.g win 11 resurface
+
 right utility is mammoth again and need splitting into new modules?
 
 Make 2 extra branches of both + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
