@@ -12,7 +12,13 @@ class NavigationShell:
         ("quick_actions", "Quick Actions", "\ue945", "Frequently used Windows Resurface actions."),
         ("user_interface", "User Interface", "\ue790", "Choose how Windows Resurface looks and behaves."),
         ("screen_mover", "Screen Mover", "\ue7f4", "Move and manage windows with the title-bar dock and keyboard shortcuts."),
-        ("monitor_rules", "Monitor Rules", "\ue8a7", "Automatically place chosen applications on chosen monitors."),
+        (
+            "monitor_rules",
+            "Monitor Rules",
+            "\ue8a7",
+            "Automatically place chosen applications on chosen monitors.\n"
+            "Rules are checked from top to bottom. The first complete match wins.",
+        ),
         ("external_drives", "External Drives", "\ue88e", "Manage drive reminders, storage usage, and removable drives."),
         ("organising_utilities", "Organising Utilities", "\ue74c", "Back up desktop items, bookmarks, layouts, and screenshots."),
         ("folder_utilities", "Folder Utilities", "\ue8b7", "Create desktop folders or open the Folder Creator companion."),

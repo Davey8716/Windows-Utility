@@ -366,11 +366,11 @@ class MonitorRulesPage(QFrame):
         root.setContentsMargins(24, 24, 24, 24)
         root.setSpacing(12)
         top_row = QHBoxLayout()
-        summary = QLabel(
-            "Rules are checked from top to bottom. The first complete match wins.", self
-        )
-        summary.setWordWrap(True)
-        summary.setStyleSheet(styles.page_description_style())
+        # summary = QLabel(
+        #     "Rules are checked from top to bottom. The first complete match wins.", self
+        # )
+        # summary.setWordWrap(True)
+        # summary.setStyleSheet(styles.page_description_style())
         self.add_button = QPushButton("Add Rule", self)
         self.add_button.setToolTip("Create an automatic application placement rule")
         self.turn_off_all_button = QPushButton("Turn Off All", self)
@@ -387,7 +387,7 @@ class MonitorRulesPage(QFrame):
         self.turn_off_all_button.clicked.connect(self._toggle_all)
         self.delete_all_button.clicked.connect(self._delete_all_rules)
         self.alphabet_sort_button.clicked.connect(self._sort_alphabetically)
-        top_row.addWidget(summary, 1)
+        # top_row.addWidget(summary, 1)
         top_row.addWidget(self.turn_off_all_button)
         top_row.addWidget(self.delete_all_button)
         top_row.addWidget(self.add_button)
