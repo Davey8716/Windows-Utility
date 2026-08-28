@@ -231,6 +231,11 @@ def test_startup_initialization_places_existing_matches_once(monkeypatch):
     )
     monkeypatch.setattr(
         monitor_rules,
+        "window_monitor_device",
+        lambda _hwnd: r"\\.\DISPLAY1",
+    )
+    monkeypatch.setattr(
+        monitor_rules,
         "apply_monitor_rule",
         lambda hwnd, _rule: placed.append(hwnd) or True,
     )
@@ -241,6 +246,33 @@ def test_startup_initialization_places_existing_matches_once(monkeypatch):
 
     assert placed == [1]
     assert watcher._managed == {}
+
+
+def test_startup_initialization_skips_match_already_on_target(monkeypatch):
+    rule = make_rule(match_exact_path=False, reapply_if_moved=False)
+    watcher = monitor_rules.MonitorRuleWatcher()
+    placed = []
+    monkeypatch.setattr(watcher, "start", lambda: None)
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [_matching_window_details()],
+    )
+    monkeypatch.setattr(
+        monitor_rules,
+        "window_monitor_device",
+        lambda _hwnd: rule["target_device"],
+    )
+    monkeypatch.setattr(
+        monitor_rules,
+        "apply_monitor_rule",
+        lambda hwnd, _rule: placed.append(hwnd) or True,
+    )
+
+    watcher.update_rules([rule], app_hwnd=999, apply_existing=True)
+    watcher._scan_once()
+
+    assert placed == []
 
 
 def test_startup_initialization_manages_successful_reapply_matches(monkeypatch):

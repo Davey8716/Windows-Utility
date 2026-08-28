@@ -554,7 +554,11 @@ class MonitorRuleWatcher:
                 rule = first_matching_rule(rules, details)
                 if rule is None:
                     continue
-                placed = apply_monitor_rule(hwnd, rule)
+                already_on_target = (
+                    window_monitor_device(hwnd).casefold()
+                    == rule["target_device"].casefold()
+                )
+                placed = already_on_target or apply_monitor_rule(hwnd, rule)
                 if placed and rule.get("reapply_if_moved"):
                     with self._lock:
                         self._managed[hwnd] = rule["id"]
