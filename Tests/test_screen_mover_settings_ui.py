@@ -858,7 +858,7 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
         notification_label = next(
             label
             for label in window.findChildren(QLabel)
-            if label.text() == "Plug/unplug notifications"
+            if label.text() == "Plug/unplug notifications:"
         )
         leave_reminder_button = next(
             button
@@ -942,6 +942,46 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
             assert window.connected_drives_field.width() == stable_width
             assert leave_reminder_button.width() == stable_width
             assert_centered()
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_loose_labels_use_sidebar_surface_style_across_themes(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        labels = {
+            label.text(): label
+            for label in window.findChildren(QLabel)
+            if label.property("surfaceLabelStyle")
+        }
+        surfaced = [
+            labels["Delete items older than:"],
+            window.backup_path_input,
+            window.connected_drives_empty_label,
+            labels["Plug/unplug notifications:"],
+        ]
+        original_sizes = [(label.width(), label.height()) for label in surfaced]
+
+        assert len(surfaced) == 4
+        assert all(label.property("surfaceLabelStyle") for label in surfaced)
+
+        for is_dark in (False, True):
+            window.apply_theme(is_dark)
+            qt_app.processEvents()
+            expected_background = styles.qcolor_css(styles.SURFACE_BG)
+            expected_border = styles.qcolor_css(styles.SURFACE_BORDER)
+            for label, original_size in zip(surfaced, original_sizes):
+                assert f"background-color: {expected_background};" in label.styleSheet()
+                assert f"border: 1px solid {expected_border};" in label.styleSheet()
+                assert "border-radius: 8px;" in label.styleSheet()
+                assert "padding: 0px 10px;" in label.styleSheet()
+                assert (label.width(), label.height()) == original_size
     finally:
         window._quit_requested = True
         window.close()

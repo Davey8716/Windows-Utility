@@ -989,9 +989,9 @@ class LeftPanelBuilder:
         )
 
         app.connected_drives_empty_label = QLabel("No Drives Connected")
-        app.connected_drives_empty_label.setStyleSheet(
-            styles.label_style(font_size=14, color=styles.theme_text_color())
-        )
+        app.connected_drives_empty_label.setProperty("surfaceLabelStyle", True)
+        app.connected_drives_empty_label.setProperty("styleFontSize", 14)
+        app.connected_drives_empty_label.setStyleSheet(styles.surfaced_label_style(14))
         app.connected_drives_empty_label.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
@@ -1013,7 +1013,9 @@ class LeftPanelBuilder:
         leave_reminder_btn.toggled.connect(on_leave_reminder_changed)
 
         plug_notification_label = QLabel("Plug/unplug notifications:")
-        plug_notification_label.setStyleSheet(styles.label_style(font_size=14))
+        plug_notification_label.setProperty("surfaceLabelStyle", True)
+        plug_notification_label.setProperty("styleFontSize", 14)
+        plug_notification_label.setStyleSheet(styles.surfaced_label_style(14))
         plug_notification_label.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
@@ -1165,8 +1167,9 @@ class LeftPanelBuilder:
 
         app.backup_path_input = QLabel()
         app.backup_path_input.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
-        app.backup_path_input.setProperty("plainThemeLabelStyle", True)
-        app.backup_path_input.setStyleSheet(styles.plain_theme_label_style(15))
+        app.backup_path_input.setProperty("surfaceLabelStyle", True)
+        app.backup_path_input.setProperty("styleFontSize", 15)
+        app.backup_path_input.setStyleSheet(styles.surfaced_label_style(15))
         app.backup_path_input.setAlignment(
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
@@ -1334,7 +1337,9 @@ class LeftPanelBuilder:
 
         cleanup_rule_label = QLabel("Delete items older than:")
         cleanup_rule_label.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
-        cleanup_rule_label.setStyleSheet(styles.label_style(font_size=14))
+        cleanup_rule_label.setProperty("surfaceLabelStyle", True)
+        cleanup_rule_label.setProperty("styleFontSize", 14)
+        cleanup_rule_label.setStyleSheet(styles.surfaced_label_style(14))
         recycle_bin_age_rule_row = QWidget()
         recycle_bin_age_rule_row.setFixedWidth(self.CONTROL_ROW_WIDTH)
         recycle_bin_age_rule_row_layout = QGridLayout(recycle_bin_age_rule_row)

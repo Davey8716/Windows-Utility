@@ -748,6 +748,22 @@ def plain_theme_label_style(font_size: int) -> str:
         }}
     """
 
+
+def surfaced_label_style(font_size: int = 14) -> str:
+    return f"""
+        QLabel {{
+            {label_style(
+                font_size=font_size,
+                bold=True,
+                color=theme_text_color(),
+            )}
+            background-color: {qcolor_css(SURFACE_BG)};
+            border: 1px solid {qcolor_css(SURFACE_BORDER)};
+            border-radius: 8px;
+            padding: 0px 10px;
+        }}
+    """
+
 def _modern_combo_style(
     font_size: int,
     *,

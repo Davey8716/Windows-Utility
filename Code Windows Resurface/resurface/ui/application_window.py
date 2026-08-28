@@ -1043,12 +1043,13 @@ class UtilityControlApp(
 
         self._refresh_screen_mover_shortcut_field_styles()
 
-        backup_path_label = getattr(self, "backup_path_input", None)
-        if (
-            backup_path_label is not None
-            and backup_path_label.property("plainThemeLabelStyle")
-        ):
-            backup_path_label.setStyleSheet(styles.plain_theme_label_style(15))
+        for label in self.findChildren(QLabel):
+            if label.property("surfaceLabelStyle"):
+                font_size = styles.coerce_font_size(
+                    label.property("styleFontSize"),
+                    14,
+                ) or 14
+                label.setStyleSheet(styles.surfaced_label_style(font_size))
 
         self._refresh_master_backup_path_display()
 
@@ -1079,12 +1080,6 @@ class UtilityControlApp(
                 combo.setStyleSheet(styles.surfaced_combo_style(font_size=font_size))
             else:
                 combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
-
-        empty_label = getattr(self, "connected_drives_empty_label", None)
-        if empty_label is not None:
-            empty_label.setStyleSheet(
-                styles.label_style(font_size=14, color=styles.theme_text_color())
-            )
 
         if hasattr(self, "right_tools_panel"):
             if hasattr(self.right_tools_panel, "sidebar_output"):
