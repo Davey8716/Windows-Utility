@@ -199,7 +199,7 @@ class DesktopOperationsMixin:
                 self._message_box_icon("Question"),
                 "Overwrite Desktop Screenshots",
                 (
-                    "Desktop screenshots already exist in the master backup folder."
+                    "Desktop screenshots already exist in the screenshots backup folder."
                     "\n\nOverwrite the current saved screenshot set?"
                 ),
                 self._message_box_button("Yes")
@@ -231,7 +231,7 @@ class DesktopOperationsMixin:
     def _build_desktop_screenshot_capture_spec(self):
         monitors = self._enumerate_monitor_rects()
         path_type = self._get_app_module_attr("Path", Path)
-        save_dir = path_type(self._get_master_backup_dir())
+        save_dir = path_type(self.get_default_screenshot_path()).parent
         save_dir.mkdir(parents=True, exist_ok=True)
 
         if not monitors:

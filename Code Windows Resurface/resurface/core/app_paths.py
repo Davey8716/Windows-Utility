@@ -133,7 +133,11 @@ class MasterBackupPathsMixin:
         )
 
     def get_default_screenshot_path(self) -> str:
-        return self._build_master_output_path("desktop_screenshot.png")
+        path_type = self._get_app_module_attr("Path", Path)
+        base_dir = self._get_master_backup_dir().strip() or str(path_type.home())
+        return str(
+            path_type(base_dir) / "Desktop Screenshots" / "desktop_screenshot.png"
+        )
 
     def _refresh_taskbar_backup_folder_button(self):
         is_open = self.actions.is_backup_folder_open(

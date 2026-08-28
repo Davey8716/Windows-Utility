@@ -20,7 +20,7 @@ TOOLTIP_TEXT = {
     "screen_mover_reset": "Restores the Screen Mover defaults without changing other Windows Resurface settings.",
     "idle_plugged_reminder": "Controls warnings when you lock, log out, restart, shut down, or use this app's power actions with an external drive still connected.",
     "plug_unplug_notify": "Controls notifications for drive plug and unplug events.",
-    "desktop_screenshot": "Captures each detected screen into separate images and saves them to the master backup folder.",
+    "desktop_screenshot": "Captures each detected screen into separate images and saves them to the Desktop Screenshots backup folder.",
     "folder_to_desktop": "Creates a desktop folder using the name entered beside it.",
     "folder_creator_launcher": "Opens the external Folder Creator tool from its main.py launcher.",
     "folder_name_input": "Enter the name of the folder to create on the desktop.",

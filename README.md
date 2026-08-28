@@ -115,7 +115,7 @@ The master backup path is configurable inside the app and defaults to your home 
 - `TaskBarApps\` for taskbar shortcut backups
 - `Bookmarks\` for exported browser bookmark files
 - `Desktop Icon Layout\desktop_icon_layout.json` for desktop icon positions
-- `DesktopScreenshot_Monitor*.png` for per-monitor screenshots
+- `Desktop Screenshots\DesktopScreenshot_Monitor*.png` for per-monitor screenshots
 
 ## Notes
 
