@@ -45,6 +45,7 @@ EXTERNAL_DRIVES_CONTROL_WIDTH = (
 ) // 2
 POPUP_CORNER_RADIUS = 0
 POPUP_BORDER_WIDTH = 2
+BUTTON_CORNER_RADIUS = 6
 
 
 def title_bar_control_style(*, close_button: bool = False) -> str:
@@ -56,6 +57,7 @@ def title_bar_control_style(*, close_button: bool = False) -> str:
             color: {text};
             background: transparent;
             border: none;
+            border-radius: {BUTTON_CORNER_RADIUS}px;
             padding: 0px;
             font-size: 18px;
             font-weight: bold;
@@ -321,6 +323,7 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
             color: {qcolor_css(text_color)};
             background: transparent;
             border: none;
+            border-radius: {BUTTON_CORNER_RADIUS}px;
             padding: 0px;
             font-size: {font_size}px;
             font-weight: bold;
@@ -351,7 +354,7 @@ def message_box_style(radius: int = 10) -> str:
             background-color: {background};
             color: {text};
             border: 2px solid {border};
-            border-radius: 0px;
+            border-radius: {BUTTON_CORNER_RADIUS}px;
             padding: 5px 12px;
             min-width: 72px;
             font-weight: bold;
@@ -505,7 +508,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             font-weight: bold;
             color: {qcolor_css(button_text_color())};
             border: 1px solid {qcolor_css(themed_button_border())};
-            border-radius: 3px;
+            border-radius: {BUTTON_CORNER_RADIUS}px;
             background-color: {qcolor_css(themed_button_bg())};
         }}
         QPushButton:hover {{

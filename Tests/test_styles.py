@@ -48,6 +48,20 @@ def test_shared_palette_uses_darker_canvas_and_blue_controls(
     )
 
 
+def test_all_button_styles_share_the_standard_corner_radius():
+    radius_rule = f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;"
+
+    assert radius_rule in styles.organizing_button_style(14)
+    assert radius_rule in styles.button_text_style(14)
+    assert radius_rule in styles.toggle_button_style(14)
+    assert radius_rule in styles.message_box_style()
+    assert radius_rule in styles.title_bar_control_style()
+    assert radius_rule in styles.arrow_button_style(
+        styles.theme_text_color(),
+        styles.SURFACE_HOVER,
+    )
+
+
 @pytest.mark.parametrize(
     "style_factory",
     [

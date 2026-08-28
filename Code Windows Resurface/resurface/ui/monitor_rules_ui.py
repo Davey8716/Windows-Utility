@@ -190,6 +190,7 @@ class MonitorRuleEditorDialog(QDialog):
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
             parent=self,
         )
+        self.button_box.setStyleSheet(styles.organizing_button_style(12))
         self.button_box.accepted.connect(self._accept_if_valid)
         self.button_box.rejected.connect(self.reject)
         root.addWidget(self.button_box)
