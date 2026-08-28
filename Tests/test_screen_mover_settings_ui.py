@@ -205,6 +205,12 @@ def test_folder_to_desktop_starts_empty_and_saved_selection_populates_input(monk
     try:
         assert window.folder_input.text() == ""
         assert window.folder_name_combo.isEditable()
+        folder_button = next(
+            button
+            for button in window.findChildren(QPushButton)
+            if button.text() == "Folder To Desktop"
+        )
+        assert folder_button.property("lightModePlaceholderButton") is True
         assert [
             window.folder_name_combo.itemText(index)
             for index in range(window.folder_name_combo.count())

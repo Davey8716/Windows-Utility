@@ -1066,6 +1066,7 @@ class LeftPanelBuilder:
         )
 
         folder_btn = QPushButton("Folder To Desktop")
+        folder_btn.setProperty("lightModePlaceholderButton", True)
         self._style_organizing_button(folder_btn)
         app.register_tooltip(folder_btn, tooltip_text("folder_to_desktop"))
 
