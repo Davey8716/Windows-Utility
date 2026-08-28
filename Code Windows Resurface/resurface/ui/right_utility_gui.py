@@ -199,39 +199,8 @@ class AdvancedToolsPanel(QWidget):
         self.advanced_title = QLabel("Advanced Tools", title_row)
         self.advanced_title.setStyleSheet(styles.label_style(font_size=20))
         self.advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.master_collapse_btn_right = QToolButton()
-        self.master_collapse_btn_right.setProperty("rightMasterToggleButton", True)
-        self.app.master_toggle_right_state = bool(
-            self.app.saved_state.get("master_toggle_right", False)
-        )
-        self.master_collapse_btn_right.setArrowType(Qt.ArrowType.NoArrow)
-        self.master_collapse_btn_right.setText(
-            styles.arrow_glyph(
-                Qt.ArrowType.DownArrow
-                if self.app.master_toggle_right_state
-                else Qt.ArrowType.UpArrow
-            )
-        )
-        self.master_collapse_btn_right.setStyleSheet(
-            styles.right_master_toggle_style(
-                styles.theme_text_color(),
-                styles.SURFACE_DARK,
-            )
-        )
         right_master_slot_width, right_master_slot_height = (
             styles.right_master_toggle_slot_size()
-        )
-        self.master_collapse_btn_right.setFixedSize(
-            right_master_slot_width,
-            right_master_slot_height,
-        )
-        self.master_collapse_btn_right.clicked.connect(
-            self.toggle_all_right_sections
-        )
-        self.app.register_tooltip(
-            self.master_collapse_btn_right,
-            tooltip_text("master_collapse_right"),
         )
         title_spacer = QWidget(title_row)
         title_spacer.setFixedSize(
@@ -242,7 +211,6 @@ class AdvancedToolsPanel(QWidget):
         title_row_layout.addStretch()
         title_row_layout.addWidget(self.advanced_title)
         title_row_layout.addStretch()
-        title_row_layout.addWidget(self.master_collapse_btn_right)
         self.side_layout.addWidget(title_row)
 
         self.windows_utility_section = CollapsibleSection(
@@ -1655,25 +1623,3 @@ class AdvancedToolsPanel(QWidget):
             return exported_paths
 
         return False
-
-    def toggle_all_right_sections(self):
-        any_open = any(
-            section.is_open
-            for section in self.app.collapsible_sections
-            if getattr(section, "parent", lambda: None)() is self.side_frame
-        )
-        new_state = not any_open
-        self.app.master_toggle_right_state = new_state
-        self.app.state["master_toggle_right"] = new_state
-        self.master_collapse_btn_right.setText(
-            styles.arrow_glyph(
-                Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
-            )
-        )
-
-        for section in self.app.collapsible_sections:
-            if hasattr(section, "set_open") and section.parent() is self.side_frame:
-                if section.is_open != new_state:
-                    section.set_open(new_state)
-
-        self.app.save_all_settings()
