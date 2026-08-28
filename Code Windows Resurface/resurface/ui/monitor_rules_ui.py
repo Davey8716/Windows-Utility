@@ -27,13 +27,11 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.features.monitor_rules import (
-    apply_monitor_rule,
     capture_window_geometry,
     enumerate_eligible_windows,
     enumerate_monitors,
     normalize_monitor_rule,
     normalize_monitor_rules,
-    rule_matches_window,
 )
 from resurface.ui import styles
 
@@ -187,15 +185,6 @@ class MonitorRuleEditorDialog(QDialog):
         geometry_row.addWidget(self.capture_button)
         geometry_row.addWidget(self.capture_status, 1)
         root.addLayout(geometry_row)
-
-        test_row = QHBoxLayout()
-        test_button = QPushButton("Test Rule", self)
-        _style_button(test_button)
-        test_button.setToolTip("Apply these unsaved settings to the selected running window")
-        test_button.clicked.connect(self._test_rule)
-        test_row.addWidget(test_button)
-        test_row.addStretch(1)
-        root.addLayout(test_row)
 
         self.button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel,
@@ -359,30 +348,6 @@ class MonitorRuleEditorDialog(QDialog):
             QMessageBox.warning(self, "Monitor Rules", message)
             return
         self.accept()
-
-    def _test_rule(self) -> None:
-        message = self._validation_message()
-        details = self._selected_window()
-        if message:
-            QMessageBox.warning(self, "Monitor Rules", message)
-            return
-        if details is None:
-            QMessageBox.warning(self, "Monitor Rules", "Select the running window to test.")
-            return
-        draft = self._draft_rule()
-        if not rule_matches_window(draft, details):
-            QMessageBox.warning(
-                self,
-                "Monitor Rules",
-                "The selected window does not match the executable or optional filters.",
-            )
-            return
-        if not apply_monitor_rule(details["hwnd"], draft):
-            QMessageBox.warning(
-                self,
-                "Monitor Rules",
-                "The rule could not be applied. The target monitor may be unavailable.",
-            )
 
     def result_rule(self) -> dict:
         return self._draft_rule()
