@@ -408,15 +408,21 @@ class MonitorRulesPage(QFrame):
                 filters.append(f"title contains ‘{rule['title_contains']}’")
             if rule["class_name"]:
                 filters.append(f"class {rule['class_name']}")
+            # Keep each rule property on a stable line.  In the previous arrow-separated
+            # sentence, a long executable path could wrap immediately before the
+            # placement value, making (for example) "Maximize" look detached from its
+            # rule and appear to move between cards when the rules were reordered.
             details = (
-                f"{match_text}  →  {rule['target_label']}  →  "
-                f"{PLACEMENT_LABELS[rule['placement_mode']]}"
+                f"Application: {match_text}\n"
+                f"Target: {rule['target_label']}\n"
+                f"Placement: {PLACEMENT_LABELS[rule['placement_mode']]}"
             )
             if filters:
                 details += "\nFilters: " + ", ".join(filters)
             if rule["reapply_if_moved"]:
                 details += "\nReapply if moved is enabled"
             detail_label = QLabel(details, card)
+            detail_label.setObjectName("MonitorRuleDetails")
             detail_label.setWordWrap(True)
             detail_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             detail_label.setStyleSheet(styles.page_description_style())

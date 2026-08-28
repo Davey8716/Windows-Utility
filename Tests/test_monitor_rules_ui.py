@@ -8,7 +8,12 @@ from resurface.ui import monitor_rules_ui
 from test_screen_mover_settings_ui import _build_offscreen_window
 
 
-def make_rule(rule_id="one", name="Discord", enabled=True):
+def make_rule(
+    rule_id="one",
+    name="Discord",
+    enabled=True,
+    placement_mode="keep_size",
+):
     return {
         "id": rule_id,
         "name": name,
@@ -21,7 +26,7 @@ def make_rule(rule_id="one", name="Discord", enabled=True):
         "class_name": "",
         "target_device": r"\\.\DISPLAY2",
         "target_label": "Monitor 2",
-        "placement_mode": "keep_size",
+        "placement_mode": placement_mode,
         "saved_geometry": None,
     }
 
@@ -45,7 +50,10 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
     commits = []
     page = monitor_rules_ui.MonitorRulesPage(
         None,
-        rules=[make_rule(), make_rule("two", "Discord Work")],
+        rules=[
+            make_rule(placement_mode="maximize"),
+            make_rule("two", "Discord Work", placement_mode="maximize"),
+        ],
         app_hwnd=999,
         on_rules_changed=lambda rules: commits.append(rules),
     )
@@ -65,6 +73,17 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         assert commits[-1][0]["enabled"] is False
         page._move_rule(1, -1)
         assert [rule["id"] for rule in commits[-1]] == ["two", "one"]
+
+        current_cards = [
+            page.rule_list_layout.itemAt(index).widget()
+            for index in range(page.rule_list_layout.count())
+        ]
+        details = [
+            card.findChild(monitor_rules_ui.QLabel, "MonitorRuleDetails").text()
+            for card in current_cards
+        ]
+        assert len(details) == 2
+        assert all("\nTarget: Monitor 2\nPlacement: Maximize" in text for text in details)
 
         page.rules[0]["target_device"] = r"\\.\MISSING"
         page._render_rules()
