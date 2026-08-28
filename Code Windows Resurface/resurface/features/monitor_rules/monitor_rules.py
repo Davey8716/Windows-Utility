@@ -375,13 +375,14 @@ class MonitorRuleWatcher:
         self._off_target_since: dict[int, float] = {}
         self._enroll_rule_ids: set[str] = set()
         self._immediate_rule_ids: set[str] = set()
+        self._apply_existing_once = False
 
     @property
     def is_running(self) -> bool:
         with self._lock:
             return bool(self._thread and self._thread.is_alive())
 
-    def update_rules(self, rules, app_hwnd=None) -> None:
+    def update_rules(self, rules, app_hwnd=None, *, apply_existing=False) -> None:
         normalized = normalize_monitor_rules(copy.deepcopy(rules))
         enabled = [rule for rule in normalized if rule["enabled"]]
         with self._lock:
@@ -440,6 +441,9 @@ class MonitorRuleWatcher:
             if not should_start:
                 self._enroll_rule_ids.clear()
                 self._immediate_rule_ids.clear()
+                self._apply_existing_once = False
+            elif apply_existing:
+                self._apply_existing_once = True
             if should_start and not running:
                 self._baseline_pending = True
 
@@ -521,6 +525,8 @@ class MonitorRuleWatcher:
         now = time.monotonic()
 
         with self._lock:
+            apply_existing = self._apply_existing_once
+            self._apply_existing_once = False
             if self._baseline_pending:
                 new_identities = set()
                 self._baseline_pending = False
@@ -542,6 +548,16 @@ class MonitorRuleWatcher:
                 self._pending[hwnd] = now + MATCH_RETRY_SECONDS
 
             pending = dict(self._pending)
+
+        if apply_existing:
+            for hwnd, details in details_by_hwnd.items():
+                rule = first_matching_rule(rules, details)
+                if rule is None:
+                    continue
+                placed = apply_monitor_rule(hwnd, rule)
+                if placed and rule.get("reapply_if_moved"):
+                    with self._lock:
+                        self._managed[hwnd] = rule["id"]
 
         for hwnd, deadline in pending.items():
             details = details_by_hwnd.get(hwnd)

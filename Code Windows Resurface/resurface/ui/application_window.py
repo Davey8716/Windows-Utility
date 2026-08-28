@@ -166,7 +166,7 @@ class UtilityControlApp(
             settings=self.state,
         )
         self.apply_screen_mover_settings()
-        self.apply_monitor_rule_settings()
+        self.apply_monitor_rule_settings(apply_existing=True)
         
         self._set_main_window_topmost_state(True)
         self._apply_fixed_window_style()
@@ -370,10 +370,11 @@ class UtilityControlApp(
         if tray_manager is not None:
             tray_manager.sync_screen_mover_action()
 
-    def apply_monitor_rule_settings(self) -> None:
+    def apply_monitor_rule_settings(self, *, apply_existing=False) -> None:
         self.monitor_rule_watcher.update_rules(
             self.state.get("monitor_rules", []),
             app_hwnd=int(self.winId()),
+            apply_existing=apply_existing,
         )
 
     def set_monitor_rules(self, rules) -> None:

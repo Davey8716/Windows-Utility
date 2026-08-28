@@ -219,6 +219,76 @@ def test_watcher_baselines_existing_windows_then_places_a_new_match(monkeypatch)
     assert placed == [2]
 
 
+def test_startup_initialization_places_existing_matches_once(monkeypatch):
+    rule = make_rule(match_exact_path=False, reapply_if_moved=False)
+    watcher = monitor_rules.MonitorRuleWatcher()
+    placed = []
+    monkeypatch.setattr(watcher, "start", lambda: None)
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [_matching_window_details()],
+    )
+    monkeypatch.setattr(
+        monitor_rules,
+        "apply_monitor_rule",
+        lambda hwnd, _rule: placed.append(hwnd) or True,
+    )
+
+    watcher.update_rules([rule], app_hwnd=999, apply_existing=True)
+    watcher._scan_once()
+    watcher._scan_once()
+
+    assert placed == [1]
+    assert watcher._managed == {}
+
+
+def test_startup_initialization_manages_successful_reapply_matches(monkeypatch):
+    rule = make_rule(match_exact_path=False, reapply_if_moved=True)
+    watcher = monitor_rules.MonitorRuleWatcher()
+    monkeypatch.setattr(watcher, "start", lambda: None)
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [_matching_window_details()],
+    )
+    monkeypatch.setattr(monitor_rules.win32gui, "IsWindow", lambda _hwnd: True)
+    monkeypatch.setattr(
+        monitor_rules,
+        "window_monitor_device",
+        lambda _hwnd: rule["target_device"],
+    )
+    monkeypatch.setattr(monitor_rules, "apply_monitor_rule", lambda *_args: True)
+
+    watcher.update_rules([rule], apply_existing=True)
+    watcher._scan_once()
+
+    assert watcher._managed == {1: "rule-1"}
+
+
+def test_startup_initialization_uses_first_matching_rule(monkeypatch):
+    first = make_rule(id="first", match_exact_path=False)
+    second = make_rule(id="second", match_exact_path=False)
+    watcher = monitor_rules.MonitorRuleWatcher()
+    applied_rule_ids = []
+    monkeypatch.setattr(watcher, "start", lambda: None)
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [_matching_window_details()],
+    )
+    monkeypatch.setattr(
+        monitor_rules,
+        "apply_monitor_rule",
+        lambda _hwnd, rule: applied_rule_ids.append(rule["id"]) or True,
+    )
+
+    watcher.update_rules([first, second], apply_existing=True)
+    watcher._scan_once()
+
+    assert applied_rule_ids == ["first"]
+
+
 def test_watcher_reapplies_when_hidden_window_becomes_visible_again(monkeypatch):
     rule = monitor_rules.normalize_monitor_rule(make_rule(match_exact_path=False))
     watcher = monitor_rules.MonitorRuleWatcher()

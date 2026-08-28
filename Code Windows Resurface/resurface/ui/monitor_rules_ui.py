@@ -477,13 +477,17 @@ class MonitorRulesPage(QFrame):
             self._commit()
 
     def _delete_rule(self, index: int) -> None:
-        result = QMessageBox.question(
-            self,
-            "Delete Monitor Rule",
-            f"Delete the rule ‘{self.rules[index]['name']}’?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+        message_box = QMessageBox(self)
+        message_box.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        message_box.setStyleSheet(styles.message_box_style())
+        message_box.setIcon(QMessageBox.Icon.Question)
+        message_box.setWindowTitle("Delete Monitor Rule")
+        message_box.setText(f"Delete the rule ‘{self.rules[index]['name']}’?")
+        message_box.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
+        message_box.setDefaultButton(QMessageBox.StandardButton.No)
+        result = message_box.exec()
         if result == QMessageBox.StandardButton.Yes:
             self.rules.pop(index)
             self._commit()

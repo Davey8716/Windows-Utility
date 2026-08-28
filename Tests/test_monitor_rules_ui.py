@@ -1,5 +1,6 @@
 import copy
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFrame, QPushButton
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
@@ -175,13 +176,60 @@ def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypa
         app.processEvents()
 
 
+def test_delete_rule_uses_borderless_confirmation_and_only_commits_yes(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    commits = []
+    dialogs = []
+    responses = [
+        monitor_rules_ui.QMessageBox.StandardButton.No,
+        monitor_rules_ui.QMessageBox.StandardButton.Yes,
+    ]
+
+    def exec_message_box(message_box):
+        dialogs.append(message_box)
+        return responses.pop(0)
+
+    monkeypatch.setattr(monitor_rules_ui.QMessageBox, "exec", exec_message_box)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda rules: commits.append(rules),
+    )
+    try:
+        page._delete_rule(0)
+        dialog = dialogs[-1]
+        assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style()
+        assert dialog.icon() == monitor_rules_ui.QMessageBox.Icon.Question
+        assert dialog.windowTitle() == "Delete Monitor Rule"
+        assert dialog.text() == "Delete the rule ‘Discord’?"
+        assert dialog.standardButtons() == (
+            monitor_rules_ui.QMessageBox.StandardButton.Yes
+            | monitor_rules_ui.QMessageBox.StandardButton.No
+        )
+        assert dialog.defaultButton().standardButton() == (
+            monitor_rules_ui.QMessageBox.StandardButton.No
+        )
+        assert len(page.rules) == 1
+        assert commits == []
+
+        page._delete_rule(0)
+        assert page.rules == []
+        assert commits[-1] == []
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
 class FakeMonitorRuleWatcher:
     def __init__(self, *args, **kwargs):
         self.updates = []
         self.stopped = False
 
-    def update_rules(self, rules, app_hwnd=None):
-        self.updates.append((copy.deepcopy(rules), app_hwnd))
+    def update_rules(self, rules, app_hwnd=None, *, apply_existing=False):
+        self.updates.append((copy.deepcopy(rules), app_hwnd, apply_existing))
 
     def stop(self):
         self.stopped = True
@@ -195,11 +243,13 @@ def test_application_persists_rules_updates_watcher_and_stops_it(monkeypatch):
     watcher = window.monitor_rule_watcher
     try:
         assert watcher.updates[0][0] == []
+        assert watcher.updates[0][2] is True
         assert window.monitor_rules_page.objectName() == "MonitorRulesEmptyState"
         assert "border-radius: 8px" in window.monitor_rules_page.styleSheet()
         window.set_monitor_rules([make_rule()])
         assert window.state["monitor_rules"][0]["id"] == "one"
         assert watcher.updates[-1][0][0]["target_device"] == r"\\.\DISPLAY2"
+        assert watcher.updates[-1][2] is False
     finally:
         window._quit_requested = True
         window.close()
