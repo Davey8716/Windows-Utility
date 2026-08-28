@@ -73,6 +73,12 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             page.rule_list_layout.itemAt(index).widget()
             for index in range(page.rule_list_layout.count())
         ]
+        expected_actions = {"Edit", "Delete", "Move Up", "Move Down"}
+        assert all(
+            {button.text() for button in card.findChildren(QPushButton)}
+            == expected_actions
+            for card in initial_cards
+        )
         assert all(
             card.findChild(monitor_rules_ui.QLabel, "MonitorRuleStatus").text() == "on"
             for card in initial_cards

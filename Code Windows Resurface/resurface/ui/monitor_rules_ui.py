@@ -437,7 +437,6 @@ class MonitorRulesPage(QFrame):
             actions = QHBoxLayout()
             for text, callback in (
                 ("Edit", lambda _checked=False, idx=index: self._edit_rule(idx)),
-                ("Test", lambda _checked=False, idx=index: self._edit_rule(idx)),
                 ("Delete", lambda _checked=False, idx=index: self._delete_rule(idx)),
                 ("Move Up", lambda _checked=False, idx=index: self._move_rule(idx, -1)),
                 ("Move Down", lambda _checked=False, idx=index: self._move_rule(idx, 1)),
