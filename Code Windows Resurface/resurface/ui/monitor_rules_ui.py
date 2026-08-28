@@ -360,6 +360,7 @@ class MonitorRulesPage(QFrame):
         self._app_hwnd = app_hwnd
         self._on_rules_changed = on_rules_changed
         self.rules = normalize_monitor_rules(copy.deepcopy(rules))
+        self._sort_ascending = True
 
         root = QVBoxLayout(self)
         root.setContentsMargins(24, 24, 24, 24)
@@ -373,13 +374,24 @@ class MonitorRulesPage(QFrame):
         self.add_button = QPushButton("Add Rule", self)
         self.add_button.setToolTip("Create an automatic application placement rule")
         self.turn_off_all_button = QPushButton("Turn Off All", self)
+        self.delete_all_button = QPushButton("Delete All", self)
+        self.delete_all_button.setToolTip("Delete all monitor rules")
+        self.alphabet_sort_button = QPushButton("A–Z", self)
+        self.alphabet_sort_button.setAccessibleName("Sort monitor rules alphabetically")
+        self.alphabet_sort_button.setToolTip("Sort rules A to Z")
         _style_button(self.add_button)
         _style_button(self.turn_off_all_button)
+        _style_button(self.delete_all_button)
+        _style_button(self.alphabet_sort_button)
         self.add_button.clicked.connect(self._add_rule)
         self.turn_off_all_button.clicked.connect(self._toggle_all)
+        self.delete_all_button.clicked.connect(self._delete_all_rules)
+        self.alphabet_sort_button.clicked.connect(self._sort_alphabetically)
         top_row.addWidget(summary, 1)
         top_row.addWidget(self.turn_off_all_button)
+        top_row.addWidget(self.delete_all_button)
         top_row.addWidget(self.add_button)
+        top_row.addWidget(self.alphabet_sort_button)
         root.addLayout(top_row)
 
         self.rule_list = QWidget(self)
@@ -406,6 +418,8 @@ class MonitorRulesPage(QFrame):
         self._clear_rule_widgets()
         any_enabled = any(rule["enabled"] for rule in self.rules)
         self.turn_off_all_button.setEnabled(bool(self.rules))
+        self.delete_all_button.setEnabled(bool(self.rules))
+        self.alphabet_sort_button.setEnabled(len(self.rules) > 1)
         self.turn_off_all_button.setText(
             "Turn Off All" if any_enabled else "Turn On All"
         )
@@ -535,11 +549,44 @@ class MonitorRulesPage(QFrame):
             self.rules.pop(index)
             self._commit()
 
+    def _delete_all_rules(self) -> None:
+        if not self.rules:
+            return
+        message_box = QMessageBox(self)
+        message_box.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        message_box.setStyleSheet(styles.message_box_style())
+        message_box.setIcon(QMessageBox.Icon.Question)
+        message_box.setWindowTitle("Delete All Monitor Rules")
+        message_box.setText(
+            f"Delete all {len(self.rules)} monitor rules? This cannot be undone."
+        )
+        message_box.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        message_box.setDefaultButton(QMessageBox.StandardButton.No)
+        if message_box.exec() == QMessageBox.StandardButton.Yes:
+            self.rules.clear()
+            self._commit()
+
     def _move_rule(self, index: int, direction: int) -> None:
         target = index + direction
         if target < 0 or target >= len(self.rules):
             return
         self.rules[index], self.rules[target] = self.rules[target], self.rules[index]
+        self._commit()
+
+    def _sort_alphabetically(self) -> None:
+        if len(self.rules) < 2:
+            return
+        self.rules.sort(
+            key=lambda rule: rule["name"].casefold(),
+            reverse=not self._sort_ascending,
+        )
+        self._sort_ascending = not self._sort_ascending
+        self.alphabet_sort_button.setText("A–Z" if self._sort_ascending else "Z–A")
+        self.alphabet_sort_button.setToolTip(
+            "Sort rules A to Z" if self._sort_ascending else "Sort rules Z to A"
+        )
         self._commit()
 
     def _set_enabled(self, index: int, enabled: bool) -> None:

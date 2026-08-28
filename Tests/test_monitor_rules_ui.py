@@ -72,6 +72,10 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         assert page.add_button.isEnabled()
         assert page.turn_off_all_button.isEnabled()
         assert page.turn_off_all_button.text() == "Turn Off All"
+        assert page.delete_all_button.isEnabled()
+        assert page.delete_all_button.text() == "Delete All"
+        assert page.alphabet_sort_button.isEnabled()
+        assert page.alphabet_sort_button.text() == "A–Z"
         initial_cards = [
             page.rule_list_layout.itemAt(index).widget()
             for index in range(page.rule_list_layout.count())
@@ -241,6 +245,77 @@ def test_delete_rule_uses_borderless_confirmation_and_only_commits_yes(monkeypat
         page._delete_rule(0)
         assert page.rules == []
         assert commits[-1] == []
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_delete_all_rules_confirms_and_updates_empty_state(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    commits = []
+    dialogs = []
+    responses = [
+        monitor_rules_ui.QMessageBox.StandardButton.No,
+        monitor_rules_ui.QMessageBox.StandardButton.Yes,
+    ]
+
+    def exec_message_box(message_box):
+        dialogs.append(message_box)
+        return responses.pop(0)
+
+    monkeypatch.setattr(monitor_rules_ui.QMessageBox, "exec", exec_message_box)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule(), make_rule("two", "Discord Work")],
+        app_hwnd=999,
+        on_rules_changed=lambda rules: commits.append(rules),
+    )
+    try:
+        page.delete_all_button.click()
+        assert len(page.rules) == 2
+        assert commits == []
+        assert dialogs[-1].windowTitle() == "Delete All Monitor Rules"
+        assert dialogs[-1].text() == (
+            "Delete all 2 monitor rules? This cannot be undone."
+        )
+
+        page.delete_all_button.click()
+        assert page.rules == []
+        assert commits[-1] == []
+        assert not page.delete_all_button.isEnabled()
+        assert not page.turn_off_all_button.isEnabled()
+        assert (
+            page.rule_list_layout.itemAt(0).widget().text()
+            == "No application monitor rules have been created."
+        )
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_alphabet_button_sorts_rules_in_both_directions(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    commits = []
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[
+            make_rule("zulu", "Zulu"),
+            make_rule("alpha", "alpha"),
+            make_rule("middle", "Middle"),
+        ],
+        app_hwnd=999,
+        on_rules_changed=lambda rules: commits.append(rules),
+    )
+    try:
+        page.alphabet_sort_button.click()
+        assert [rule["name"] for rule in commits[-1]] == ["alpha", "Middle", "Zulu"]
+        assert page.alphabet_sort_button.text() == "Z–A"
+
+        page.alphabet_sort_button.click()
+        assert [rule["name"] for rule in commits[-1]] == ["Zulu", "Middle", "alpha"]
+        assert page.alphabet_sort_button.text() == "A–Z"
     finally:
         page.deleteLater()
         app.processEvents()
