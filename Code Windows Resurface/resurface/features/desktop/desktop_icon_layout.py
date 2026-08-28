@@ -6,6 +6,7 @@ import win32gui
 import win32api
 import win32process
 import json
+from pathlib import Path
 
 user32 = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
@@ -202,7 +203,9 @@ def save_desktop_icon_layout(out_path: str) -> int:
         "version": 1,
         "layout": layout,
     }
-    with open(out_path, "w", encoding="utf-8") as f:
+    output_path = Path(out_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
     return len(layout)
 
