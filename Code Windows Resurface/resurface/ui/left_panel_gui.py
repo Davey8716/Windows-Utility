@@ -4,7 +4,7 @@ from typing import Callable
 from resurface.ui import styles
 from resurface.core.state_manager import save_state
 from resurface.features.screen_mover.hotkeys import ACTION_LABELS, hotkey_to_display, normalize_hotkey
-from resurface.ui.tooltips import left_section_toggle_tooltip, tooltip_text
+from resurface.ui.tooltips import tooltip_text
 from PySide6.QtCore import Qt, QTimer, QSize
 from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPixmap
 from PySide6.QtWidgets import (
@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSizePolicy,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -37,18 +36,13 @@ class LeftPanelBuilder:
     def __init__(self, app):
         self.app = app
         self.state = app.state
-        self.master_btn = None
 
     @property
     def icons_root(self) -> Path:
         return Path(__file__).resolve().parents[3] / "App Icons"
 
     def build(self) -> None:
-        self.master_btn = getattr(self.app, "master_collapse_btn_left", None)
-        self.app.left_sections = []
-        self.app.master_toggle_left_state = bool(
-            self.state.get("master_toggle_left", True)
-        )
+        self.app.left_page_contents = {}
 
         self._build_user_interface_section()
         self._build_screen_mover_section()
@@ -57,140 +51,20 @@ class LeftPanelBuilder:
         self._build_folder_utilities_section()
         self._build_recycle_bin_section()
 
-        self.app.main_layout.addStretch(1)
-        if self.master_btn is not None:
-            self._wire_master_toggle()
-
-    def _add_left_section_spacer(self, height: int):
-        self.app.main_layout.addSpacing(height)
-        return self.app.main_layout.itemAt(self.app.main_layout.count() - 1).spacerItem()
-
-    def _register_left_section(
-        self,
-        section: QWidget,
-        *,
-        top_spacer,
-        expanded_spacer_height: int,
-    ) -> None:
-        section.top_spacer = top_spacer
-        section.expanded_spacer_height = expanded_spacer_height
-        self.app.left_sections.append(section)
-        self.app._sync_left_section_spacing(section)
-
     def _attach_left_section(
         self,
         section: QWidget,
-        *,
-        expanded_spacer_height: int,
     ) -> None:
-        top_spacer = self._add_left_section_spacer(expanded_spacer_height)
-        self.app.main_layout.addWidget(section)
-        self._register_left_section(
-            section,
-            top_spacer=top_spacer,
-            expanded_spacer_height=expanded_spacer_height,
-        )
+        self.app.left_page_contents[section.section_id] = section
 
-    def _make_section(self, title_text: str, section_id: str):
+    def _make_section(self, section_id: str):
         app = self.app
-        section = QWidget(app.main_frame)
+        section = QWidget(app)
         section.section_id = section_id
-        section.setFixedWidth(app.MAIN_SECTION_OUTER_WIDTH)
-        section.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        layout = QVBoxLayout(section)
-        section.section_layout = layout
-        layout.setContentsMargins(
-            app.MAIN_SECTION_SIDE_PADDING,
-            app.LEFT_SECTION_TOP_MARGIN,
-            app.MAIN_SECTION_SIDE_PADDING,
-            app.LEFT_SECTION_BOTTOM_MARGIN,
-        )
-        layout.setSpacing(4)
-
-        sec_header = QWidget(section)
-        sec_header.setMaximumWidth(app.LEFT_SECTION_VISIBLE_FRAME_WIDTH)
-        sec_header.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
-        sec_header_layout = QHBoxLayout(sec_header)
-        sec_header_layout.setContentsMargins(0, 0, app.LEFT_TOGGLE_RIGHT_INSET, 0)
-
-        sec_title = QLabel(title_text, sec_header)
-        sec_title.setStyleSheet(styles.label_style(font_size=15))
-
-        toggle = QToolButton(sec_header)
-        toggle.setCursor(Qt.CursorShape.ArrowCursor)
-        toggle.setArrowType(Qt.ArrowType.NoArrow)
-        toggle.setText(styles.arrow_glyph(Qt.ArrowType.DownArrow))
-        toggle.setStyleSheet(
-            styles.section_toggle_style(
-                styles.theme_text_color(),
-                styles.SURFACE_DARK,
-            )
-        )
-        section_toggle_slot_width, section_toggle_slot_height = (
-            styles.section_toggle_slot_size()
-        )
-        toggle.setFixedSize(section_toggle_slot_width, section_toggle_slot_height)
-        section.toggle_btn = toggle
-        app.register_tooltip(toggle, left_section_toggle_tooltip(title_text))
-
-        title_spacer = QWidget(sec_header)
-        title_spacer.setFixedSize(section_toggle_slot_width, section_toggle_slot_height)
-
-        sec_header_layout.addWidget(title_spacer)
-        sec_header_layout.addStretch()
-        sec_header_layout.addWidget(sec_title)
-        sec_header_layout.addStretch()
-        sec_header_layout.addWidget(toggle)
-
-        frame = QFrame(section)
-        section.frame = frame
-        frame.setObjectName("CollapsibleSectionFrame")
-        frame.setMaximumWidth(app.LEFT_SECTION_VISIBLE_FRAME_WIDTH)
-        frame.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
-        frame.setStyleSheet(styles.LEFT_PANEL_FRAME_STYLE)
-        frame_layout = QVBoxLayout(frame)
-        frame_layout.setContentsMargins(2, 2, 2, 2)
-        frame_layout.setSpacing(0)
-
-        section.content = QWidget(frame)
-        content = section.content
-        content.setMaximumWidth(app.LEFT_SECTION_VISIBLE_FRAME_WIDTH - 4)
-        content.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
-        initial_open = (
-            True
-            if getattr(app, "sidebar_navigation_mode", False)
-            else app.state.get("left_section_states", {}).get(section_id, True)
-        )
-        section.is_open = bool(initial_open)
-        content.setVisible(initial_open)
-        frame.setVisible(initial_open)
-
-        content_layout = QVBoxLayout(content)
+        section.content = section
+        section.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        content_layout = QVBoxLayout(section)
         content_layout.setContentsMargins(10, 10, 10, 10)
-
-        layout.addWidget(sec_header)
-        frame_layout.addWidget(content)
-        layout.addWidget(frame)
-
-        def toggle_section():
-            app._set_left_section_open(section, not bool(section.is_open))
-            app.save_all_settings()
-
-        toggle.clicked.connect(toggle_section)
-        toggle.setText(
-            styles.arrow_glyph(
-                Qt.ArrowType.DownArrow if initial_open else Qt.ArrowType.UpArrow
-            )
-        )
 
         return section, content_layout
 
@@ -442,11 +316,8 @@ class LeftPanelBuilder:
     def _build_user_interface_section(self) -> None:
         app = self.app
         state = self.state
-        ui_section, ui_layout = self._make_section("User Interface", "user_interface")
-        self._attach_left_section(
-            ui_section,
-            expanded_spacer_height=app.USER_INTERFACE_TOP_SPACER,
-        )
+        ui_section, ui_layout = self._make_section("user_interface")
+        self._attach_left_section(ui_section)
 
         compact_toggle_width = (
             self.LEFT_CONTROL_COLUMN_WIDTH - self.CONTROL_COLUMN_GAP
@@ -649,7 +520,7 @@ class LeftPanelBuilder:
     def _build_screen_mover_section(self) -> None:
         app = self.app
         state = self.state
-        screen_section, screen_layout = self._make_section("Screen Mover", "screen_mover")
+        screen_section, screen_layout = self._make_section("screen_mover")
         screen_layout.setSpacing(16)
 
         screen_row = QWidget(screen_section.content)
@@ -920,18 +791,12 @@ class LeftPanelBuilder:
             tooltip_text("screen_mover_reset"),
         )
 
-        self._attach_left_section(
-            screen_section,
-            expanded_spacer_height=app.SCREEN_MOVER_TOP_SPACER,
-        )
+        self._attach_left_section(screen_section)
 
     def _build_drive_reminder_section(self) -> None:
         app = self.app
         state = self.state
-        usb_section, usb_layout = self._make_section(
-            "External Drive Reminder Options",
-            "drive_reminder_options",
-        )
+        usb_section, usb_layout = self._make_section("drive_reminder_options")
 
         leave_reminder_row = QWidget()
         leave_reminder_row.setProperty("centeredControlGrid", True)
@@ -1053,10 +918,7 @@ class LeftPanelBuilder:
             Qt.AlignmentFlag.AlignHCenter,
         )
 
-        self._attach_left_section(
-            usb_section,
-            expanded_spacer_height=app.DRIVE_REMINDER_TOP_SPACER,
-        )
+        self._attach_left_section(usb_section)
 
     def _create_drive_reminder_combo(
         self,
@@ -1114,10 +976,7 @@ class LeftPanelBuilder:
 
     def _build_organising_utilities_section(self) -> None:
         app = self.app
-        org_section, org_layout = self._make_section(
-            "General Organising Utilities",
-            "organising_utilities",
-        )
+        org_section, org_layout = self._make_section("organising_utilities")
         app.backup_path = app._get_master_backup_dir()
 
         screenshot_btn = QPushButton("Desktop Screenshot")
@@ -1189,18 +1048,12 @@ class LeftPanelBuilder:
         app._taskbar_backup_folder_timer.start(1000)
         app._refresh_taskbar_backup_folder_button()
 
-        self._attach_left_section(
-            org_section,
-            expanded_spacer_height=app.ORGANISING_SECTION_TOP_SPACER,
-        )
+        self._attach_left_section(org_section)
 
     def _build_folder_utilities_section(self) -> None:
         app = self.app
         state = self.state
-        folder_section, folder_layout = self._make_section(
-            "Folder Utilities",
-            "folder_utilities",
-        )
+        folder_section, folder_layout = self._make_section("folder_utilities")
         folder_layout.setSpacing(16)
 
         folder_creator_btn = QPushButton("Folder Creator")
@@ -1262,17 +1115,13 @@ class LeftPanelBuilder:
         folder_creator_btn.clicked.connect(app.open_folder_creator)
         folder_input.textChanged.connect(on_folder_name_changed)
 
-        self._attach_left_section(
-            folder_section,
-            expanded_spacer_height=app.FOLDER_UTILITIES_TOP_SPACER,
-        )
+        self._attach_left_section(folder_section)
 
     def _build_recycle_bin_section(self) -> None:
         app = self.app
         state = self.state
         recycle_bin_section, recycle_bin_layout = self._make_section(
-            "Recycle Bin Actions",
-            "recycle_bin_actions",
+            "recycle_bin_actions"
         )
 
         recycle_bin_controls = QWidget()
@@ -1405,43 +1254,4 @@ class LeftPanelBuilder:
             on_recycle_bin_age_rule_changed
         )
 
-        self._attach_left_section(
-            recycle_bin_section,
-            expanded_spacer_height=app.RECYCLE_BIN_ACTIONS_TOP_SPACER,
-        )
-
-    def _wire_master_toggle(self) -> None:
-        app = self.app
-        master_btn = self.master_btn
-        if master_btn is None:
-            return
-
-        def toggle_all():
-            any_visible = any(
-                bool(getattr(section, "is_open", False))
-                for section in app.left_sections
-            )
-
-            new_state = not any_visible
-            app.master_toggle_left_state = new_state
-            app.state["master_toggle_left"] = new_state
-
-            master_btn.setText(
-                styles.arrow_glyph(
-                    Qt.ArrowType.DownArrow if new_state else Qt.ArrowType.UpArrow
-                )
-            )
-
-            for section in app.left_sections:
-                app._set_left_section_open(section, new_state)
-
-            app.save_all_settings()
-
-        master_btn.clicked.connect(toggle_all)
-        master_btn.setText(
-            styles.arrow_glyph(
-                Qt.ArrowType.DownArrow
-                if app.master_toggle_left_state
-                else Qt.ArrowType.UpArrow
-            )
-        )
+        self._attach_left_section(recycle_bin_section)

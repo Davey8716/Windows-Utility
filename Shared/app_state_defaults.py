@@ -38,21 +38,6 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "recycle_bin_last_auto_clean_popup_days": None,
     "master_backup_output_path": str(Path.home()),
     "desktop_screenshot_last_dir": str(Path.home()),
-    "advanced_panel_open": False,
-    "master_toggle_left": True,
-    "master_toggle_right": False,
-    "left_section_states": {
-        "user_interface": True,
-        "screen_mover": True,
-        "drive_reminder_options": True,
-        "organising_utilities": True,
-        "recycle_bin_actions": True,
-    },
-    "right_section_states": {
-        "windows_utilities": False,
-        "sidebar_utils_section": False,
-        "drive_space_display": False,
-    },
 }
 
 SHARED_APP_STATE_DEFAULTS = {

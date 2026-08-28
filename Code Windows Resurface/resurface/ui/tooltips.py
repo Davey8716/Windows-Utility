@@ -35,14 +35,8 @@ TOOLTIP_TEXT = {
     "desktop_zen_mode": "Hides desktop icons and sends the app to the system tray in Zen Mode, then shows icons again when toggled back.",
     "master_backup_path": "Chooses the base folder used by backup and layout utilities.",
     "backup_path_input": "Shows the current master backup folder path.",
-    "side_panel_toggle": "Shows or hides the advanced tools side panel.",
     "window_minimize": "Minimizes Windows Resurface.",
     "window_close": "Hides Windows Resurface to the system tray.",
-    "master_collapse_left": "Master collapse toggle for all left-panel sections.",
-    "master_collapse_right": "Master collapse toggle for all of these regions.",
-    "windows_utilities_toggle": "Shows windows utilities grouped by type and quick actions.",
-    "maintenance_quick_actions_toggle": "Shows maintenance, cleanup, repair, and quick-access action menus.",
-    "drive_space_display_toggle": "Shows disk usage for all detected drives.",
     "open_this_pc": "Opens This PC, closes it if it is already open, or maximizes it if it is minimized.",
     "open_storage_sense": "Opens Storage Sense, closes it if it is already open, or maximizes it if it is minimized.",
     "windows_dropdown_system": "Opens system-focused Windows tools such as Control Panel, Credential Manager, Settings, and System Information.",
@@ -60,9 +54,6 @@ TOOLTIP_TEXT = {
 def tooltip_text(key: str) -> str:
     return TOOLTIP_TEXT[key]
 
-
-def left_section_toggle_tooltip(title: str) -> str:
-    return f"Shows or hides the {title} section."
 
 def format_tooltip_text(text: str, wrap_width: int = 62) -> str:
     paragraphs: list[str] = []

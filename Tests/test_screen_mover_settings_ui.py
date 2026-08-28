@@ -261,7 +261,28 @@ def test_fixed_sidebar_shell_builds_ten_scrollable_pages(monkeypatch):
             for scroll in window.page_scroll_areas.values()
         )
         assert not hasattr(window, "advanced_settings_toggle")
-        assert not hasattr(window, "master_collapse_btn_left")
+        # assert not hasattr(window, "master_collapse_btn_left")
+        assert not hasattr(window, "left_sections")
+        assert not hasattr(window, "collapsible_sections")
+        for obsolete_key in (
+            "advanced_panel_open",
+            "master_toggle_left",
+            "master_toggle_right",
+            "left_section_states",
+            "right_section_states",
+        ):
+            assert obsolete_key not in WINDOWS_RESURFACE_DEFAULTS
+        mounted_content = {
+            "user_interface": window.left_page_contents["user_interface"],
+            "screen_mover": window.left_page_contents["screen_mover"],
+            "external_drives": window.right_tools_panel.drive_space_content,
+            "windows_utilities": window.right_tools_panel.windows_utilities_content,
+            "maintenance": window.right_tools_panel.maintenance_content,
+        }
+        assert all(
+            window.page_by_id[page_id].isAncestorOf(content)
+            for page_id, content in mounted_content.items()
+        )
     finally:
         window._quit_requested = True
         window.close()
@@ -401,7 +422,6 @@ def test_overview_status_and_folder_quick_action(monkeypatch):
 def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
-    state["advanced_panel_open"] = True
     minimize_calls = []
     monkeypatch.setattr(
         main.UtilityControlApp,
@@ -448,7 +468,6 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         assert window.window_minimize_btn.x() > window.SIDEBAR_WIDTH
         assert window.window_close_btn.x() > window.window_minimize_btn.x()
 
-        left_states = copy.deepcopy(window.state["left_section_states"])
         window.window_minimize_btn.click()
         assert minimize_calls == [window]
 
@@ -456,7 +475,6 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         assert "font-size: 25px" in window.window_title_label.styleSheet()
         assert "font-size: 18px" in window.window_minimize_btn.styleSheet()
         assert "font-size: 18px" in window.window_close_btn.styleSheet()
-        assert window.state["left_section_states"] == left_states
 
         window.window_close_btn.click()
         qt_app.processEvents()
@@ -1000,7 +1018,7 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         qt_app.processEvents()
 
         panel = window.right_tools_panel
-        maintenance_content = panel.sidebar_utils_section.content
+        maintenance_content = panel.maintenance_content
         selectors = maintenance_content.findChildren(QComboBox)
         selector_grid = selectors[0].parentWidget()
         maintenance_page = window.page_by_id["maintenance"]
@@ -1090,7 +1108,7 @@ def test_external_drive_controls_and_output_share_the_inner_frame_width(monkeypa
         qt_app.processEvents()
 
 
-def test_master_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):
+def test_screen_mover_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):
     saved_states = []
     monkeypatch.setattr(main, "save_state", lambda state: saved_states.append(dict(state)))
     window = FakeWindow()

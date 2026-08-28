@@ -35,7 +35,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QLabel,
     QPushButton,
-    QToolButton,
     QVBoxLayout,
     QScrollArea,
     QLineEdit,
@@ -85,27 +84,7 @@ class UtilityControlApp(
     TITLE_CONTROL_ROW_HEIGHT = 0
     TITLE_BAR_HEIGHT = 40
     PAGE_TITLE_TOP_INSET = 28
-    MAIN_PANEL_WIDTH = 480
     PREFERRED_WINDOW_HEIGHT = WINDOW_HEIGHT
-    RIGHT_PANEL_WIDTH = MAIN_PANEL_WIDTH + 65
-    MAIN_SECTION_SIDE_PADDING = 14
-    LEFT_TOGGLE_RIGHT_INSET = 14
-    LEFT_SECTION_TOP_MARGIN = 5
-    LEFT_SECTION_BOTTOM_MARGIN = 12
-    LEFT_SECTION_COLLAPSED_TOP_MARGIN = 10
-    LEFT_SECTION_COLLAPSED_BOTTOM_MARGIN = 0
-    LEFT_SECTION_COLLAPSED_SPACER = 0
-    USER_INTERFACE_TOP_SPACER = 0
-    SCREEN_MOVER_TOP_SPACER = 0
-    DRIVE_REMINDER_TOP_SPACER = 0
-    ORGANISING_SECTION_TOP_SPACER = 0
-    FOLDER_UTILITIES_TOP_SPACER = 0
-    RECYCLE_BIN_ACTIONS_TOP_SPACER = 0
-    MAIN_SECTION_FRAME_WIDTH = 435
-    LEFT_SECTION_VISIBLE_FRAME_WIDTH = MAIN_SECTION_FRAME_WIDTH - 4
-    MAIN_SECTION_OUTER_WIDTH = (
-        MAIN_SECTION_FRAME_WIDTH + (MAIN_SECTION_SIDE_PADDING * 2)
-    )
     def __init__(self):
         super().__init__()
 
@@ -130,8 +109,6 @@ class UtilityControlApp(
         self._session_notification_registered = False
         self._pending_end_session_warning = False
         self._taskbar_backup_folder_open = False
-        self.advanced_settings_open = False
-        self.collapsible_sections = []
         self._quit_requested = False
         self._shutdown_complete = False
         self._folder_creator_title_candidates = (
@@ -575,18 +552,6 @@ class UtilityControlApp(
         self.right_tools_panel = RightAdvancedToolsPanel(self)
         self.right_tools_panel.hide()
 
-        self.main_frame = QWidget(self)
-        self.main_frame.setMinimumWidth(self.MAIN_SECTION_OUTER_WIDTH)
-        self.main_frame.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Fixed,
-        )
-        self.main_layout = QVBoxLayout(self.main_frame)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(4)
-        self.main_layout.setAlignment(
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
-        )
         LeftPanelBuilder(self).build()
 
         left_page_map = {
@@ -597,24 +562,24 @@ class UtilityControlApp(
             "folder_utilities": "folder_utilities",
             "recycle_bin_actions": "recycle_bin",
         }
-        for section in self.left_sections:
+        for section_id, content in self.left_page_contents.items():
             self._mount_page_content(
-                left_page_map[section.section_id],
-                section.content,
+                left_page_map[section_id],
+                content,
             )
 
         self._add_page_subheading("external_drives", "Storage")
         self._mount_page_content(
             "external_drives",
-            self.right_tools_panel.display_space_section.content,
+            self.right_tools_panel.drive_space_content,
         )
         self._mount_page_content(
             "windows_utilities",
-            self.right_tools_panel.windows_utility_section.content,
+            self.right_tools_panel.windows_utilities_content,
         )
         self._mount_page_content(
             "maintenance",
-            self.right_tools_panel.sidebar_utils_section.content,
+            self.right_tools_panel.maintenance_content,
         )
         self._build_overview_page()
         self._build_monitor_rules_page()
@@ -626,7 +591,6 @@ class UtilityControlApp(
         self.navigation_list.currentRowChanged.connect(self._on_navigation_changed)
         saved_page = self.state.get("last_opened_page", "overview")
         self.navigate_to_page(saved_page, persist=False)
-        self.main_frame.hide()
         self._apply_navigation_theme()
         self._refresh_screen_mover_shortcut_field_styles()
         QTimer.singleShot(0, self._refresh_screen_mover_shortcut_field_styles)
@@ -891,88 +855,10 @@ class UtilityControlApp(
         )
         return self._height_for_available_height(available_height)
 
-    def _update_main_scrollbar_policy(self) -> None:
-        if not hasattr(self, "main_scroll") or not hasattr(self, "main_frame"):
-            return
-
-        layout = self.main_frame.layout()
-        if layout is not None:
-            layout.activate()
-        content_height = self.main_frame.sizeHint().height()
-        viewport_height = self.WINDOW_HEIGHT - self.TITLE_BAR_HEIGHT
-        policy = (
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-            if content_height > viewport_height
-            else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self.main_scroll.setVerticalScrollBarPolicy(policy)
-
-    def _position_advanced_settings_toggle(self):
-        x = self.MAIN_PANEL_WIDTH - self.advanced_settings_toggle.width() + 14
-        y = self.TITLE_BAR_HEIGHT + (
-            self.height()
-            - self.TITLE_BAR_HEIGHT
-            - self.advanced_settings_toggle.height()
-        ) // 2
-        self.advanced_settings_toggle.move(x, y)
-
-    def _set_left_section_open(self, section, is_open: bool):
-        section.is_open = bool(is_open)
-        section.content.setVisible(is_open)
-        if hasattr(section, "frame"):
-            section.frame.setVisible(is_open)
-        if hasattr(section, "toggle_btn"):
-            section.toggle_btn.setText(
-                styles.arrow_glyph(
-                    Qt.ArrowType.DownArrow if is_open else Qt.ArrowType.UpArrow
-                )
-            )
-        self._sync_left_section_spacing(section)
-        self._update_main_scrollbar_policy()
-
-    def _sync_left_section_spacing(self, section):
-        if hasattr(section, "is_open"):
-            is_open = bool(section.is_open)
-        else:
-            is_open = bool(section.content.isVisible())
-
-        top_spacer = getattr(section, "top_spacer", None)
-        if top_spacer is not None:
-            spacer_height = (
-                getattr(section, "expanded_spacer_height", self.LEFT_SECTION_COLLAPSED_SPACER)
-                if is_open
-                else self.LEFT_SECTION_COLLAPSED_SPACER
-            )
-            top_spacer.changeSize(
-                0,
-                spacer_height,
-                QSizePolicy.Policy.Fixed,
-                QSizePolicy.Policy.Fixed,
-            )
-
-        section_layout = getattr(section, "section_layout", None)
-        if section_layout is not None:
-            section_layout.setContentsMargins(
-                self.MAIN_SECTION_SIDE_PADDING,
-                self.LEFT_SECTION_TOP_MARGIN,
-                self.MAIN_SECTION_SIDE_PADDING,
-                self.LEFT_SECTION_BOTTOM_MARGIN,
-            )
-
-        main_layout = getattr(self, "main_layout", None)
-        if main_layout is not None:
-            main_layout.invalidate()
-
     def resizeEvent(self, event):
         self._position_title_bar_controls()
         self._refresh_master_backup_path_display()
         super().resizeEvent(event)
-
-    def _get_arrow_colors(self):
-        return {
-            "text": styles.theme_text_color(),
-            "hover": styles.SURFACE_HOVER_DARK,
-        }
 
     def _power_action_item_colors(self) -> dict[str, QColor]:
         return {
@@ -1023,9 +909,6 @@ class UtilityControlApp(
         styles.set_theme(is_dark)
         self.setStyleSheet(styles.window_style() + styles.tooltip_style())
         self._apply_title_bar_theme()
-
-        for frame in self.findChildren(QFrame, "CollapsibleSectionFrame"):
-            frame.setStyleSheet(styles.collapsible_section_frame_style())
 
         for line_edit in self.findChildren(QLineEdit):
             if self._is_screen_mover_shortcut_internal_field(line_edit):
@@ -1098,97 +981,11 @@ class UtilityControlApp(
         for key, label in getattr(self, "overview_status_labels", {}).items():
             label.setStyleSheet(styles.summary_value_style())
         self._apply_navigation_theme()
-        self.update_collapsible_arrow_colours()
-
-    def update_collapsible_arrow_colours(self):
-        colors = self._get_arrow_colors()
-
-        for btn in self.findChildren(QToolButton):
-            if btn.property("titleBarMinimizeButton"):
-                btn.setStyleSheet(styles.title_bar_control_style())
-            elif btn.property("titleBarCloseButton"):
-                btn.setStyleSheet(styles.title_bar_control_style(close_button=True))
-            elif btn.property("leftMasterToggleButton"):
-                btn.setStyleSheet(
-                    styles.left_master_toggle_style(
-                        colors["text"],
-                        colors["hover"],
-                    )
-                )
-            elif btn.property("rightMasterToggleButton"):
-                btn.setStyleSheet(
-                    styles.right_master_toggle_style(
-                        colors["text"],
-                        colors["hover"],
-                    )
-                )
-            elif btn.property("sidePanelToggleButton"):
-                btn.setStyleSheet(
-                    styles.side_panel_toggle_style(
-                        colors["text"],
-                        colors["hover"],
-                    )
-                )
-            else:
-                btn.setStyleSheet(
-                    styles.section_toggle_style(
-                        colors["text"],
-                        colors["hover"],
-                    )
-                )
 
     def register_tooltip(self, widget: QWidget, text: str, delay: int = 10):
         manager = QtTooltipManager(widget, text, delay=delay)
         self._tooltip_managers.append(manager)
         return manager
-
-    def save_section_states(self):
-        left_states = {}
-        for section in self.left_sections:
-            section_id = getattr(section, "section_id", None)
-            if section_id and hasattr(section, "content"):
-                left_states[section_id] = bool(
-                    getattr(section, "is_open", section.content.isVisible())
-                )
-
-        if left_states:
-            self.state["left_section_states"] = left_states
-            self.state["master_toggle_left"] = all(left_states.values())
-            self.master_toggle_left_state = self.state["master_toggle_left"]
-
-        right_states = {}
-        for section in self.collapsible_sections:
-            section_id = getattr(section, "section_id", None)
-            is_open = getattr(section, "is_open", None)
-            if section_id and is_open is not None:
-                right_states[section_id] = bool(is_open)
-
-        if right_states:
-            self.state["right_section_states"] = right_states
-            self.state["master_toggle_right"] = all(right_states.values())
-            self.master_toggle_right_state = self.state["master_toggle_right"]
-
-        self._refresh_master_toggle_buttons()
-
-    def _refresh_master_toggle_buttons(self):
-        if hasattr(self, "master_collapse_btn_left"):
-            self.master_collapse_btn_left.setText(
-                styles.arrow_glyph(
-                    Qt.ArrowType.DownArrow
-                    if self.state.get("master_toggle_left", True)
-                    else Qt.ArrowType.UpArrow
-                )
-            )
-
-        right_button = getattr(self, "right_tools_panel", None)
-        if right_button and hasattr(right_button, "master_collapse_btn_right"):
-            right_button.master_collapse_btn_right.setText(
-                styles.arrow_glyph(
-                    Qt.ArrowType.DownArrow
-                    if self.state.get("master_toggle_right", False)
-                    else Qt.ArrowType.UpArrow
-                )
-            )
 
     def save_all_settings(self):
         self.state["main_always_on_top_enabled"] = bool(

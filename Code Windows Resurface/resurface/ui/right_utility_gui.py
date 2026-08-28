@@ -10,7 +10,6 @@ from pathlib import Path
 from resurface.ui import styles
 from resurface.core.state_manager import save_state
 from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
-from resurface.ui.collapsible_section import CollapsibleSection
 from resurface.ui.tooltips import format_tooltip_text, tooltip_text
 import win32file
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer, QProcess
@@ -25,9 +24,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QMenu,
     QPushButton,
-    QScrollArea,
     QTextEdit,
-    QToolButton,
     QVBoxLayout,
     QWidget,
     QSizePolicy,
@@ -164,90 +161,17 @@ class AdvancedToolsPanel(QWidget):
             self._refresh_tracked_window_button_labels
         )
 
-        root_layout = QVBoxLayout(self)
-        root_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll.setViewportMargins(0, 0, 0, 0)
-        root_layout.addWidget(self.scroll)
-
-        self.side_frame = QWidget()
-        self.side_frame.setFixedWidth(self.SIDE_FRAME_WIDTH)
-        self.side_frame.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.scroll.setWidget(self.side_frame)
-
-        self.side_layout = QVBoxLayout(self.side_frame)
-        self.side_layout.setContentsMargins(self.OUTER_SIDE_PADDING, 0, self.OUTER_SIDE_PADDING, 5)
-        self.side_layout.setSpacing(2)
-        self.side_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        title_row = QWidget()
-        title_row.setMaximumWidth(styles.RIGHT_SECTION_MAX_WIDTH)
-        title_row.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        title_row_layout = QHBoxLayout(title_row)
-        title_row_layout.setContentsMargins(
-            0,
-            10,
-            0,
-            10,
-        )
-
-        self.advanced_title = QLabel("Advanced Tools", title_row)
-        self.advanced_title.setStyleSheet(styles.label_style(font_size=20))
-        self.advanced_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        right_master_slot_width, right_master_slot_height = (
-            styles.right_master_toggle_slot_size()
-        )
-        title_spacer = QWidget(title_row)
-        title_spacer.setFixedSize(
-            right_master_slot_width,
-            right_master_slot_height,
-        )
-        title_row_layout.addWidget(title_spacer)
-        title_row_layout.addStretch()
-        title_row_layout.addWidget(self.advanced_title)
-        title_row_layout.addStretch()
-        self.side_layout.addWidget(title_row)
-
-        self.windows_utility_section = CollapsibleSection(
-            parent=self.side_frame,
-            title_text="Windows Utilities",
-            section_id="windows_utilities",
-            app=self.app,
-            initial_open=self.app.saved_state
-            .get("right_section_states", {})
-            .get("windows_utilities", False),
-        )
-        self.side_layout.addWidget(self.windows_utility_section)
-        self.app.collapsible_sections.append(self.windows_utility_section)
-        self.app.register_tooltip(
-            self.windows_utility_section.toggle_btn,
-            tooltip_text("windows_utilities_toggle"),
-        )
+        self.windows_utilities_content = QWidget(self)
+        self.windows_utilities_layout = QVBoxLayout(self.windows_utilities_content)
+        self.windows_utilities_layout.setContentsMargins(0, 0, 0, 0)
 
         self._build_windows_utilities()
 
-        self.sidebar_utils_section = CollapsibleSection(
-            parent=self.side_frame,
-            title_text="Maintenance & Quick Actions",
-            section_id="sidebar_utils_section",
-            app=self.app,
-            initial_open=self.app.saved_state
-            .get("right_section_states", {})
-            .get("sidebar_utils_section", False),
-        )
-        self.app.collapsible_sections.append(self.sidebar_utils_section)
-        self.side_layout.addWidget(self.sidebar_utils_section)
+        self.maintenance_content = QWidget(self)
+        self.maintenance_layout = QVBoxLayout(self.maintenance_content)
+        self.maintenance_layout.setContentsMargins(0, 0, 0, 0)
         self.build_sidebar_utilities()
-        self.sidebar_utils_section.content_layout.setSpacing(16)
-        self.app.register_tooltip(
-            self.sidebar_utils_section.toggle_btn,
-            tooltip_text("maintenance_quick_actions_toggle"),
-        )
+        self.maintenance_layout.setSpacing(16)
 
         self.sidebar_output_container = QWidget()
         self.sidebar_output_container.setFixedSize(
@@ -277,7 +201,7 @@ class AdvancedToolsPanel(QWidget):
         self._sidebar_output_last_action_label = None
 
         self._apply_sidebar_output_theme()
-        self.sidebar_utils_section.content_layout.addWidget(
+        self.maintenance_layout.addWidget(
             self.sidebar_output_container,
             0,
             Qt.AlignmentFlag.AlignHCenter,
@@ -300,31 +224,19 @@ class AdvancedToolsPanel(QWidget):
             0,
             Qt.AlignmentFlag.AlignLeft,
         )
-        self.sidebar_utils_section.content_layout.addWidget(
+        self.maintenance_layout.addWidget(
             clear_log_row,
             0,
             Qt.AlignmentFlag.AlignHCenter,
         )
 
-        self.display_space_section = CollapsibleSection(
-            parent=self.side_frame,
-            title_text="Drive Space Display",
-            section_id="drive_space_display",
-            app=self.app,
-            initial_open=self.app.saved_state
-            .get("right_section_states", {})
-            .get("drive_space_display", False),
-        )
-        self.side_layout.addWidget(self.display_space_section)
-        self.app.collapsible_sections.append(self.display_space_section)
-        self.app.register_tooltip(
-            self.display_space_section.toggle_btn,
-            tooltip_text("drive_space_display_toggle"),
-        )
+        self.drive_space_content = QWidget(self)
+        self.drive_space_layout = QVBoxLayout(self.drive_space_content)
+        self.drive_space_layout.setContentsMargins(0, 0, 0, 0)
         self._build_drive_space_display()
 
     def _build_windows_utilities(self):
-        parent_layout = self.windows_utility_section.content_layout
+        parent_layout = self.windows_utilities_layout
 
         row = QWidget()
         row.setProperty("centeredControlGrid", True)
@@ -411,7 +323,7 @@ class AdvancedToolsPanel(QWidget):
         self.sidebar_output.setPlainText(message)
 
     def _build_drive_space_display(self):
-        drive_parent = self.display_space_section.content_layout
+        drive_parent = self.drive_space_layout
 
         button_row = QWidget()
         button_row.setProperty("centeredControlGrid", True)
@@ -1077,7 +989,7 @@ class AdvancedToolsPanel(QWidget):
         return dict(sorted(actions.items(), key=lambda item: item[0].casefold()))
 
     def build_sidebar_utilities(self):
-        parent_layout = self.sidebar_utils_section.content_layout
+        parent_layout = self.maintenance_layout
         dropdown_grid = QWidget()
         dropdown_grid.setProperty("centeredControlGrid", True)
         dropdown_grid.setFixedWidth(self.MAINTENANCE_CONTENT_WIDTH)
