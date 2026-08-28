@@ -1,4 +1,5 @@
 import copy
+import json
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFrame, QPushButton
@@ -316,6 +317,75 @@ def test_alphabet_button_sorts_rules_in_both_directions(monkeypatch):
         page.alphabet_sort_button.click()
         assert [rule["name"] for rule in commits[-1]] == ["Zulu", "Middle", "alpha"]
         assert page.alphabet_sort_button.text() == "A–Z"
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_monitor_rules_export_and_import_use_master_backup_path(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    monkeypatch.setattr(monitor_rules_ui.QMessageBox, "information", lambda *_args: None)
+    commits = []
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda rules: commits.append(rules),
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    try:
+        assert page.export_rules_button.isEnabled()
+        assert page.import_rules_button.isEnabled()
+        exported_path = page._export_rules()
+        assert exported_path.parent == tmp_path / "Monitor Rules"
+        payload = json.loads(exported_path.read_text(encoding="utf-8"))
+        assert payload["format"] == "windows-resurface-monitor-rules"
+        assert payload["rules"][0]["name"] == "Discord"
+
+        imported_path = tmp_path / "Monitor Rules" / "import.json"
+        imported_path.write_text(
+            json.dumps({"rules": [make_rule("new", "Imported Rule")]}),
+            encoding="utf-8",
+        )
+        page.rules = []
+        monkeypatch.setattr(
+            monitor_rules_ui.QFileDialog,
+            "getOpenFileName",
+            lambda *_args: (str(imported_path), ""),
+        )
+        page._import_rules()
+        assert commits[-1][0]["id"] == "new"
+        assert commits[-1][0]["name"] == "Imported Rule"
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_delete_all_creates_safety_backup(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    monkeypatch.setattr(
+        monitor_rules_ui.QMessageBox,
+        "exec",
+        lambda _message_box: monitor_rules_ui.QMessageBox.StandardButton.Yes,
+    )
+    commits = []
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda rules: commits.append(rules),
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    try:
+        page._delete_all_rules()
+        safety_backups = list(
+            (tmp_path / "Monitor Rules").glob("monitor_rules_before_delete_*.json")
+        )
+        assert len(safety_backups) == 1
+        assert json.loads(safety_backups[0].read_text(encoding="utf-8"))["rules"]
+        assert commits[-1] == []
     finally:
         page.deleteLater()
         app.processEvents()

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import copy
+from datetime import datetime
+import json
 import os
+from pathlib import Path
 import uuid
 
 from PySide6.QtCore import QPoint, Qt
@@ -355,11 +358,20 @@ class MonitorRuleEditorDialog(QDialog):
 
 
 class MonitorRulesPage(QFrame):
-    def __init__(self, parent, *, rules, app_hwnd, on_rules_changed):
+    def __init__(
+        self,
+        parent,
+        *,
+        rules,
+        app_hwnd,
+        on_rules_changed,
+        get_master_backup_dir=None,
+    ):
         super().__init__(parent)
         self.setObjectName("MonitorRulesEmptyState")
         self._app_hwnd = app_hwnd
         self._on_rules_changed = on_rules_changed
+        self._get_master_backup_dir = get_master_backup_dir
         self.rules = normalize_monitor_rules(copy.deepcopy(rules))
         self._sort_ascending = True
 
@@ -394,9 +406,25 @@ class MonitorRulesPage(QFrame):
         top_row.addWidget(self.add_button)
         top_row.addWidget(self.turn_off_all_button)
         top_row.addWidget(self.delete_all_button)
-       
-      
         root.addLayout(top_row)
+
+        backup_row = QHBoxLayout()
+        backup_row.addStretch(1)
+        self.export_rules_button = QPushButton("Export Rules", self)
+        self.export_rules_button.setToolTip(
+            "Export monitor rules to the Master Backup Path"
+        )
+        self.import_rules_button = QPushButton("Import Rules", self)
+        self.import_rules_button.setToolTip(
+            "Import monitor rules from a backup file"
+        )
+        _style_button(self.export_rules_button)
+        _style_button(self.import_rules_button)
+        self.export_rules_button.clicked.connect(self._export_rules)
+        self.import_rules_button.clicked.connect(self._import_rules)
+        backup_row.addWidget(self.export_rules_button)
+        backup_row.addWidget(self.import_rules_button)
+        root.addLayout(backup_row)
 
         self.rule_list = QWidget(self)
         self.rule_list_layout = QVBoxLayout(self.rule_list)
@@ -423,6 +451,7 @@ class MonitorRulesPage(QFrame):
         any_enabled = any(rule["enabled"] for rule in self.rules)
         self.turn_off_all_button.setEnabled(bool(self.rules))
         self.delete_all_button.setEnabled(bool(self.rules))
+        self.export_rules_button.setEnabled(bool(self.rules))
         self.alphabet_sort_button.setEnabled(len(self.rules) > 1)
         self.turn_off_all_button.setText(
             "Turn Off All" if any_enabled else "Turn On All"
@@ -569,8 +598,94 @@ class MonitorRulesPage(QFrame):
         )
         message_box.setDefaultButton(QMessageBox.StandardButton.No)
         if message_box.exec() == QMessageBox.StandardButton.Yes:
+            if callable(self._get_master_backup_dir) and self._export_rules(
+                safety_backup=True
+            ) is None:
+                return
             self.rules.clear()
             self._commit()
+
+    def _backup_directory(self) -> Path | None:
+        if not callable(self._get_master_backup_dir):
+            return None
+        raw_path = str(self._get_master_backup_dir() or "").strip()
+        return Path(raw_path) if raw_path else None
+
+    def _export_rules(self, _checked=False, *, safety_backup=False) -> Path | None:
+        backup_dir = self._backup_directory()
+        if backup_dir is None:
+            QMessageBox.warning(
+                self,
+                "Monitor Rules",
+                "Set a Master Backup Path before exporting monitor rules.",
+            )
+            return None
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        prefix = "monitor_rules_before_delete" if safety_backup else "monitor_rules"
+        path = backup_dir / "Monitor Rules" / f"{prefix}_{timestamp}.json"
+        payload = {
+            "format": "windows-resurface-monitor-rules",
+            "version": 1,
+            "rules": normalize_monitor_rules(copy.deepcopy(self.rules)),
+        }
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except (OSError, TypeError, ValueError) as exc:
+            QMessageBox.warning(
+                self,
+                "Monitor Rules",
+                f"Could not export monitor rules:\n{exc}",
+            )
+            return None
+        if not safety_backup:
+            QMessageBox.information(
+                self,
+                "Monitor Rules Exported",
+                f"Monitor rules were exported to:\n{path}",
+            )
+        return path
+
+    def _import_rules(self) -> None:
+        backup_dir = self._backup_directory()
+        start_dir = str(backup_dir / "Monitor Rules") if backup_dir else ""
+        path, _selected_filter = QFileDialog.getOpenFileName(
+            self,
+            "Import Monitor Rules",
+            start_dir,
+            "Monitor rule backups (*.json);;All files (*)",
+        )
+        if not path:
+            return
+        try:
+            payload = json.loads(Path(path).read_text(encoding="utf-8"))
+            raw_rules = payload.get("rules") if isinstance(payload, dict) else None
+            if not isinstance(raw_rules, list):
+                raise ValueError("The selected file is not a monitor rules backup.")
+            imported = normalize_monitor_rules(raw_rules)
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            QMessageBox.warning(self, "Import Monitor Rules", str(exc))
+            return
+
+        if self.rules:
+            choice = QMessageBox.question(
+                self,
+                "Import Monitor Rules",
+                "Replace the current rules? Choose No to merge the backup instead.",
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel,
+            )
+            if choice == QMessageBox.StandardButton.Cancel:
+                return
+            if choice == QMessageBox.StandardButton.No:
+                by_id = {rule["id"]: rule for rule in self.rules}
+                for rule in imported:
+                    by_id[rule["id"]] = rule
+                imported = list(by_id.values())
+        self.rules = imported
+        self._commit()
 
     def _move_rule(self, index: int, direction: int) -> None:
         target = index + direction

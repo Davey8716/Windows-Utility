@@ -731,6 +731,7 @@ class UtilityControlApp(
             rules=self.state.get("monitor_rules", []),
             app_hwnd=int(self.winId()),
             on_rules_changed=self.set_monitor_rules,
+            get_master_backup_dir=self._get_master_backup_dir,
         )
         self.monitor_rules_add_button = self.monitor_rules_page.add_button
         layout.addWidget(self.monitor_rules_page)
