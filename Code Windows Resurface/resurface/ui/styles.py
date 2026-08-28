@@ -155,6 +155,14 @@ def tooltip_text_color() -> QColor:
     return CURRENT_TEXT
 
 
+def power_action_title_background_color() -> QColor:
+    return QColor(42, 134, 230) if not THEME_IS_DARK else QColor(26, 118, 214)
+
+
+def power_action_title_color() -> QColor:
+    return dropdown_text_color()
+
+
 def tooltip_border() -> QColor:
     return SURFACE_BORDER if THEME_IS_DARK else QColor(120, 120, 120)
 
@@ -830,17 +838,17 @@ def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") 
 
 def power_combo_style(font_size: int) -> str:
     if THEME_IS_DARK:
-        power_bg = QColor(43, 49, 60)
-        power_hover = QColor(56, 65, 80)
-        power_pressed = QColor(32, 38, 47)
-        power_pressed_hover = QColor(48, 57, 70)
-        power_border = QColor(101, 113, 132)
+        power_bg = power_action_title_background_color()
+        power_hover = QColor(39, 132, 224)
+        power_pressed = QColor(19, 94, 174)
+        power_pressed_hover = QColor(31, 111, 197)
+        power_border = QColor(86, 166, 244)
     else:
-        power_bg = QColor(70, 81, 95)
-        power_hover = QColor(89, 102, 117)
-        power_pressed = QColor(53, 64, 77)
-        power_pressed_hover = QColor(74, 87, 102)
-        power_border = QColor(40, 52, 66)
+        power_bg = power_action_title_background_color()
+        power_hover = QColor(68, 153, 238)
+        power_pressed = QColor(31, 108, 188)
+        power_pressed_hover = QColor(52, 130, 208)
+        power_border = QColor(25, 92, 160)
 
     return _modern_combo_style(
         font_size,

@@ -4,6 +4,7 @@ import ctypes
 from resurface.ui import application_window as main
 from resurface.ui import left_panel_gui, styles
 from resurface.ui import navigation_shell
+from resurface.ui.window_chrome import CenteredTitleComboBox
 from resurface.features.screen_mover.hotkeys import ACTION_LABELS
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QShortcut
@@ -532,6 +533,7 @@ def test_live_theme_switch_preserves_blue_and_power_dropdown_roles(monkeypatch):
     try:
         combos = window.findChildren(QComboBox)
         power_combo = next(combo for combo in combos if combo.property("powerActionStyle"))
+        assert isinstance(power_combo, CenteredTitleComboBox)
         standard_combo = next(
             combo
             for combo in combos
@@ -540,10 +542,17 @@ def test_live_theme_switch_preserves_blue_and_power_dropdown_roles(monkeypatch):
         )
 
         for is_dark, standard_color, power_color in (
-            (True, "#1c66c4", "#2b313c"),
-            (False, "#2d73c8", "#46515f"),
+            (True, "#1c66c4", "#1a76d6"),
+            (False, "#2d73c8", "#2a86e6"),
         ):
             window.apply_theme(is_dark)
+
+            assert main.styles.power_action_title_color() == (
+                main.styles.TEXT_LIGHT if is_dark else main.styles.theme_text_color()
+            )
+            assert main.styles.power_action_title_background_color() == QColor(
+                power_color
+            )
 
             assert f"background-color: {standard_color};" in standard_combo.styleSheet()
             assert f"background-color: {power_color};" in power_combo.styleSheet()

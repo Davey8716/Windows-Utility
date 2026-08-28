@@ -5,6 +5,7 @@ from resurface.ui import styles
 from resurface.core.state_manager import save_state
 from resurface.features.screen_mover.hotkeys import ACTION_LABELS, hotkey_to_display, normalize_hotkey
 from resurface.ui.tooltips import tooltip_text
+from resurface.ui.window_chrome import CenteredTitleComboBox
 from PySide6.QtCore import Qt, QTimer, QSize
 from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPixmap
 from PySide6.QtWidgets import (
@@ -271,7 +272,7 @@ class LeftPanelBuilder:
         power_action_style: bool = False,
         severity_map: dict[str, str] | None = None,
     ) -> QComboBox:
-        combo = QComboBox()
+        combo = CenteredTitleComboBox() if power_action_style else QComboBox()
         combo.addItem(placeholder)
         combo.addItems(actions_map.keys())
         combo.setCurrentText(placeholder)

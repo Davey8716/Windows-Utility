@@ -4,7 +4,45 @@ from resurface.ui import styles
 from resurface.ui.tooltips import tooltip_text
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QFrame, QLabel, QStyle, QStyledItemDelegate, QToolButton, QWidget
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QLabel,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionComboBox,
+    QStylePainter,
+    QToolButton,
+    QWidget,
+)
+
+
+class CenteredTitleComboBox(QComboBox):
+    """Combo box with a centered, accented closed-state title."""
+
+    def paintEvent(self, _event):
+        painter = QStylePainter(self)
+        option = QStyleOptionComboBox()
+        self.initStyleOption(option)
+        option.currentText = ""
+        option.currentIcon = option.currentIcon.__class__()
+        painter.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, option)
+
+        text_rect = self.style().subControlRect(
+            QStyle.ComplexControl.CC_ComboBox,
+            option,
+            QStyle.SubControl.SC_ComboBoxEditField,
+            self,
+        )
+        painter.setPen(styles.power_action_title_color())
+        font = self.font()
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(
+            text_rect,
+            Qt.AlignmentFlag.AlignCenter,
+            self.currentText(),
+        )
 
 
 class SeverityComboItemDelegate(QStyledItemDelegate):
