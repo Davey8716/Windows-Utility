@@ -390,7 +390,13 @@ class MonitorRulesPage(QFrame):
                 lambda checked, idx=index: self._set_enabled(idx, checked)
             )
             unavailable = rule["target_device"].casefold() not in available_devices
-            status = QLabel("Target unavailable" if unavailable else "Ready", card)
+            status_text = (
+                "Target unavailable"
+                if unavailable
+                else "on" if rule["enabled"] else "off"
+            )
+            status = QLabel(status_text, card)
+            status.setObjectName("MonitorRuleStatus")
             status.setStyleSheet(
                 styles.label_style(
                     font_size=11,
