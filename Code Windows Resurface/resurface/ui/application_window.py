@@ -15,6 +15,7 @@ from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
 from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
 from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager, VALID_ACTIONS, active_hotkeys
 from resurface.features.screen_mover.screen_mover import ScreenMover, perform_window_action
+from resurface.features.monitor_rules import MonitorRuleWatcher, normalize_monitor_rules
 from resurface.features.system.utility_toggles import UtilityActionsManager
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.left_panel_gui import LeftPanelBuilder
@@ -25,6 +26,7 @@ from resurface.ui.right_utility_gui import (
 from resurface.ui.tooltips import QtTooltipManager, tooltip_text
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, QSize
 from resurface.ui.navigation_shell import NavigationShell
+from resurface.ui.monitor_rules_ui import MonitorRulesPage
 from resurface.ui.window_chrome import SeverityComboItemDelegate, WindowChrome
 
 from PySide6.QtWidgets import (
@@ -143,6 +145,7 @@ class UtilityControlApp(
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
         self.screen_mover = ScreenMover(name="WindowsResurfaceMain")
+        self.monitor_rule_watcher = MonitorRuleWatcher(name="WindowsResurfaceMonitorRules")
         self.hotkey_manager = GlobalHotkeyManager(self.screen_mover.request_action)
         self.navigation_shell = NavigationShell(self)
         self.window_chrome = WindowChrome(self)
@@ -163,6 +166,7 @@ class UtilityControlApp(
             settings=self.state,
         )
         self.apply_screen_mover_settings()
+        self.apply_monitor_rule_settings()
         
         self._set_main_window_topmost_state(True)
         self._apply_fixed_window_style()
@@ -366,6 +370,17 @@ class UtilityControlApp(
         if tray_manager is not None:
             tray_manager.sync_screen_mover_action()
 
+    def apply_monitor_rule_settings(self) -> None:
+        self.monitor_rule_watcher.update_rules(
+            self.state.get("monitor_rules", []),
+            app_hwnd=int(self.winId()),
+        )
+
+    def set_monitor_rules(self, rules) -> None:
+        self.state["monitor_rules"] = normalize_monitor_rules(rules)
+        save_state(self.state)
+        self.apply_monitor_rule_settings()
+
     def set_screen_mover_enabled(self, enabled: bool) -> None:
         enabled = bool(enabled)
         self.state["title_bar_dock_enabled"] = enabled
@@ -444,6 +459,11 @@ class UtilityControlApp(
 
         try:
             self.screen_mover.stop()
+        except Exception:
+            pass
+
+        try:
+            self.monitor_rule_watcher.stop()
         except Exception:
             pass
 
@@ -765,35 +785,14 @@ class UtilityControlApp(
 
     def _build_monitor_rules_page(self) -> None:
         layout = self.page_content_layouts["monitor_rules"]
-        empty_state = QFrame()
-        empty_state.setObjectName("MonitorRulesEmptyState")
-        empty_layout = QVBoxLayout(empty_state)
-        empty_layout.setContentsMargins(24, 24, 24, 24)
-        empty_layout.setSpacing(12)
-        heading = QLabel("Application placement rules are planned")
-        heading.setObjectName("PageSectionHeading")
-        heading.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        heading.setStyleSheet(styles.page_section_heading_style())
-        explanation = QLabel(
-            "A future update will let you assign applications to monitors, "
-            "restore saved size and position, maximize windows, and optionally "
-            "reapply placement when a window is moved."
+        self.monitor_rules_page = MonitorRulesPage(
+            self.page_by_id["monitor_rules"],
+            rules=self.state.get("monitor_rules", []),
+            app_hwnd=int(self.winId()),
+            on_rules_changed=self.set_monitor_rules,
         )
-        explanation.setWordWrap(True)
-        explanation.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        explanation.setStyleSheet(styles.page_description_style())
-        add_rule = QPushButton("Add rule")
-        add_rule.setEnabled(False)
-        add_rule.setProperty("lightModePlaceholderButton", True)
-        add_rule.setAccessibleDescription("Monitor Rules is not available yet")
-        styles.apply_page_control_size(add_rule)
-        add_rule.setStyleSheet(styles.organizing_button_style(13))
-        empty_layout.addWidget(heading)
-        empty_layout.addWidget(explanation)
-        empty_layout.addSpacing(4)
-        empty_layout.addWidget(add_rule, 0, Qt.AlignmentFlag.AlignHCenter)
-        self.monitor_rules_add_button = add_rule
-        layout.addWidget(empty_state)
+        self.monitor_rules_add_button = self.monitor_rules_page.add_button
+        layout.addWidget(self.monitor_rules_page)
 
     def _populate_navigation(self) -> None:
         self.navigation_shell.populate()

@@ -282,8 +282,8 @@ def test_navigation_restores_valid_page_and_falls_back_to_overview(monkeypatch):
         window.navigate_to_page("not-a-page")
         assert window.state["last_opened_page"] == "overview"
         assert window.page_stack.currentWidget() is window.page_by_id["overview"]
-        assert not window.monitor_rules_add_button.isEnabled()
-        assert "monitor_rules" not in window.state
+        assert window.monitor_rules_add_button.isEnabled()
+        assert window.state["monitor_rules"] == []
         assert window.findChildren(QShortcut) == []
     finally:
         window._quit_requested = True

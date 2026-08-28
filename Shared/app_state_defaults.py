@@ -29,6 +29,7 @@ WINDOWS_RESURFACE_DEFAULTS = {
         "MINIMIZE": "",
         "MAXIMIZE": "",
     },
+    "monitor_rules": [],
     "usb_idle_enabled": True,
     "usb_plug_enabled": True,
     "usb_plug_notify_mode": "on",

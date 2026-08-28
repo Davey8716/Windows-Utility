@@ -68,6 +68,7 @@ The left side is the everyday tools area:
 
 - `User Interface`: theme, always-on-top, tooltips, desktop Zen Mode, power actions, minimize-after-use
 - `Screen Mover`: master enable control, mouse trigger, and configurable keyboard shortcuts for moving, minimizing, or maximizing the foreground window
+- `Monitor Rules`: automatically place newly opened application windows on an assigned display, preserving their current size, restoring captured geometry, or maximizing them
 - `External Drive Reminder Options`: connected drive display plus leave and plug/unplug reminders
 - `General Organising Utilities`: screenshots, desktop layout backup/restore, bookmarks export, taskbar backup, master backup path
 - `Folder Utilities`: launch Folder Creator or create a named desktop folder
@@ -96,6 +97,14 @@ Minimize, and Maximize. Empty shortcut fields are disabled. The tray menu's
 `Screen Mover Enabled` action mirrors the master control in the main window, and
 `Reset Screen Mover Defaults` restores the middle mouse trigger and clears all
 shortcuts without changing other app settings.
+
+Monitor Rules are evaluated from top to bottom while Windows Resurface is open
+or hidden in the system tray. Rules can match an exact executable path or an
+executable name, with optional title and window-class filters. Existing windows
+are left untouched until a rule is explicitly tested; newly opened matching
+windows are moved automatically. A rule can optionally be reapplied if its
+managed window is dragged to another monitor. If the assigned display is not
+connected, the window is left alone.
 
 The visible title-bar mover dock is suppressed for executables installed beneath
 a Steam library's `steamapps\common` directory. Configured keyboard shortcuts
