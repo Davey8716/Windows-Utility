@@ -443,6 +443,8 @@ class MonitorRulesPage(QFrame):
                 ("Move Down", lambda _checked=False, idx=index: self._move_rule(idx, 1)),
             ):
                 button = QPushButton(text, card)
+                if text in {"Move Up", "Move Down"}:
+                    button.setProperty("lightModeBlackDisabledText", True)
                 _style_button(button)
                 button.clicked.connect(callback)
                 if text == "Move Up":

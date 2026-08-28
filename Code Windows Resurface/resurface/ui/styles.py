@@ -546,10 +546,16 @@ def organizing_button_style(font_size: int | None = None) -> str:
     font_size = coerce_font_size(font_size)
     font_rule = f"font-size: {font_size}px;" if font_size is not None else ""
     placeholder_disabled_override = ""
+    black_disabled_text_override = ""
     if not THEME_IS_DARK:
         placeholder_disabled_override = f"""
         QPushButton[lightModePlaceholderButton=\"true\"]:disabled {{
             color: {qcolor_css(theme_text_color())};
+        }}
+        """
+        black_disabled_text_override = f"""
+        QPushButton[lightModeBlackDisabledText=\"true\"]:disabled {{
+            color: {qcolor_css(button_text_color())};
         }}
         """
     return f"""
@@ -581,6 +587,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             background-color: {qcolor_css(themed_button_disabled_bg())};
         }}
         {placeholder_disabled_override}
+        {black_disabled_text_override}
     """
 
 def toggle_button_style(font_size: int | None = None) -> str:

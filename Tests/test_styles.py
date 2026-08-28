@@ -122,6 +122,17 @@ def test_light_mode_placeholder_button_overrides_only_its_disabled_text_color():
     assert 'QPushButton[lightModePlaceholderButton="true"]:disabled' not in dark_style
 
 
+def test_light_mode_opt_in_keeps_disabled_button_text_black():
+    styles.set_theme(False)
+    light_style = styles.organizing_button_style(14)
+    assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' in light_style
+    assert "color: #000000;" in light_style
+
+    styles.set_theme(True)
+    dark_style = styles.organizing_button_style(14)
+    assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' not in dark_style
+
+
 def test_contrasting_text_color_favors_readable_severity_foregrounds():
     assert styles.contrasting_text_color(QColor(196, 162, 32)) == styles.TEXT_DARK
     assert styles.contrasting_text_color(QColor(176, 38, 38)) == styles.TEXT_LIGHT

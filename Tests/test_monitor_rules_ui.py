@@ -1,6 +1,6 @@
 import copy
 
-from PySide6.QtWidgets import QApplication, QFrame
+from PySide6.QtWidgets import QApplication, QFrame, QPushButton
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 from resurface.ui import application_window as main
@@ -76,6 +76,23 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         assert all(
             card.findChild(monitor_rules_ui.QLabel, "MonitorRuleStatus").text() == "on"
             for card in initial_cards
+        )
+        move_buttons = [
+            {
+                button.text(): button
+                for button in card.findChildren(QPushButton)
+                if button.text() in {"Move Up", "Move Down"}
+            }
+            for card in initial_cards
+        ]
+        assert not move_buttons[0]["Move Up"].isEnabled()
+        assert move_buttons[0]["Move Down"].isEnabled()
+        assert move_buttons[1]["Move Up"].isEnabled()
+        assert not move_buttons[1]["Move Down"].isEnabled()
+        assert all(
+            button.property("lightModeBlackDisabledText") is True
+            for card_buttons in move_buttons
+            for button in card_buttons.values()
         )
 
         page._set_enabled(0, False)
