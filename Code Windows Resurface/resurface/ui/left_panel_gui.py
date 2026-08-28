@@ -819,7 +819,6 @@ class LeftPanelBuilder:
             role="externalDrive",
         )
         self._bind_toggle_state_text(leave_reminder_btn, "Drive Leave Reminder")
-        leave_reminder_row_layout.addWidget(leave_reminder_btn)
         app.register_tooltip(
             leave_reminder_btn,
             tooltip_text("idle_plugged_reminder"),
@@ -868,6 +867,7 @@ class LeftPanelBuilder:
 
         leave_reminder_row_layout.addWidget(app.connected_drives_field)
         leave_reminder_row_layout.addWidget(app.connected_drives_empty_label)
+        leave_reminder_row_layout.addWidget(leave_reminder_btn)
         usb_layout.addWidget(leave_reminder_row, 0, Qt.AlignmentFlag.AlignHCenter)
         app._refresh_connected_drive_status_label()
 

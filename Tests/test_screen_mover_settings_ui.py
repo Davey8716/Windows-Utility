@@ -896,6 +896,7 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
         assert leave_reminder_button.parentWidget().width() == (
             styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         )
+        assert window.connected_drives_empty_label.x() < leave_reminder_button.x()
 
         external_viewport = window.page_scroll_areas["external_drives"].viewport()
 
