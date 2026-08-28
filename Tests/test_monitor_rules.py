@@ -361,7 +361,9 @@ def _matching_window_details(hwnd=1):
 
 def _running_watcher_with_rule(rule):
     watcher = monitor_rules.MonitorRuleWatcher()
-    watcher._rules = [monitor_rules.normalize_monitor_rule(rule)]
+    normalized = monitor_rules.normalize_monitor_rule(rule)
+    watcher._configured_rules = [normalized]
+    watcher._rules = [normalized] if normalized["enabled"] else []
     watcher._thread = type("Thread", (), {"is_alive": lambda self: True})()
     return watcher
 
@@ -431,6 +433,165 @@ def test_enabling_reapply_moves_existing_off_target_window_after_settle(monkeypa
     current_time[0] += monitor_rules.REAPPLY_SETTLE_SECONDS + 0.1
     watcher._scan_once()
     assert placed == [1]
+
+
+def test_reenabling_rule_immediately_moves_existing_off_target_window(monkeypatch):
+    disabled_rule = make_rule(
+        enabled=False,
+        match_exact_path=False,
+        reapply_if_moved=True,
+    )
+    enabled_rule = {**disabled_rule, "enabled": True}
+    watcher = monitor_rules.MonitorRuleWatcher()
+    details = _matching_window_details()
+    placed = []
+    monkeypatch.setattr(watcher, "start", lambda: None)
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [copy.deepcopy(details)],
+    )
+    monkeypatch.setattr(monitor_rules.win32gui, "IsWindow", lambda _hwnd: True)
+    monkeypatch.setattr(
+        monitor_rules,
+        "window_monitor_device",
+        lambda _hwnd: r"\\.\DISPLAY1",
+    )
+    monkeypatch.setattr(
+        monitor_rules,
+        "apply_monitor_rule",
+        lambda hwnd, _rule: placed.append(hwnd) or True,
+    )
+
+    watcher.update_rules([disabled_rule])
+    watcher.update_rules([enabled_rule])
+    watcher._scan_once()
+
+    assert placed == [1]
+    assert watcher._managed == {1: "rule-1"}
+    assert watcher._enroll_rule_ids == set()
+    assert watcher._immediate_rule_ids == set()
+
+
+def test_reenabling_rule_enrolls_existing_window_already_on_target(monkeypatch):
+    disabled_rule = make_rule(
+        enabled=False,
+        match_exact_path=False,
+        reapply_if_moved=True,
+    )
+    enabled_rule = {**disabled_rule, "enabled": True}
+    watcher = monitor_rules.MonitorRuleWatcher()
+    placed = []
+    monkeypatch.setattr(watcher, "start", lambda: None)
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [_matching_window_details()],
+    )
+    monkeypatch.setattr(monitor_rules.win32gui, "IsWindow", lambda _hwnd: True)
+    monkeypatch.setattr(
+        monitor_rules,
+        "window_monitor_device",
+        lambda _hwnd: enabled_rule["target_device"],
+    )
+    monkeypatch.setattr(
+        monitor_rules,
+        "apply_monitor_rule",
+        lambda hwnd, _rule: placed.append(hwnd) or True,
+    )
+
+    watcher.update_rules([disabled_rule])
+    watcher.update_rules([enabled_rule])
+    watcher._scan_once()
+
+    assert placed == []
+    assert watcher._managed == {1: "rule-1"}
+
+
+def test_reenabling_rule_wakes_running_watcher_and_applies_immediately(monkeypatch):
+    disabled_rule = make_rule(
+        enabled=False,
+        match_exact_path=False,
+        reapply_if_moved=True,
+    )
+    other_rule = make_rule(
+        id="other",
+        executable_name="other.exe",
+        enabled=True,
+        match_exact_path=False,
+    )
+    enabled_rule = {**disabled_rule, "enabled": True}
+    watcher = monitor_rules.MonitorRuleWatcher()
+    watcher._configured_rules = [
+        monitor_rules.normalize_monitor_rule(disabled_rule),
+        monitor_rules.normalize_monitor_rule(other_rule),
+    ]
+    watcher._rules = [monitor_rules.normalize_monitor_rule(other_rule)]
+    watcher._thread = type("Thread", (), {"is_alive": lambda self: True})()
+    wake_calls = []
+    placed = []
+    monkeypatch.setattr(watcher._wake_event, "set", lambda: wake_calls.append(True))
+    monkeypatch.setattr(
+        monitor_rules,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [_matching_window_details()],
+    )
+    monkeypatch.setattr(monitor_rules.win32gui, "IsWindow", lambda _hwnd: True)
+    monkeypatch.setattr(
+        monitor_rules,
+        "window_monitor_device",
+        lambda _hwnd: r"\\.\DISPLAY1",
+    )
+    monkeypatch.setattr(
+        monitor_rules,
+        "apply_monitor_rule",
+        lambda hwnd, _rule: placed.append(hwnd) or True,
+    )
+
+    watcher.update_rules([enabled_rule, other_rule])
+    watcher._scan_once()
+
+    assert wake_calls == [True]
+    assert placed == [1]
+
+
+def test_reenabling_rule_without_reapply_does_not_enroll_existing_window(monkeypatch):
+    disabled_rule = make_rule(
+        enabled=False,
+        match_exact_path=False,
+        reapply_if_moved=False,
+    )
+    watcher = monitor_rules.MonitorRuleWatcher()
+    monkeypatch.setattr(watcher, "start", lambda: None)
+
+    watcher.update_rules([disabled_rule])
+    watcher.update_rules([{**disabled_rule, "enabled": True}])
+
+    assert watcher._enroll_rule_ids == set()
+    assert watcher._immediate_rule_ids == set()
+
+
+def test_rapid_rule_transitions_clear_stale_immediate_requests(monkeypatch):
+    disabled_rule = make_rule(enabled=False, reapply_if_moved=True)
+    enabled_rule = {**disabled_rule, "enabled": True}
+    watcher = monitor_rules.MonitorRuleWatcher()
+    monkeypatch.setattr(watcher, "start", lambda: None)
+
+    watcher.update_rules([disabled_rule])
+    watcher.update_rules([enabled_rule])
+    assert watcher._immediate_rule_ids == {"rule-1"}
+
+    watcher.update_rules([disabled_rule])
+    assert watcher._enroll_rule_ids == set()
+    assert watcher._immediate_rule_ids == set()
+
+    watcher.update_rules([enabled_rule])
+    assert watcher._immediate_rule_ids == {"rule-1"}
+
+    watcher.update_rules([])
+    watcher.update_rules([enabled_rule])
+    assert watcher._enroll_rule_ids == set()
+    assert watcher._immediate_rule_ids == set()
 
 
 def test_disabling_reapply_immediately_clears_management_and_enrollment():
