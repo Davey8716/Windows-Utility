@@ -81,7 +81,11 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             for card in initial_cards
         )
         assert all(
-            card.findChild(monitor_rules_ui.QLabel, "MonitorRuleStatus").text() == "on"
+            card.findChild(monitor_rules_ui.QLabel, "MonitorRuleStatus") is None
+            for card in initial_cards
+        )
+        assert all(
+            card.findChild(monitor_rules_ui.StateIndicatorCheckBox).isChecked()
             for card in initial_cards
         )
         move_buttons = [
@@ -105,10 +109,12 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         page._set_enabled(0, False)
         assert commits[-1][0]["enabled"] is False
         disabled_card = page.rule_list_layout.itemAt(0).widget()
-        assert (
-            disabled_card.findChild(monitor_rules_ui.QLabel, "MonitorRuleStatus").text()
-            == "off"
-        )
+        assert disabled_card.findChild(
+            monitor_rules_ui.QLabel, "MonitorRuleStatus"
+        ) is None
+        assert not disabled_card.findChild(
+            monitor_rules_ui.StateIndicatorCheckBox
+        ).isChecked()
         page._move_rule(1, -1)
         assert [rule["id"] for rule in commits[-1]] == ["two", "one"]
 

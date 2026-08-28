@@ -4,8 +4,8 @@ import copy
 import os
 import uuid
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -19,6 +19,9 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QStyle,
+    QStyleOptionButton,
+    QStylePainter,
     QVBoxLayout,
     QWidget,
 )
@@ -40,6 +43,68 @@ PLACEMENT_LABELS = {
     "maximize": "Maximize",
     "saved_geometry": "Use captured size and position",
 }
+
+
+class StateIndicatorCheckBox(QCheckBox):
+    """Checkbox with an explicit green tick or red cross in its indicator."""
+
+    def paintEvent(self, _event) -> None:
+        option = QStyleOptionButton()
+        self.initStyleOption(option)
+        painter = QStylePainter(self)
+        painter.drawControl(QStyle.ControlElement.CE_CheckBox, option)
+
+        indicator = self.style().subElementRect(
+            QStyle.SubElement.SE_CheckBoxIndicator,
+            option,
+            self,
+        ).adjusted(1, 1, -1, -1)
+        if not indicator.isValid():
+            return
+
+        checked = self.isChecked()
+        color = QColor(42, 166, 86) if checked else QColor(210, 70, 70)
+        if not self.isEnabled():
+            color.setAlpha(130)
+
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(QPen(color.darker(125), 1))
+        painter.setBrush(color)
+        painter.drawRoundedRect(indicator, 3, 3)
+
+        painter.setPen(
+            QPen(
+                QColor(255, 255, 255, 220 if self.isEnabled() else 150),
+                2,
+                Qt.PenStyle.SolidLine,
+                Qt.PenCapStyle.RoundCap,
+                Qt.PenJoinStyle.RoundJoin,
+            )
+        )
+        if checked:
+            mark = QPainterPath()
+            mark.moveTo(indicator.left() + indicator.width() * 0.22, indicator.center().y())
+            mark.lineTo(
+                indicator.left() + indicator.width() * 0.43,
+                indicator.bottom() - indicator.height() * 0.23,
+            )
+            mark.lineTo(
+                indicator.right() - indicator.width() * 0.18,
+                indicator.top() + indicator.height() * 0.22,
+            )
+            painter.drawPath(mark)
+        else:
+            inset = max(3, int(indicator.width() * 0.27))
+            painter.drawLine(
+                indicator.topLeft() + QPoint(inset, inset),
+                indicator.bottomRight() - QPoint(inset, inset),
+            )
+            painter.drawLine(
+                indicator.topRight() + QPoint(-inset, inset),
+                indicator.bottomLeft() + QPoint(inset, -inset),
+            )
+        painter.restore()
 
 
 def _style_button(button: QPushButton) -> None:
@@ -84,7 +149,9 @@ class MonitorRuleEditorDialog(QDialog):
         self.name_edit = QLineEdit(self)
         self.executable_edit = QLineEdit(self)
         self.executable_edit.setReadOnly(True)
-        self.exact_path_check = QCheckBox("Match this exact executable path", self)
+        self.exact_path_check = StateIndicatorCheckBox(
+            "Match this exact executable path", self
+        )
         self.title_edit = QLineEdit(self)
         self.title_edit.setPlaceholderText("Optional, case-insensitive text contained in the title")
         self.class_edit = QLineEdit(self)
@@ -94,8 +161,10 @@ class MonitorRuleEditorDialog(QDialog):
         for mode, label in PLACEMENT_LABELS.items():
             self.placement_combo.addItem(label, mode)
         self.placement_combo.currentIndexChanged.connect(self._sync_capture_state)
-        self.enabled_check = QCheckBox("Rule enabled", self)
-        self.reapply_check = QCheckBox("Reapply if moved to another monitor", self)
+        self.enabled_check = StateIndicatorCheckBox("Rule enabled", self)
+        self.reapply_check = StateIndicatorCheckBox(
+            "Reapply if moved to another monitor", self
+        )
 
         form.addRow("Rule name", self.name_edit)
         form.addRow("Executable", self.executable_edit)
@@ -383,29 +452,26 @@ class MonitorRulesPage(QFrame):
             card_layout.setSpacing(8)
 
             header = QHBoxLayout()
-            enabled = QCheckBox(rule["name"], card)
+            enabled = StateIndicatorCheckBox(rule["name"], card)
             enabled.setChecked(rule["enabled"])
             enabled.setStyleSheet(styles.label_style(font_size=13, bold=True))
             enabled.toggled.connect(
                 lambda checked, idx=index: self._set_enabled(idx, checked)
             )
             unavailable = rule["target_device"].casefold() not in available_devices
-            status_text = (
-                "Target unavailable"
-                if unavailable
-                else "on" if rule["enabled"] else "off"
-            )
-            status = QLabel(status_text, card)
-            status.setObjectName("MonitorRuleStatus")
-            status.setStyleSheet(
-                styles.label_style(
-                    font_size=11,
-                    bold=True,
-                    color=QColor(210, 70, 70) if unavailable else styles.STATUS_ACCENT,
+            if unavailable:
+                status = QLabel("Target unavailable", card)
+                status.setObjectName("MonitorRuleStatus")
+                status.setStyleSheet(
+                    styles.label_style(
+                        font_size=11,
+                        bold=True,
+                        color=QColor(210, 70, 70),
+                    )
                 )
-            )
             header.addWidget(enabled, 1)
-            header.addWidget(status)
+            if unavailable:
+                header.addWidget(status)
             card_layout.addLayout(header)
 
             match_text = rule["executable_path"] if rule["match_exact_path"] else rule["executable_name"]
