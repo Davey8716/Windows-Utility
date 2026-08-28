@@ -70,6 +70,8 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         )
         assert page.layout().spacing() == 12
         assert page.add_button.isEnabled()
+        assert page.turn_off_all_button.isEnabled()
+        assert page.turn_off_all_button.text() == "Turn Off All"
         initial_cards = [
             page.rule_list_layout.itemAt(index).widget()
             for index in range(page.rule_list_layout.count())
@@ -106,8 +108,23 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             for button in card_buttons.values()
         )
 
+        page.turn_off_all_button.click()
+        assert all(rule["enabled"] is False for rule in commits[-1])
+        assert page.turn_off_all_button.isEnabled()
+        assert page.turn_off_all_button.text() == "Turn On All"
+        assert all(
+            not page.rule_list_layout.itemAt(index)
+            .widget()
+            .findChild(monitor_rules_ui.StateIndicatorCheckBox)
+            .isChecked()
+            for index in range(page.rule_list_layout.count())
+        )
+
+        page.turn_off_all_button.click()
+        assert all(rule["enabled"] is True for rule in commits[-1])
+        assert page.turn_off_all_button.isEnabled()
+        assert page.turn_off_all_button.text() == "Turn Off All"
         page._set_enabled(0, False)
-        assert commits[-1][0]["enabled"] is False
         disabled_card = page.rule_list_layout.itemAt(0).widget()
         assert disabled_card.findChild(
             monitor_rules_ui.QLabel, "MonitorRuleStatus"

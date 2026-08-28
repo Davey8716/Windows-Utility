@@ -211,3 +211,42 @@ def test_tray_screen_mover_action_syncs_and_dispatches() -> None:
 
     assert window.enabled_calls == [True]
     assert manager.screen_mover_action.isChecked()
+
+
+def test_tray_monitor_rules_action_syncs_and_dispatches() -> None:
+    _app()
+
+    class FakeWindow(QObject):
+        def __init__(self):
+            super().__init__()
+            self.state = {
+                "monitor_rules": [
+                    {"enabled": True},
+                    {"enabled": False},
+                ]
+            }
+            self.enabled_calls = []
+
+        def set_monitor_rules_enabled(self, enabled):
+            self.enabled_calls.append(enabled)
+            for rule in self.state["monitor_rules"]:
+                rule["enabled"] = enabled
+
+    window = FakeWindow()
+    manager = TrayIconManager(window)
+    manager.monitor_rules_action = QAction("Monitor Rules Enabled", window)
+    manager.monitor_rules_action.setCheckable(True)
+
+    manager.sync_monitor_rules_action()
+    assert manager.monitor_rules_action.isEnabled()
+    assert manager.monitor_rules_action.isChecked()
+
+    manager.toggle_monitor_rules(False)
+    manager.sync_monitor_rules_action()
+    assert window.enabled_calls == [False]
+    assert not manager.monitor_rules_action.isChecked()
+
+    manager.toggle_monitor_rules(True)
+    manager.sync_monitor_rules_action()
+    assert window.enabled_calls == [False, True]
+    assert manager.monitor_rules_action.isChecked()

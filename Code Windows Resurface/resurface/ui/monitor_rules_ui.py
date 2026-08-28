@@ -372,9 +372,13 @@ class MonitorRulesPage(QFrame):
         summary.setStyleSheet(styles.page_description_style())
         self.add_button = QPushButton("Add Rule", self)
         self.add_button.setToolTip("Create an automatic application placement rule")
+        self.turn_off_all_button = QPushButton("Turn Off All", self)
         _style_button(self.add_button)
+        _style_button(self.turn_off_all_button)
         self.add_button.clicked.connect(self._add_rule)
+        self.turn_off_all_button.clicked.connect(self._toggle_all)
         top_row.addWidget(summary, 1)
+        top_row.addWidget(self.turn_off_all_button)
         top_row.addWidget(self.add_button)
         root.addLayout(top_row)
 
@@ -400,6 +404,14 @@ class MonitorRulesPage(QFrame):
 
     def _render_rules(self) -> None:
         self._clear_rule_widgets()
+        any_enabled = any(rule["enabled"] for rule in self.rules)
+        self.turn_off_all_button.setEnabled(bool(self.rules))
+        self.turn_off_all_button.setText(
+            "Turn Off All" if any_enabled else "Turn On All"
+        )
+        self.turn_off_all_button.setToolTip(
+            "Disable all monitor rules" if any_enabled else "Enable all monitor rules"
+        )
         if not self.rules:
             empty = QLabel("No application monitor rules have been created.", self.rule_list)
             empty.setAlignment(Qt.AlignmentFlag.AlignHCenter)
@@ -532,4 +544,14 @@ class MonitorRulesPage(QFrame):
 
     def _set_enabled(self, index: int, enabled: bool) -> None:
         self.rules[index]["enabled"] = bool(enabled)
+        self._commit()
+
+    def _toggle_all(self) -> None:
+        if not self.rules:
+            return
+        self.set_all_enabled(not any(rule["enabled"] for rule in self.rules))
+
+    def set_all_enabled(self, enabled: bool) -> None:
+        for rule in self.rules:
+            rule["enabled"] = bool(enabled)
         self._commit()

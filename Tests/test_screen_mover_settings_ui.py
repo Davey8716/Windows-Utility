@@ -278,10 +278,11 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         assert window.size().height() == 800
         assert window.minimumSize() == window.maximumSize()
         assert window.navigation_list.width() == 220
-        assert window.navigation_list.count() == 11
-        assert window.page_stack.count() == 11
+        assert window.navigation_list.count() == 12
+        assert window.page_stack.count() == 12
         assert list(window.page_by_id) == [
             "overview",
+            "quick_actions",
             "user_interface",
             "screen_mover",
             "monitor_rules",
@@ -293,7 +294,7 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
             "maintenance",
             "hover_window_controls",
         ]
-        assert len(window.page_scroll_areas) == 11
+        assert len(window.page_scroll_areas) == 12
         assert all(
             isinstance(scroll, QScrollArea)
             and scroll.verticalScrollBarPolicy()
@@ -323,7 +324,7 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
             window.page_by_id[page_id].isAncestorOf(content)
             for page_id, content in mounted_content.items()
         )
-        hover_item = window.navigation_list.item(10)
+        hover_item = window.navigation_list.item(11)
         assert hover_item.text() == "Hover Window Controls"
         assert hover_item.data(Qt.ItemDataRole.UserRole) == "hover_window_controls"
         window.navigate_to_page("hover_window_controls")
@@ -420,7 +421,7 @@ def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkey
         qt_app.processEvents()
 
 
-def test_overview_status_and_folder_quick_action(monkeypatch):
+def test_overview_status_and_separate_quick_actions_page(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     state["title_bar_dock_enabled"] = False
@@ -439,23 +440,19 @@ def test_overview_status_and_folder_quick_action(monkeypatch):
         assert window.overview_status_labels["recycle"].text() == "On"
 
         overview = window.page_by_id["overview"]
+        quick_actions_page = window.page_by_id["quick_actions"]
         summary = overview.findChild(QWidget, "OverviewSummary")
-        quick_actions = next(
-            widget
-            for widget in overview.findChildren(QWidget)
-            if widget.property("centeredControlGrid")
+        quick_actions = quick_actions_page.findChild(
+            QWidget, "QuickActionsGrid"
         )
         assert summary is not None
+        assert quick_actions is not None
+        assert overview.findChild(QWidget, "QuickActionsGrid") is None
         assert summary.width() == quick_actions.width() == 512
-        summary_center = summary.mapTo(overview, QPoint()).x() + (summary.width() / 2)
-        actions_center = quick_actions.mapTo(overview, QPoint()).x() + (
-            quick_actions.width() / 2
-        )
-        assert abs(summary_center - actions_center) <= 1
 
         folder_action = next(
             button
-            for button in overview.findChildren(QPushButton)
+            for button in quick_actions_page.findChildren(QPushButton)
             if button.text() == "Create Desktop Folder"
         )
         folder_action.click()

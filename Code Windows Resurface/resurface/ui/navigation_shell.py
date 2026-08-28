@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QListWidgetItem
 class NavigationShell:
     PAGE_DEFINITIONS = (
         ("overview", "Overview", "\ue80f", "Common actions and a quick view of Windows Resurface."),
+        ("quick_actions", "Quick Actions", "\ue945", "Frequently used Windows Resurface actions."),
         ("user_interface", "User Interface", "\ue790", "Choose how Windows Resurface looks and behaves."),
         ("screen_mover", "Screen Mover", "\ue7f4", "Move and manage windows with the title-bar dock and keyboard shortcuts."),
         ("monitor_rules", "Monitor Rules", "\ue8a7", "Automatically place chosen applications on chosen monitors."),

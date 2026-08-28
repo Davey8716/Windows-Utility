@@ -285,6 +285,21 @@ class UtilityControlApp(
         self.state["monitor_rules"] = normalize_monitor_rules(rules)
         save_state(self.state)
         self.apply_monitor_rule_settings()
+        tray_manager = getattr(self, "tray_manager", None)
+        sync_tray = getattr(tray_manager, "sync_monitor_rules_action", None)
+        if callable(sync_tray):
+            sync_tray()
+
+    def set_monitor_rules_enabled(self, enabled: bool) -> None:
+        page = getattr(self, "monitor_rules_page", None)
+        if page is not None:
+            page.set_all_enabled(enabled)
+            return
+
+        rules = normalize_monitor_rules(self.state.get("monitor_rules", []))
+        for rule in rules:
+            rule["enabled"] = bool(enabled)
+        self.set_monitor_rules(rules)
 
     def set_screen_mover_enabled(self, enabled: bool) -> None:
         enabled = bool(enabled)
@@ -509,6 +524,7 @@ class UtilityControlApp(
             self.right_tools_panel.maintenance_content,
         )
         self._build_overview_page()
+        self._build_quick_actions_page()
         self._build_monitor_rules_page()
         self._build_hover_window_controls_placeholder()
 
@@ -677,10 +693,17 @@ class UtilityControlApp(
         summary_layout.setColumnStretch(1, 1)
         layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        self._add_page_subheading("overview", "Quick actions")
+        self.refresh_overview()
+
+    def _build_quick_actions_page(self) -> None:
+        layout = self.page_content_layouts["quick_actions"]
+        quick_actions_width = (
+            styles.PAGE_CONTROL_WIDTH * 2
+        ) + styles.PAGE_CONTROL_GAP
         quick_row = QWidget()
         quick_row.setProperty("centeredControlGrid", True)
-        quick_row.setFixedWidth(overview_content_width)
+        quick_row.setObjectName("QuickActionsGrid")
+        quick_row.setFixedWidth(quick_actions_width)
         quick_row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         quick_layout = QGridLayout(quick_row)
         quick_layout.setContentsMargins(0, 0, 0, 0)
@@ -700,7 +723,6 @@ class UtilityControlApp(
             button.clicked.connect(callback)
             quick_layout.addWidget(button, index // 2, index % 2)
         layout.addWidget(quick_row, 0, Qt.AlignmentFlag.AlignHCenter)
-        self.refresh_overview()
 
     def _build_monitor_rules_page(self) -> None:
         layout = self.page_content_layouts["monitor_rules"]

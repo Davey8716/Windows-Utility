@@ -23,6 +23,7 @@ class TrayIconManager(QObject):
         self.tray = None
         self.zen_mode_action = None
         self.screen_mover_action = None
+        self.monitor_rules_action = None
 
     def _resolve_tray_icon(self):
         icon = self.app.windowIcon()
@@ -53,6 +54,11 @@ class TrayIconManager(QObject):
         self.screen_mover_action.setCheckable(True)
         self.screen_mover_action.toggled.connect(self.toggle_screen_mover)
         menu.addAction(self.screen_mover_action)
+
+        self.monitor_rules_action = QAction("Monitor Rules Enabled", self.app)
+        self.monitor_rules_action.setCheckable(True)
+        self.monitor_rules_action.toggled.connect(self.toggle_monitor_rules)
+        menu.addAction(self.monitor_rules_action)
 
         menu.addSeparator()
 
@@ -95,6 +101,19 @@ class TrayIconManager(QObject):
     def sync_actions(self):
         self.sync_zen_mode_action()
         self.sync_screen_mover_action()
+        self.sync_monitor_rules_action()
+
+    def sync_monitor_rules_action(self):
+        if not self.monitor_rules_action:
+            return
+
+        rules = getattr(self.app, "state", {}).get("monitor_rules", [])
+        self.monitor_rules_action.blockSignals(True)
+        self.monitor_rules_action.setEnabled(bool(rules))
+        self.monitor_rules_action.setChecked(
+            any(bool(rule.get("enabled", True)) for rule in rules)
+        )
+        self.monitor_rules_action.blockSignals(False)
 
     def toggle_zen_mode(self, enabled: bool):
         zen_button = getattr(self.app, "desktop_zen_btn", None)
@@ -124,6 +143,13 @@ class TrayIconManager(QObject):
             setter(enabled)
         else:
             self.sync_screen_mover_action()
+
+    def toggle_monitor_rules(self, enabled: bool):
+        setter = getattr(self.app, "set_monitor_rules_enabled", None)
+        if callable(setter):
+            setter(enabled)
+        else:
+            self.sync_monitor_rules_action()
 
     def quit_from_tray(self):
         setattr(self.app, "_quit_requested", True)
