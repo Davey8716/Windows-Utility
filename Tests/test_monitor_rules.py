@@ -101,6 +101,47 @@ def test_enumerate_monitors_keeps_device_identity_and_negative_coordinates(monke
     assert monitors[1]["primary"] is True
 
 
+def test_window_details_includes_windows_resurface_main_window(monkeypatch):
+    app_hwnd = 999
+    monkeypatch.setattr(monitor_rules.win32gui, "IsWindow", lambda _hwnd: True)
+    monkeypatch.setattr(
+        monitor_rules.win32gui, "IsWindowVisible", lambda _hwnd: True
+    )
+    monkeypatch.setattr(monitor_rules.win32gui, "GetParent", lambda _hwnd: 0)
+    monkeypatch.setattr(
+        monitor_rules.win32gui, "GetWindow", lambda _hwnd, _command: 0
+    )
+    monkeypatch.setattr(
+        monitor_rules.win32gui, "GetWindowLong", lambda _hwnd, _index: 0
+    )
+    monkeypatch.setattr(
+        monitor_rules.win32gui,
+        "GetWindowText",
+        lambda _hwnd: "Windows Resurface",
+    )
+    monkeypatch.setattr(
+        monitor_rules.win32gui, "GetClassName", lambda _hwnd: "QtWindowClass"
+    )
+    monkeypatch.setattr(monitor_rules, "_is_cloaked", lambda _hwnd: False)
+    monkeypatch.setattr(
+        monitor_rules,
+        "_process_details",
+        lambda _hwnd: (
+            "windows resurface.exe",
+            r"c:\apps\windows resurface.exe",
+            123,
+            456.0,
+        ),
+    )
+
+    details = monitor_rules.window_details(app_hwnd, app_hwnd=app_hwnd)
+
+    assert details is not None
+    assert details["hwnd"] == app_hwnd
+    assert details["title"] == "Windows Resurface"
+    assert details["executable_name"] == "windows resurface.exe"
+
+
 def _patch_window_placement(monkeypatch, *, rect=(100, 100, 900, 700), show_cmd=1):
     calls = []
     monkeypatch.setattr(monitor_rules.win32gui, "IsWindow", lambda _hwnd: True)

@@ -177,10 +177,14 @@ def _is_cloaked(hwnd) -> bool:
 
 
 def window_details(hwnd, *, app_hwnd=None) -> dict | None:
+    """Return rule-matching details for an eligible top-level window.
+
+    ``app_hwnd`` remains accepted for compatibility with existing callers, but the
+    Windows Resurface window is deliberately eligible so the app can manage its
+    own monitor placement.
+    """
     try:
         if not hwnd or not win32gui.IsWindow(hwnd) or not win32gui.IsWindowVisible(hwnd):
-            return None
-        if app_hwnd and hwnd == app_hwnd:
             return None
         if win32gui.GetParent(hwnd):
             return None

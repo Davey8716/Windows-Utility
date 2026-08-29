@@ -224,6 +224,41 @@ def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypa
         app.processEvents()
 
 
+def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    calls = []
+    monkeypatch.setattr(
+        monitor_rules_ui,
+        "enumerate_eligible_windows",
+        lambda **kwargs: calls.append(kwargs) or [
+            {
+                "hwnd": 999,
+                "title": "Windows Resurface",
+                "class_name": "QtWindowClass",
+                "executable_name": "windows resurface.exe",
+                "executable_path": r"C:\Apps\Windows Resurface.exe",
+            }
+        ],
+    )
+
+    dialog = monitor_rules_ui.MonitorRuleEditorDialog(None, app_hwnd=999)
+    try:
+        assert calls == [{"app_hwnd": 999}]
+        assert dialog.window_combo.count() == 2
+        assert "Windows Resurface" in dialog.window_combo.itemText(1)
+
+        dialog.window_combo.setCurrentIndex(1)
+
+        assert dialog.executable_edit.text() == r"C:\Apps\Windows Resurface.exe"
+        assert dialog.name_edit.text() == "windows resurface"
+        assert dialog.exact_path_check.isChecked()
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        app.processEvents()
+
+
 def test_delete_rule_uses_borderless_confirmation_and_only_commits_yes(monkeypatch):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
