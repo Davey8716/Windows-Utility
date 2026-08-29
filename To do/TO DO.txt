@@ -1,24 +1,20 @@
-Wont move msvisual code coz I think it needs admin permissions
+Add pinning to the quick actions, right clicking certain items should be pinable or have icon next to icons to pin/unpin them ?
 
-Dosnt recognise itself in the app list to to move e.g win 11 resurface
+Switching between section tabs is very laggy, maybe a lot of the app is too coupled?
 
 right utility is mammoth again and need splitting into new modules?
 
 Make 2 extra branches of both + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
 
-Windows exe builder not making the exe icon tray icon again after build
-
-Add some of pinned jump lists to right click functionality of pinned exes to taskbar
+Windows exe builder not the dropdown > buttons on building
 
 Fix sfc scannow and chkdsk
 
 Threading/lag
 
-Do icons for the last list made in codex, plus do proper icons for the arrow < collapsible section/panel buttons
+More icon use for buttons ?
 
 Button Sizes in general, colours relative to state
-
-A hook for workspace builder ?
 
 I agree. User-configurable Quick Actions would make the overview much more useful than a fixed selection.
 A strong interaction model would be:
