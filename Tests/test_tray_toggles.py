@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -211,6 +212,29 @@ def test_tray_screen_mover_action_syncs_and_dispatches() -> None:
 
     assert window.enabled_calls == [True]
     assert manager.screen_mover_action.isChecked()
+
+
+def test_tray_zen_mode_uses_composed_user_interface_page() -> None:
+    _app()
+
+    class UserInterfacePage:
+        def __init__(self):
+            self.enabled_calls = []
+
+        def set_desktop_zen_enabled(self, enabled):
+            self.enabled_calls.append(enabled)
+
+    class FakeWindow(QObject):
+        def __init__(self):
+            super().__init__()
+            self.pages = SimpleNamespace(user_interface_page=UserInterfacePage())
+
+    window = FakeWindow()
+    manager = TrayIconManager(window)
+
+    manager.toggle_zen_mode(True)
+
+    assert window.pages.user_interface_page.enabled_calls == [True]
 
 
 def test_tray_monitor_rules_action_syncs_and_dispatches() -> None:

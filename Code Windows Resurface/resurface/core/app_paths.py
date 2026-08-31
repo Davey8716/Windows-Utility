@@ -74,7 +74,9 @@ class MasterBackupPathsMixin:
         if not full_path:
             return ""
 
-        page = getattr(self, "organising_utilities_page", None)
+        page = getattr(
+            getattr(self, "pages", None), "organising_utilities_page", None
+        )
         if page is None:
             return full_path
 
@@ -93,7 +95,9 @@ class MasterBackupPathsMixin:
         )
 
     def _refresh_master_backup_path_display(self) -> None:
-        page = getattr(self, "organising_utilities_page", None)
+        page = getattr(
+            getattr(self, "pages", None), "organising_utilities_page", None
+        )
         if page is None:
             return
 

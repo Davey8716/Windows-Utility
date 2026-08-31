@@ -1,22 +1,6 @@
 Windows Resurface: Module Splitting and Coupling Review
 =======================================================
 
-Main-window coupling
---------------------
-
-The current _build_ui() builds controls in hidden "staging containers" and then reparents them into pages around line 434. That is transitional architecture and should eventually go away.
-
-After extracting the services and page widgets above, UtilityControlApp should mainly:
-
-- Construct dependencies
-- Compose pages
-- Connect high-level signals
-- Handle native main-window lifecycle events
-- Coordinate startup and shutdown
-
-I would move its page-building and navigation code first, but leave its Win32 lifecycle methods together unless they grow further.
-
-
 Folder Creator companion app
 ----------------------------
 

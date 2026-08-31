@@ -116,7 +116,9 @@ class TrayIconManager(QObject):
         self.monitor_rules_action.blockSignals(False)
 
     def toggle_zen_mode(self, enabled: bool):
-        page = getattr(self.app, "user_interface_page", None)
+        page = getattr(
+            getattr(self.app, "pages", None), "user_interface_page", None
+        )
         if page is not None:
             page.set_desktop_zen_enabled(enabled)
             self.sync_zen_mode_action()

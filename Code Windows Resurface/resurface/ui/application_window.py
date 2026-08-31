@@ -154,8 +154,12 @@ class UtilityControlApp(
             drive_service=self.drive_service,
             monitor=self.drive_monitor,
             policy=self.drive_reminder_policy,
-            page=lambda: getattr(self, "external_drives_page", None),
-            drive_space_page=lambda: getattr(self, "drive_space_page", None),
+            page=lambda: getattr(
+                getattr(self, "pages", None), "external_drives_page", None
+            ),
+            drive_space_page=lambda: getattr(
+                getattr(self, "pages", None), "drive_space_page", None
+            ),
             refresh_overview=self.refresh_overview,
             run_with_optional_minimize=(
                 self.organising_actions.run_with_optional_minimize
@@ -176,11 +180,11 @@ class UtilityControlApp(
             refresh_connected_drives_style=(
                 self.external_drive_controller.apply_connected_drives_style
             ),
-            screen_mover_settings_page=self.screen_mover_settings_page,
-            user_interface_page=self.user_interface_page,
-            maintenance_page=self.maintenance_page,
-            drive_space_page=self.drive_space_page,
-            overview_status_labels=self.overview_status_labels,
+            screen_mover_settings_page=self.pages.screen_mover_settings_page,
+            user_interface_page=self.pages.user_interface_page,
+            maintenance_page=self.pages.maintenance_page,
+            drive_space_page=self.pages.drive_space_page,
+            overview_status_labels=self.pages.overview_page.status_labels,
         )
         self.screen_mover_settings_controller = ScreenMoverSettingsController(
             state=self.state,
@@ -188,7 +192,9 @@ class UtilityControlApp(
             hotkey_manager=self.hotkey_manager,
             save_state=save_state,
             window_handle=lambda: int(self.winId()),
-            settings_page=lambda: getattr(self, "screen_mover_settings_page", None),
+            settings_page=lambda: getattr(
+                getattr(self, "pages", None), "screen_mover_settings_page", None
+            ),
             legacy_toggle=lambda: getattr(self, "screen_mover_enabled_btn", None),
             legacy_activation_combo=lambda: getattr(self, "screen_move_button_combo", None),
             legacy_hotkey_edits=lambda: getattr(self, "screen_mover_hotkey_edits", {}),
@@ -200,7 +206,9 @@ class UtilityControlApp(
             watcher=self.monitor_rule_watcher,
             save_state=save_state,
             window_handle=lambda: int(self.winId()),
-            rules_page=lambda: getattr(self, "monitor_rules_page", None),
+            rules_page=lambda: getattr(
+                getattr(self, "pages", None), "monitor_rules_page", None
+            ),
             sync_tray=lambda: getattr(
                 self.tray_manager, "sync_monitor_rules_action", lambda: None
             )(),
@@ -408,16 +416,8 @@ class UtilityControlApp(
 
         self.page_composer = ApplicationPageComposer(self, self.navigation_shell)
         self.pages = self.page_composer.compose()
-
-        # Transitional aliases keep mixins and callers stable during extraction.
-        self.navigation_sidebar = self.navigation_shell.navigation_sidebar
-        self.navigation_list = self.navigation_shell.navigation_list
-        self.version_label = self.navigation_shell.version_label
-        self.page_stack = self.navigation_shell.page_stack
-        self.page_registry = self.navigation_shell.page_registry
-        self.page_by_id = self.navigation_shell.page_by_id
-        self.page_content_layouts = self.navigation_shell.page_content_layouts
-        self.page_scroll_areas = self.navigation_shell.page_scroll_areas
+        self._refresh_taskbar_backup_folder_button()
+        self._refresh_master_backup_path_display()
 
         self.sidebar_navigation_mode = True
         self.navigation_shell.page_changed.connect(self._on_page_changed)
@@ -445,15 +445,13 @@ class UtilityControlApp(
 
     def _open_folder_utilities(self) -> None:
         self.navigate_to_page("folder_utilities")
-        page = getattr(self, "folder_utilities_page", None)
-        if page is not None:
-            page.focus_name_input()
+        self.pages.folder_utilities_page.focus_name_input()
 
     def refresh_overview(self) -> None:
-        page = getattr(self, "overview_page", None)
-        if page is None:
+        pages = getattr(self, "pages", None)
+        if pages is None:
             return
-        page.refresh(
+        pages.overview_page.refresh(
             self.state, getattr(self, "_overview_connected_drives", set())
         )
 

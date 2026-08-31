@@ -205,7 +205,7 @@ def test_folder_to_desktop_starts_empty_and_saved_selection_populates_input(monk
     window = _build_offscreen_window(monkeypatch, state)
 
     try:
-        page = window.folder_utilities_page
+        page = window.pages.folder_utilities_page
         assert page._input.text() == ""
         assert page._names.isEditable()
         folder_button = next(
@@ -279,10 +279,11 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         assert window.size().width() == 1000
         assert window.size().height() == 800
         assert window.minimumSize() == window.maximumSize()
-        assert window.navigation_list.width() == 220
-        assert window.navigation_list.count() == 12
-        assert window.page_stack.count() == 12
-        assert list(window.page_by_id) == [
+        shell = window.navigation_shell
+        assert shell.navigation_list.width() == 220
+        assert shell.navigation_list.count() == 12
+        assert shell.page_stack.count() == 12
+        assert list(shell.page_by_id) == [
             "overview",
             "quick_actions",
             "user_interface",
@@ -296,12 +297,12 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
             "maintenance",
             "hover_window_controls",
         ]
-        assert len(window.page_scroll_areas) == 12
+        assert len(shell.page_scroll_areas) == 12
         assert all(
             isinstance(scroll, QScrollArea)
             and scroll.verticalScrollBarPolicy()
             == Qt.ScrollBarPolicy.ScrollBarAsNeeded
-            for scroll in window.page_scroll_areas.values()
+            for scroll in shell.page_scroll_areas.values()
         )
         assert not hasattr(window, "advanced_settings_toggle")
         # assert not hasattr(window, "master_collapse_btn_left")
@@ -316,23 +317,23 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         ):
             assert obsolete_key not in WINDOWS_RESURFACE_DEFAULTS
         mounted_content = {
-            "user_interface": window.user_interface_page,
-            "screen_mover": window.screen_mover_settings_page,
-            "external_drives": window.drive_space_page,
-            "windows_utilities": window.windows_utilities_page,
-            "maintenance": window.maintenance_page,
+            "user_interface": window.pages.user_interface_page,
+            "screen_mover": window.pages.screen_mover_settings_page,
+            "external_drives": window.pages.drive_space_page,
+            "windows_utilities": window.pages.windows_utilities_page,
+            "maintenance": window.pages.maintenance_page,
         }
         assert not hasattr(window, "right_tools_panel")
         assert not hasattr(window, "left_page_contents")
         assert all(
-            window.page_by_id[page_id].isAncestorOf(content)
+            shell.page_by_id[page_id].isAncestorOf(content)
             for page_id, content in mounted_content.items()
         )
-        hover_item = window.navigation_list.item(11)
+        hover_item = shell.navigation_list.item(11)
         assert hover_item.text() == "Hover Window Controls"
         assert hover_item.data(Qt.ItemDataRole.UserRole) == "hover_window_controls"
         window.navigate_to_page("hover_window_controls")
-        placeholder = window.page_by_id["hover_window_controls"].findChild(
+        placeholder = shell.page_by_id["hover_window_controls"].findChild(
             QFrame, "HoverWindowControlsPlaceholder"
         )
         assert placeholder is not None
@@ -368,12 +369,26 @@ def test_page_composer_builds_widgets_in_their_final_hosts(monkeypatch):
     }
     try:
         assert not hasattr(window, "left_page_contents")
+        for alias in (
+            "navigation_sidebar",
+            "navigation_list",
+            "version_label",
+            "page_stack",
+            "page_registry",
+            "page_by_id",
+            "page_content_layouts",
+            "page_scroll_areas",
+            *page_ids,
+            "overview_status_labels",
+            "monitor_rules_add_button",
+        ):
+            assert not hasattr(window, alias)
         for attribute, page_id in page_ids.items():
             page = getattr(window.pages, attribute)
             assert page.parentWidget() is window.navigation_shell.content_parent(page_id)
         external_host = window.navigation_shell.content_parent("external_drives")
-        assert external_host.isAncestorOf(window.external_drives_page)
-        assert external_host.isAncestorOf(window.drive_space_page)
+        assert external_host.isAncestorOf(window.pages.external_drives_page)
+        assert external_host.isAncestorOf(window.pages.drive_space_page)
     finally:
         window._quit_requested = True
         window.close()
@@ -387,14 +402,15 @@ def test_navigation_restores_valid_page_and_falls_back_to_overview(monkeypatch):
     state["last_opened_page"] = "maintenance"
     window = _build_offscreen_window(monkeypatch, state)
     try:
-        assert window.navigation_list.currentItem().data(Qt.ItemDataRole.UserRole) == "maintenance"
+        shell = window.navigation_shell
+        assert shell.navigation_list.currentItem().data(Qt.ItemDataRole.UserRole) == "maintenance"
         window.navigate_to_page("screen_mover")
         assert window.state["last_opened_page"] == "screen_mover"
-        assert window.page_stack.currentWidget() is window.page_by_id["screen_mover"]
+        assert shell.page_stack.currentWidget() is shell.page_by_id["screen_mover"]
         window.navigate_to_page("not-a-page")
         assert window.state["last_opened_page"] == "overview"
-        assert window.page_stack.currentWidget() is window.page_by_id["overview"]
-        assert window.monitor_rules_add_button.isEnabled()
+        assert shell.page_stack.currentWidget() is shell.page_by_id["overview"]
+        assert window.pages.monitor_rules_page.add_button.isEnabled()
         assert window.state["monitor_rules"] == []
         assert window.findChildren(QShortcut) == []
     finally:
@@ -427,7 +443,10 @@ def test_navigation_stays_in_memory_until_settings_are_saved(monkeypatch):
 
         assert saved_states == []
         assert window.state["last_opened_page"] == "overview"
-        assert window.page_stack.currentWidget() is window.page_by_id["overview"]
+        assert (
+            window.navigation_shell.page_stack.currentWidget()
+            is window.navigation_shell.page_by_id["overview"]
+        )
 
         window.navigate_to_page("maintenance")
         window.save_all_settings()
@@ -481,8 +500,8 @@ def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkey
         window.show()
         qt_app.processEvents()
 
-        theme_button = window.user_interface_page._dark_mode_button
-        zen_button = window.user_interface_page._desktop_zen_button
+        theme_button = window.pages.user_interface_page._dark_mode_button
+        zen_button = window.pages.user_interface_page._desktop_zen_button
         for button in (theme_button, zen_button):
             assert button.text() == ""
             assert not button.icon().isNull()
@@ -535,13 +554,14 @@ def test_overview_status_and_separate_quick_actions_page(monkeypatch):
         window.show()
         qt_app.processEvents()
         window.refresh_overview()
-        assert window.overview_status_labels["screen_mover"].text() == "Off"
-        assert window.overview_status_labels["drives"].text() == "2 connected"
-        assert window.overview_status_labels["backup_path"].text() == r"C:\Backups"
-        assert window.overview_status_labels["recycle"].text() == "On"
+        status_labels = window.pages.overview_page.status_labels
+        assert status_labels["screen_mover"].text() == "Off"
+        assert status_labels["drives"].text() == "2 connected"
+        assert status_labels["backup_path"].text() == r"C:\Backups"
+        assert status_labels["recycle"].text() == "On"
 
-        overview = window.page_by_id["overview"]
-        quick_actions_page = window.page_by_id["quick_actions"]
+        overview = window.navigation_shell.page_by_id["overview"]
+        quick_actions_page = window.navigation_shell.page_by_id["quick_actions"]
         summary = overview.findChild(QWidget, "OverviewSummary")
         quick_actions = quick_actions_page.findChild(
             QWidget, "QuickActionsGrid"
@@ -559,8 +579,11 @@ def test_overview_status_and_separate_quick_actions_page(monkeypatch):
         folder_action.click()
         qt_app.processEvents()
         assert window.state["last_opened_page"] == "folder_utilities"
-        assert window.page_stack.currentWidget() is window.page_by_id["folder_utilities"]
-        assert window.folder_utilities_page._input.hasFocus()
+        assert (
+            window.navigation_shell.page_stack.currentWidget()
+            is window.navigation_shell.page_by_id["folder_utilities"]
+        )
+        assert window.pages.folder_utilities_page._input.hasFocus()
     finally:
         window._quit_requested = True
         window.close()
@@ -603,8 +626,8 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         assert not window.window_close_btn.icon().isNull()
 
         assert window_center_x(window.window_title_label) == (
-            window.page_stack.mapTo(window, QPoint(0, 0)).x()
-            + (window.page_stack.width() // 2)
+            window.navigation_shell.page_stack.mapTo(window, QPoint(0, 0)).x()
+            + (window.navigation_shell.page_stack.width() // 2)
         )
         assert window_y(window.window_title_label) == window.TITLE_TEXT_TOP_PADDING
         assert window.window_title_label.height() == (
@@ -782,8 +805,8 @@ def test_main_window_and_power_dropdown_are_wide_enough(monkeypatch):
         assert window.COLLAPSED_WIDTH == 1000
         assert window.width() == 1000
         assert window.height() == 800
-        assert window.navigation_list.width() == 220
-        assert window.page_stack.width() == 780
+        assert window.navigation_shell.navigation_list.width() == 220
+        assert window.navigation_shell.page_stack.width() == 780
         assert 250 <= power_combo.width() <= 300
         assert power_combo.minimumWidth() == power_combo.width()
         assert power_combo.maximumWidth() == power_combo.width()
@@ -821,10 +844,10 @@ def test_navigation_panel_border_aligns_with_active_page_title(monkeypatch):
         for page_id in ("overview", "user_interface", "screen_mover"):
             window.navigate_to_page(page_id)
             qt_app.processEvents()
-            current_page = window.page_stack.currentWidget()
+            current_page = window.navigation_shell.page_stack.currentWidget()
             page_title = current_page.findChild(QLabel, "PageTitle")
             assert page_title is not None
-            assert window.navigation_list.mapTo(window, QPoint(0, 0)).y() == (
+            assert window.navigation_shell.navigation_list.mapTo(window, QPoint(0, 0)).y() == (
                 page_title.mapTo(window, QPoint(0, 0)).y()
             )
     finally:
@@ -905,7 +928,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             ("E:\\Example Removable Drive With A Long Volume Name",)
         )
         qt_app.processEvents()
-        connected_combo = window.external_drives_page.drive_combo()
+        connected_combo = window.pages.external_drives_page.drive_combo()
         connected_row = connected_combo.parentWidget()
         assert connected_row.width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         assert connected_combo.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
@@ -927,13 +950,13 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             id(widget): (widget.width(), widget.height())
             for widget in marked_controls
         }
-        active_page_id = window.navigation_list.currentItem().data(
+        active_page_id = window.navigation_shell.navigation_list.currentItem().data(
             Qt.ItemDataRole.UserRole
         )
         for is_dark in (False, True):
             window.apply_theme(is_dark)
             qt_app.processEvents()
-            assert window.navigation_list.currentItem().data(
+            assert window.navigation_shell.navigation_list.currentItem().data(
                 Qt.ItemDataRole.UserRole
             ) == active_page_id
             assert all(
@@ -941,13 +964,13 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
                 for widget in marked_controls
             )
 
-        for page_id in window.page_by_id:
+        for page_id in window.navigation_shell.page_by_id:
             window.navigate_to_page(page_id)
             qt_app.processEvents()
-            viewport = window.page_scroll_areas[page_id].viewport()
+            viewport = window.navigation_shell.page_scroll_areas[page_id].viewport()
             grids = [
                 widget
-                for widget in window.page_by_id[page_id].findChildren(QWidget)
+                for widget in window.navigation_shell.page_by_id[page_id].findChildren(QWidget)
                 if widget.property("centeredControlGrid")
             ]
             for grid in grids:
@@ -955,7 +978,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
                 grid_center = grid_left + (grid.width() / 2)
                 assert abs(grid_center - (viewport.width() / 2)) <= 2
 
-        folder_page = window.page_by_id["folder_utilities"]
+        folder_page = window.navigation_shell.page_by_id["folder_utilities"]
         folder_creator = next(
             button
             for button in folder_page.findChildren(QPushButton)
@@ -967,7 +990,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             if button.text() == "Folder To Desktop"
         )
         assert folder_creator.size().width() == folder_desktop.size().width() == 250
-        folder_row = window.folder_utilities_page._names.parentWidget()
+        folder_row = window.pages.folder_utilities_page._names.parentWidget()
         assert folder_creator.mapTo(folder_page, QPoint()).y() == (
             folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
         )
@@ -988,13 +1011,13 @@ def test_folder_utilities_places_creator_below_quick_folder_action(monkeypatch):
         window.show()
         qt_app.processEvents()
 
-        folder_page = window.page_by_id["folder_utilities"]
+        folder_page = window.navigation_shell.page_by_id["folder_utilities"]
         folder_creator = next(
             button
             for button in folder_page.findChildren(QPushButton)
             if button.text() == "Folder Creator"
         )
-        folder_row = window.folder_utilities_page._names.parentWidget()
+        folder_row = window.pages.folder_utilities_page._names.parentWidget()
         folder_desktop = folder_row.findChild(QPushButton)
 
         assert folder_desktop is not None
@@ -1048,14 +1071,17 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
         assert notification_combo.height() == 34
         assert notification_label.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
         assert leave_reminder_button.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
-        assert window.external_drives_page.drive_combo().width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+        assert (
+            window.pages.external_drives_page.drive_combo().width()
+            == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+        )
         assert notification_combo.parentWidget().width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         assert leave_reminder_button.parentWidget().width() == (
             styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         )
-        assert window.external_drives_page._empty_label.x() < leave_reminder_button.x()
+        assert window.pages.external_drives_page._empty_label.x() < leave_reminder_button.x()
 
-        external_viewport = window.page_scroll_areas["external_drives"].viewport()
+        external_viewport = window.navigation_shell.page_scroll_areas["external_drives"].viewport()
 
         def assert_centered() -> None:
             control_row = notification_combo.parentWidget()
@@ -1106,7 +1132,7 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
             ("E:\\Example Removable Drive With A Long Volume Name",)
         )
         qt_app.processEvents()
-        connected_combo = window.external_drives_page.drive_combo()
+        connected_combo = window.pages.external_drives_page.drive_combo()
         assert connected_combo.width() == stable_width
         assert connected_combo.parentWidget().width() == (
             styles.EXTERNAL_DRIVES_CONTENT_WIDTH
@@ -1139,8 +1165,8 @@ def test_loose_labels_use_sidebar_surface_style_across_themes(monkeypatch):
         }
         surfaced = [
             labels["Delete items older than:"],
-            window.organising_utilities_page._path_label,
-            window.external_drives_page._empty_label,
+            window.pages.organising_utilities_page._path_label,
+            window.pages.external_drives_page._empty_label,
             labels["Plug/unplug notifications:"],
         ]
         original_sizes = [(label.width(), label.height()) for label in surfaced]
@@ -1176,11 +1202,11 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         window.show()
         qt_app.processEvents()
 
-        panel = window.maintenance_page
+        panel = window.pages.maintenance_page
         maintenance_content = panel
         selectors = maintenance_content.findChildren(QComboBox)
         selector_grid = selectors[0].parentWidget()
-        maintenance_page = window.page_by_id["maintenance"]
+        maintenance_page = window.navigation_shell.page_by_id["maintenance"]
 
         assert len(selectors) == 4
         assert all(selector.width() == 238 for selector in selectors)
@@ -1244,8 +1270,8 @@ def test_external_drive_controls_and_output_share_the_inner_frame_width(monkeypa
         window.show()
         qt_app.processEvents()
 
-        panel = window.drive_space_page
-        drive_page = window.page_by_id["external_drives"]
+        panel = window.pages.drive_space_page
+        drive_page = window.navigation_shell.page_by_id["external_drives"]
         button_row = panel.btn_this_pc.parentWidget()
 
         assert panel.btn_this_pc.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
@@ -1320,7 +1346,7 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
 
     window = _build_offscreen_window(monkeypatch, state)
     try:
-        settings_page = window.screen_mover_settings_page
+        settings_page = window.pages.screen_mover_settings_page
         assert settings_page._enabled_button.isChecked()
         assert settings_page._activation_combo.currentData() == "right"
         assert set(settings_page._hotkey_edits) == {
@@ -1364,11 +1390,11 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
         window.show()
         qt_app.processEvents()
 
-        settings_page = window.screen_mover_settings_page
+        settings_page = window.pages.screen_mover_settings_page
         controls_row = settings_page.controls_row
         shortcuts_header = settings_page.shortcuts_header
         shortcuts_container = settings_page.shortcuts_container
-        screen_page = window.page_by_id["screen_mover"]
+        screen_page = window.navigation_shell.page_by_id["screen_mover"]
 
         def assert_blocks_aligned() -> None:
             widgets = (controls_row, shortcuts_header, shortcuts_container)
@@ -1483,7 +1509,7 @@ def test_screen_mover_shortcut_fields_keep_surface_style_after_restart_and_theme
         expected_background = styles.qcolor_css(styles.themed_surface_field_bg())
         expected_border = styles.qcolor_css(styles.themed_surface_field_border())
 
-        for edit in window.screen_mover_settings_page._hotkey_edits.values():
+        for edit in window.pages.screen_mover_settings_page._hotkey_edits.values():
             assert edit.objectName() == "ScreenMoverShortcutEdit"
             assert "QKeySequenceEdit#ScreenMoverShortcutEdit" in edit.styleSheet()
             assert (
@@ -1533,7 +1559,7 @@ def test_screen_mover_shortcuts_have_balanced_heading_spacing(monkeypatch):
         window.show()
         qt_app.processEvents()
 
-        settings_page = window.screen_mover_settings_page
+        settings_page = window.pages.screen_mover_settings_page
         controls_row = settings_page.controls_row
         shortcuts_header = settings_page.shortcuts_header
         shortcuts_container = settings_page.shortcuts_container

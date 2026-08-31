@@ -40,7 +40,9 @@ class FolderActionsController:
                     show_close_now_button=True,
                 )
                 return
-            page = getattr(self.app, "folder_utilities_page", None)
+            page = getattr(
+                getattr(self.app, "pages", None), "folder_utilities_page", None
+            )
             toggle = getattr(self.app, "save_folder_name_toggle", None)
             should_save = bool(save_name)
             if save_name is None and toggle is not None:

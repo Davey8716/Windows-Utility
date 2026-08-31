@@ -279,18 +279,8 @@ class ApplicationPageComposer:
             maintenance_page=maintenance_page,
             hover_window_controls_page=hover_page,
         )
-        self._publish_compatibility_aliases(pages)
-        app._refresh_taskbar_backup_folder_button()
-        app._refresh_master_backup_path_display()
         overview_page.refresh(self.state, getattr(app, "_overview_connected_drives", set()))
         return pages
-
-    def _publish_compatibility_aliases(self, pages: ApplicationPages) -> None:
-        app = self.app
-        for name in ApplicationPages.__dataclass_fields__:
-            setattr(app, name, getattr(pages, name))
-        app.overview_status_labels = pages.overview_page.status_labels
-        app.monitor_rules_add_button = pages.monitor_rules_page.add_button
 
     def _wire_user_interface_page(self, page: UserInterfacePage) -> None:
         app = self.app
@@ -301,7 +291,9 @@ class ApplicationPageComposer:
         page.minimize_after_use_changed.connect(
             lambda enabled: self._set_state_value("minimize_after_use_enabled", enabled)
         )
-        page.desktop_zen_changed.connect(self._desktop_zen_changed)
+        page.desktop_zen_changed.connect(
+            lambda enabled: self._desktop_zen_changed(page, enabled)
+        )
         actions = {
             "Lock PC": app.maintenance_actions.run_lock_pc,
             "Sleep": app.maintenance_actions.run_sleep,
@@ -341,7 +333,7 @@ class ApplicationPageComposer:
                 callback(enabled)
                 break
 
-    def _desktop_zen_changed(self, enabled: bool) -> None:
+    def _desktop_zen_changed(self, page: UserInterfacePage, enabled: bool) -> None:
         self.state["desktop_zen_mode_enabled"] = enabled
         if self.app.actions.desktop_zen_mode_toggle(enabled) is not None:
             save_state(self.state)
@@ -349,7 +341,7 @@ class ApplicationPageComposer:
                 self.app.organising_actions.minimize_self_if_configured()
             return
         self.state["desktop_zen_mode_enabled"] = not enabled
-        self.app.user_interface_page.revert_desktop_zen(not enabled)
+        page.revert_desktop_zen(not enabled)
         save_state(self.state)
         self.app._show_timed_message(
             QMessageBox.Icon.Warning,

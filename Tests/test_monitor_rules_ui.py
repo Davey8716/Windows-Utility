@@ -563,8 +563,8 @@ def test_application_persists_rules_updates_watcher_and_stops_it(monkeypatch):
     try:
         assert watcher.updates[0][0] == []
         assert watcher.updates[0][2] is True
-        assert window.monitor_rules_page.objectName() == "MonitorRulesEmptyState"
-        assert "border-radius: 8px" in window.monitor_rules_page.styleSheet()
+        assert window.pages.monitor_rules_page.objectName() == "MonitorRulesEmptyState"
+        assert "border-radius: 8px" in window.pages.monitor_rules_page.styleSheet()
         window.set_monitor_rules([make_rule()])
         assert window.state["monitor_rules"][0]["id"] == "one"
         assert watcher.updates[-1][0][0]["target_device"] == r"\\.\DISPLAY2"
