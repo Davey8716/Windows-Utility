@@ -2,11 +2,9 @@ import os
 from pathlib import Path
 
 from resurface.ui import styles
-from PySide6.QtGui import QFont, QFontMetrics
 from resurface.features.drives.drive_service import DriveServiceError
 from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt, QTimer
 from PySide6.QtWidgets import QMenu, QMessageBox
-from resurface.ui.tooltips import format_tooltip_text
 
 
 class ExternalDriveMixin:
@@ -16,7 +14,8 @@ class ExternalDriveMixin:
         return Path(__file__).resolve().parents[4] / "App Icons" / "Usb Icon.png"
 
     def eventFilter(self, watched, event):
-        combo = getattr(self, "connected_drives_field", None)
+        page = getattr(self, "external_drives_page", None)
+        combo = page.drive_combo() if page is not None else None
         if combo is not None:
             popup_view = combo.view()
             popup_viewport = popup_view.viewport()
@@ -55,127 +54,31 @@ class ExternalDriveMixin:
         return drive_label, drive_lines
 
     def _apply_connected_drives_field_style(self) -> None:
-        combo = getattr(self, "connected_drives_field", None)
-        if combo is None:
+        page = getattr(self, "external_drives_page", None)
+        if page is None:
             return
-
-        visible_text = ""
-        current_text_getter = getattr(combo, "currentText", None)
-        if callable(current_text_getter):
-            visible_text = current_text_getter() or ""
-        if not visible_text:
-            placeholder_text_getter = getattr(combo, "placeholderText", None)
-            if callable(placeholder_text_getter):
-                visible_text = placeholder_text_getter() or ""
-
-        combo_width = 0
-        width_getter = getattr(combo, "width", None)
-        if callable(width_getter):
-            measured_width = width_getter()
-            if isinstance(measured_width, (int, float)):
-                combo_width = int(measured_width)
-
-        chosen_font_size = 15
-        chosen_font_family = "Segoe UI"
-        if visible_text and combo_width > 0:
-            text_width_limit = max(0, combo_width - 34)
-            for candidate_family in ("Segoe UI", "Arial", "Consolas"):
-                for candidate_size in (15, 14, 13, 12):
-                    metrics = QFontMetrics(QFont(candidate_family, candidate_size))
-                    if metrics.horizontalAdvance(visible_text) <= text_width_limit:
-                        chosen_font_family = candidate_family
-                        chosen_font_size = candidate_size
-                        break
-                else:
-                    continue
-                break
-            else:
-                chosen_font_size = 12
-                chosen_font_family = "Arial"
-
-        combo.setProperty("styleFontSize", chosen_font_size)
-        combo.setProperty("styleFontFamily", chosen_font_family)
-        combo.setStyleSheet(
-            styles.connected_drives_combo_style(
-                chosen_font_size,
-                chosen_font_family,
-            )
-        )
-        styles.apply_page_control_size(
-            combo,
-            width=styles.EXTERNAL_DRIVES_CONTROL_WIDTH,
-            role="externalDrive",
-        )
-        control_row = combo.parentWidget()
-        if (
-            control_row is not None
-            and control_row.property("centeredControlGrid")
-        ):
-            empty_label = getattr(self, "connected_drives_empty_label", None)
-            status_width = combo.width()
-            if combo.isHidden() and empty_label is not None:
-                status_width = empty_label.width()
-            control_row.setFixedWidth(
-                styles.EXTERNAL_DRIVES_CONTROL_WIDTH
-                + styles.PAGE_CONTROL_GAP
-                + status_width
-            )
+        page.apply_drive_field_style()
 
     def _refresh_connected_drive_status_label(self, drives=None):
-        if not hasattr(self, "connected_drives_field"):
+        page = getattr(self, "external_drives_page", None)
+        if page is None:
             return
-
-        empty_label = getattr(self, "connected_drives_empty_label", None)
 
         if drives is None:
             drives = tuple(sorted(self._current_external_drives()))
         elif not isinstance(drives, tuple):
             drives = tuple(sorted(drives))
         self._overview_connected_drives = set(drives)
-
-        self.connected_drives_field.clear()
-        if drives:
-            self.connected_drives_field.setPlaceholderText("")
-            display_drives = [f"{drive} Connected" for drive in drives]
-            for drive_path, display_text in zip(drives, display_drives):
-                self.connected_drives_field.addItem(display_text, drive_path)
-                row = self.connected_drives_field.count() - 1
-                self.connected_drives_field.setItemData(
-                    row,
-                    display_text,
-                    Qt.ItemDataRole.ToolTipRole,
-                )
-            self.connected_drives_field.setCurrentIndex(0)
-            self.connected_drives_field.show()
-            if empty_label is not None:
-                empty_label.hide()
-            self.connected_drives_field.setToolTip(
-                format_tooltip_text(
-                    "Connected drives:\n" + "\n".join(display_drives)
-                )
-            )
-        else:
-            self.connected_drives_field.setPlaceholderText("")
-            self.connected_drives_field.setCurrentIndex(-1)
-            self.connected_drives_field.hide()
-            if empty_label is not None:
-                empty_label.show()
-                empty_label.setToolTip(format_tooltip_text("No Drives Connected"))
-            self.connected_drives_field.setToolTip(
-                format_tooltip_text("No Drives Connected")
-            )
-
-        self._apply_connected_drives_field_style()
-        QTimer.singleShot(0, self._apply_connected_drives_field_style)
+        page.set_connected_drives(drives)
         refresh_overview = getattr(self, "refresh_overview", None)
         if refresh_overview is not None:
             refresh_overview()
 
     def _open_connected_drive_from_index(self, index: QModelIndex) -> None:
-        if not hasattr(self, "connected_drives_field") or not index.isValid():
+        page = getattr(self, "external_drives_page", None)
+        if page is None or not index.isValid():
             return
-
-        drive_path = self.connected_drives_field.itemData(index.row())
+        drive_path = page.drive_combo().itemData(index.row())
         if not drive_path:
             return
 
@@ -187,21 +90,23 @@ class ExternalDriveMixin:
         os.startfile(drive_path)
 
     def _show_connected_drives_context_menu(self, pos):
-        if not hasattr(self, "connected_drives_field"):
+        page = getattr(self, "external_drives_page", None)
+        if page is None:
             return
+        combo = page.drive_combo()
 
         drives = tuple(sorted(self._current_external_drives()))
         if not drives:
             return
 
-        menu = QMenu(self.connected_drives_field)
+        menu = QMenu(combo)
         styles.apply_popup_menu_style(menu)
         actions = {}
         for drive_path in drives:
             action = menu.addAction(f"Safely Remove {drive_path}")
             actions[action] = drive_path
 
-        selected_action = menu.exec(self.connected_drives_field.mapToGlobal(pos))
+        selected_action = menu.exec(combo.mapToGlobal(pos))
         drive_path = actions.get(selected_action)
         if drive_path:
             self._safely_remove_external_drive(drive_path)

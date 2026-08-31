@@ -315,15 +315,16 @@ class UtilityControlApp(
     def set_screen_mover_enabled(self, enabled: bool) -> None:
         enabled = bool(enabled)
         self.state["title_bar_dock_enabled"] = enabled
-
-        toggle = getattr(self, "screen_mover_enabled_btn", None)
-        if toggle is not None and toggle.isChecked() != enabled:
-            toggle.blockSignals(True)
-            toggle.setChecked(enabled)
-            toggle.blockSignals(False)
-            toggle.setText(
-                "Screen Mover On" if enabled else "Screen Mover Off"
-            )
+        page = getattr(self, "screen_mover_settings_page", None)
+        if page is not None:
+            page.set_enabled(enabled)
+        else:
+            toggle = getattr(self, "screen_mover_enabled_btn", None)
+            if toggle is not None and toggle.isChecked() != enabled:
+                toggle.blockSignals(True)
+                toggle.setChecked(enabled)
+                toggle.blockSignals(False)
+                toggle.setText("Screen Mover On" if enabled else "Screen Mover Off")
 
         save_state(self.state)
         self.apply_screen_mover_settings()
@@ -332,6 +333,11 @@ class UtilityControlApp(
             refresh_overview()
 
     def reset_screen_mover_settings(self) -> None:
+        page = getattr(self, "screen_mover_settings_page", None)
+        if page is not None:
+            page.reset_settings()
+            return
+
         self.state["title_bar_dock_enabled"] = True
         self.state["screen_mover_activation_button"] = "middle"
         self.state["mmb_activation_enabled"] = True
@@ -341,21 +347,12 @@ class UtilityControlApp(
 
         combo = getattr(self, "screen_move_button_combo", None)
         if combo is not None:
-            combo_index = combo.findData("middle")
             combo.blockSignals(True)
-            combo.setCurrentIndex(combo_index)
+            combo.setCurrentIndex(combo.findData("middle"))
             combo.blockSignals(False)
             combo.setProperty("persistPressed", True)
             combo.style().unpolish(combo)
             combo.style().polish(combo)
-            sync_screen_mover_widths = getattr(
-                self,
-                "_sync_screen_mover_control_widths",
-                None,
-            )
-            if callable(sync_screen_mover_widths):
-                sync_screen_mover_widths()
-
         for edit in getattr(self, "screen_mover_hotkey_edits", {}).values():
             edit.blockSignals(True)
             edit.clear()
@@ -529,7 +526,8 @@ class UtilityControlApp(
             self,
         )
 
-        LeftPanelBuilder(self).build()
+        self.left_panel_builder = LeftPanelBuilder(self)
+        self.left_panel_builder.build()
 
         left_page_map = {
             "user_interface": "user_interface",
@@ -611,6 +609,10 @@ class UtilityControlApp(
 
     def _refresh_screen_mover_shortcut_field_styles(self) -> None:
         """Restore shortcut-field styling after Qt reparents or repolishes it."""
+        page = getattr(self, "screen_mover_settings_page", None)
+        if page is not None:
+            page.refresh_shortcut_styles()
+            return
         for hotkey_edit in self.findChildren(QKeySequenceEdit):
             if hotkey_edit.objectName() != "ScreenMoverShortcutEdit":
                 continue
@@ -822,9 +824,9 @@ class UtilityControlApp(
 
     def _open_folder_utilities(self) -> None:
         self.navigate_to_page("folder_utilities")
-        folder_input = getattr(self, "folder_input", None)
-        if folder_input is not None:
-            folder_input.setFocus(Qt.FocusReason.ShortcutFocusReason)
+        page = getattr(self, "folder_utilities_page", None)
+        if page is not None:
+            page.focus_name_input()
 
     def refresh_overview(self) -> None:
         labels = getattr(self, "overview_status_labels", None)
@@ -960,12 +962,9 @@ class UtilityControlApp(
             ) or 14
             button.setStyleSheet(styles.organizing_button_style(font_size=font_size))
 
-        for button_name in ("dark_mode_btn", "desktop_zen_btn"):
-            refresh_icon = getattr(
-                getattr(self, button_name, None), "_refresh_toggle_icon", None
-            )
-            if callable(refresh_icon):
-                refresh_icon()
+        user_interface_page = getattr(self, "user_interface_page", None)
+        if user_interface_page is not None:
+            user_interface_page.refresh_icons()
 
         for combo in self.findChildren(QComboBox):
             font_size = styles.coerce_font_size(

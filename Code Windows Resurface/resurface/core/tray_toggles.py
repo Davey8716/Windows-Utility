@@ -116,12 +116,10 @@ class TrayIconManager(QObject):
         self.monitor_rules_action.blockSignals(False)
 
     def toggle_zen_mode(self, enabled: bool):
-        zen_button = getattr(self.app, "desktop_zen_btn", None)
-        if zen_button is not None:
-            if zen_button.isChecked() != enabled:
-                zen_button.setChecked(enabled)
-            else:
-                self.sync_zen_mode_action()
+        page = getattr(self.app, "user_interface_page", None)
+        if page is not None:
+            page.set_desktop_zen_enabled(enabled)
+            self.sync_zen_mode_action()
             return
 
         if self.app.actions.desktop_zen_mode_toggle(enabled) is not None:

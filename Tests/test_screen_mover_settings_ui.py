@@ -4,6 +4,7 @@ import time
 
 from resurface.ui import application_window as main
 from resurface.ui import left_panel_gui, styles
+from resurface.ui.pages import folder_utilities_page
 from resurface.ui import navigation_shell
 from resurface.ui.window_chrome import CenteredTitleComboBox
 from resurface.features.screen_mover.hotkeys import ACTION_LABELS
@@ -197,15 +198,16 @@ def test_folder_to_desktop_starts_empty_and_saved_selection_populates_input(monk
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     state["folder_to_desktop_name"] = "Legacy Name"
     monkeypatch.setattr(
-        left_panel_gui,
+        folder_utilities_page,
         "load_saved_folder_names",
         lambda: ["Reports", "Invoices"],
     )
     window = _build_offscreen_window(monkeypatch, state)
 
     try:
-        assert window.folder_input.text() == ""
-        assert window.folder_name_combo.isEditable()
+        page = window.folder_utilities_page
+        assert page._input.text() == ""
+        assert page._names.isEditable()
         folder_button = next(
             button
             for button in window.findChildren(QPushButton)
@@ -213,14 +215,14 @@ def test_folder_to_desktop_starts_empty_and_saved_selection_populates_input(monk
         )
         assert folder_button.property("lightModePlaceholderButton") is True
         assert [
-            window.folder_name_combo.itemText(index)
-            for index in range(window.folder_name_combo.count())
+            page._names.itemText(index)
+            for index in range(page._names.count())
         ] == ["Reports", "Invoices"]
-        window.folder_name_combo.setCurrentIndex(1)
-        assert window.folder_input.text() == "Invoices"
-        assert window.save_folder_name_toggle.isCheckable()
-        assert not window.save_folder_name_toggle.isChecked()
-        assert window.save_folder_name_toggle.width() == 250
+        page._names.setCurrentIndex(1)
+        assert page._input.text() == "Invoices"
+        assert page._save_name.isCheckable()
+        assert not page._save_name.isChecked()
+        assert page._save_name.width() == 250
     finally:
         window._quit_requested = True
         window.close()
@@ -443,8 +445,8 @@ def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkey
         window.show()
         qt_app.processEvents()
 
-        theme_button = window.dark_mode_btn
-        zen_button = window.desktop_zen_btn
+        theme_button = window.user_interface_page._dark_mode_button
+        zen_button = window.user_interface_page._desktop_zen_button
         for button in (theme_button, zen_button):
             assert button.text() == ""
             assert not button.icon().isNull()
@@ -522,7 +524,7 @@ def test_overview_status_and_separate_quick_actions_page(monkeypatch):
         qt_app.processEvents()
         assert window.state["last_opened_page"] == "folder_utilities"
         assert window.page_stack.currentWidget() is window.page_by_id["folder_utilities"]
-        assert window.folder_input.hasFocus()
+        assert window.folder_utilities_page._input.hasFocus()
     finally:
         window._quit_requested = True
         window.close()
@@ -867,7 +869,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             ("E:\\Example Removable Drive With A Long Volume Name",)
         )
         qt_app.processEvents()
-        connected_combo = window.connected_drives_field
+        connected_combo = window.external_drives_page.drive_combo()
         connected_row = connected_combo.parentWidget()
         assert connected_row.width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         assert connected_combo.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
@@ -929,7 +931,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             if button.text() == "Folder To Desktop"
         )
         assert folder_creator.size().width() == folder_desktop.size().width() == 250
-        folder_row = window.folder_name_combo.parentWidget()
+        folder_row = window.folder_utilities_page._names.parentWidget()
         assert folder_creator.mapTo(folder_page, QPoint()).y() == (
             folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
         )
@@ -956,7 +958,7 @@ def test_folder_utilities_places_creator_below_quick_folder_action(monkeypatch):
             for button in folder_page.findChildren(QPushButton)
             if button.text() == "Folder Creator"
         )
-        folder_row = window.folder_name_combo.parentWidget()
+        folder_row = window.folder_utilities_page._names.parentWidget()
         folder_desktop = folder_row.findChild(QPushButton)
 
         assert folder_desktop is not None
@@ -1010,12 +1012,12 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
         assert notification_combo.height() == 34
         assert notification_label.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
         assert leave_reminder_button.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
-        assert window.connected_drives_field.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
+        assert window.external_drives_page.drive_combo().width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
         assert notification_combo.parentWidget().width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         assert leave_reminder_button.parentWidget().width() == (
             styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         )
-        assert window.connected_drives_empty_label.x() < leave_reminder_button.x()
+        assert window.external_drives_page._empty_label.x() < leave_reminder_button.x()
 
         external_viewport = window.page_scroll_areas["external_drives"].viewport()
 
@@ -1068,8 +1070,9 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
             ("E:\\Example Removable Drive With A Long Volume Name",)
         )
         qt_app.processEvents()
-        assert window.connected_drives_field.width() == stable_width
-        assert window.connected_drives_field.parentWidget().width() == (
+        connected_combo = window.external_drives_page.drive_combo()
+        assert connected_combo.width() == stable_width
+        assert connected_combo.parentWidget().width() == (
             styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         )
 
@@ -1077,7 +1080,7 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
             window.apply_theme(is_dark)
             qt_app.processEvents()
             assert notification_combo.width() == stable_width
-            assert window.connected_drives_field.width() == stable_width
+            assert connected_combo.width() == stable_width
             assert leave_reminder_button.width() == stable_width
             assert_centered()
     finally:
@@ -1100,8 +1103,8 @@ def test_loose_labels_use_sidebar_surface_style_across_themes(monkeypatch):
         }
         surfaced = [
             labels["Delete items older than:"],
-            window.backup_path_input,
-            window.connected_drives_empty_label,
+            window.organising_utilities_page._path_label,
+            window.external_drives_page._empty_label,
             labels["Plug/unplug notifications:"],
         ]
         original_sizes = [(label.width(), label.height()) for label in surfaced]
@@ -1281,9 +1284,10 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
 
     window = _build_offscreen_window(monkeypatch, state)
     try:
-        assert window.screen_mover_enabled_btn.isChecked()
-        assert window.screen_move_button_combo.currentData() == "right"
-        assert set(window.screen_mover_hotkey_edits) == {
+        settings_page = window.screen_mover_settings_page
+        assert settings_page._enabled_button.isChecked()
+        assert settings_page._activation_combo.currentData() == "right"
+        assert set(settings_page._hotkey_edits) == {
             "FAR_LEFT",
             "LEFT",
             "RIGHT",
@@ -1292,19 +1296,19 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
             "MAXIMIZE",
         }
         assert (
-            window.screen_mover_hotkey_edits["LEFT"].keySequence().toString()
+            settings_page._hotkey_edits["LEFT"].keySequence().toString()
             == QKeySequence("Ctrl+Left").toString()
         )
-        assert not window.screen_mover_shortcuts_container.isHidden()
+        assert not settings_page.shortcuts_container.isHidden()
 
         window.state["desktop_screenshot_last_dir"] = "unchanged"
         window.reset_screen_mover_settings()
 
         assert window.state["desktop_screenshot_last_dir"] == "unchanged"
-        assert window.screen_move_button_combo.currentData() == "middle"
+        assert settings_page._activation_combo.currentData() == "middle"
         assert all(
             edit.keySequence().isEmpty()
-            for edit in window.screen_mover_hotkey_edits.values()
+            for edit in settings_page._hotkey_edits.values()
         )
     finally:
         window._quit_requested = True
@@ -1324,9 +1328,10 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
         window.show()
         qt_app.processEvents()
 
-        controls_row = window.screen_mover_controls_row
-        shortcuts_header = window.screen_mover_shortcuts_header
-        shortcuts_container = window.screen_mover_shortcuts_container
+        settings_page = window.screen_mover_settings_page
+        controls_row = settings_page.controls_row
+        shortcuts_header = settings_page.shortcuts_header
+        shortcuts_container = settings_page.shortcuts_container
         screen_page = window.page_by_id["screen_mover"]
 
         def assert_blocks_aligned() -> None:
@@ -1345,9 +1350,9 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
 
         assert_blocks_aligned()
         assert controls_row.width() == (
-            window.screen_mover_enabled_btn.width()
+            settings_page._enabled_button.width()
             + 12
-            + window.screen_move_button_combo.width()
+            + settings_page._activation_combo.width()
         )
         assert shortcuts_header.y() >= controls_row.y() + controls_row.height()
         assert shortcuts_container.y() >= (
@@ -1359,7 +1364,7 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
             for label in shortcuts_container.findChildren(QLabel)
             if label.text() in ACTION_LABELS.values()
         ]
-        shortcut_edits = list(window.screen_mover_hotkey_edits.values())
+        shortcut_edits = list(settings_page._hotkey_edits.values())
         clear_buttons = [
             button
             for button in shortcuts_container.findChildren(QPushButton)
@@ -1380,9 +1385,9 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
             for button in clear_buttons
         )
 
-        assert window.screen_mover_reset_btn.size().width() == 250
-        assert window.screen_mover_reset_btn.size().height() == 34
-        reset_left = window.screen_mover_reset_btn.mapTo(
+        assert settings_page.reset_button.size().width() == 250
+        assert settings_page.reset_button.size().height() == 34
+        reset_left = settings_page.reset_button.mapTo(
             shortcuts_container,
             QPoint(),
         ).x()
@@ -1390,8 +1395,8 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
 
         selection_widths = {}
         for button_value in ("off", "left", "middle", "right"):
-            combo_index = window.screen_move_button_combo.findData(button_value)
-            window.screen_move_button_combo.setCurrentIndex(combo_index)
+            combo_index = settings_page._activation_combo.findData(button_value)
+            settings_page._activation_combo.setCurrentIndex(combo_index)
             qt_app.processEvents()
             selection_widths[button_value] = controls_row.width()
             assert_blocks_aligned()
@@ -1399,8 +1404,8 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
         wide_value = max(selection_widths, key=selection_widths.get)
         standard_width = selection_widths[narrow_value]
         assert selection_widths[wide_value] > standard_width
-        window.screen_move_button_combo.setCurrentIndex(
-            window.screen_move_button_combo.findData(wide_value)
+        settings_page._activation_combo.setCurrentIndex(
+            settings_page._activation_combo.findData(wide_value)
         )
         qt_app.processEvents()
         assert controls_row.width() == selection_widths[wide_value]
@@ -1411,17 +1416,17 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
             qt_app.processEvents()
             assert_blocks_aligned()
 
-        narrow_index = window.screen_move_button_combo.findData(narrow_value)
-        window.screen_move_button_combo.setCurrentIndex(narrow_index)
+        narrow_index = settings_page._activation_combo.findData(narrow_value)
+        settings_page._activation_combo.setCurrentIndex(narrow_index)
         qt_app.processEvents()
         assert controls_row.width() == standard_width
         window.reset_screen_mover_settings()
         qt_app.processEvents()
-        assert window.screen_move_button_combo.currentData() == "middle"
+        assert settings_page._activation_combo.currentData() == "middle"
         assert controls_row.width() == (
-            window.screen_mover_enabled_btn.width()
+            settings_page._enabled_button.width()
             + 12
-            + window.screen_move_button_combo.width()
+            + settings_page._activation_combo.width()
         )
         assert_blocks_aligned()
     finally:
@@ -1442,7 +1447,7 @@ def test_screen_mover_shortcut_fields_keep_surface_style_after_restart_and_theme
         expected_background = styles.qcolor_css(styles.themed_surface_field_bg())
         expected_border = styles.qcolor_css(styles.themed_surface_field_border())
 
-        for edit in window.screen_mover_hotkey_edits.values():
+        for edit in window.screen_mover_settings_page._hotkey_edits.values():
             assert edit.objectName() == "ScreenMoverShortcutEdit"
             assert "QKeySequenceEdit#ScreenMoverShortcutEdit" in edit.styleSheet()
             assert (
@@ -1492,9 +1497,10 @@ def test_screen_mover_shortcuts_have_balanced_heading_spacing(monkeypatch):
         window.show()
         qt_app.processEvents()
 
-        controls_row = window.screen_mover_controls_row
-        shortcuts_header = window.screen_mover_shortcuts_header
-        shortcuts_container = window.screen_mover_shortcuts_container
+        settings_page = window.screen_mover_settings_page
+        controls_row = settings_page.controls_row
+        shortcuts_header = settings_page.shortcuts_header
+        shortcuts_container = settings_page.shortcuts_container
         assert shortcuts_header.y() - (
             controls_row.y() + controls_row.height()
         ) == 16

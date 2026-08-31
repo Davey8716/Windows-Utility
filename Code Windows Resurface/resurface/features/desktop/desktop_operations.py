@@ -662,9 +662,18 @@ class DesktopOperationsMixin:
 
         self._run_with_optional_minimize(action)
 
-    def _create_desktop_folder(self, folder_input: QLineEdit):
+    def _create_desktop_folder(
+        self,
+        folder_input: QLineEdit | str,
+        *,
+        save_name: bool | None = None,
+    ):
         path_type = self._get_app_module_attr("Path", Path)
-        folder_name = folder_input.text().strip()
+        folder_name = (
+            folder_input.strip()
+            if isinstance(folder_input, str)
+            else folder_input.text().strip()
+        )
         if not folder_name:
             return
 
@@ -683,16 +692,24 @@ class DesktopOperationsMixin:
                     return
 
                 new_path.mkdir(parents=True, exist_ok=False)
+                page = getattr(self, "folder_utilities_page", None)
                 save_name_toggle = getattr(self, "save_folder_name_toggle", None)
-                if save_name_toggle is not None and save_name_toggle.isChecked():
+                should_save = bool(save_name)
+                if save_name is None and save_name_toggle is not None:
+                    should_save = save_name_toggle.isChecked()
+                saved_names = None
+                if should_save:
                     saved_names = add_saved_folder_name(folder_name)
-                    refresh_saved_names = getattr(
-                        self, "refresh_saved_folder_names", None
-                    )
-                    if callable(refresh_saved_names):
+                if page is not None:
+                    page.folder_created(saved_names)
+                else:
+                    refresh_saved_names = getattr(self, "refresh_saved_folder_names", None)
+                    if saved_names is not None and callable(refresh_saved_names):
                         refresh_saved_names(saved_names)
-                    save_name_toggle.setChecked(False)
-                folder_input.clear()
+                    if save_name_toggle is not None:
+                        save_name_toggle.setChecked(False)
+                    if not isinstance(folder_input, str):
+                        folder_input.clear()
                 self._show_organizing_timed_message(
                     self._message_box_icon("Information"),
                     "Folder to Desktop",

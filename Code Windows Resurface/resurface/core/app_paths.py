@@ -73,15 +73,15 @@ class MasterBackupPathsMixin:
         if not full_path:
             return ""
 
-        display_widget = getattr(self, "backup_path_input", None)
-        if display_widget is None:
+        page = getattr(self, "organising_utilities_page", None)
+        if page is None:
             return full_path
 
-        available_width = max(0, display_widget.width() - 24)
+        available_width = max(0, page.path_display_width() - 24)
         if available_width <= 0:
             return full_path
 
-        metrics = QFontMetrics(display_widget.font())
+        metrics = QFontMetrics(page.path_display_font())
         if metrics.horizontalAdvance(full_path) <= available_width:
             return full_path
 
@@ -92,17 +92,13 @@ class MasterBackupPathsMixin:
         )
 
     def _refresh_master_backup_path_display(self) -> None:
-        display_widget = getattr(self, "backup_path_input", None)
-        if display_widget is None:
+        page = getattr(self, "organising_utilities_page", None)
+        if page is None:
             return
 
         display_text = self._get_master_backup_path_display_text()
-        if display_widget.text() != display_text:
-            display_widget.setText(display_text)
-
         tooltip_text = self._get_master_backup_path_tooltip_text()
-        if display_widget.toolTip() != tooltip_text:
-            display_widget.setToolTip(tooltip_text)
+        page.set_backup_path(display_text, tooltip_text)
         refresh_overview = getattr(self, "refresh_overview", None)
         if refresh_overview is not None:
             refresh_overview()
