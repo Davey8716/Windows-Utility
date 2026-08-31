@@ -55,13 +55,7 @@ Code Folder Creator/folder_creator/features/tree/nested_folder_manager.py also m
 Lower-priority candidates
 -------------------------
 
-- Code Windows Resurface/resurface/features/monitor_rules/monitor_rules.py could become rule_schema.py, win32_windows.py, and watcher.py. It is large, but still reasonably cohesive.
-
-- Code Windows Resurface/resurface/ui/monitor_rules_ui.py can separate the editor dialog from the rules-list page and move import/export into a repository module.
-
 - Code Windows Resurface/resurface/ui/styles.py is 1,024 lines, but mostly cohesive. Eventually split theme tokens, shared helpers, and component styles; it is not urgent.
-
-- Code Windows Resurface/resurface/features/desktop/desktop_icon_layout.py duplicates LVITEMW and desktop-list-view discovery inside its restore function. Consolidate that duplication before deciding whether it needs multiple modules.
 
 
 

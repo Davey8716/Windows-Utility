@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Callable
 
-from .monitor_rules import normalize_monitor_rules
+from .rule_schema import normalize_monitor_rules
 
 
 BACKUP_FORMAT = "windows-resurface-monitor-rules"
