@@ -1,36 +1,6 @@
 Windows Resurface: Module Splitting and Coupling Review
 =======================================================
 
-The app is already moving toward a sensible feature-based structure, but several files are still "modules" only in the filesystem sense—their code remains tightly coupled through the main window.
-
-Highest-priority splits
------------------------
-
-5. Code Windows Resurface/resurface/features/desktop/desktop_operations.py
-
-DesktopOperationsMixin is 867 lines and combines:
-
-- Screenshot capture and temporary window minimization
-- Taskbar backup UI flow
-- Desktop layout UI flow
-- Bookmark export UI flow
-- Recycle Bin confirmation and cleanup
-- Desktop-folder creation
-- Locating, launching, and focusing Folder Creator
-
-The most obvious reversed dependency is at line 466: a feature mixin calls the private UI method right_tools_panel._run_brave_export().
-
-Recommended split:
-
-    features/desktop/screenshot_service.py
-    features/folder_creator/launcher.py
-    ui/controllers/organising_actions.py
-    ui/controllers/recycle_bin_actions.py
-    ui/controllers/folder_actions.py
-
-The controllers can show dialogs and notifications; the services should accept plain paths/options and return results.
-
-
 Main-window coupling
 --------------------
 

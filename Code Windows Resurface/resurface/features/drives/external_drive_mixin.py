@@ -81,7 +81,8 @@ class ExternalDriveMixin:
         if not drive_path:
             return
 
-        minimize_and_run = getattr(self, "_run_with_optional_minimize", None)
+        controller = getattr(self, "organising_actions", None)
+        minimize_and_run = getattr(controller, "run_with_optional_minimize", None)
         if callable(minimize_and_run):
             minimize_and_run(lambda: os.startfile(drive_path))
             return

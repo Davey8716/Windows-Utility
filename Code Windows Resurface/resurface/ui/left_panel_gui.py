@@ -43,7 +43,9 @@ class LeftPanelBuilder:
         )
         app.external_drives_page.settings_changed.connect(self._update_state)
         app.external_drives_page.drive_open_requested.connect(
-            lambda path: app._run_with_optional_minimize(lambda: os.startfile(path))
+            lambda path: app.organising_actions.run_with_optional_minimize(
+                lambda: os.startfile(path)
+            )
         )
         app.external_drives_page.context_menu_requested.connect(
             app._show_connected_drives_context_menu
@@ -56,9 +58,13 @@ class LeftPanelBuilder:
         self._wire_organising_page(app.organising_utilities_page)
         app.folder_utilities_page = FolderUtilitiesPage(app.register_tooltip, app)
         app.folder_utilities_page.create_folder_requested.connect(
-            lambda name, save_name: app._create_desktop_folder(name, save_name=save_name)
+            lambda name, save_name: app.folder_actions.create_desktop_folder(
+                name, save_name=save_name
+            )
         )
-        app.folder_utilities_page.folder_creator_requested.connect(app.open_folder_creator)
+        app.folder_utilities_page.folder_creator_requested.connect(
+            app.folder_actions.open_folder_creator
+        )
         app.recycle_bin_page = RecycleBinPage(self.state, app.register_tooltip, app)
         self._wire_recycle_bin_page(app.recycle_bin_page)
 
@@ -120,7 +126,7 @@ class LeftPanelBuilder:
         if self.app.actions.desktop_zen_mode_toggle(enabled) is not None:
             save_state(self.state)
             if enabled and getattr(self.app, "tray_manager", None):
-                self.app._minimize_self_if_configured()
+                self.app.organising_actions.minimize_self_if_configured()
             return
         self.state["desktop_zen_mode_enabled"] = not enabled
         self.app.user_interface_page.revert_desktop_zen(not enabled)
@@ -140,12 +146,12 @@ class LeftPanelBuilder:
 
     def _wire_organising_page(self, page: OrganisingUtilitiesPage) -> None:
         actions = {
-            "desktop_screenshot": self.app.take_desktop_screenshot,
-            "capture_layout": self.app.capture_desktop_layout,
-            "restore_layout": self.app.restore_desktop_layout,
-            "export_bookmarks": self.app.export_bookmarks,
-            "backup_taskbar": self.app.backup_taskbar_apps,
-            "open_backup_folder": self.app.open_taskbar_backup_folder,
+            "desktop_screenshot": self.app.organising_actions.take_desktop_screenshot,
+            "capture_layout": self.app.organising_actions.capture_desktop_layout,
+            "restore_layout": self.app.organising_actions.restore_desktop_layout,
+            "export_bookmarks": self.app.organising_actions.export_bookmarks,
+            "backup_taskbar": self.app.organising_actions.backup_taskbar_apps,
+            "open_backup_folder": self.app.organising_actions.open_taskbar_backup_folder,
         }
         page.action_requested.connect(lambda name: actions[name]())
         page.master_backup_path_requested.connect(self.app._choose_master_backup_dir)
@@ -158,7 +164,11 @@ class LeftPanelBuilder:
         self.app._refresh_master_backup_path_display()
 
     def _wire_recycle_bin_page(self, page: RecycleBinPage) -> None:
-        actions = {"open": self.app.open_recycle_bin, "run": self.app.run_recycle_bin_cleanup_now, "empty": self.app.empty_recycle_bin}
+        actions = {
+            "open": self.app.recycle_bin_actions.open_recycle_bin,
+            "run": self.app.recycle_bin_actions.run_cleanup_now,
+            "empty": self.app.recycle_bin_actions.empty_recycle_bin,
+        }
         page.action_requested.connect(lambda name: actions[name]())
         page.settings_changed.connect(self._recycle_settings_changed)
 

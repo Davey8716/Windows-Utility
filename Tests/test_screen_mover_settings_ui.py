@@ -179,11 +179,7 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
         "_register_session_notifications",
         lambda _self: None,
     )
-    monkeypatch.setattr(
-        main.UtilityControlApp,
-        "run_recycle_bin_auto_cleanup",
-        lambda _self: None,
-    )
+    monkeypatch.setattr(main.RecycleBinActionsController, "run_auto_cleanup", lambda _self: None)
     if window_height is not None:
         monkeypatch.setattr(
             main.UtilityControlApp,

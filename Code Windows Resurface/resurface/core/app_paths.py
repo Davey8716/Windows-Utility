@@ -38,7 +38,8 @@ class MasterBackupPathsMixin:
             def action():
                 self._set_master_backup_dir(selected_dir)
 
-            minimize_runner = getattr(self, "_run_with_optional_minimize", None)
+            controller = getattr(self, "organising_actions", None)
+            minimize_runner = getattr(controller, "run_with_optional_minimize", None)
             if callable(minimize_runner):
                 minimize_runner(action)
             else:
@@ -136,7 +137,5 @@ class MasterBackupPathsMixin:
         )
 
     def _refresh_taskbar_backup_folder_button(self):
-        is_open = self.actions.is_backup_folder_open(
-            self.get_default_taskbar_backup_dir()
-        )
+        is_open = self.explorer_windows.is_folder_open(self.get_default_taskbar_backup_dir())
         self._taskbar_backup_folder_open = is_open

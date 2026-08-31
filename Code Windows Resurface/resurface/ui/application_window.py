@@ -11,8 +11,10 @@ from resurface.core.app_paths import MasterBackupPathsMixin
 from resurface.core.instance_runtime import WM_APP_RESTORE_INSTANCE
 from resurface.core.state_manager import load_state, save_state
 from resurface.core.tray_toggles import TrayIconManager, resolve_application_icon
-from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
+from resurface.features.desktop.folder_service import DesktopFolderService
+from resurface.features.desktop.screenshot_service import ScreenshotService
 from resurface.features.desktop.zen_mode import ZenModeService
+from resurface.features.folder_creator.launcher import FolderCreatorLauncher
 from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
 from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
@@ -30,6 +32,11 @@ from resurface.features.system.command_runner import CommandRunner
 from resurface.features.system.maintenance_actions import MaintenanceActions
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui.app_notifications import WindowMessageMixin
+from resurface.ui.controllers import (
+    FolderActionsController,
+    OrganisingActionsController,
+    RecycleBinActionsController,
+)
 from resurface.ui.left_panel_gui import LeftPanelBuilder
 from resurface.ui.pages.drive_space_page import DriveSpacePage
 from resurface.ui.pages.maintenance_page import MaintenancePage
@@ -83,7 +90,6 @@ class UtilityControlApp(
     MasterBackupPathsMixin,
     WindowMessageMixin,
     ExternalDriveMixin,
-    DesktopOperationsMixin,
     QMainWindow,
 ):
     APP_VERSION = "0.1.0"
@@ -125,8 +131,28 @@ class UtilityControlApp(
         self.explorer_windows = ExplorerWindowService(self.window_management)
         self.recycle_bin_service = RecycleBinService(self.window_management)
         self.taskbar_backup_service = TaskbarBackupService()
+        self.screenshot_service = ScreenshotService()
+        self.desktop_folder_service = DesktopFolderService()
+        self.folder_creator_launcher = FolderCreatorLauncher()
         self.zen_mode_service = ZenModeService()
         self.router_service = RouterService()
+        self.organising_actions = OrganisingActionsController(
+            self,
+            self.screenshot_service,
+            self.taskbar_backup_service,
+            self.explorer_windows,
+        )
+        self.recycle_bin_actions = RecycleBinActionsController(
+            self,
+            self.recycle_bin_service,
+            self.organising_actions.run_with_optional_minimize,
+        )
+        self.folder_actions = FolderActionsController(
+            self,
+            self.desktop_folder_service,
+            self.folder_creator_launcher,
+            self.organising_actions,
+        )
         self.actions = UtilityActionsManager(
             self,
             windows=self.window_management,
@@ -170,7 +196,7 @@ class UtilityControlApp(
         self._set_main_window_topmost_state(True)
         self._apply_fixed_window_style()
         self._register_session_notifications()
-        QTimer.singleShot(0, self.run_recycle_bin_auto_cleanup)
+        QTimer.singleShot(0, self.recycle_bin_actions.run_auto_cleanup)
 
     def _apply_fixed_window_style(self):
         hwnd = int(self.winId())
@@ -526,7 +552,7 @@ class UtilityControlApp(
             self.maintenance_actions,
             self.command_runner,
             self.register_tooltip,
-            self._run_with_optional_minimize,
+            self.organising_actions.run_with_optional_minimize,
             self._show_modal_message,
             self,
         )
@@ -537,7 +563,7 @@ class UtilityControlApp(
             self.window_management,
             self.maintenance_actions,
             self.register_tooltip,
-            self._run_with_optional_minimize,
+            self.organising_actions.run_with_optional_minimize,
             self.maintenance_page.set_output_context,
             self,
         )
@@ -546,7 +572,7 @@ class UtilityControlApp(
             self.window_management,
             self.register_tooltip,
             self._show_timed_message,
-            self._run_with_optional_minimize,
+            self.organising_actions.run_with_optional_minimize,
             self,
         )
 
@@ -772,10 +798,10 @@ class UtilityControlApp(
         quick_layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
         quick_layout.setVerticalSpacing(12)
         actions = (
-            ("Desktop Screenshot", self.take_desktop_screenshot),
-            ("Export Bookmarks", self.export_bookmarks),
+            ("Desktop Screenshot", self.organising_actions.take_desktop_screenshot),
+            ("Export Bookmarks", self.organising_actions.export_bookmarks),
             ("Create Desktop Folder", self._open_folder_utilities),
-            ("Open Recycle Bin", self.open_recycle_bin),
+            ("Open Recycle Bin", self.recycle_bin_actions.open_recycle_bin),
         )
         for index, (text, callback) in enumerate(actions):
             button = QPushButton(text)
