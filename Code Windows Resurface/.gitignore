@@ -20,6 +20,7 @@ Microsoft utility suite working + Isnt.md
 *.md
 *.json
 state_manager.py
+!resurface/core/state_manager.py
 screen_mover_state.json
 /.VSCodeCounter/2026-02-07_20-14-08
 .VSCodeCounter/2026-02-07_20-14-08/results.csv

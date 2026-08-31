@@ -108,6 +108,27 @@ Code Folder Creator/folder_creator/ui/nested_ui_controller.py should then split 
 Code Folder Creator/folder_creator/features/tree/nested_folder_manager.py also mixes tree-widget manipulation, text parsing, serialization, filesystem creation, sorting, and importing. Extract the pure outline parser and filesystem builder; leave widget-specific operations in a tree controller.
 
 
+Cross-app shared state
+----------------------
+
+Keeping Shared beside the application directories is reasonable: Windows Resurface and Folder Creator both import Shared/app_state_defaults.py and Shared/shared_state_manager.py, and neither application should own that reusable implementation.
+
+The two applications intentionally resolve their configuration to the same file:
+
+    %LOCALAPPDATA%/Windows Resurface/app_state.json
+
+SHARED_APP_STATE_DEFAULTS allows their respective keys to coexist in that file. However, sharing the file introduces a lost-update risk when both applications are open. JsonStateManager's _PATH_LOCKS protects threads within one Python process only; it does not coordinate the separate Resurface and Folder Creator processes. The temporary-file plus os.replace write prevents partial or corrupted JSON, but it does not prevent one process from saving stale values over changes recently made by the other. Each application currently loads the combined dictionary and can later write that full snapshot back.
+
+Recommended approach:
+
+- Define which state keys are owned by each application.
+- Reload the latest on-disk state and patch only the keys owned or changed by the saving application.
+- Hold a Windows-compatible cross-process file lock across the complete read/merge/write operation.
+- Alternatively, give each application its own state file and keep a third shared file only for settings that genuinely need to be common.
+
+The external Shared source directory and the persistence strategy are separate concerns: the former is a sound code-ownership decision, while the latter still needs explicit concurrency and key-ownership rules.
+
+
 Lower-priority candidates
 -------------------------
 

@@ -10,6 +10,8 @@ FOLDER_CREATOR_DEFAULTS = {
     "close_after_build": False,
 }
 
+FOLDER_CREATOR_STATE_KEYS = frozenset(FOLDER_CREATOR_DEFAULTS)
+
 WINDOWS_RESURFACE_DEFAULTS = {
     "last_opened_page": "overview",
     "theme_dark": True,
@@ -39,6 +41,21 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "master_backup_output_path": str(Path.home()),
     "desktop_screenshot_last_dir": str(Path.home()),
 }
+
+# These keys are persisted by Windows Resurface but are intentionally not all
+# defaults. Some are optional output paths and some are compatibility aliases
+# retained while older state files are migrated.
+WINDOWS_RESURFACE_STATE_KEYS = frozenset(
+    {
+        *WINDOWS_RESURFACE_DEFAULTS,
+        "backup_folder_path",
+        "backup_output_path",
+        "desktop_layout_last_path",
+        "desktop_screenshot_last_path",
+        "desktop_zen_mode_enabled",
+        "minimize_all_enabled",
+    }
+)
 
 SHARED_APP_STATE_DEFAULTS = {
     **WINDOWS_RESURFACE_DEFAULTS,

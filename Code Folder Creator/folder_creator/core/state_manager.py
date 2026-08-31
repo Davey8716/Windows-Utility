@@ -9,6 +9,7 @@ if project_root_str not in sys.path:
 
 from Shared.app_state_defaults import (
     FOLDER_CREATOR_DEFAULTS,
+    FOLDER_CREATOR_STATE_KEYS,
     SHARED_APP_STATE_DEFAULTS,
 )
 from Shared.shared_state_manager import JsonStateManager
@@ -49,6 +50,7 @@ class StateManager(JsonStateManager):
             defaults=SHARED_APP_STATE_DEFAULTS,
             persist_defaults_on_missing=True,
             preserve_unknown_keys=True,
+            owned_keys=FOLDER_CREATOR_STATE_KEYS,
             config_path_resolver=get_config_path,
             legacy_config_path_resolver=get_legacy_config_path,
         )

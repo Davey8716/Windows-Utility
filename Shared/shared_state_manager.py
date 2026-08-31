@@ -3,8 +3,15 @@ import json
 import os
 import tempfile
 import threading
+import time
 from contextlib import ExitStack, contextmanager
+from collections.abc import Iterable
 from pathlib import Path
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
 
 
 _PATH_LOCKS: dict[str, threading.RLock] = {}
@@ -49,6 +56,44 @@ def _locked_paths(*paths: Path | None):
         yield
 
 
+def _try_lock_file(file_obj) -> None:
+    file_obj.seek(0)
+    if os.name == "nt":
+        msvcrt.locking(file_obj.fileno(), msvcrt.LK_NBLCK, 1)
+    else:
+        fcntl.flock(file_obj.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def _unlock_file(file_obj) -> None:
+    file_obj.seek(0)
+    if os.name == "nt":
+        msvcrt.locking(file_obj.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        fcntl.flock(file_obj.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def _interprocess_file_lock(lock_path: Path, timeout_seconds: float):
+    """Lock a stable sidecar file that is not replaced with the state file."""
+    deadline = time.monotonic() + timeout_seconds
+    with open(lock_path, "a+b") as file_obj:
+        while True:
+            try:
+                _try_lock_file(file_obj)
+                break
+            except (OSError, BlockingIOError):
+                if time.monotonic() >= deadline:
+                    raise TimeoutError(
+                        f"Timed out waiting for state lock {lock_path}"
+                    )
+                time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+
+        try:
+            yield
+        finally:
+            _unlock_file(file_obj)
+
+
 class JsonStateManager:
     def __init__(
         self,
@@ -61,6 +106,8 @@ class JsonStateManager:
         legacy_value_transforms: dict | None = None,
         persist_defaults_on_missing: bool = False,
         preserve_unknown_keys: bool = False,
+        owned_keys: Iterable[str] | None = None,
+        lock_timeout_seconds: float = 5.0,
         config_path_resolver=None,
         legacy_config_path_resolver=None,
     ):
@@ -72,6 +119,8 @@ class JsonStateManager:
         self.legacy_value_transforms = dict(legacy_value_transforms or {})
         self.persist_defaults_on_missing = persist_defaults_on_missing
         self.preserve_unknown_keys = preserve_unknown_keys
+        self.owned_keys = frozenset(owned_keys) if owned_keys is not None else None
+        self.lock_timeout_seconds = max(0.0, float(lock_timeout_seconds))
         self._config_path_resolver = config_path_resolver
         self._legacy_config_path_resolver = legacy_config_path_resolver
 
@@ -169,29 +218,50 @@ class JsonStateManager:
 
     def save_state(self, state_dict: dict):
         config_path = self.get_config_path()
+        lock_path = config_path.with_name(f"{config_path.name}.lock")
+        config_path.parent.mkdir(parents=True, exist_ok=True)
         with _locked_paths(config_path):
-            existing_data = self._read_json_file(config_path) or {}
-            payload = self._build_persisted_state({**existing_data, **state_dict})
-            payload = self._merge_unknown_keys(payload, existing_data, state_dict)
-            config_path.parent.mkdir(parents=True, exist_ok=True)
-
             temp_path: Path | None = None
             try:
-                with tempfile.NamedTemporaryFile(
-                    "w",
-                    encoding="utf-8",
-                    delete=False,
-                    dir=config_path.parent,
-                    prefix=f"{config_path.stem}-",
-                    suffix=".tmp",
-                ) as file_obj:
-                    temp_path = Path(file_obj.name)
-                    json.dump(payload, file_obj, indent=4)
-                    file_obj.flush()
-                    os.fsync(file_obj.fileno())
+                with _interprocess_file_lock(lock_path, self.lock_timeout_seconds):
+                    existing_data = self._read_json_file(config_path) or {}
+                    if self.owned_keys is None:
+                        state_patch = dict(state_dict)
+                    else:
+                        state_patch = {
+                            key: value
+                            for key, value in state_dict.items()
+                            if key in self.owned_keys
+                        }
 
-                os.replace(temp_path, config_path)
-                temp_path = None
+                    payload = self._build_persisted_state(
+                        {**existing_data, **state_patch}
+                    )
+                    payload = self._merge_unknown_keys(
+                        payload,
+                        existing_data,
+                        state_patch,
+                    )
+                    if self.owned_keys is not None:
+                        for key, value in state_patch.items():
+                            if key not in self.default_state:
+                                payload[key] = value
+
+                    with tempfile.NamedTemporaryFile(
+                        "w",
+                        encoding="utf-8",
+                        delete=False,
+                        dir=config_path.parent,
+                        prefix=f"{config_path.stem}-",
+                        suffix=".tmp",
+                    ) as file_obj:
+                        temp_path = Path(file_obj.name)
+                        json.dump(payload, file_obj, indent=4)
+                        file_obj.flush()
+                        os.fsync(file_obj.fileno())
+
+                    os.replace(temp_path, config_path)
+                    temp_path = None
             except Exception as exc:
                 print(f"[STATE] Failed to write {config_path}: {exc}")
             finally:
@@ -236,6 +306,8 @@ class JsonStateManager:
                 return self._copy_defaults()
 
     def update(self, key, value):
+        if self.owned_keys is not None and key not in self.owned_keys:
+            raise ValueError(f"State key is not owned by this application: {key}")
         state = self.load_state()
         state[key] = value
         self.save_state(state)
