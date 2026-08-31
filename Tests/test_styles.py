@@ -5,6 +5,7 @@ import pytest
 from PySide6.QtGui import QColor
 
 from resurface.ui import styles
+from resurface.ui import control_styles, shell_styles, style_helpers, style_tokens
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -132,6 +133,27 @@ def test_light_mode_placeholder_button_overrides_only_its_disabled_text_color():
     assert f"color: {styles.qcolor_css(styles.themed_button_disabled_text())};" in light_style
 
     styles.set_theme(True)
+
+
+def test_styles_facade_delegates_to_focused_modules():
+    assert styles.set_theme is style_tokens.set_theme
+    assert styles.coerce_font_size is style_helpers.coerce_font_size
+    assert styles.window_style is shell_styles.window_style
+    assert styles.organizing_button_style is control_styles.organizing_button_style
+
+
+def test_styles_facade_exposes_live_theme_tokens_after_theme_changes():
+    styles.set_theme(False)
+
+    assert styles.THEME_IS_DARK is False
+    assert styles.WINDOW_BG is style_tokens.WINDOW_BG
+    assert "background-color: #dde3ea;" in styles.window_style()
+
+    styles.set_theme(True)
+
+    assert styles.THEME_IS_DARK is True
+    assert styles.WINDOW_BG is style_tokens.WINDOW_BG
+    assert "background-color: #171b24;" in styles.window_style()
     dark_style = styles.organizing_button_style(14)
     assert 'QPushButton[lightModePlaceholderButton="true"]:disabled' not in dark_style
 

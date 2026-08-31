@@ -34,11 +34,6 @@ Code Folder Creator/folder_creator/ui/nested_ui_controller.py should then split 
 
 Code Folder Creator/folder_creator/features/tree/nested_folder_manager.py also mixes tree-widget manipulation, text parsing, serialization, filesystem creation, sorting, and importing. Extract the pure outline parser and filesystem builder; leave widget-specific operations in a tree controller.
 
-Lower-priority candidates
--------------------------
-
-- Code Windows Resurface/resurface/ui/styles.py is 1,024 lines, but mostly cohesive. Eventually split theme tokens, shared helpers, and component styles; it is not urgent.
-
 Recommended order
 -----------------
 
