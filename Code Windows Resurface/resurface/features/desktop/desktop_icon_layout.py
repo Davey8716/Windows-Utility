@@ -15,6 +15,7 @@ LVM_FIRST = 0x1000
 LVM_GETITEMCOUNT = LVM_FIRST + 4
 LVM_GETITEMTEXTW = LVM_FIRST + 115
 LVM_GETITEMPOSITION = LVM_FIRST + 16
+LVM_SETITEMPOSITION32 = LVM_FIRST + 49
 
 LVIF_TEXT = 0x0001
 
@@ -217,55 +218,13 @@ def restore_desktop_icon_layout(json_path: str) -> int:
     - LVM_SETITEMPOSITION32 (write positions via remote POINT*)
     Returns number of icons restored.
     """
-    
-    kernel32 = ctypes.windll.kernel32
-
-    LVM_FIRST = 0x1000
-    LVM_GETITEMCOUNT = LVM_FIRST + 4
-    LVM_GETITEMTEXTW = LVM_FIRST + 115
-    LVM_SETITEMPOSITION32 = LVM_FIRST + 49
-    LVIF_TEXT = 0x0001
-
-    class LVITEMW(ctypes.Structure):
-        _fields_ = [
-            ("mask", wintypes.UINT),
-            ("iItem", ctypes.c_int),
-            ("iSubItem", ctypes.c_int),
-            ("state", wintypes.UINT),
-            ("stateMask", wintypes.UINT),
-            ("pszText", wintypes.LPWSTR),
-            ("cchTextMax", ctypes.c_int),
-            ("iImage", ctypes.c_int),
-            ("lParam", wintypes.LPARAM),
-        ]
-
-    def find_desktop_listview():
-        progman = win32gui.FindWindow("Progman", None)
-        if progman:
-            shell = win32gui.FindWindowEx(progman, 0, "SHELLDLL_DefView", None)
-            if shell:
-                lv = win32gui.FindWindowEx(shell, 0, "SysListView32", "FolderView")
-                if lv:
-                    return lv
-
-        def enum_cb(hwnd, out):
-            if win32gui.GetClassName(hwnd) == "WorkerW":
-                shell = win32gui.FindWindowEx(hwnd, 0, "SHELLDLL_DefView", None)
-                if shell:
-                    lv = win32gui.FindWindowEx(shell, 0, "SysListView32", "FolderView")
-                    if lv:
-                        out.append(lv)
-
-        found = []
-        win32gui.EnumWindows(enum_cb, found)
-        return found[0] if found else None
 
     with open(json_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     layout = {item["name"]: (int(item["x"]), int(item["y"])) for item in data.get("layout", [])}
 
-    lv_hwnd = find_desktop_listview()
+    lv_hwnd = _find_desktop_listview_hwnd()
     if not lv_hwnd:
         raise RuntimeError("Desktop ListView not found")
 
