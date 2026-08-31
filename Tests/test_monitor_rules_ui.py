@@ -381,7 +381,11 @@ def test_alphabet_button_sorts_rules_in_both_directions(monkeypatch):
 def test_monitor_rules_export_and_import_use_master_backup_path(monkeypatch, tmp_path):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
-    monkeypatch.setattr(monitor_rules_ui.QMessageBox, "information", lambda *_args: None)
+    monkeypatch.setattr(
+        monitor_rules_ui.QMessageBox,
+        "exec",
+        lambda _message_box: monitor_rules_ui.QMessageBox.StandardButton.Ok,
+    )
     commits = []
     page = monitor_rules_ui.MonitorRulesPage(
         None,
@@ -419,6 +423,44 @@ def test_monitor_rules_export_and_import_use_master_backup_path(monkeypatch, tmp
         assert commits[-1][0]["id"] == "new"
         assert commits[-1][0]["name"] == "Imported Rule"
     finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    captured = []
+
+    def accept_and_capture(dialog):
+        captured.append(dialog)
+        return monitor_rules_ui.QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(monitor_rules_ui.QMessageBox, "exec", accept_and_capture)
+    try:
+        for is_dark in (True, False):
+            monitor_rules_ui.styles.set_theme(is_dark)
+            exported_path = page._export_rules()
+            dialog = captured[-1]
+            assert dialog.parent() is page
+            assert dialog.windowTitle() == "Monitor Rules Exported"
+            assert dialog.text() == f"Monitor rules were exported to:\n{exported_path}"
+            assert dialog.icon() == monitor_rules_ui.QMessageBox.Icon.Information
+            assert (
+                dialog.standardButtons()
+                == monitor_rules_ui.QMessageBox.StandardButton.Ok
+            )
+            assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+            assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style()
+    finally:
+        monitor_rules_ui.styles.set_theme(True)
         page.deleteLater()
         app.processEvents()
 
