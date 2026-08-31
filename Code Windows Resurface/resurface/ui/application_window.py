@@ -15,7 +15,8 @@ from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
 from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
 from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager, VALID_ACTIONS, active_hotkeys
-from resurface.features.screen_mover.screen_mover import ScreenMover, perform_window_action
+from resurface.features.screen_mover.service import ScreenMover
+from resurface.features.screen_mover.window_actions import perform_window_action
 from resurface.features.monitor_rules import MonitorRuleWatcher, normalize_monitor_rules
 from resurface.features.system.utility_toggles import UtilityActionsManager
 from resurface.features.system.command_runner import CommandRunner

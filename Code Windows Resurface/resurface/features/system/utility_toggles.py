@@ -20,7 +20,7 @@ from resurface.features.desktop.desktop_icon_layout import (
     save_desktop_icon_layout,
     set_desktop_icons_visible,
 )
-from resurface.features.screen_mover.screen_mover import SCREEN_MOVER
+from resurface.features.screen_mover.service import SCREEN_MOVER
 
 
 class UtilityActionsManager:
