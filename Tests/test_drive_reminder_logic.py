@@ -1,4 +1,7 @@
-from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
+from resurface.features.drives.drive_reminder_logic import (
+    DriveChanges,
+    DriveReminderPolicy,
+)
 
 
 def test_signature_normalizes_duplicate_unsorted_drives():
@@ -25,30 +28,33 @@ def test_should_remind_requires_enabled_policy_and_connected_drive():
     assert not DriveReminderPolicy.should_remind(True, [])
 
 
-def test_observe_reports_added_and_removed_drives_and_advances_state():
-    policy = DriveReminderPolicy(["E:\\", "F:\\"])
-
-    changes = policy.observe(["F:\\", "G:\\"])
-
-    assert changes.current == ("F:\\", "G:\\")
-    assert changes.added == ("G:\\",)
-    assert changes.removed == ("E:\\",)
-    assert policy.observe(["F:\\", "G:\\"]).added == ()
-
-
-def test_observe_tracks_state_without_reporting_disabled_notifications():
-    policy = DriveReminderPolicy(["E:\\"])
-
-    changes = policy.observe(["F:\\"], notifications_enabled=False)
+def test_notification_changes_hides_disabled_notifications():
+    changes = DriveReminderPolicy.notification_changes(
+        DriveChanges(
+            current=("F:\\",),
+            added=("F:\\",),
+            removed=("E:\\",),
+        ),
+        notifications_enabled=False,
+    )
 
     assert changes.added == ()
     assert changes.removed == ()
-    assert policy.observe(["F:\\"]).removed == ()
 
 
-def test_observe_suppresses_expected_removal_from_confirmation_dialog():
-    policy = DriveReminderPolicy(["E:\\"])
-
-    changes = policy.observe([], suppressed_removals=["E:\\"])
+def test_notification_changes_suppresses_expected_removal_from_confirmation_dialog():
+    changes = DriveReminderPolicy.notification_changes(
+        DriveChanges(current=(), removed=("E:\\",)),
+        suppressed_removals=["E:\\"],
+    )
 
     assert changes.removed == ()
+
+
+def test_notification_changes_keeps_partial_unexpected_removal():
+    changes = DriveReminderPolicy.notification_changes(
+        DriveChanges(current=(), removed=("E:\\", "F:\\")),
+        suppressed_removals=["E:\\"],
+    )
+
+    assert changes.removed == ("E:\\", "F:\\")

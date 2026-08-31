@@ -1,6 +1,5 @@
 """Construction and page-specific signal wiring for the main application UI."""
 
-import os
 from dataclasses import dataclass
 
 from PySide6.QtCore import Qt, QTimer
@@ -202,12 +201,6 @@ class ApplicationPageComposer:
             self.state, app.register_tooltip, shell.content_parent("external_drives")
         )
         external_drives_page.settings_changed.connect(self._update_state)
-        external_drives_page.drive_open_requested.connect(
-            lambda path: app.organising_actions.run_with_optional_minimize(
-                lambda: os.startfile(path)
-            )
-        )
-        external_drives_page.context_menu_requested.connect(app._show_connected_drives_context_menu)
         shell.mount_content("external_drives", external_drives_page)
         shell.add_subheading("external_drives", "Storage")
         drive_space_page = DriveSpacePage(
@@ -287,7 +280,6 @@ class ApplicationPageComposer:
             hover_window_controls_page=hover_page,
         )
         self._publish_compatibility_aliases(pages)
-        app._refresh_connected_drive_status_label()
         app._refresh_taskbar_backup_folder_button()
         app._refresh_master_backup_path_display()
         overview_page.refresh(self.state, getattr(app, "_overview_connected_drives", set()))
@@ -317,7 +309,12 @@ class ApplicationPageComposer:
             "Restart": app.maintenance_actions.run_restart,
             "Shutdown": app.maintenance_actions.run_shutdown,
         }
-        page.power_action_requested.connect(lambda name: app._confirm_power_action(name, actions[name]))
+        page.power_action_requested.connect(
+            lambda name: app.external_drive_controller.confirm_power_action(
+                name,
+                actions[name],
+            )
+        )
 
     def _theme_changed(self, enabled: bool) -> None:
         self.state["theme_dark"] = enabled

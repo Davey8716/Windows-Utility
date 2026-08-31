@@ -14,9 +14,10 @@ from resurface.features.desktop.folder_service import DesktopFolderService
 from resurface.features.desktop.screenshot_service import ScreenshotService
 from resurface.features.desktop.zen_mode import ZenModeService
 from resurface.features.folder_creator.launcher import FolderCreatorLauncher
+from resurface.features.drives.drive_monitor import DriveMonitor
 from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
-from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
+from resurface.features.drives.windows_session_adapter import WindowsSessionEventAdapter
 from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager
 from resurface.features.screen_mover.service import ScreenMover
 from resurface.features.monitor_rules import MonitorRuleWatcher
@@ -32,6 +33,7 @@ from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.application_pages import ApplicationPageComposer
 from resurface.ui.controllers import (
     ApplicationThemeController,
+    ExternalDriveController,
     FolderActionsController,
     MonitorRulesController,
     OrganisingActionsController,
@@ -44,13 +46,6 @@ from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.window_chrome import WindowChrome
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
-
-WM_QUERYENDSESSION = 0x0011
-ENDSESSION_LOGOFF = 0x80000000
-WM_WTSSESSION_CHANGE = 0x02B1
-WTS_SESSION_LOCK = 0x7
-NOTIFY_FOR_THIS_SESSION = 0
-
 
 class ScreenMoverActionBridge(QObject):
     action_requested = Signal(str)
@@ -66,7 +61,6 @@ class ScreenMoverActionBridge(QObject):
 class UtilityControlApp(
     MasterBackupPathsMixin,
     WindowMessageMixin,
-    ExternalDriveMixin,
     QMainWindow,
 ):
     APP_VERSION = "0.1.0"
@@ -99,8 +93,7 @@ class UtilityControlApp(
         self._tooltip_managers = []
         self._active_message_boxes = []
         self._grouped_timed_message_boxes = {}
-        self._session_notification_registered = False
-        self._pending_end_session_warning = False
+        self._overview_connected_drives = set()
         self._taskbar_backup_folder_open = False
         self._quit_requested = False
         self._shutdown_complete = False
@@ -141,6 +134,7 @@ class UtilityControlApp(
         )
         self.drive_service = DriveService()
         self.drive_reminder_policy = DriveReminderPolicy()
+        self.drive_monitor = DriveMonitor(self.drive_service, parent=self)
         self.command_runner = CommandRunner(self)
         self.maintenance_actions = MaintenanceActions(
             self.command_runner,
@@ -154,6 +148,24 @@ class UtilityControlApp(
         self.monitor_rule_watcher = MonitorRuleWatcher(name="WindowsResurfaceMonitorRules")
         self.hotkey_manager = GlobalHotkeyManager(self.screen_mover.request_action)
         self.window_chrome = WindowChrome(self)
+        self.external_drive_controller = ExternalDriveController(
+            window=self,
+            state=self.state,
+            drive_service=self.drive_service,
+            monitor=self.drive_monitor,
+            policy=self.drive_reminder_policy,
+            page=lambda: getattr(self, "external_drives_page", None),
+            drive_space_page=lambda: getattr(self, "drive_space_page", None),
+            refresh_overview=self.refresh_overview,
+            run_with_optional_minimize=(
+                self.organising_actions.run_with_optional_minimize
+            ),
+        )
+        self.session_event_adapter = WindowsSessionEventAdapter(
+            window_handle=lambda: int(self.winId()),
+            on_session_lock=self.external_drive_controller.handle_session_lock,
+            on_end_session=self.external_drive_controller.block_end_session,
+        )
 
         self._build_ui()
         self.theme_controller = ApplicationThemeController(
@@ -161,7 +173,9 @@ class UtilityControlApp(
             window_chrome=self.window_chrome,
             navigation_shell=self.navigation_shell,
             refresh_master_backup_path=self._refresh_master_backup_path_display,
-            refresh_connected_drives_style=self._apply_connected_drives_field_style,
+            refresh_connected_drives_style=(
+                self.external_drive_controller.apply_connected_drives_style
+            ),
             screen_mover_settings_page=self.screen_mover_settings_page,
             user_interface_page=self.user_interface_page,
             maintenance_page=self.maintenance_page,
@@ -195,10 +209,7 @@ class UtilityControlApp(
         QTimer.singleShot(
             0, self.theme_controller.refresh_screen_mover_shortcut_styles
         )
-        self.drive_reminder_policy.reset(self._current_external_drives())
-        self._drive_change_timer = QTimer(self)
-        self._drive_change_timer.timeout.connect(self._check_external_drive_changes)
-        self._drive_change_timer.start(3000)
+        self.external_drive_controller.start()
         self.tray_manager.create_tray_icon()
         self.screen_mover.configure(
             app_hwnd=int(self.winId()),
@@ -210,7 +221,7 @@ class UtilityControlApp(
         
         self._set_main_window_topmost_state(True)
         self._apply_fixed_window_style()
-        self._register_session_notifications()
+        self.session_event_adapter.register()
         QTimer.singleShot(0, self.recycle_bin_actions.run_auto_cleanup)
 
     def _apply_fixed_window_style(self):
@@ -265,7 +276,7 @@ class UtilityControlApp(
     def showEvent(self, event):
         super().showEvent(event)
         self._apply_fixed_window_style()
-        self._register_session_notifications()
+        self.session_event_adapter.register()
 
     def _set_main_window_topmost_state(self, enabled: bool) -> None:
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
@@ -290,6 +301,13 @@ class UtilityControlApp(
             print(f"[TOPMOST] Failed to apply topmost={enabled}: {exc}")
 
     def nativeEvent(self, eventType, message):
+        handled, result = self.session_event_adapter.handle_native_event(
+            eventType,
+            message,
+        )
+        if handled:
+            return True, result
+
         try:
             event_name = bytes(eventType).decode(errors="ignore")
         except Exception:
@@ -297,15 +315,7 @@ class UtilityControlApp(
 
         if event_name == "windows_generic_MSG":
             msg = wintypes.MSG.from_address(int(message))
-            if msg.message == WM_WTSSESSION_CHANGE and msg.wParam == WTS_SESSION_LOCK:
-                QTimer.singleShot(0, self._handle_session_lock_reminder)
-            elif msg.message == WM_QUERYENDSESSION:
-                end_session_reason = (
-                    "Log Out" if (msg.lParam & ENDSESSION_LOGOFF) else "Shutdown or Restart"
-                )
-                if self._block_end_session_for_connected_drives(end_session_reason):
-                    return True, 0
-            elif msg.message == WM_APP_RESTORE_INSTANCE:
+            if msg.message == WM_APP_RESTORE_INSTANCE:
                 QTimer.singleShot(0, self.restore_from_activation)
                 return True, 0
 
@@ -352,7 +362,8 @@ class UtilityControlApp(
             return
 
         self._shutdown_complete = True
-        self._unregister_session_notifications()
+        self.session_event_adapter.unregister()
+        self.external_drive_controller.shutdown()
 
         try:
             self.hotkey_manager.stop()
@@ -377,43 +388,6 @@ class UtilityControlApp(
                 tray.hide()
             except Exception:
                 pass
-
-    def _register_session_notifications(self):
-        if self._session_notification_registered:
-            return
-
-        hwnd = int(self.winId())
-        if not hwnd:
-            return
-
-        try:
-            registered = bool(
-                ctypes.windll.wtsapi32.WTSRegisterSessionNotification(
-                    hwnd,
-                    NOTIFY_FOR_THIS_SESSION,
-                )
-            )
-        except Exception as exc:
-            print(f"[SESSION] Failed to register session notifications: {exc}")
-            return
-
-        if registered:
-            self._session_notification_registered = True
-
-    def _unregister_session_notifications(self):
-        if not self._session_notification_registered:
-            return
-
-        hwnd = int(self.winId())
-        if not hwnd:
-            return
-
-        try:
-            ctypes.windll.wtsapi32.WTSUnRegisterSessionNotification(hwnd)
-        except Exception as exc:
-            print(f"[SESSION] Failed to unregister session notifications: {exc}")
-        finally:
-            self._session_notification_registered = False
 
     def _build_ui(self):
         self.root_container = QWidget()

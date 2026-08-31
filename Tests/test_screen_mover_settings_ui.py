@@ -171,11 +171,7 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
     monkeypatch.setattr(main, "TrayIconManager", FakeTrayManager)
     monkeypatch.setattr(main, "resolve_application_icon", lambda _window: QIcon())
-    monkeypatch.setattr(
-        main.UtilityControlApp,
-        "_current_external_drives",
-        lambda _self: set(),
-    )
+    monkeypatch.setattr(main.DriveMonitor, "start", lambda _self: None)
     monkeypatch.setattr(
         main.UtilityControlApp,
         "_set_main_window_topmost_state",
@@ -186,11 +182,7 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
         "_apply_fixed_window_style",
         lambda _self: None,
     )
-    monkeypatch.setattr(
-        main.UtilityControlApp,
-        "_register_session_notifications",
-        lambda _self: None,
-    )
+    monkeypatch.setattr(main.WindowsSessionEventAdapter, "register", lambda _self: None)
     monkeypatch.setattr(main.RecycleBinActionsController, "run_auto_cleanup", lambda _self: None)
     if window_height is not None:
         monkeypatch.setattr(
@@ -909,7 +901,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
                 assert required <= popup_width or popup_width == 420
                 assert combo.itemData(row, Qt.ItemDataRole.ToolTipRole) == item_text
 
-        window._refresh_connected_drive_status_label(
+        window.external_drive_controller.refresh_status(
             ("E:\\Example Removable Drive With A Long Volume Name",)
         )
         qt_app.processEvents()
@@ -1110,7 +1102,7 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
                 Qt.ItemDataRole.ToolTipRole,
             ) == notification_combo.itemText(row)
 
-        window._refresh_connected_drive_status_label(
+        window.external_drive_controller.refresh_status(
             ("E:\\Example Removable Drive With A Long Volume Name",)
         )
         qt_app.processEvents()
