@@ -17,21 +17,6 @@ After extracting the services and page widgets above, UtilityControlApp should m
 I would move its page-building and navigation code first, but leave its Win32 lifecycle methods together unless they grow further.
 
 
-External-drive feature
-----------------------
-
-Code Windows Resurface/resurface/features/drives/external_drive_mixin.py combines drive polling, widget styling, context menus, session-lock handling, shutdown blocking, and notifications.
-
-There is already an empty Code Windows Resurface/resurface/features/drives/drive_reminder_logic.py, which is exactly where the non-UI state machine should go.
-
-Suggested separation:
-
-- DriveMonitor: detects additions/removals
-- DriveReminderPolicy: decides whether to warn
-- ExternalDrivesPage: displays drives
-- Main-window/native-event adapter: handles Windows session messages
-
-
 Folder Creator companion app
 ----------------------------
 
