@@ -7,7 +7,8 @@ from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QFrame, QPushB
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 from resurface.ui import application_window as main
-from resurface.ui import monitor_rules_ui
+from resurface.ui import monitor_rule_editor_dialog
+from resurface.ui import monitor_rules_page as monitor_rules_ui
 from test_screen_mover_settings_ui import _build_offscreen_window
 
 
@@ -188,9 +189,9 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
 
 def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypatch):
     app = QApplication.instance() or QApplication([])
-    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
     monkeypatch.setattr(
-        monitor_rules_ui,
+        monitor_rule_editor_dialog,
         "enumerate_eligible_windows",
         lambda **_kwargs: [
             {
@@ -203,11 +204,11 @@ def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypa
         ],
     )
     monkeypatch.setattr(
-        monitor_rules_ui,
+        monitor_rule_editor_dialog,
         "capture_window_geometry",
         lambda _hwnd: {"x_offset": 40, "y_offset": 50, "width": 900, "height": 700},
     )
-    dialog = monitor_rules_ui.MonitorRuleEditorDialog(None, app_hwnd=999)
+    dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(None, app_hwnd=999)
     try:
         dialog.window_combo.setCurrentIndex(1)
         dialog.placement_combo.setCurrentIndex(
@@ -227,10 +228,10 @@ def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypa
 
 def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
     app = QApplication.instance() or QApplication([])
-    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
     calls = []
     monkeypatch.setattr(
-        monitor_rules_ui,
+        monitor_rule_editor_dialog,
         "enumerate_eligible_windows",
         lambda **kwargs: calls.append(kwargs) or [
             {
@@ -243,7 +244,7 @@ def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
         ],
     )
 
-    dialog = monitor_rules_ui.MonitorRuleEditorDialog(None, app_hwnd=999)
+    dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(None, app_hwnd=999)
     try:
         assert calls == [{"app_hwnd": 999}]
         assert dialog.window_combo.count() == 2
@@ -293,7 +294,7 @@ def test_delete_rule_uses_borderless_confirmation_and_only_commits_yes(monkeypat
             monitor_rules_ui.QMessageBox.StandardButton.Yes
             | monitor_rules_ui.QMessageBox.StandardButton.No
         )
-        assert dialog.defaultButton().standardButton() == (
+        assert dialog.standardButton(dialog.defaultButton()) == (
             monitor_rules_ui.QMessageBox.StandardButton.No
         )
         assert len(page.rules) == 1

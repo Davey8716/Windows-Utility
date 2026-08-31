@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QMessageBox, QPushBut
 from resurface.core.state_manager import save_state
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
-from resurface.ui.monitor_rules_ui import MonitorRulesPage
+from resurface.ui.monitor_rules_page import MonitorRulesPage
 from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.pages.drive_space_page import DriveSpacePage
 from resurface.ui.pages.external_drives_page import ExternalDrivesPage

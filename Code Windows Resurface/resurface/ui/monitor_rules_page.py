@@ -21,32 +21,16 @@ from PySide6.QtWidgets import (
 from resurface.features.monitor_rules import (
     BackupDirectoryNotConfiguredError,
     MonitorRulesRepository,
-    capture_window_geometry,
-    enumerate_eligible_windows,
     enumerate_monitors,
     normalize_monitor_rules,
 )
 from resurface.ui import styles
 from resurface.ui.monitor_rule_editor_dialog import (
     PLACEMENT_LABELS,
-    MonitorRuleEditorDialog as _MonitorRuleEditorDialog,
+    MonitorRuleEditorDialog,
     StateIndicatorCheckBox,
     style_button as _style_button,
 )
-
-
-class MonitorRuleEditorDialog(_MonitorRuleEditorDialog):
-    """Compatibility entry point for the editor formerly defined in this module."""
-
-    def __init__(self, parent, *, rule=None, app_hwnd=None):
-        super().__init__(
-            parent,
-            rule=rule,
-            app_hwnd=app_hwnd,
-            monitor_enumerator=enumerate_monitors,
-            window_enumerator=enumerate_eligible_windows,
-            geometry_capturer=capture_window_geometry,
-        )
 
 
 class MonitorRulesPage(QFrame):
