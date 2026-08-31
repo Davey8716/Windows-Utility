@@ -1,5 +1,6 @@
 import copy
 import ctypes
+import time
 
 from resurface.ui import application_window as main
 from resurface.ui import left_panel_gui, styles
@@ -153,7 +154,6 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
     monkeypatch.setattr(main, "save_state", lambda _state: None)
     monkeypatch.setattr(left_panel_gui, "save_state", lambda _state: None)
-    monkeypatch.setattr(navigation_shell, "save_state", lambda _state: None)
     monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
     monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
     monkeypatch.setattr(main, "TrayIconManager", FakeTrayManager)
@@ -363,6 +363,68 @@ def test_navigation_restores_valid_page_and_falls_back_to_overview(monkeypatch):
         window.close()
         window.deleteLater()
         qt_app.processEvents()
+
+
+def test_navigation_stays_in_memory_until_settings_are_saved(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    saved_states = []
+
+    def slow_save(saved_state):
+        time.sleep(0.02)
+        saved_states.append(copy.deepcopy(saved_state))
+
+    window = _build_offscreen_window(monkeypatch, state)
+    monkeypatch.setattr(main, "save_state", slow_save)
+    try:
+        for page_id in (
+            "quick_actions",
+            "screen_mover",
+            "maintenance",
+            "folder_utilities",
+            "overview",
+        ):
+            window.navigate_to_page(page_id)
+
+        assert saved_states == []
+        assert window.state["last_opened_page"] == "overview"
+        assert window.page_stack.currentWidget() is window.page_by_id["overview"]
+
+        window.navigate_to_page("maintenance")
+        window.save_all_settings()
+
+        assert len(saved_states) == 1
+        assert saved_states[0]["last_opened_page"] == "maintenance"
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_overview_refreshes_once_per_navigation(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    window = _build_offscreen_window(
+        monkeypatch,
+        copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS),
+    )
+    refresh_calls = []
+    window.refresh_overview = lambda: refresh_calls.append(True)
+    try:
+        window.navigate_to_page("quick_actions")
+        window.navigate_to_page("overview")
+        assert len(refresh_calls) == 1
+
+        refresh_calls.clear()
+        window.navigate_to_page("not-a-page")
+        assert len(refresh_calls) == 1
+        assert window.state["last_opened_page"] == "overview"
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
 
 def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])

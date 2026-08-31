@@ -1,7 +1,5 @@
 Add pinning to the quick actions, right clicking certain items should be pinable or have icon next to icons to pin/unpin them ?
 
-Switching between section tabs is very laggy, maybe a lot of the app is too coupled?
-
 right utility is mammoth again and need splitting into new modules?
 
 Make 2 extra branches of both + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version

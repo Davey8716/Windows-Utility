@@ -1,7 +1,6 @@
 """Navigation registry and page-selection behavior for the main window."""
 
 from resurface.ui import styles
-from resurface.core.state_manager import save_state
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QListWidgetItem
 
@@ -68,7 +67,6 @@ class NavigationShell:
         entry = app.page_registry[row]
         app.page_stack.setCurrentWidget(entry["widget"])
         app.state["last_opened_page"] = entry["id"]
-        save_state(app.state)
         if entry["id"] == "overview":
             app.refresh_overview()
 
@@ -79,12 +77,17 @@ class NavigationShell:
             page_id = "overview"
         row = valid_ids.index(page_id)
         if persist:
+            row_changed = app.navigation_list.currentRow() != row
             app.navigation_list.setCurrentRow(row)
+            if not row_changed:
+                app.state["last_opened_page"] = page_id
+                if page_id == "overview":
+                    app.refresh_overview()
         else:
             app.navigation_list.blockSignals(True)
             app.navigation_list.setCurrentRow(row)
             app.page_stack.setCurrentIndex(row)
             app.navigation_list.blockSignals(False)
             app.state["last_opened_page"] = page_id
-        if page_id == "overview":
+        if not persist and page_id == "overview":
             app.refresh_overview()
