@@ -4,7 +4,7 @@ from ctypes import wintypes
 from resurface.ui import styles
 import win32gui
 import win32con
-from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 
 from resurface.core.app_paths import MasterBackupPathsMixin
 from resurface.core.instance_runtime import WM_APP_RESTORE_INSTANCE
@@ -17,10 +17,9 @@ from resurface.features.folder_creator.launcher import FolderCreatorLauncher
 from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
 from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
-from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager, VALID_ACTIONS, active_hotkeys
+from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager
 from resurface.features.screen_mover.service import ScreenMover
-from resurface.features.screen_mover.window_actions import perform_window_action
-from resurface.features.monitor_rules import MonitorRuleWatcher, normalize_monitor_rules
+from resurface.features.monitor_rules import MonitorRuleWatcher
 from resurface.features.explorer.window_service import ExplorerWindowService
 from resurface.features.recycle_bin.service import RecycleBinService
 from resurface.features.system.utility_toggles import UtilityActionsManager
@@ -32,26 +31,19 @@ from resurface.features.system.maintenance_actions import MaintenanceActions
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.application_pages import ApplicationPageComposer
 from resurface.ui.controllers import (
+    ApplicationThemeController,
     FolderActionsController,
+    MonitorRulesController,
     OrganisingActionsController,
     RecycleBinActionsController,
+    ScreenMoverSettingsController,
 )
 from resurface.ui.tooltips import QtTooltipManager
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from resurface.ui.navigation_shell import NavigationShell
-from resurface.ui.window_chrome import SeverityComboItemDelegate, WindowChrome
+from resurface.ui.window_chrome import WindowChrome
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QMainWindow,
-    QComboBox,
-    QLabel,
-    QPushButton,
-    QVBoxLayout,
-    QLineEdit,
-    QApplication,
-    QKeySequenceEdit,
-)
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
 WM_QUERYENDSESSION = 0x0011
 ENDSESSION_LOGOFF = 0x80000000
@@ -164,6 +156,45 @@ class UtilityControlApp(
         self.window_chrome = WindowChrome(self)
 
         self._build_ui()
+        self.theme_controller = ApplicationThemeController(
+            root=self,
+            window_chrome=self.window_chrome,
+            navigation_shell=self.navigation_shell,
+            refresh_master_backup_path=self._refresh_master_backup_path_display,
+            refresh_connected_drives_style=self._apply_connected_drives_field_style,
+            screen_mover_settings_page=self.screen_mover_settings_page,
+            user_interface_page=self.user_interface_page,
+            maintenance_page=self.maintenance_page,
+            drive_space_page=self.drive_space_page,
+            overview_status_labels=self.overview_status_labels,
+        )
+        self.screen_mover_settings_controller = ScreenMoverSettingsController(
+            state=self.state,
+            screen_mover=self.screen_mover,
+            hotkey_manager=self.hotkey_manager,
+            save_state=save_state,
+            window_handle=lambda: int(self.winId()),
+            settings_page=lambda: getattr(self, "screen_mover_settings_page", None),
+            legacy_toggle=lambda: getattr(self, "screen_mover_enabled_btn", None),
+            legacy_activation_combo=lambda: getattr(self, "screen_move_button_combo", None),
+            legacy_hotkey_edits=lambda: getattr(self, "screen_mover_hotkey_edits", {}),
+            refresh_overview=self.refresh_overview,
+            sync_tray=self.tray_manager.sync_screen_mover_action,
+        )
+        self.monitor_rules_controller = MonitorRulesController(
+            state=self.state,
+            watcher=self.monitor_rule_watcher,
+            save_state=save_state,
+            window_handle=lambda: int(self.winId()),
+            rules_page=lambda: getattr(self, "monitor_rules_page", None),
+            sync_tray=lambda: getattr(
+                self.tray_manager, "sync_monitor_rules_action", lambda: None
+            )(),
+        )
+        self.theme_controller.refresh_screen_mover_shortcut_styles()
+        QTimer.singleShot(
+            0, self.theme_controller.refresh_screen_mover_shortcut_styles
+        )
         self.drive_reminder_policy.reset(self._current_external_drives())
         self._drive_change_timer = QTimer(self)
         self._drive_change_timer.timeout.connect(self._check_external_drive_changes)
@@ -296,114 +327,25 @@ class UtilityControlApp(
             pass
 
     def apply_screen_mover_settings(self) -> None:
-        enabled = bool(self.state.get("title_bar_dock_enabled", True))
-        hotkeys = active_hotkeys(
-            self.state.get("screen_mover_keyboard_hotkeys", {})
-        )
-        activation_button = (
-            self.state.get("screen_mover_activation_button", "middle")
-            if enabled
-            else "off"
-        )
-
-        self.screen_mover.update_settings(
-            title_bar_dock_enabled=enabled,
-            activation_button=activation_button,
-            force_running=enabled and bool(hotkeys),
-        )
-        self.hotkey_manager.update_hotkeys(hotkeys, enabled=enabled)
-
-        tray_manager = getattr(self, "tray_manager", None)
-        if tray_manager is not None:
-            tray_manager.sync_screen_mover_action()
+        self.screen_mover_settings_controller.apply_settings()
 
     def apply_monitor_rule_settings(self, *, apply_existing=False) -> None:
-        self.monitor_rule_watcher.update_rules(
-            self.state.get("monitor_rules", []),
-            app_hwnd=int(self.winId()),
-            apply_existing=apply_existing,
-        )
+        self.monitor_rules_controller.apply_settings(apply_existing=apply_existing)
 
     def set_monitor_rules(self, rules) -> None:
-        self.state["monitor_rules"] = normalize_monitor_rules(rules)
-        save_state(self.state)
-        self.apply_monitor_rule_settings()
-        tray_manager = getattr(self, "tray_manager", None)
-        sync_tray = getattr(tray_manager, "sync_monitor_rules_action", None)
-        if callable(sync_tray):
-            sync_tray()
+        self.monitor_rules_controller.set_rules(rules)
 
     def set_monitor_rules_enabled(self, enabled: bool) -> None:
-        page = getattr(self, "monitor_rules_page", None)
-        if page is not None:
-            page.set_all_enabled(enabled)
-            return
-
-        rules = normalize_monitor_rules(self.state.get("monitor_rules", []))
-        for rule in rules:
-            rule["enabled"] = bool(enabled)
-        self.set_monitor_rules(rules)
+        self.monitor_rules_controller.set_enabled(enabled)
 
     def set_screen_mover_enabled(self, enabled: bool) -> None:
-        enabled = bool(enabled)
-        self.state["title_bar_dock_enabled"] = enabled
-        page = getattr(self, "screen_mover_settings_page", None)
-        if page is not None:
-            page.set_enabled(enabled)
-        else:
-            toggle = getattr(self, "screen_mover_enabled_btn", None)
-            if toggle is not None and toggle.isChecked() != enabled:
-                toggle.blockSignals(True)
-                toggle.setChecked(enabled)
-                toggle.blockSignals(False)
-                toggle.setText("Screen Mover On" if enabled else "Screen Mover Off")
-
-        save_state(self.state)
-        self.apply_screen_mover_settings()
-        refresh_overview = getattr(self, "refresh_overview", None)
-        if refresh_overview is not None:
-            refresh_overview()
+        self.screen_mover_settings_controller.set_enabled(enabled)
 
     def reset_screen_mover_settings(self) -> None:
-        page = getattr(self, "screen_mover_settings_page", None)
-        if page is not None:
-            page.reset_settings()
-            return
-
-        self.state["title_bar_dock_enabled"] = True
-        self.state["screen_mover_activation_button"] = "middle"
-        self.state["mmb_activation_enabled"] = True
-        self.state["screen_mover_keyboard_hotkeys"] = {
-            action: "" for action in VALID_ACTIONS
-        }
-
-        combo = getattr(self, "screen_move_button_combo", None)
-        if combo is not None:
-            combo.blockSignals(True)
-            combo.setCurrentIndex(combo.findData("middle"))
-            combo.blockSignals(False)
-            combo.setProperty("persistPressed", True)
-            combo.style().unpolish(combo)
-            combo.style().polish(combo)
-        for edit in getattr(self, "screen_mover_hotkey_edits", {}).values():
-            edit.blockSignals(True)
-            edit.clear()
-            edit.blockSignals(False)
-
-        self.set_screen_mover_enabled(True)
+        self.screen_mover_settings_controller.reset_settings()
 
     def handle_screen_mover_self_action(self, action: str) -> None:
-        if action == "MAXIMIZE":
-            return
-
-        hwnd = int(self.winId())
-        if not hwnd:
-            return
-
-        try:
-            perform_window_action(hwnd, action)
-        except Exception as exc:
-            print(f"[SCREEN_MOVER] Failed self-window action {action}: {exc}")
+        self.screen_mover_settings_controller.handle_self_action(action)
 
     def prepare_for_shutdown(self):
         if self._shutdown_complete:
@@ -508,46 +450,12 @@ class UtilityControlApp(
         saved_page = self.state.get("last_opened_page", "overview")
         self.navigate_to_page(saved_page, persist=False)
         self.navigation_shell.apply_theme()
-        self._refresh_screen_mover_shortcut_field_styles()
-        QTimer.singleShot(0, self._refresh_screen_mover_shortcut_field_styles)
 
     def _build_title_bar(self) -> None:
         self.window_chrome.build()
 
     def _position_title_bar_controls(self) -> None:
         self.window_chrome.position_controls()
-
-    def _apply_title_bar_theme(self) -> None:
-        self.window_chrome.apply_theme()
-
-    def _refresh_screen_mover_shortcut_field_styles(self) -> None:
-        """Restore shortcut-field styling after Qt reparents or repolishes it."""
-        page = getattr(self, "screen_mover_settings_page", None)
-        if page is not None:
-            page.refresh_shortcut_styles()
-            return
-        for hotkey_edit in self.findChildren(QKeySequenceEdit):
-            if hotkey_edit.objectName() != "ScreenMoverShortcutEdit":
-                continue
-
-            internal_edits = hotkey_edit.findChildren(QLineEdit)
-            for internal_edit in internal_edits:
-                internal_edit.setStyleSheet("")
-            hotkey_edit.setStyleSheet(styles.hotkey_edit_style(13))
-            widgets = (hotkey_edit, *internal_edits)
-            for widget in widgets:
-                widget.style().unpolish(widget)
-                widget.style().polish(widget)
-                widget.update()
-            hotkey_edit.setFixedHeight(styles.PAGE_CONTROL_HEIGHT)
-
-    @staticmethod
-    def _is_screen_mover_shortcut_internal_field(line_edit: QLineEdit) -> bool:
-        parent = line_edit.parentWidget()
-        return (
-            isinstance(parent, QKeySequenceEdit)
-            and parent.objectName() == "ScreenMoverShortcutEdit"
-        )
 
     def navigate_to_page(self, page_id: str, *, persist: bool = True) -> None:
         resolved_id = self.navigation_shell.navigate_to(
@@ -608,123 +516,8 @@ class UtilityControlApp(
         self._refresh_master_backup_path_display()
         super().resizeEvent(event)
 
-    def _power_action_item_colors(self) -> dict[str, QColor]:
-        return {
-            "placeholder": QColor(26, 118, 214) if styles.THEME_IS_DARK else QColor(42, 134, 230),
-            "blue": QColor(36, 104, 196) if styles.THEME_IS_DARK else QColor(68, 142, 236),
-            "yellow": QColor(196, 162, 32) if styles.THEME_IS_DARK else QColor(224, 196, 74),
-            "amber": QColor(207, 132, 30) if styles.THEME_IS_DARK else QColor(230, 154, 56),
-            "orange": QColor(210, 95, 26) if styles.THEME_IS_DARK else QColor(234, 118, 42),
-            "orange_red": QColor(198, 67, 35) if styles.THEME_IS_DARK else QColor(220, 88, 48),
-            "red": QColor(176, 38, 38) if styles.THEME_IS_DARK else QColor(204, 52, 52),
-        }
-
-    def _power_action_item_foreground(self, label: str, background: QColor) -> QColor:
-        if styles.THEME_IS_DARK and label in {"Sleep", "Log out"}:
-            return styles.TEXT_LIGHT
-        if not styles.THEME_IS_DARK and label == "Shutdown":
-            return QColor(0, 0, 0)
-        return styles.contrasting_text_color(background)
-
-    def _apply_power_action_dropdown_style(self, combo: QComboBox) -> None:
-        font_size = styles.coerce_font_size(
-            combo.property("styleFontSize"),
-            14,
-        ) or 14
-        combo.setStyleSheet(styles.power_combo_style(font_size))
-
-        severity_map = combo.property("powerActionSeverityMap") or {}
-        placeholder_text = combo.property("powerActionPlaceholder") or ""
-        color_map = self._power_action_item_colors()
-
-        for row in range(combo.count()):
-            label = combo.itemText(row)
-            severity = "placeholder" if label == placeholder_text else severity_map.get(label)
-            if not severity:
-                continue
-            background = color_map[severity]
-            combo.setItemData(row, background, Qt.ItemDataRole.BackgroundRole)
-            combo.setItemData(
-                row,
-                self._power_action_item_foreground(label, background),
-                Qt.ItemDataRole.ForegroundRole,
-            )
-
-        if not isinstance(combo.itemDelegate(), SeverityComboItemDelegate):
-            combo.setItemDelegate(SeverityComboItemDelegate(combo))
-
-    def apply_theme(self, is_dark: bool):
-        styles.set_theme(is_dark)
-        self.setStyleSheet(styles.window_style() + styles.tooltip_style())
-        self._apply_title_bar_theme()
-
-        for line_edit in self.findChildren(QLineEdit):
-            if self._is_screen_mover_shortcut_internal_field(line_edit):
-                continue
-            if line_edit.property("emphasizedSurfaceFieldStyle"):
-                line_edit.setStyleSheet(styles.emphasized_surface_line_edit_style(15))
-            elif line_edit.property("framelessSurfaceFieldStyle"):
-                line_edit.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
-            elif line_edit.property("plainThemeFieldStyle"):
-                line_edit.setStyleSheet(styles.plain_theme_line_edit_style(15))
-            elif line_edit.property("surfaceFieldStyle"):
-                line_edit.setStyleSheet(styles.surfaced_line_edit_style(15))
-            else:
-                line_edit.setStyleSheet(styles.line_edit_style(15))
-
-        self._refresh_screen_mover_shortcut_field_styles()
-
-        for label in self.findChildren(QLabel):
-            if label.property("surfaceLabelStyle"):
-                font_size = styles.coerce_font_size(
-                    label.property("styleFontSize"),
-                    14,
-                ) or 14
-                label.setStyleSheet(styles.surfaced_label_style(font_size))
-
-        self._refresh_master_backup_path_display()
-
-        for button in self.findChildren(QPushButton):
-            font_size = styles.coerce_font_size(
-                button.property("styleFontSize"),
-                14,
-            ) or 14
-            button.setStyleSheet(styles.organizing_button_style(font_size=font_size))
-
-        user_interface_page = getattr(self, "user_interface_page", None)
-        if user_interface_page is not None:
-            user_interface_page.refresh_icons()
-
-        for combo in self.findChildren(QComboBox):
-            font_size = styles.coerce_font_size(
-                combo.property("styleFontSize"),
-                14,
-            ) or 14
-            if combo.property("connectedDrivesFieldStyle"):
-                self._apply_connected_drives_field_style()
-            elif combo.property("powerActionStyle"):
-                self._apply_power_action_dropdown_style(combo)
-            elif combo.property("surfaceFieldStyle"):
-                combo.setStyleSheet(styles.surfaced_combo_style(font_size=font_size))
-            else:
-                combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
-
-        if hasattr(self, "maintenance_page"):
-            self.maintenance_page.apply_theme()
-        if hasattr(self, "drive_space_page"):
-            self.drive_space_page.apply_theme()
-
-        for label in self.findChildren(QLabel, "PageTitle"):
-            label.setStyleSheet(styles.page_title_style())
-        for label in self.findChildren(QLabel, "PageDescription"):
-            label.setStyleSheet(styles.page_description_style())
-        for label in self.findChildren(QLabel, "PageSectionHeading"):
-            label.setStyleSheet(styles.page_section_heading_style())
-        for label in self.findChildren(QLabel, "OverviewSummaryLabel"):
-            label.setStyleSheet(styles.summary_label_style())
-        for key, label in getattr(self, "overview_status_labels", {}).items():
-            label.setStyleSheet(styles.summary_value_style())
-        self.navigation_shell.apply_theme()
+    def apply_theme(self, is_dark: bool) -> None:
+        self.theme_controller.apply_theme(is_dark)
 
     def register_tooltip(self, widget: QWidget, text: str, delay: int = 10):
         manager = QtTooltipManager(widget, text, delay=delay)

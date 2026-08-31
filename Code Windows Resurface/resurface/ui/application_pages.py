@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QMessageBox, QPushBut
 from resurface.core.state_manager import save_state
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
+from resurface.ui.controllers.theme_controller import apply_power_action_dropdown_style
 from resurface.ui.monitor_rules_page import MonitorRulesPage
 from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.pages.drive_space_page import DriveSpacePage
@@ -172,7 +173,7 @@ class ApplicationPageComposer:
         user_interface_page = UserInterfacePage(
             self.state,
             app.register_tooltip,
-            app._apply_power_action_dropdown_style,
+            apply_power_action_dropdown_style,
             desktop_icons_visible=icons_visible,
             parent=shell.content_parent("user_interface"),
         )

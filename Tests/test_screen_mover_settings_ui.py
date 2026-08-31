@@ -148,6 +148,19 @@ class FakeWindow:
             "LEFT": FakeEdit(),
             "RIGHT": FakeEdit(),
         }
+        self.screen_mover_settings_controller = main.ScreenMoverSettingsController(
+            state=self.state,
+            screen_mover=self.screen_mover,
+            hotkey_manager=self.hotkey_manager,
+            save_state=main.save_state,
+            window_handle=lambda: 0,
+            settings_page=lambda: None,
+            legacy_toggle=lambda: self.screen_mover_enabled_btn,
+            legacy_activation_combo=lambda: self.screen_move_button_combo,
+            legacy_hotkey_edits=lambda: self.screen_mover_hotkey_edits,
+            refresh_overview=lambda: None,
+            sync_tray=self.tray_manager.sync_screen_mover_action,
+        )
 
 
 def _build_offscreen_window(monkeypatch, state, *, window_height=None):

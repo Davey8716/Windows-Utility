@@ -4,8 +4,6 @@ Windows Resurface: Module Splitting and Coupling Review
 Main-window coupling
 --------------------
 
-Code Windows Resurface/resurface/ui/application_window.py is 994 lines and inherits from four mixins plus QMainWindow. It also constructs nearly every service and owns shutdown, native Windows messages, navigation, pages, theme propagation, tray state, monitor rules, Screen Mover, and settings.
-
 The current _build_ui() builds controls in hidden "staging containers" and then reparents them into pages around line 434. That is transitional architecture and should eventually go away.
 
 After extracting the services and page widgets above, UtilityControlApp should mainly:
@@ -51,13 +49,10 @@ Code Folder Creator/folder_creator/ui/nested_ui_controller.py should then split 
 
 Code Folder Creator/folder_creator/features/tree/nested_folder_manager.py also mixes tree-widget manipulation, text parsing, serialization, filesystem creation, sorting, and importing. Extract the pure outline parser and filesystem builder; leave widget-specific operations in a tree controller.
 
-
 Lower-priority candidates
 -------------------------
 
 - Code Windows Resurface/resurface/ui/styles.py is 1,024 lines, but mostly cohesive. Eventually split theme tokens, shared helpers, and component styles; it is not urgent.
-
-
 
 Recommended order
 -----------------
@@ -77,9 +72,5 @@ Recommended order
 7. Tidy Monitor Rules and styles afterward.
 
 
-Guiding rule
-------------
-
-The key rule for the refactor is: don't pass the entire main window into new modules. Pass a service, a small callback bundle, or constructor arguments containing only what that component genuinely needs.
 
 
