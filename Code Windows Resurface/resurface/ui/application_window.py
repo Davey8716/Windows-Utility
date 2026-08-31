@@ -1,11 +1,10 @@
 
-import sys
 import ctypes
 from ctypes import wintypes
 from resurface.ui import styles
 import win32gui
 import win32con
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 
 from resurface.core.app_paths import MasterBackupPathsMixin
 from resurface.core.instance_runtime import WM_APP_RESTORE_INSTANCE
@@ -30,21 +29,16 @@ from resurface.features.taskbar.backup_service import TaskbarBackupService
 from resurface.features.windows.window_management import WindowManagementService
 from resurface.features.system.command_runner import CommandRunner
 from resurface.features.system.maintenance_actions import MaintenanceActions
-from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui.app_notifications import WindowMessageMixin
+from resurface.ui.application_pages import ApplicationPageComposer
 from resurface.ui.controllers import (
     FolderActionsController,
     OrganisingActionsController,
     RecycleBinActionsController,
 )
-from resurface.ui.left_panel_gui import LeftPanelBuilder
-from resurface.ui.pages.drive_space_page import DriveSpacePage
-from resurface.ui.pages.maintenance_page import MaintenancePage
-from resurface.ui.pages.windows_utilities_page import WindowsUtilitiesPage
-from resurface.ui.tooltips import QtTooltipManager, tooltip_text
-from PySide6.QtCore import QObject, Qt, QTimer, Signal, QSize
+from resurface.ui.tooltips import QtTooltipManager
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from resurface.ui.navigation_shell import NavigationShell
-from resurface.ui.monitor_rules_ui import MonitorRulesPage
 from resurface.ui.window_chrome import SeverityComboItemDelegate, WindowChrome
 
 from PySide6.QtWidgets import (
@@ -54,18 +48,9 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QVBoxLayout,
-    QScrollArea,
     QLineEdit,
     QApplication,
-    QFrame,
     QKeySequenceEdit,
-    QSizePolicy,
-    QHBoxLayout,
-    QGridLayout,
-    QListWidget,
-    QListWidgetItem,
-    QStackedWidget,
-    QAbstractItemView,
 )
 
 WM_QUERYENDSESSION = 0x0011
@@ -176,7 +161,6 @@ class UtilityControlApp(
         self.screen_mover = ScreenMover(name="WindowsResurfaceMain")
         self.monitor_rule_watcher = MonitorRuleWatcher(name="WindowsResurfaceMonitorRules")
         self.hotkey_manager = GlobalHotkeyManager(self.screen_mover.request_action)
-        self.navigation_shell = NavigationShell(self)
         self.window_chrome = WindowChrome(self)
 
         self._build_ui()
@@ -498,158 +482,37 @@ class UtilityControlApp(
         self._build_title_bar()
         root_layout.addWidget(self.window_title_bar)
 
-        body = QWidget(self.root_container)
-        body_layout = QHBoxLayout(body)
-        body_layout.setContentsMargins(0, 0, 0, 0)
-        body_layout.setSpacing(0)
-        root_layout.addWidget(body, 1)
-
-        self.navigation_sidebar = QWidget(body)
-        self.navigation_sidebar.setObjectName("NavigationSidebar")
-        self.navigation_sidebar.setFixedWidth(self.SIDEBAR_WIDTH)
-        navigation_layout = QVBoxLayout(self.navigation_sidebar)
-        navigation_layout.setContentsMargins(0, self.PAGE_TITLE_TOP_INSET, 0, 0)
-        navigation_layout.setSpacing(0)
-
-        self.navigation_list = QListWidget(self.navigation_sidebar)
-        self.navigation_list.setObjectName("NavigationList")
-        self.navigation_list.setFixedWidth(self.SIDEBAR_WIDTH)
-        self.navigation_list.setIconSize(QSize(22, 22))
-        self.navigation_list.setSpacing(2)
-        self.navigation_list.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        self.navigation_shell = NavigationShell(
+            app_version=self.APP_VERSION,
+            sidebar_width=self.SIDEBAR_WIDTH,
+            page_title_top_inset=self.PAGE_TITLE_TOP_INSET,
+            parent=self.root_container,
         )
-        self.navigation_list.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
-        self.navigation_list.setSelectionMode(
-            QAbstractItemView.SelectionMode.SingleSelection
-        )
-        self.navigation_list.setAccessibleName("Sections")
-        navigation_layout.addWidget(self.navigation_list, 1)
+        root_layout.addWidget(self.navigation_shell, 1)
 
-        self.version_label = QLabel(
-            f"Windows Resurface  ·  v{self.APP_VERSION}",
-            self.navigation_sidebar,
-        )
-        self.version_label.setObjectName("SidebarVersionLabel")
-        self.version_label.setAccessibleName("Application version")
-        self.version_label.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-        )
-        navigation_layout.addWidget(self.version_label)
-        body_layout.addWidget(self.navigation_sidebar)
+        self.page_composer = ApplicationPageComposer(self, self.navigation_shell)
+        self.pages = self.page_composer.compose()
 
-        self.page_stack = QStackedWidget(body)
-        self.page_stack.setObjectName("PageStack")
-        body_layout.addWidget(self.page_stack, 1)
-
-        self.navigation_shell.create_page_registry()
+        # Transitional aliases keep mixins and callers stable during extraction.
+        self.navigation_sidebar = self.navigation_shell.navigation_sidebar
+        self.navigation_list = self.navigation_shell.navigation_list
+        self.version_label = self.navigation_shell.version_label
+        self.page_stack = self.navigation_shell.page_stack
+        self.page_registry = self.navigation_shell.page_registry
+        self.page_by_id = self.navigation_shell.page_by_id
+        self.page_content_layouts = self.navigation_shell.page_content_layouts
+        self.page_scroll_areas = self.navigation_shell.page_scroll_areas
 
         self.sidebar_navigation_mode = True
-
-        self.maintenance_page = MaintenancePage(
-            self.maintenance_actions,
-            self.command_runner,
-            self.register_tooltip,
-            self.organising_actions.run_with_optional_minimize,
-            self._show_modal_message,
-            self,
-        )
-        self.windows_utilities_page = WindowsUtilitiesPage(
-            WindowsToolCatalog(),
-            self.router_service,
-            self.explorer_windows,
-            self.window_management,
-            self.maintenance_actions,
-            self.register_tooltip,
-            self.organising_actions.run_with_optional_minimize,
-            self.maintenance_page.set_output_context,
-            self,
-        )
-        self.drive_space_page = DriveSpacePage(
-            self.drive_service,
-            self.window_management,
-            self.register_tooltip,
-            self._show_timed_message,
-            self.organising_actions.run_with_optional_minimize,
-            self,
-        )
-
-        self.left_panel_builder = LeftPanelBuilder(self)
-        self.left_panel_builder.build()
-
-        left_page_map = {
-            "user_interface": "user_interface",
-            "screen_mover": "screen_mover",
-            "drive_reminder_options": "external_drives",
-            "organising_utilities": "organising_utilities",
-            "folder_utilities": "folder_utilities",
-            "recycle_bin_actions": "recycle_bin",
-        }
-        for section_id, content in self.left_page_contents.items():
-            self._mount_page_content(
-                left_page_map[section_id],
-                content,
-            )
-
-        self._add_page_subheading("external_drives", "Storage")
-        self._mount_page_content(
-            "external_drives",
-            self.drive_space_page,
-        )
-        self._mount_page_content(
-            "windows_utilities",
-            self.windows_utilities_page,
-        )
-        self._mount_page_content(
-            "maintenance",
-            self.maintenance_page,
-        )
-        self._build_overview_page()
-        self._build_quick_actions_page()
-        self._build_monitor_rules_page()
-        self._build_hover_window_controls_placeholder()
-
-        for layout in self.page_content_layouts.values():
-            layout.addStretch(1)
-
-        self._populate_navigation()
-        self.navigation_list.currentRowChanged.connect(self._on_navigation_changed)
+        self.navigation_shell.page_changed.connect(self._on_page_changed)
         saved_page = self.state.get("last_opened_page", "overview")
         self.navigate_to_page(saved_page, persist=False)
-        self._apply_navigation_theme()
+        self.navigation_shell.apply_theme()
         self._refresh_screen_mover_shortcut_field_styles()
         QTimer.singleShot(0, self._refresh_screen_mover_shortcut_field_styles)
 
     def _build_title_bar(self) -> None:
         self.window_chrome.build()
-
-    def _build_hover_window_controls_placeholder(self) -> None:
-        frame = QFrame(self.page_by_id["hover_window_controls"])
-        frame.setObjectName("HoverWindowControlsPlaceholder")
-        frame_layout = QVBoxLayout(frame)
-        frame_layout.setContentsMargins(24, 28, 24, 28)
-        frame_layout.setSpacing(10)
-
-        status = QLabel("COMING SOON", frame)
-        status.setObjectName("HoverWindowControlsStatus")
-        status.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        status.setStyleSheet(styles.page_section_heading_style())
-
-        message = QLabel(
-            "This section will provide settings for floating window controls "
-            "and hover actions.",
-            frame,
-        )
-        message.setObjectName("HoverWindowControlsMessage")
-        message.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        message.setWordWrap(True)
-        message.setStyleSheet(styles.page_description_style())
-
-        frame_layout.addWidget(status)
-        frame_layout.addWidget(message)
-        self.page_content_layouts["hover_window_controls"].addWidget(frame)
 
     def _position_title_bar_controls(self) -> None:
         self.window_chrome.position_controls()
@@ -686,191 +549,17 @@ class UtilityControlApp(
             and parent.objectName() == "ScreenMoverShortcutEdit"
         )
 
-    def _create_page(self, title_text: str, description: str):
-        page = QWidget(self.page_stack)
-        page.setObjectName("ContentPage")
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(0, 0, 0, 0)
-        page_layout.setSpacing(0)
-
-        scroll = QScrollArea(page)
-        scroll.setObjectName("PageScrollArea")
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        page_layout.addWidget(scroll)
-
-        content = QWidget()
-        content.setObjectName("PageContent")
-        content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        layout = QVBoxLayout(content)
-        layout.setContentsMargins(38, self.PAGE_TITLE_TOP_INSET, 38, 32)
-        layout.setSpacing(16)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        title = QLabel(title_text, content)
-        title.setObjectName("PageTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        title.setStyleSheet(styles.page_title_style())
-        description_label = QLabel(description, content)
-        description_label.setObjectName("PageDescription")
-        description_label.setWordWrap(True)
-        description_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        description_label.setStyleSheet(styles.page_description_style())
-        layout.addWidget(title)
-        layout.addWidget(description_label)
-        layout.addSpacing(6)
-        scroll.setWidget(content)
-        return page, layout, scroll
-
-    def _mount_page_content(self, page_id: str, content: QWidget) -> None:
-        content.setParent(self.page_by_id[page_id])
-        content.setMaximumWidth(16777215)
-        content.setMinimumWidth(0)
-        content.setVisible(True)
-        content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        content_layout = content.layout()
-        if content_layout is not None:
-            content_layout.setContentsMargins(0, 0, 0, 0)
-            content_layout.setAlignment(
-                Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter
-            )
-        self.page_content_layouts[page_id].addWidget(content)
-
-    def _add_page_subheading(self, page_id: str, text: str) -> None:
-        label = QLabel(text)
-        label.setObjectName("PageSectionHeading")
-        label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        label.setStyleSheet(styles.page_section_heading_style())
-        self.page_content_layouts[page_id].addSpacing(8)
-        self.page_content_layouts[page_id].addWidget(label)
-
-    def _build_overview_page(self) -> None:
-        layout = self.page_content_layouts["overview"]
-        overview_content_width = (
-            styles.PAGE_CONTROL_WIDTH * 2
-        ) + styles.PAGE_CONTROL_GAP
-        summary = QFrame()
-        summary.setObjectName("OverviewSummary")
-        summary.setFixedWidth(overview_content_width)
-        summary_layout = QGridLayout(summary)
-        summary_layout.setContentsMargins(20, 18, 20, 18)
-        summary_layout.setHorizontalSpacing(24)
-        summary_layout.setVerticalSpacing(12)
-
-        self.overview_status_labels = {}
-        for row, (key, label_text) in enumerate(
-            (
-                ("screen_mover", "Screen Mover"),
-                ("drives", "Connected drives"),
-                ("backup_path", "Master backup path"),
-                ("recycle", "Recycle Bin auto-clean"),
-            )
-        ):
-            label = QLabel(label_text)
-            label.setObjectName("OverviewSummaryLabel")
-            label.setStyleSheet(styles.summary_label_style())
-            value = QLabel()
-            value.setWordWrap(True)
-            value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            value.setStyleSheet(styles.summary_value_style())
-            summary_layout.addWidget(label, row, 0)
-            summary_layout.addWidget(value, row, 1)
-            self.overview_status_labels[key] = value
-        summary_layout.setColumnStretch(1, 1)
-        layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
-
-        self.refresh_overview()
-
-    def _build_quick_actions_page(self) -> None:
-        layout = self.page_content_layouts["quick_actions"]
-        quick_actions_width = (
-            styles.PAGE_CONTROL_WIDTH * 2
-        ) + styles.PAGE_CONTROL_GAP
-        quick_row = QWidget()
-        quick_row.setProperty("centeredControlGrid", True)
-        quick_row.setObjectName("QuickActionsGrid")
-        quick_row.setFixedWidth(quick_actions_width)
-        quick_row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        quick_layout = QGridLayout(quick_row)
-        quick_layout.setContentsMargins(0, 0, 0, 0)
-        quick_layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
-        quick_layout.setVerticalSpacing(12)
-        actions = (
-            ("Desktop Screenshot", self.organising_actions.take_desktop_screenshot),
-            ("Export Bookmarks", self.organising_actions.export_bookmarks),
-            ("Create Desktop Folder", self._open_folder_utilities),
-            ("Open Recycle Bin", self.recycle_bin_actions.open_recycle_bin),
-        )
-        for index, (text, callback) in enumerate(actions):
-            button = QPushButton(text)
-            styles.apply_page_control_size(button)
-            button.setProperty("styleFontSize", 13)
-            button.setStyleSheet(styles.organizing_button_style(13))
-            button.clicked.connect(callback)
-            quick_layout.addWidget(button, index // 2, index % 2)
-        layout.addWidget(quick_row, 0, Qt.AlignmentFlag.AlignHCenter)
-
-    def _build_monitor_rules_page(self) -> None:
-        layout = self.page_content_layouts["monitor_rules"]
-        self.monitor_rules_page = MonitorRulesPage(
-            self.page_by_id["monitor_rules"],
-            rules=self.state.get("monitor_rules", []),
-            app_hwnd=int(self.winId()),
-            on_rules_changed=self.set_monitor_rules,
-            get_master_backup_dir=self._get_master_backup_dir,
-        )
-        self.monitor_rules_add_button = self.monitor_rules_page.add_button
-        layout.addWidget(self.monitor_rules_page)
-
-    def _populate_navigation(self) -> None:
-        self.navigation_shell.populate()
-
-    def _navigation_icon(self, glyph: str) -> QIcon:
-        icon = QIcon()
-        for mode, color in (
-            (QIcon.Mode.Normal, styles.theme_muted_text_color()),
-            (QIcon.Mode.Selected, styles.STATUS_ACCENT),
-        ):
-            pixmap = QPixmap(24, 24)
-            pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            font = QFont("Segoe Fluent Icons")
-            font.setPixelSize(18)
-            painter.setFont(font)
-            painter.setPen(color)
-            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
-            painter.end()
-            icon.addPixmap(pixmap, mode)
-        return icon
-
-    def _refresh_navigation_icons(self) -> None:
-        for row, entry in enumerate(self.page_registry):
-            item = self.navigation_list.item(row)
-            if item is not None:
-                item.setIcon(self._navigation_icon(entry["glyph"]))
-
-    def _apply_navigation_theme(self) -> None:
-        if hasattr(self, "navigation_list"):
-            self.navigation_list.setStyleSheet(styles.navigation_list_style())
-            self._refresh_navigation_icons()
-        if hasattr(self, "version_label"):
-            self.version_label.setStyleSheet(styles.sidebar_version_label_style())
-        for name in (
-            "OverviewSummary",
-            "MonitorRulesEmptyState",
-            "HoverWindowControlsPlaceholder",
-        ):
-            for frame in self.findChildren(QFrame, name):
-                frame.setStyleSheet(styles.summary_frame_style())
-
-    def _on_navigation_changed(self, row: int) -> None:
-        self.navigation_shell.selection_changed(row)
-
     def navigate_to_page(self, page_id: str, *, persist: bool = True) -> None:
-        self.navigation_shell.navigate_to(page_id, persist=persist)
+        resolved_id = self.navigation_shell.navigate_to(
+            page_id, emit_signal=persist
+        )
+        if not persist:
+            self._on_page_changed(resolved_id)
+
+    def _on_page_changed(self, page_id: str) -> None:
+        self.state["last_opened_page"] = page_id
+        if page_id == "overview":
+            self.refresh_overview()
 
     def _open_folder_utilities(self) -> None:
         self.navigate_to_page("folder_utilities")
@@ -879,21 +568,11 @@ class UtilityControlApp(
             page.focus_name_input()
 
     def refresh_overview(self) -> None:
-        labels = getattr(self, "overview_status_labels", None)
-        if not labels:
+        page = getattr(self, "overview_page", None)
+        if page is None:
             return
-        labels["screen_mover"].setText(
-            "On" if self.state.get("title_bar_dock_enabled", True) else "Off"
-        )
-        drive_count = len(getattr(self, "_overview_connected_drives", set()))
-        labels["drives"].setText(
-            f"{drive_count} connected" if drive_count else "None connected"
-        )
-        labels["backup_path"].setText(
-            str(self.state.get("master_backup_output_path", "Not set"))
-        )
-        labels["recycle"].setText(
-            "On" if self.state.get("recycle_bin_auto_clean_enabled", False) else "Off"
+        page.refresh(
+            self.state, getattr(self, "_overview_connected_drives", set())
         )
 
     def _title_bar_icon(self, action: str) -> QIcon:
@@ -1045,7 +724,7 @@ class UtilityControlApp(
             label.setStyleSheet(styles.summary_label_style())
         for key, label in getattr(self, "overview_status_labels", {}).items():
             label.setStyleSheet(styles.summary_value_style())
-        self._apply_navigation_theme()
+        self.navigation_shell.apply_theme()
 
     def register_tooltip(self, widget: QWidget, text: str, delay: int = 10):
         manager = QtTooltipManager(widget, text, delay=delay)

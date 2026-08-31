@@ -3,9 +3,8 @@ import ctypes
 import time
 
 from resurface.ui import application_window as main
-from resurface.ui import left_panel_gui, styles
+from resurface.ui import application_pages, styles
 from resurface.ui.pages import folder_utilities_page
-from resurface.ui import navigation_shell
 from resurface.ui.window_chrome import CenteredTitleComboBox
 from resurface.features.screen_mover.hotkeys import ACTION_LABELS
 from PySide6.QtCore import QPoint, Qt
@@ -154,7 +153,7 @@ class FakeWindow:
 def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
     monkeypatch.setattr(main, "save_state", lambda _state: None)
-    monkeypatch.setattr(left_panel_gui, "save_state", lambda _state: None)
+    monkeypatch.setattr(application_pages, "save_state", lambda _state: None)
     monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
     monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
     monkeypatch.setattr(main, "TrayIconManager", FakeTrayManager)
@@ -312,13 +311,14 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         ):
             assert obsolete_key not in WINDOWS_RESURFACE_DEFAULTS
         mounted_content = {
-            "user_interface": window.left_page_contents["user_interface"],
-            "screen_mover": window.left_page_contents["screen_mover"],
+            "user_interface": window.user_interface_page,
+            "screen_mover": window.screen_mover_settings_page,
             "external_drives": window.drive_space_page,
             "windows_utilities": window.windows_utilities_page,
             "maintenance": window.maintenance_page,
         }
         assert not hasattr(window, "right_tools_panel")
+        assert not hasattr(window, "left_page_contents")
         assert all(
             window.page_by_id[page_id].isAncestorOf(content)
             for page_id, content in mounted_content.items()
@@ -334,6 +334,41 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         assert placeholder.findChild(
             QLabel, "HoverWindowControlsStatus"
         ).text() == "COMING SOON"
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_page_composer_builds_widgets_in_their_final_hosts(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    window = _build_offscreen_window(
+        monkeypatch, copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    )
+    page_ids = {
+        "overview_page": "overview",
+        "quick_actions_page": "quick_actions",
+        "user_interface_page": "user_interface",
+        "screen_mover_settings_page": "screen_mover",
+        "monitor_rules_page": "monitor_rules",
+        "external_drives_page": "external_drives",
+        "drive_space_page": "external_drives",
+        "organising_utilities_page": "organising_utilities",
+        "folder_utilities_page": "folder_utilities",
+        "recycle_bin_page": "recycle_bin",
+        "windows_utilities_page": "windows_utilities",
+        "maintenance_page": "maintenance",
+        "hover_window_controls_page": "hover_window_controls",
+    }
+    try:
+        assert not hasattr(window, "left_page_contents")
+        for attribute, page_id in page_ids.items():
+            page = getattr(window.pages, attribute)
+            assert page.parentWidget() is window.navigation_shell.content_parent(page_id)
+        external_host = window.navigation_shell.content_parent("external_drives")
+        assert external_host.isAncestorOf(window.external_drives_page)
+        assert external_host.isAncestorOf(window.drive_space_page)
     finally:
         window._quit_requested = True
         window.close()
@@ -975,7 +1010,7 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
     window = _build_offscreen_window(monkeypatch, state)
     saved_states = []
     monkeypatch.setattr(
-        left_panel_gui,
+        application_pages,
         "save_state",
         lambda saved_state: saved_states.append(dict(saved_state)),
     )
