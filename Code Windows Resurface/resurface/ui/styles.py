@@ -440,6 +440,87 @@ def window_style() -> str:
     """
 
 
+def file_dialog_style() -> str:
+    """Return the current app theme for non-native Qt file dialogs."""
+    background = qcolor_css(WINDOW_BG)
+    surface = qcolor_css(SURFACE_BG)
+    hover = qcolor_css(SURFACE_HOVER)
+    border = qcolor_css(SURFACE_BORDER)
+    text = qcolor_css(theme_text_color())
+    selected = qcolor_css(PANEL_HOVER)
+    accent = qcolor_css(STATUS_ACCENT)
+    return (
+        window_style()
+        + tooltip_style()
+        + f"""
+        QFileDialog {{
+            background-color: {background};
+            color: {text};
+        }}
+        QFileDialog QLabel {{
+            background: transparent;
+            color: {text};
+        }}
+        QFileDialog QLineEdit,
+        QFileDialog QComboBox,
+        QFileDialog QAbstractItemView {{
+            background-color: {surface};
+            color: {text};
+            border: 1px solid {border};
+            border-radius: 6px;
+            selection-background-color: {selected};
+            selection-color: {text};
+        }}
+        QFileDialog QLineEdit,
+        QFileDialog QComboBox {{
+            min-height: 26px;
+            padding: 2px 7px;
+        }}
+        QFileDialog QAbstractItemView::item:hover {{
+            background-color: {hover};
+        }}
+        QFileDialog QAbstractItemView::item:selected {{
+            background-color: {selected};
+            color: {text};
+        }}
+        QFileDialog QPushButton {{
+            color: {qcolor_css(button_text_color())};
+            background-color: {qcolor_css(themed_button_bg())};
+            border: 1px solid {qcolor_css(themed_button_border())};
+            border-radius: {BUTTON_CORNER_RADIUS}px;
+            min-height: 26px;
+            padding: 2px 10px;
+            font-weight: bold;
+        }}
+        QFileDialog QPushButton:hover {{
+            background-color: {qcolor_css(themed_button_hover())};
+        }}
+        QFileDialog QPushButton:pressed {{
+            background-color: {qcolor_css(themed_button_pressed())};
+        }}
+        QFileDialog QToolButton {{
+            color: {text};
+            background-color: {surface};
+            border: 1px solid {border};
+            border-radius: {BUTTON_CORNER_RADIUS}px;
+            padding: 3px;
+        }}
+        QFileDialog QToolButton:hover {{
+            background-color: {hover};
+            border-color: {accent};
+        }}
+        QFileDialog QHeaderView::section {{
+            background-color: {surface};
+            color: {text};
+            border: none;
+            border-right: 1px solid {border};
+            border-bottom: 1px solid {border};
+            padding: 4px;
+        }}
+        """
+    )
+
+
 def tooltip_style() -> str:
     return f"""
         QToolTip {{

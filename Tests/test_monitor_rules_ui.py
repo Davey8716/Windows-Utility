@@ -1,8 +1,9 @@
 import copy
 import json
+from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QFrame, QPushButton
+from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QFrame, QPushButton
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 from resurface.ui import application_window as main
@@ -406,13 +407,65 @@ def test_monitor_rules_export_and_import_use_master_backup_path(monkeypatch, tmp
         page.rules = []
         monkeypatch.setattr(
             monitor_rules_ui.QFileDialog,
-            "getOpenFileName",
-            lambda *_args: (str(imported_path), ""),
+            "exec",
+            lambda _dialog: QDialog.DialogCode.Accepted,
+        )
+        monkeypatch.setattr(
+            monitor_rules_ui.QFileDialog,
+            "selectedFiles",
+            lambda _dialog: [str(imported_path)],
         )
         page._import_rules()
         assert commits[-1][0]["id"] == "new"
         assert commits[-1][0]["name"] == "Imported Rule"
     finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_import_rules_dialog_is_non_native_and_tracks_current_theme(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    (tmp_path / "Monitor Rules").mkdir()
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    captured = []
+
+    def reject_and_capture(dialog):
+        captured.append(dialog)
+        return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(monitor_rules_ui.QFileDialog, "exec", reject_and_capture)
+    try:
+        for is_dark in (True, False):
+            monitor_rules_ui.styles.set_theme(is_dark)
+            page._import_rules()
+            dialog = captured[-1]
+            assert dialog.parent() is page
+            assert dialog.windowTitle() == "Import Monitor Rules"
+            assert Path(dialog.directory().absolutePath()) == tmp_path / "Monitor Rules"
+            assert dialog.nameFilters() == [
+                "Monitor rule backups (*.json)",
+                "All files (*)",
+            ]
+            assert dialog.testOption(QFileDialog.Option.DontUseNativeDialog)
+            assert dialog.fileMode() == QFileDialog.FileMode.ExistingFile
+            assert dialog.acceptMode() == QFileDialog.AcceptMode.AcceptOpen
+            assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+            stylesheet = dialog.styleSheet()
+            assert monitor_rules_ui.styles.qcolor_css(
+                monitor_rules_ui.styles.WINDOW_BG
+            ) in stylesheet
+            assert monitor_rules_ui.styles.qcolor_css(
+                monitor_rules_ui.styles.theme_text_color()
+            ) in stylesheet
+    finally:
+        monitor_rules_ui.styles.set_theme(True)
         page.deleteLater()
         app.processEvents()
 

@@ -1,0 +1,21 @@
+{
+  "format": "windows-resurface-monitor-rules",
+  "version": 1,
+  "rules": [
+    {
+      "id": "one",
+      "name": "Discord",
+      "enabled": true,
+      "reapply_if_moved": false,
+      "executable_name": "discord.exe",
+      "executable_path": "c:\\apps\\discord.exe",
+      "match_exact_path": true,
+      "title_contains": "",
+      "class_name": "",
+      "target_device": "\\\\.\\DISPLAY2",
+      "target_label": "Monitor 2",
+      "placement_mode": "keep_size",
+      "saved_geometry": null
+    }
+  ]
+}

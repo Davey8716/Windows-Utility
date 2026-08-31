@@ -660,14 +660,23 @@ class MonitorRulesPage(QFrame):
     def _import_rules(self) -> None:
         backup_dir = self._backup_directory()
         start_dir = str(backup_dir / "Monitor Rules") if backup_dir else ""
-        path, _selected_filter = QFileDialog.getOpenFileName(
+        dialog = QFileDialog(
             self,
             "Import Monitor Rules",
             start_dir,
             "Monitor rule backups (*.json);;All files (*)",
         )
-        if not path:
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        dialog.setStyleSheet(styles.file_dialog_style())
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
+        selected_files = dialog.selectedFiles()
+        if not selected_files:
+            return
+        path = selected_files[0]
         try:
             payload = json.loads(Path(path).read_text(encoding="utf-8"))
             raw_rules = payload.get("rules") if isinstance(payload, dict) else None
