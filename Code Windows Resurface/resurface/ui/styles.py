@@ -545,7 +545,7 @@ def hotkey_edit_style(font_size: int = 13) -> str:
                 bold=True,
                 color=themed_surface_field_text(),
             )}
-            min-height: 26px;
+            min-height: 22px;
             padding: 4px 8px;
             background-color: {qcolor_css(themed_surface_field_bg())};
             border: 2px solid {qcolor_css(themed_surface_field_border())};

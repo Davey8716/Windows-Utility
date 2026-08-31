@@ -1,0 +1,230 @@
+Windows Resurface: Module Splitting and Coupling Review
+=======================================================
+
+The app is already moving toward a sensible feature-based structure, but several files are still "modules" only in the filesystem sense—their code remains tightly coupled through the main window.
+
+
+Highest-priority splits
+-----------------------
+
+1. Code Windows Resurface/resurface/ui/right_utility_gui.py
+
+This is the clearest God object: 1,537 lines, with AdvancedToolsPanel spanning roughly 1,435 lines and 104 methods. It currently owns:
+
+- Drive detection, display, opening, and ejection
+- Windows utility definitions and launching
+- Normal and elevated process execution
+- Output collection and polling
+- Cleanup and repair commands
+- Tracked-window behaviour
+- Bookmark-export coordination
+- UI construction and styling
+
+Recommended split:
+
+    features/drives/drive_service.py
+    features/system/windows_tool_catalog.py
+    features/system/command_runner.py
+    features/system/maintenance_actions.py
+
+    ui/pages/drive_space_page.py
+    ui/pages/windows_utilities_page.py
+    ui/pages/maintenance_page.py
+
+AdvancedToolsPanel should disappear or become a very small container composing those three pages.
+
+The natural boundaries are already visible: drive UI starts around line 325, launchers around line 635, and command-running infrastructure around line 1052.
+
+
+2. Code Windows Resurface/resurface/features/screen_mover/screen_mover.py
+
+At 1,315 lines, this file contains four distinct systems:
+
+- Icon discovery and GDI+ rendering
+- Monitor/window geometry and window actions
+- Native Win32 dock-overlay window
+- Mouse listener, worker thread, command queue, and orchestration
+
+Recommended split:
+
+    screen_mover/window_actions.py
+    screen_mover/dock_icons.py
+    screen_mover/dock_overlay.py
+    screen_mover/window_filter.py
+    screen_mover/service.py
+
+The seams are unusually clean already:
+
+- Renderer: line 111
+- Geometry/actions: line 308
+- Overlay: line 511
+- Service/orchestration: line 781
+
+This should be a comparatively safe extraction because the project already has substantial Screen Mover tests.
+
+
+3. Code Windows Resurface/resurface/ui/left_panel_gui.py
+
+LeftPanelBuilder is 1,255 lines and builds six unrelated pages while writing their widgets directly onto app. That means every page implicitly depends on the complete main-window object.
+
+Split it by page:
+
+    ui/pages/user_interface_page.py
+    ui/pages/screen_mover_settings_page.py
+    ui/pages/external_drives_page.py
+    ui/pages/organising_utilities_page.py
+    ui/pages/folder_utilities_page.py
+    ui/pages/recycle_bin_page.py
+
+Each page should be a QWidget exposing signals and a small explicit API. For example, ScreenMoverSettingsPage.settings_changed is much safer than storing screen_mover_hotkey_edits, screen_move_button_combo, and numerous buttons on the main window.
+
+The largest current sections are Screen Mover at line 522 and User Interface at line 318.
+
+
+4. Code Windows Resurface/resurface/features/system/utility_toggles.py
+
+This 1,100-line module is not one feature. It contains:
+
+- UI toggle compatibility code
+- Taskbar backup
+- Recycle Bin operations and raw metadata deletion
+- Desktop icon-layout wrappers
+- Explorer folder discovery
+- General top-level window discovery and manipulation
+- Zen Mode
+- Router detection
+
+UtilityActionsManager also accepts the entire app and contains hasattr/getattr fallbacks for Qt and legacy Tk interfaces. That compatibility layer obscures what each operation actually requires.
+
+Recommended split:
+
+    features/recycle_bin/service.py
+    features/taskbar/backup_service.py
+    features/explorer/window_service.py
+    features/desktop/zen_mode.py
+    features/system/router_service.py
+    features/windows/window_management.py
+
+Keep UtilityActionsManager temporarily as a thin compatibility facade while callers migrate. Removing it immediately would create an unnecessarily large refactor.
+
+
+5. Code Windows Resurface/resurface/features/desktop/desktop_operations.py
+
+DesktopOperationsMixin is 867 lines and combines:
+
+- Screenshot capture and temporary window minimization
+- Taskbar backup UI flow
+- Desktop layout UI flow
+- Bookmark export UI flow
+- Recycle Bin confirmation and cleanup
+- Desktop-folder creation
+- Locating, launching, and focusing Folder Creator
+
+The most obvious reversed dependency is at line 466: a feature mixin calls the private UI method right_tools_panel._run_brave_export().
+
+Recommended split:
+
+    features/desktop/screenshot_service.py
+    features/folder_creator/launcher.py
+    ui/controllers/organising_actions.py
+    ui/controllers/recycle_bin_actions.py
+    ui/controllers/folder_actions.py
+
+The controllers can show dialogs and notifications; the services should accept plain paths/options and return results.
+
+
+Main-window coupling
+--------------------
+
+Code Windows Resurface/resurface/ui/application_window.py is 994 lines and inherits from four mixins plus QMainWindow. It also constructs nearly every service and owns shutdown, native Windows messages, navigation, pages, theme propagation, tray state, monitor rules, Screen Mover, and settings.
+
+The current _build_ui() builds controls in hidden "staging containers" and then reparents them into pages around line 434. That is transitional architecture and should eventually go away.
+
+After extracting the services and page widgets above, UtilityControlApp should mainly:
+
+- Construct dependencies
+- Compose pages
+- Connect high-level signals
+- Handle native main-window lifecycle events
+- Coordinate startup and shutdown
+
+I would move its page-building and navigation code first, but leave its Win32 lifecycle methods together unless they grow further.
+
+
+External-drive feature
+----------------------
+
+Code Windows Resurface/resurface/features/drives/external_drive_mixin.py combines drive polling, widget styling, context menus, session-lock handling, shutdown blocking, and notifications.
+
+There is already an empty Code Windows Resurface/resurface/features/drives/drive_reminder_logic.py, which is exactly where the non-UI state machine should go.
+
+Suggested separation:
+
+- DriveMonitor: detects additions/removals
+- DriveReminderPolicy: decides whether to warn
+- ExternalDrivesPage: displays drives
+- Main-window/native-event adapter: handles Windows session messages
+
+
+Folder Creator companion app
+----------------------------
+
+Code Folder Creator/main.py needs splitting too. Its MainWindow.__init__ is approximately 645 lines of widget construction, layout, initial state, and signal wiring.
+
+Extract UI components such as:
+
+    ui/template_panel.py
+    ui/tree_editor_panel.py
+    ui/output_options_panel.py
+    ui/post_build_panel.py
+    ui/main_window.py
+
+Code Folder Creator/folder_creator/ui/nested_ui_controller.py should then split into template, build, and output-location controllers. It currently even defines open_output_folder twice, at lines 481 and 550.
+
+Code Folder Creator/folder_creator/features/tree/nested_folder_manager.py also mixes tree-widget manipulation, text parsing, serialization, filesystem creation, sorting, and importing. Extract the pure outline parser and filesystem builder; leave widget-specific operations in a tree controller.
+
+
+Lower-priority candidates
+-------------------------
+
+- Code Windows Resurface/resurface/features/monitor_rules/monitor_rules.py could become rule_schema.py, win32_windows.py, and watcher.py. It is large, but still reasonably cohesive.
+
+- Code Windows Resurface/resurface/ui/monitor_rules_ui.py can separate the editor dialog from the rules-list page and move import/export into a repository module.
+
+- Code Windows Resurface/resurface/ui/styles.py is 1,024 lines, but mostly cohesive. Eventually split theme tokens, shared helpers, and component styles; it is not urgent.
+
+- Code Windows Resurface/resurface/features/desktop/desktop_icon_layout.py duplicates LVITEMW and desktop-list-view discovery inside its restore function. Consolidate that duplication before deciding whether it needs multiple modules.
+
+- Code Windows Resurface/resurface/ui/app_notifications.py is large but cohesive enough to leave alone.
+
+- The bookmark exporter and shared state manager are currently reasonable module sizes and boundaries.
+
+
+Recommended order
+-----------------
+
+1. Add characterization tests for command execution, drive operations, and Folder Creator UI behaviour.
+
+2. Extract pure OS-facing services from right_utility_gui.py, utility_toggles.py, and desktop_operations.py.
+
+3. Split screen_mover.py along its existing class boundaries.
+
+4. Convert each left-side section into an independent page widget.
+
+5. Reduce UtilityControlApp to composition and lifecycle management.
+
+6. Refactor Folder Creator.
+
+7. Tidy Monitor Rules and styles afterward.
+
+
+Guiding rule
+------------
+
+The key rule for the refactor is: don't pass the entire main window into new modules. Pass a service, a small callback bundle, or constructor arguments containing only what that component genuinely needs.
+
+
+Review note
+-----------
+
+No source files were changed as part of the review.

@@ -8,7 +8,7 @@ from pathlib import Path
 import psutil
 from PIL import ImageGrab
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QLineEdit, QMessageBox
 import win32api
 import win32con
 import win32gui
@@ -16,6 +16,7 @@ import win32process
 
 from resurface.core.state_manager import save_state
 from resurface.core.saved_folder_names import add_saved_folder_name
+from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
 from resurface.features.system.utility_toggles import (
     _should_skip,
     focus_window_handles,
@@ -464,7 +465,7 @@ class DesktopOperationsMixin:
         self._run_with_optional_minimize(action)
 
     def export_bookmarks(self):
-        out_paths = self.right_tools_panel._run_brave_export()
+        out_paths = self._run_bookmarks_export()
         if isinstance(out_paths, str) and out_paths:
             exported_paths = [out_paths]
         elif isinstance(out_paths, (list, tuple)) and out_paths:
@@ -486,6 +487,50 @@ class DesktopOperationsMixin:
                 "Export Bookmarks",
                 "Could not export bookmarks.",
             )
+
+    def _run_bookmarks_export(self):
+        start_dir = Path(self.get_default_bookmarks_export_dir())
+        start_dir.mkdir(parents=True, exist_ok=True)
+        exporters = [
+            exporter
+            for exporter in BraveBookmarksExporter.supported_exporters()
+            if exporter.has_bookmarks()
+        ]
+        if not exporters:
+            return False
+
+        export_targets = [
+            (exporter, start_dir / exporter.output_filename)
+            for exporter in exporters
+        ]
+        prompt = "Export bookmarks to:\n" + "\n".join(
+            str(out_path) for _exporter, out_path in export_targets
+        )
+        if any(out_path.exists() for _exporter, out_path in export_targets):
+            prompt += "\n\nExisting bookmark export files in this list will be overwritten."
+
+        result = self._show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            "Export Bookmarks",
+            prompt,
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+        )
+        if result != QMessageBox.StandardButton.Save:
+            return None
+
+        exported_paths = []
+
+        def run_export():
+            for exporter, out_path in export_targets:
+                if exporter.export_to_file(str(out_path)):
+                    exported_paths.append(str(out_path))
+
+        self._run_with_optional_minimize(run_export)
+        if exported_paths:
+            save_state(self.state)
+            return exported_paths
+        return False
 
     def open_recycle_bin(self):
         def action():

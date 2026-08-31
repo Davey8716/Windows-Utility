@@ -3,7 +3,7 @@ from pathlib import Path
 
 from resurface.ui import styles
 from PySide6.QtGui import QFont, QFontMetrics
-from resurface.ui.right_utility_gui import get_drive_info
+from resurface.features.drives.drive_service import DriveServiceError
 from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt, QTimer
 from PySide6.QtWidgets import QMenu, QMessageBox
 from resurface.ui.tooltips import format_tooltip_text
@@ -35,9 +35,9 @@ class ExternalDriveMixin:
 
     def _current_external_drives(self) -> set[str]:
         drives = set()
-        for drive in get_drive_info():
-            if drive.get("ejectable"):
-                drives.add(str(drive["drive"]))
+        for drive in self.drive_service.list_drives():
+            if drive.ejectable:
+                drives.add(drive.path)
         return drives
 
     def _leave_drive_reminder_enabled(self) -> bool:
@@ -101,11 +101,6 @@ class ExternalDriveMixin:
                 chosen_font_family,
             )
         )
-        styles.fit_page_combo_width(
-            combo,
-            placeholder=visible_text,
-            font_size=chosen_font_size,
-        )
         styles.apply_page_control_size(
             combo,
             width=styles.EXTERNAL_DRIVES_CONTROL_WIDTH,
@@ -144,6 +139,12 @@ class ExternalDriveMixin:
             display_drives = [f"{drive} Connected" for drive in drives]
             for drive_path, display_text in zip(drives, display_drives):
                 self.connected_drives_field.addItem(display_text, drive_path)
+                row = self.connected_drives_field.count() - 1
+                self.connected_drives_field.setItemData(
+                    row,
+                    display_text,
+                    Qt.ItemDataRole.ToolTipRole,
+                )
             self.connected_drives_field.setCurrentIndex(0)
             self.connected_drives_field.show()
             if empty_label is not None:
@@ -178,11 +179,7 @@ class ExternalDriveMixin:
         if not drive_path:
             return
 
-        minimize_and_run = getattr(
-            getattr(self, "right_tools_panel", None),
-            "_minimize_and_run",
-            None,
-        )
+        minimize_and_run = getattr(self, "_run_with_optional_minimize", None)
         if callable(minimize_and_run):
             minimize_and_run(lambda: os.startfile(drive_path))
             return
@@ -197,14 +194,6 @@ class ExternalDriveMixin:
         if not drives:
             return
 
-        removal_handler = getattr(
-            getattr(self, "right_tools_panel", None),
-            "_safely_remove_drive",
-            None,
-        )
-        if not callable(removal_handler):
-            return
-
         menu = QMenu(self.connected_drives_field)
         styles.apply_popup_menu_style(menu)
         actions = {}
@@ -215,7 +204,30 @@ class ExternalDriveMixin:
         selected_action = menu.exec(self.connected_drives_field.mapToGlobal(pos))
         drive_path = actions.get(selected_action)
         if drive_path:
-            removal_handler(drive_path)
+            self._safely_remove_external_drive(drive_path)
+
+    def _safely_remove_external_drive(self, drive_path: str) -> None:
+        drive_name = drive_path[:2]
+        try:
+            self.drive_service.eject(drive_path)
+        except DriveServiceError as exc:
+            self._show_timed_message(
+                QMessageBox.Icon.Warning,
+                "Drive Removal",
+                f"Could not safely remove {drive_name}.\n{exc}",
+            )
+            return
+
+        self._show_timed_message(
+            QMessageBox.Icon.Information,
+            "Drive Removal",
+            f"Requested safe removal for {drive_name}.",
+        )
+        QTimer.singleShot(1600, self._refresh_connected_drive_status_label)
+        drive_page = getattr(self, "drive_space_page", None)
+        if drive_page is not None:
+            QTimer.singleShot(1500, drive_page.drive_space_list.clear)
+            QTimer.singleShot(1600, drive_page.refresh_drives)
 
     def _show_connected_drive_warning(self, title: str, body: str, on_close=None):
         return self._show_acknowledged_message(

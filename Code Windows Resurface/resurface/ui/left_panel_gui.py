@@ -376,19 +376,19 @@ class LeftPanelBuilder:
             " Power and Session ",
             {
                 "Lock PC": lambda: app._confirm_power_action(
-                    "Lock PC", app.right_tools_panel.run_lock_pc
+                    "Lock PC", app.maintenance_actions.run_lock_pc
                 ),
                 "Sleep": lambda: app._confirm_power_action(
-                    "Sleep", app.right_tools_panel.run_sleep
+                    "Sleep", app.maintenance_actions.run_sleep
                 ),
                 "Log out": lambda: app._confirm_power_action(
-                    "Log out", app.right_tools_panel.run_logout
+                    "Log out", app.maintenance_actions.run_logout
                 ),
                 "Restart": lambda: app._confirm_power_action(
-                    "Restart", app.right_tools_panel.run_restart
+                    "Restart", app.maintenance_actions.run_restart
                 ),
                 "Shutdown": lambda: app._confirm_power_action(
-                    "Shutdown", app.right_tools_panel.run_shutdown
+                    "Shutdown", app.maintenance_actions.run_shutdown
                 ),
             },
             power_action_style=True,
@@ -562,9 +562,12 @@ class LeftPanelBuilder:
         aligned_screen_mover_widgets = [screen_row]
 
         def sync_screen_mover_control_widths() -> None:
+            width_text = screen_move_button_combo.currentText()
+            if screen_move_button_combo.currentData() != "off":
+                width_text = f"Move Button: {width_text}"
             styles.fit_page_combo_width(
                 screen_move_button_combo,
-                placeholder=screen_move_button_combo.currentText(),
+                placeholder=width_text,
                 font_size=14,
             )
             aligned_width = (
@@ -947,7 +950,7 @@ class LeftPanelBuilder:
                 styles.apply_page_control_size(
                     combo,
                     width=fixed_width,
-                    role="wide",
+                    role="externalDrive",
                 )
             combo.setProperty("persistPressed", combo.currentData() != "off")
             combo.style().unpolish(combo)

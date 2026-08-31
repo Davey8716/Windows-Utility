@@ -1,10 +1,9 @@
 from pathlib import Path
-from types import SimpleNamespace
 
 from PySide6.QtWidgets import QMessageBox
 
-from resurface.ui import right_utility_gui
-from resurface.ui.right_utility_gui import AdvancedToolsPanel
+from resurface.features.desktop import desktop_operations
+from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
 
 
 class FakeExporter:
@@ -51,20 +50,18 @@ class FakeApp:
 
 def run_export(monkeypatch, tmp_path, exporters, response):
     monkeypatch.setattr(
-        right_utility_gui.BraveBookmarksExporter,
+        desktop_operations.BraveBookmarksExporter,
         "supported_exporters",
         lambda: exporters,
     )
     saved_states = []
     monkeypatch.setattr(
-        right_utility_gui,
+        desktop_operations,
         "save_state",
         lambda state: saved_states.append(state),
     )
     app = FakeApp(tmp_path / "Bookmarks", response)
-    panel = SimpleNamespace(app=app)
-
-    result = AdvancedToolsPanel._run_brave_export(panel)
+    result = DesktopOperationsMixin._run_bookmarks_export(app)
 
     return result, app, saved_states
 

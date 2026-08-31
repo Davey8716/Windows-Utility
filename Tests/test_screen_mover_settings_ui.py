@@ -316,10 +316,11 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         mounted_content = {
             "user_interface": window.left_page_contents["user_interface"],
             "screen_mover": window.left_page_contents["screen_mover"],
-            "external_drives": window.right_tools_panel.drive_space_content,
-            "windows_utilities": window.right_tools_panel.windows_utilities_content,
-            "maintenance": window.right_tools_panel.maintenance_content,
+            "external_drives": window.drive_space_page,
+            "windows_utilities": window.windows_utilities_page,
+            "maintenance": window.maintenance_page,
         }
+        assert not hasattr(window, "right_tools_panel")
         assert all(
             window.page_by_id[page_id].isAncestorOf(content)
             for page_id, content in mounted_content.items()
@@ -1136,8 +1137,8 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         window.show()
         qt_app.processEvents()
 
-        panel = window.right_tools_panel
-        maintenance_content = panel.maintenance_content
+        panel = window.maintenance_page
+        maintenance_content = panel
         selectors = maintenance_content.findChildren(QComboBox)
         selector_grid = selectors[0].parentWidget()
         maintenance_page = window.page_by_id["maintenance"]
@@ -1176,7 +1177,7 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         assert clear_button_pos.x() == output_left
         assert clear_button_pos.y() - output_bottom == 16
 
-        panel._set_sidebar_output_context("Flush DNS")
+        panel.set_output_context("Flush DNS")
         panel.sidebar_output.setPlainText("Output to clear")
         panel.sidebar_output_clear_btn.click()
         assert panel.sidebar_output.toPlainText() == "Dns output log cleared."
@@ -1204,7 +1205,7 @@ def test_external_drive_controls_and_output_share_the_inner_frame_width(monkeypa
         window.show()
         qt_app.processEvents()
 
-        panel = window.right_tools_panel
+        panel = window.drive_space_page
         drive_page = window.page_by_id["external_drives"]
         button_row = panel.btn_this_pc.parentWidget()
 

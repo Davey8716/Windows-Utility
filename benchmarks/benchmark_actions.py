@@ -25,11 +25,12 @@ for path in (PROJECT_ROOT, APP_DIR):
 
 from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
 from resurface.features.drives import external_drive_mixin
+from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
 from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
 from resurface.features.system import utility_toggles
 from resurface.features.system.utility_toggles import UtilityActionsManager
-from resurface.ui import right_utility_gui
+from resurface.features.drives import drive_service
 
 
 POWERSHELL = "powershell.exe"
@@ -446,15 +447,15 @@ def make_router_gateway_shell_execution(_root: Path, _index: int) -> Execution:
 
 
 def make_usb_drive_app_execution(_root: Path, _index: int) -> Execution:
-    original = right_utility_gui.subprocess.check_output
+    original = drive_service.subprocess.check_output
 
     def silent_check_output(*args, **kwargs):
         kwargs.setdefault("stderr", subprocess.DEVNULL)
         return original(*args, **kwargs)
 
-    patcher = patch.object(right_utility_gui.subprocess, "check_output", silent_check_output)
+    patcher = patch.object(drive_service.subprocess, "check_output", silent_check_output)
     patcher.start()
-    return Execution(right_utility_gui.get_usb_drive_letters, patcher.stop)
+    return Execution(DriveService().usb_drive_letters, patcher.stop)
 
 
 def make_usb_drive_shell_execution(_root: Path, _index: int) -> Execution:
@@ -465,15 +466,15 @@ def make_usb_drive_shell_execution(_root: Path, _index: int) -> Execution:
 
 
 def make_drive_inventory_app_execution(_root: Path, _index: int) -> Execution:
-    original = right_utility_gui.subprocess.check_output
+    original = drive_service.subprocess.check_output
 
     def silent_check_output(*args, **kwargs):
         kwargs.setdefault("stderr", subprocess.DEVNULL)
         return original(*args, **kwargs)
 
-    patcher = patch.object(right_utility_gui.subprocess, "check_output", silent_check_output)
+    patcher = patch.object(drive_service.subprocess, "check_output", silent_check_output)
     patcher.start()
-    return Execution(right_utility_gui.get_drive_info, patcher.stop)
+    return Execution(DriveService().list_drives, patcher.stop)
 
 
 def make_drive_inventory_shell_execution(_root: Path, _index: int) -> Execution:

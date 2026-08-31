@@ -12,17 +12,20 @@ from resurface.core.instance_runtime import WM_APP_RESTORE_INSTANCE
 from resurface.core.state_manager import load_state, save_state
 from resurface.core.tray_toggles import TrayIconManager, resolve_application_icon
 from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
+from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
 from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager, VALID_ACTIONS, active_hotkeys
 from resurface.features.screen_mover.screen_mover import ScreenMover, perform_window_action
 from resurface.features.monitor_rules import MonitorRuleWatcher, normalize_monitor_rules
 from resurface.features.system.utility_toggles import UtilityActionsManager
+from resurface.features.system.command_runner import CommandRunner
+from resurface.features.system.maintenance_actions import MaintenanceActions
+from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.left_panel_gui import LeftPanelBuilder
-from resurface.ui.right_utility_gui import (
-    AdvancedToolsPanel as RightAdvancedToolsPanel,
-    get_drive_info,
-)
+from resurface.ui.pages.drive_space_page import DriveSpacePage
+from resurface.ui.pages.maintenance_page import MaintenancePage
+from resurface.ui.pages.windows_utilities_page import WindowsUtilitiesPage
 from resurface.ui.tooltips import QtTooltipManager, tooltip_text
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, QSize
 from resurface.ui.navigation_shell import NavigationShell
@@ -112,6 +115,13 @@ class UtilityControlApp(
         self._quit_requested = False
         self._shutdown_complete = False
         self.actions = UtilityActionsManager(self)
+        self.drive_service = DriveService()
+        self.command_runner = CommandRunner(self)
+        self.maintenance_actions = MaintenanceActions(
+            self.command_runner,
+            self.actions,
+            self,
+        )
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
         self.screen_mover = ScreenMover(name="WindowsResurfaceMain")
@@ -387,6 +397,8 @@ class UtilityControlApp(
         except Exception:
             pass
 
+        self.command_runner.reset()
+
         tray = getattr(getattr(self, "tray_manager", None), "tray", None)
         if tray:
             try:
@@ -489,10 +501,32 @@ class UtilityControlApp(
         self.navigation_shell.create_page_registry()
 
         self.sidebar_navigation_mode = True
-        # Build the existing wired controls in staging containers, then mount their
-        # content on the new pages. This keeps all action callbacks in one place.
-        self.right_tools_panel = RightAdvancedToolsPanel(self)
-        self.right_tools_panel.hide()
+
+        self.maintenance_page = MaintenancePage(
+            self.maintenance_actions,
+            self.command_runner,
+            self.register_tooltip,
+            self._run_with_optional_minimize,
+            self._show_modal_message,
+            self,
+        )
+        self.windows_utilities_page = WindowsUtilitiesPage(
+            WindowsToolCatalog(),
+            self.actions,
+            self.maintenance_actions,
+            self.register_tooltip,
+            self._run_with_optional_minimize,
+            self.maintenance_page.set_output_context,
+            self,
+        )
+        self.drive_space_page = DriveSpacePage(
+            self.drive_service,
+            self.actions,
+            self.register_tooltip,
+            self._show_timed_message,
+            self._run_with_optional_minimize,
+            self,
+        )
 
         LeftPanelBuilder(self).build()
 
@@ -513,15 +547,15 @@ class UtilityControlApp(
         self._add_page_subheading("external_drives", "Storage")
         self._mount_page_content(
             "external_drives",
-            self.right_tools_panel.drive_space_content,
+            self.drive_space_page,
         )
         self._mount_page_content(
             "windows_utilities",
-            self.right_tools_panel.windows_utilities_content,
+            self.windows_utilities_page,
         )
         self._mount_page_content(
             "maintenance",
-            self.right_tools_panel.maintenance_content,
+            self.maintenance_page,
         )
         self._build_overview_page()
         self._build_quick_actions_page()
@@ -589,6 +623,7 @@ class UtilityControlApp(
                 widget.style().unpolish(widget)
                 widget.style().polish(widget)
                 widget.update()
+            hotkey_edit.setFixedHeight(styles.PAGE_CONTROL_HEIGHT)
 
     @staticmethod
     def _is_screen_mover_shortcut_internal_field(line_edit: QLineEdit) -> bool:
@@ -945,11 +980,10 @@ class UtilityControlApp(
             else:
                 combo.setStyleSheet(styles.organizing_combo_style(font_size=font_size))
 
-        if hasattr(self, "right_tools_panel"):
-            if hasattr(self.right_tools_panel, "sidebar_output"):
-                self.right_tools_panel._apply_sidebar_output_theme()
-            if hasattr(self.right_tools_panel, "drive_space_list"):
-                self.right_tools_panel._apply_drive_space_list_style()
+        if hasattr(self, "maintenance_page"):
+            self.maintenance_page.apply_theme()
+        if hasattr(self, "drive_space_page"):
+            self.drive_space_page.apply_theme()
 
         for label in self.findChildren(QLabel, "PageTitle"):
             label.setStyleSheet(styles.page_title_style())
