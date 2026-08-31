@@ -3,6 +3,7 @@ from pathlib import Path
 
 from resurface.ui import styles
 from resurface.features.drives.drive_service import DriveServiceError
+from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
 from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt, QTimer
 from PySide6.QtWidgets import QMenu, QMessageBox
 
@@ -43,15 +44,13 @@ class ExternalDriveMixin:
         return bool(self.state.get("usb_idle_enabled", True))
 
     def _connected_external_drive_signature(self) -> tuple[str, ...]:
-        return tuple(sorted(self._current_external_drives()))
+        return DriveReminderPolicy.signature(self._current_external_drives())
 
     def _format_external_drive_message(
         self,
         drives: tuple[str, ...],
     ) -> tuple[str, str]:
-        drive_label = "drive is" if len(drives) == 1 else "drives are"
-        drive_lines = "\n".join(drives)
-        return drive_label, drive_lines
+        return DriveReminderPolicy.format_connected_drives(drives)
 
     def _apply_connected_drives_field_style(self) -> None:
         page = getattr(self, "external_drives_page", None)
@@ -178,11 +177,11 @@ class ExternalDriveMixin:
         return not current_signature
 
     def _handle_session_lock_reminder(self):
-        if not self._leave_drive_reminder_enabled():
-            return
-
         current_signature = self._connected_external_drive_signature()
-        if not current_signature:
+        if not DriveReminderPolicy.should_remind(
+            self._leave_drive_reminder_enabled(),
+            current_signature,
+        ):
             return
 
         drive_label, drive_lines = self._format_external_drive_message(
@@ -198,12 +197,11 @@ class ExternalDriveMixin:
         )
 
     def _block_end_session_for_connected_drives(self, action_name: str) -> bool:
-        if not self._leave_drive_reminder_enabled():
-            self._pending_end_session_warning = False
-            return False
-
         current_signature = self._connected_external_drive_signature()
-        if not current_signature:
+        if not DriveReminderPolicy.should_remind(
+            self._leave_drive_reminder_enabled(),
+            current_signature,
+        ):
             self._pending_end_session_warning = False
             return False
 
@@ -233,12 +231,11 @@ class ExternalDriveMixin:
         return True
 
     def _confirm_power_action(self, action_name: str, action_callback):
-        if not self._leave_drive_reminder_enabled():
-            action_callback()
-            return
-
         current_signature = self._connected_external_drive_signature()
-        if not current_signature:
+        if not DriveReminderPolicy.should_remind(
+            self._leave_drive_reminder_enabled(),
+            current_signature,
+        ):
             action_callback()
             return
 
@@ -283,30 +280,25 @@ class ExternalDriveMixin:
     def _check_external_drive_changes(self):
         current_drives = self._current_external_drives()
         self._refresh_connected_drive_status_label(current_drives)
-
-        if self.state.get("usb_plug_notify_mode", "on") == "off":
-            self._known_external_drives = current_drives
-            return
-
-        added_drives = sorted(current_drives - self._known_external_drives)
-        removed_drives = sorted(self._known_external_drives - current_drives)
-        self._known_external_drives = current_drives
         suppressed_signature = getattr(
             self,
             "_suppress_drive_change_popup_signature",
-            None,
+            (),
+        ) or ()
+        changes = self.drive_reminder_policy.observe(
+            current_drives,
+            notifications_enabled=(
+                self.state.get("usb_plug_notify_mode", "on") != "off"
+            ),
+            suppressed_removals=suppressed_signature,
         )
-        if suppressed_signature:
-            suppressed_drives = set(suppressed_signature)
-            if removed_drives and set(removed_drives).issubset(suppressed_drives):
-                removed_drives = []
 
-        if added_drives:
-            drive_label = "drive" if len(added_drives) == 1 else "drives"
+        if changes.added:
+            drive_label = "drive" if len(changes.added) == 1 else "drives"
             self._show_timed_message(
                 self._message_box_icon("Information"),
                 "Drive Connected",
-                f"External {drive_label} connected:\n" + "\n".join(added_drives),
+                f"External {drive_label} connected:\n" + "\n".join(changes.added),
                 timeout_ms=10_000,
                 merge_group="external_drive_changes",
                 merge_title="External Drives",
@@ -320,12 +312,12 @@ class ExternalDriveMixin:
                 replace_grouped_entries=True,
             )
 
-        if removed_drives:
-            drive_label = "drive" if len(removed_drives) == 1 else "drives"
+        if changes.removed:
+            drive_label = "drive" if len(changes.removed) == 1 else "drives"
             self._show_timed_message(
                 self._message_box_icon("Information"),
                 "Drive Removed",
-                f"External {drive_label} removed:\n" + "\n".join(removed_drives),
+                f"External {drive_label} removed:\n" + "\n".join(changes.removed),
                 timeout_ms=10_000,
                 merge_group="external_drive_changes",
                 merge_title="External Drives",

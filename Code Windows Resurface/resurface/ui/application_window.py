@@ -13,6 +13,7 @@ from resurface.core.state_manager import load_state, save_state
 from resurface.core.tray_toggles import TrayIconManager, resolve_application_icon
 from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
 from resurface.features.drives.drive_service import DriveService
+from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
 from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
 from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager, VALID_ACTIONS, active_hotkeys
 from resurface.features.screen_mover.service import ScreenMover
@@ -109,7 +110,6 @@ class UtilityControlApp(
         self._tooltip_managers = []
         self._active_message_boxes = []
         self._grouped_timed_message_boxes = {}
-        self._known_external_drives = set()
         self._session_notification_registered = False
         self._pending_end_session_warning = False
         self._taskbar_backup_folder_open = False
@@ -117,6 +117,7 @@ class UtilityControlApp(
         self._shutdown_complete = False
         self.actions = UtilityActionsManager(self)
         self.drive_service = DriveService()
+        self.drive_reminder_policy = DriveReminderPolicy()
         self.command_runner = CommandRunner(self)
         self.maintenance_actions = MaintenanceActions(
             self.command_runner,
@@ -132,7 +133,7 @@ class UtilityControlApp(
         self.window_chrome = WindowChrome(self)
 
         self._build_ui()
-        self._known_external_drives = self._current_external_drives()
+        self.drive_reminder_policy.reset(self._current_external_drives())
         self._drive_change_timer = QTimer(self)
         self._drive_change_timer.timeout.connect(self._check_external_drive_changes)
         self._drive_change_timer.start(3000)
