@@ -344,7 +344,7 @@ def test_delete_all_rules_confirms_and_updates_empty_state(monkeypatch):
         assert not page.turn_off_all_button.isEnabled()
         assert (
             page.rule_list_layout.itemAt(0).widget().text()
-            == "No application monitor rules have been created."
+            == "No application monitor rules have been created or imported."
         )
     finally:
         page.deleteLater()

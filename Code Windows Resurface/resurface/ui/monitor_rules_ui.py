@@ -471,7 +471,10 @@ class MonitorRulesPage(QFrame):
             "Disable all monitor rules" if any_enabled else "Enable all monitor rules"
         )
         if not self.rules:
-            empty = QLabel("No application monitor rules have been created.", self.rule_list)
+            empty = QLabel(
+                "No application monitor rules have been created or imported.",
+                self.rule_list,
+            )
             empty.setAlignment(Qt.AlignmentFlag.AlignHCenter)
             empty.setStyleSheet(styles.page_description_style())
             self.rule_list_layout.addWidget(empty)
