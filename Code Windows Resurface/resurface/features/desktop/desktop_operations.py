@@ -17,9 +17,9 @@ import win32process
 from resurface.core.state_manager import save_state
 from resurface.core.saved_folder_names import add_saved_folder_name
 from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
-from resurface.features.system.utility_toggles import (
-    _should_skip,
+from resurface.features.windows.window_management import (
     focus_window_handles,
+    should_skip_window,
 )
 
 
@@ -88,7 +88,7 @@ class DesktopOperationsMixin:
         handles = []
 
         def enum_handler(hwnd, _):
-            if _should_skip(hwnd, skip_hwnd):
+            if should_skip_window(hwnd, skip_hwnd):
                 return
 
             try:

@@ -1,0 +1,119 @@
+"filename", "language", "Python", "JSON", "XML", "Markdown", "comment", "blank", "total"
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\App Icons\Light Theme\Dropdown Chevron Light.svg", "XML", 0, 0, 3, 0, 0, 1, 4
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\App Icons\Light Theme\Dropdown Chevron.svg", "XML", 0, 0, 3, 0, 0, 1, 4
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\README.md", "Markdown", 0, 0, 0, 104, 0, 49, 153
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\core\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\core\app_service.py", "Python", 42, 0, 0, 0, 0, 14, 56
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\core\state_manager.py", "Python", 46, 0, 0, 0, 0, 11, 57
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\core\system_paths.py", "Python", 15, 0, 0, 0, 0, 6, 21
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\features\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\features\templates\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\features\templates\template_IO_layer.py", "Python", 82, 0, 0, 0, 15, 32, 129
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\features\tree\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\features\tree\nested_folder_manager.py", "Python", 379, 0, 0, 0, 50, 128, 557
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\nested_ui_controller.py", "Python", 443, 0, 0, 0, 8, 161, 612
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\smart_tree_widget.py", "Python", 221, 0, 0, 0, 35, 74, 330
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\status_controller.py", "Python", 75, 0, 0, 0, 6, 15, 96
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\styles.py", "Python", 184, 0, 0, 0, 67, 42, 293
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\ui_state_controller.py", "Python", 218, 0, 0, 0, 10, 81, 309
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\main.py", "Python", 748, 0, 0, 0, 0, 134, 882
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\main.py", "Python", 14, 0, 0, 0, 1, 8, 23
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\app_paths.py", "Python", 115, 0, 0, 0, 0, 28, 143
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\instance_runtime.py", "Python", 119, 0, 0, 0, 3, 28, 150
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\saved_folder_names.py", "Python", 77, 0, 0, 0, 0, 13, 90
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\state_manager.py", "Python", 46, 0, 0, 0, 0, 17, 63
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\tray_toggles.py", "Python", 186, 0, 0, 0, 0, 51, 237
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\bookmarks\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\bookmarks\universal_bookmarks_export.py", "Python", 298, 0, 0, 0, 16, 64, 378
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\desktop\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\desktop\desktop_icon_layout.py", "Python", 280, 0, 0, 0, 33, 69, 382
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\desktop\desktop_operations.py", "Python", 814, 0, 0, 0, 0, 143, 957
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\drives\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\drives\drive_reminder_logic.py", "Python", 46, 0, 0, 0, 2, 16, 64
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\drives\drive_service.py", "Python", 99, 0, 0, 0, 0, 14, 113
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\drives\external_drive_mixin.py", "Python", 291, 0, 0, 0, 0, 42, 333
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\monitor_rules\__init__.py", "Python", 23, 0, 0, 0, 1, 3, 27
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\monitor_rules\monitor_rules.py", "Python", 567, 0, 0, 0, 9, 75, 651
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\monitor_rules\repository.py", "Python", 47, 0, 0, 0, 3, 15, 65
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\dock_icons.py", "Python", 199, 0, 0, 0, 1, 44, 244
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\dock_overlay.py", "Python", 280, 0, 0, 0, 1, 43, 324
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\hotkeys.py", "Python", 194, 0, 0, 0, 0, 35, 229
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\screen_mover.py", "Python", 106, 0, 0, 0, 5, 4, 115
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\service.py", "Python", 439, 0, 0, 0, 1, 94, 534
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\window_actions.py", "Python", 175, 0, 0, 0, 1, 49, 225
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\window_filter.py", "Python", 99, 0, 0, 0, 2, 26, 127
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\system\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\system\command_runner.py", "Python", 175, 0, 0, 0, 0, 31, 206
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\system\maintenance_actions.py", "Python", 127, 0, 0, 0, 0, 39, 166
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\system\utility_toggles.py", "Python", 841, 0, 0, 0, 26, 234, 1101
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\system\windows_tool_catalog.py", "Python", 96, 0, 0, 0, 0, 10, 106
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\app_notifications.py", "Python", 459, 0, 0, 0, 0, 52, 511
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\application_window.py", "Python", 899, 0, 0, 0, 2, 129, 1030
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\left_panel_gui.py", "Python", 159, 0, 0, 0, 1, 22, 182
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\monitor_rule_editor_dialog.py", "Python", 343, 0, 0, 0, 2, 37, 382
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\monitor_rules_ui.py", "Python", 383, 0, 0, 0, 10, 33, 426
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\navigation_shell.py", "Python", 84, 0, 0, 0, 1, 9, 94
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\__init__.py", "Python", 0, 0, 0, 0, 1, 1, 2
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\drive_space_page.py", "Python", 203, 0, 0, 0, 0, 25, 228
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\external_drives_page.py", "Python", 147, 0, 0, 0, 1, 17, 165
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\folder_utilities_page.py", "Python", 59, 0, 0, 0, 0, 9, 68
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\maintenance_page.py", "Python", 206, 0, 0, 0, 0, 20, 226
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\organising_utilities_page.py", "Python", 46, 0, 0, 0, 0, 8, 54
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\page_controls.py", "Python", 169, 0, 0, 0, 1, 19, 189
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\recycle_bin_page.py", "Python", 51, 0, 0, 0, 0, 7, 58
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\screen_mover_settings_page.py", "Python", 207, 0, 0, 0, 0, 24, 231
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\user_interface_page.py", "Python", 112, 0, 0, 0, 0, 14, 126
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\windows_utilities_page.py", "Python", 118, 0, 0, 0, 0, 16, 134
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\styles.py", "Python", 755, 0, 0, 0, 345, 6, 1106
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\tooltips.py", "Python", 116, 0, 0, 0, 0, 22, 138
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\window_chrome.py", "Python", 140, 0, 0, 0, 3, 19, 162
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\README.md", "Markdown", 0, 0, 0, 96, 0, 39, 135
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\app_state_defaults.py", "Python", 55, 0, 0, 0, 3, 6, 64
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\shared_state_manager.py", "Python", 263, 0, 0, 0, 1, 50, 314
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\conftest.py", "Python", 8, 0, 0, 0, 0, 4, 12
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_bookmarks_export_ui.py", "Python", 150, 0, 0, 0, 0, 34, 184
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_command_runner.py", "Python", 27, 0, 0, 0, 0, 10, 37
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_drive_reminder_logic.py", "Python", 36, 0, 0, 0, 0, 19, 55
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_drive_service.py", "Python", 41, 0, 0, 0, 0, 14, 55
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_folder_creator_launcher.py", "Python", 169, 0, 0, 0, 0, 58, 227
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_hotkeys.py", "Python", 62, 0, 0, 0, 0, 19, 81
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_instance_scope.py", "Python", 123, 0, 0, 0, 0, 32, 155
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_left_panel_pages.py", "Python", 68, 0, 0, 0, 0, 10, 78
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_maintenance_actions.py", "Python", 52, 0, 0, 0, 0, 15, 67
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_monitor_rules.py", "Python", 675, 0, 0, 0, 0, 111, 786
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_monitor_rules_repository.py", "Python", 31, 0, 0, 0, 0, 14, 45
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_monitor_rules_ui.py", "Python", 524, 0, 0, 0, 0, 53, 577
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_saved_folder_names.py", "Python", 71, 0, 0, 0, 0, 18, 89
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover.py", "Python", 284, 0, 0, 0, 0, 78, 362
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_compatibility.py", "Python", 12, 0, 0, 0, 0, 3, 15
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_dock_icons.py", "Python", 13, 0, 0, 0, 0, 7, 20
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_dock_overlay.py", "Python", 50, 0, 0, 0, 0, 19, 69
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_settings_ui.py", "Python", 1311, 0, 0, 0, 1, 203, 1515
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_window_actions.py", "Python", 100, 0, 0, 0, 0, 19, 119
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_window_filter.py", "Python", 35, 0, 0, 0, 0, 9, 44
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_shared_state_manager.py", "Python", 262, 0, 0, 0, 0, 45, 307
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_styles.py", "Python", 171, 0, 0, 0, 0, 40, 211
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_tray_toggles.py", "Python", 189, 0, 0, 0, 0, 64, 253
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_universal_bookmarks_export.py", "Python", 45, 0, 0, 0, 0, 6, 51
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_windows_tool_catalog.py", "Python", 25, 0, 0, 0, 0, 5, 30
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-final\test_delete_all_creates_safety0\Monitor Rules\monitor_rules_before_delete_20260831_161250_640640.json", "JSON", 0, 21, 0, 0, 0, 0, 21
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-final\test_monitor_rules_export_and_0\Monitor Rules\import.json", "JSON", 0, 1, 0, 0, 0, 0, 1
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-final\test_monitor_rules_export_and_0\Monitor Rules\monitor_rules_20260831_161250_501169.json", "JSON", 0, 21, 0, 0, 0, 0, 21
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-frameless\test_monitor_rules_export_and_0\Monitor Rules\import.json", "JSON", 0, 1, 0, 0, 0, 0, 1
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-frameless\test_monitor_rules_export_and_0\Monitor Rules\monitor_rules_20260831_161500_938585.json", "JSON", 0, 21, 0, 0, 0, 0, 21
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-targeted\test_monitor_rules_export_and_0\Monitor Rules\import.json", "JSON", 0, 1, 0, 0, 0, 0, 1
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-targeted\test_monitor_rules_export_and_0\Monitor Rules\monitor_rules_20260831_161225_414153.json", "JSON", 0, 21, 0, 0, 0, 0, 21
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-tests\test_delete_all_creates_safety0\Monitor Rules\monitor_rules_before_delete_20260831_161156_682992.json", "JSON", 0, 21, 0, 0, 0, 0, 21
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-tests\test_monitor_rules_export_and_0\Monitor Rules\import.json", "JSON", 0, 1, 0, 0, 0, 0, 1
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\UsersdaveyAppDataLocalTempwin-resurface-import-dialog-tests\test_monitor_rules_export_and_0\Monitor Rules\monitor_rules_20260831_161156_483895.json", "JSON", 0, 21, 0, 0, 0, 0, 21
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\benchmarks\benchmark_actions.py", "Python", 725, 0, 0, 0, 0, 148, 873
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\benchmarks\latest_results.json", "JSON", 0, 215, 0, 0, 0, 0, 215
+"c:\Users\davey\Desktop\Projects\Win-11-Resurface\benchmarks\latest_results.md", "Markdown", 0, 0, 0, 14, 0, 3, 17
+"Total", "-", 18439, 345, 6, 214, 683, 3603, 23290

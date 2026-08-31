@@ -12,6 +12,7 @@ from resurface.core.instance_runtime import WM_APP_RESTORE_INSTANCE
 from resurface.core.state_manager import load_state, save_state
 from resurface.core.tray_toggles import TrayIconManager, resolve_application_icon
 from resurface.features.desktop.desktop_operations import DesktopOperationsMixin
+from resurface.features.desktop.zen_mode import ZenModeService
 from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
 from resurface.features.drives.external_drive_mixin import ExternalDriveMixin
@@ -19,7 +20,12 @@ from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager, VALID_A
 from resurface.features.screen_mover.service import ScreenMover
 from resurface.features.screen_mover.window_actions import perform_window_action
 from resurface.features.monitor_rules import MonitorRuleWatcher, normalize_monitor_rules
+from resurface.features.explorer.window_service import ExplorerWindowService
+from resurface.features.recycle_bin.service import RecycleBinService
 from resurface.features.system.utility_toggles import UtilityActionsManager
+from resurface.features.system.router_service import RouterService
+from resurface.features.taskbar.backup_service import TaskbarBackupService
+from resurface.features.windows.window_management import WindowManagementService
 from resurface.features.system.command_runner import CommandRunner
 from resurface.features.system.maintenance_actions import MaintenanceActions
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
@@ -115,13 +121,28 @@ class UtilityControlApp(
         self._taskbar_backup_folder_open = False
         self._quit_requested = False
         self._shutdown_complete = False
-        self.actions = UtilityActionsManager(self)
+        self.window_management = WindowManagementService()
+        self.explorer_windows = ExplorerWindowService(self.window_management)
+        self.recycle_bin_service = RecycleBinService(self.window_management)
+        self.taskbar_backup_service = TaskbarBackupService()
+        self.zen_mode_service = ZenModeService()
+        self.router_service = RouterService()
+        self.actions = UtilityActionsManager(
+            self,
+            windows=self.window_management,
+            explorer=self.explorer_windows,
+            recycle_bin=self.recycle_bin_service,
+            taskbar_backup=self.taskbar_backup_service,
+            zen_mode=self.zen_mode_service,
+            router=self.router_service,
+        )
         self.drive_service = DriveService()
         self.drive_reminder_policy = DriveReminderPolicy()
         self.command_runner = CommandRunner(self)
         self.maintenance_actions = MaintenanceActions(
             self.command_runner,
-            self.actions,
+            self.explorer_windows,
+            self.window_management,
             self,
         )
         self.tray_manager = TrayIconManager(self)
@@ -511,7 +532,9 @@ class UtilityControlApp(
         )
         self.windows_utilities_page = WindowsUtilitiesPage(
             WindowsToolCatalog(),
-            self.actions,
+            self.router_service,
+            self.explorer_windows,
+            self.window_management,
             self.maintenance_actions,
             self.register_tooltip,
             self._run_with_optional_minimize,
@@ -520,7 +543,7 @@ class UtilityControlApp(
         )
         self.drive_space_page = DriveSpacePage(
             self.drive_service,
-            self.actions,
+            self.window_management,
             self.register_tooltip,
             self._show_timed_message,
             self._run_with_optional_minimize,

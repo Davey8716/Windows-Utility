@@ -16,7 +16,9 @@ class WindowsUtilitiesPage(QWidget):
     def __init__(
         self,
         catalog: WindowsToolCatalog,
-        window_actions,
+        router_service,
+        explorer_windows,
+        windows,
         maintenance_actions: MaintenanceActions,
         register_tooltip: Callable,
         run_with_optional_minimize: Callable,
@@ -25,7 +27,9 @@ class WindowsUtilitiesPage(QWidget):
     ):
         super().__init__(parent)
         self.catalog = catalog
-        self.window_actions = window_actions
+        self.router_service = router_service
+        self.explorer_windows = explorer_windows
+        self.windows = windows
         self.maintenance_actions = maintenance_actions
         self.register_tooltip = register_tooltip
         self.run_with_optional_minimize = run_with_optional_minimize
@@ -103,13 +107,13 @@ class WindowsUtilitiesPage(QWidget):
             self.maintenance_actions.show_ip_config()
             return
         if tool.launch_kind == "router":
-            self.window_actions.open_router_page()
+            self.router_service.open_router_page()
             return
         if tool.launch_kind == "folder":
-            self.window_actions.open_or_focus_folder_path(tool.target)
+            self.explorer_windows.open_or_focus_folder(tool.target)
             return
         if tool.launch_kind == "explorer_title":
-            self.window_actions.open_or_focus_explorer_title(
+            self.explorer_windows.open_or_focus_title(
                 tool.title_candidates[0],
                 lambda: self.maintenance_actions.shell_execute(tool.target, tool.parameters),
             )
@@ -128,6 +132,6 @@ class WindowsUtilitiesPage(QWidget):
                 raise ValueError(f"Unsupported Windows tool launch kind: {tool.launch_kind}")
 
         if tool.title_candidates:
-            self.window_actions.open_or_focus_window_titles(tool.title_candidates, raw_launch)
+            self.windows.open_or_focus_titles(tool.title_candidates, raw_launch)
         else:
             raw_launch()

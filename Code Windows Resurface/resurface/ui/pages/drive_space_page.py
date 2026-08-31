@@ -30,7 +30,7 @@ class DriveSpacePage(QWidget):
     def __init__(
         self,
         drive_service: DriveService,
-        window_actions,
+        windows,
         register_tooltip: Callable,
         show_timed_message: Callable,
         run_with_optional_minimize: Callable,
@@ -38,7 +38,7 @@ class DriveSpacePage(QWidget):
     ):
         super().__init__(parent)
         self.drive_service = drive_service
-        self.window_actions = window_actions
+        self.windows = windows
         self.register_tooltip = register_tooltip
         self.show_timed_message = show_timed_message
         self.run_with_optional_minimize = run_with_optional_minimize
@@ -68,7 +68,7 @@ class DriveSpacePage(QWidget):
             "Open This PC",
             labels={"closed": "Open This PC", "open": "Close This PC", "minimized": "Focus This PC"},
             title_candidates=("This PC",),
-            open_action=lambda: self.window_actions.open_or_focus_window_titles(
+            open_action=lambda: self.windows.open_or_focus_titles(
                 ("This PC",), lambda: self._shell_open("explorer.exe", "shell:MyComputerFolder")
             ),
             tooltip_key="open_this_pc",
@@ -79,7 +79,7 @@ class DriveSpacePage(QWidget):
             "Open Storage Sense",
             labels={"closed": "Open Storage Sense", "open": "Close Storage Sense", "minimized": "Focus Storage Sense"},
             title_candidates=("Settings",),
-            open_action=lambda: self.window_actions.open_or_focus_window_titles(
+            open_action=lambda: self.windows.open_or_focus_titles(
                 ("Settings",), lambda: self._shell_open("ms-settings:storagepolicies")
             ),
             tooltip_key="open_storage_sense",
@@ -206,7 +206,7 @@ class DriveSpacePage(QWidget):
         spec = self._tracked_window_buttons.get(key)
         if spec is None:
             return
-        state = self.window_actions.get_window_titles_state(spec["title_candidates"])
+        state = self.windows.get_titles_state(spec["title_candidates"])
         text = spec["labels"].get(state, spec["labels"]["closed"])
         if spec["button"].text() != text:
             spec["button"].setText(text)
@@ -216,11 +216,11 @@ class DriveSpacePage(QWidget):
         if spec is None:
             return
         titles = spec["title_candidates"]
-        state = self.window_actions.get_window_titles_state(titles)
+        state = self.windows.get_titles_state(titles)
         if state == "open":
-            self.window_actions.close_window_titles(titles)
+            self.windows.close_titles(titles)
         elif state == "minimized":
-            self.run_with_optional_minimize(lambda: self.window_actions.maximize_window_titles(titles))
+            self.run_with_optional_minimize(lambda: self.windows.maximize_titles(titles))
         else:
             self.run_with_optional_minimize(spec["open_action"])
         self._refresh_tracked_window_button_label(key)

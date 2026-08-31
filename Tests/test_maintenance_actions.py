@@ -22,7 +22,7 @@ class FakeWindowActions:
 
 def test_network_and_integrity_actions_delegate_to_runner(monkeypatch):
     runner = FakeRunner()
-    actions = MaintenanceActions(runner, FakeWindowActions())
+    actions = MaintenanceActions(runner, FakeWindowActions(), FakeWindowActions())
     actions.flush_dns()
     actions.restart_explorer()
     monkeypatch.setattr(actions, "is_admin", lambda: False)
@@ -39,7 +39,7 @@ def test_network_and_integrity_actions_delegate_to_runner(monkeypatch):
 
 def test_temp_cleanup_requests_elevation_only_for_access_denied(monkeypatch):
     runner = FakeRunner()
-    actions = MaintenanceActions(runner, FakeWindowActions())
+    actions = MaintenanceActions(runner, FakeWindowActions(), FakeWindowActions())
     monkeypatch.setattr(actions, "is_admin", lambda: False)
     requested = []
     actions.temp_cleanup_admin_required.connect(lambda: requested.append(True))

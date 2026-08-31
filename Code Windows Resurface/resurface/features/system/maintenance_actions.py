@@ -13,10 +13,11 @@ from resurface.features.system.command_runner import CommandRunner
 class MaintenanceActions(QObject):
     temp_cleanup_admin_required = Signal()
 
-    def __init__(self, runner: CommandRunner, window_actions, parent: QObject | None = None):
+    def __init__(self, runner: CommandRunner, explorer_windows, windows, parent: QObject | None = None):
         super().__init__(parent)
         self.runner = runner
-        self.window_actions = window_actions
+        self.explorer_windows = explorer_windows
+        self.windows = windows
 
     @staticmethod
     def is_admin() -> bool:
@@ -91,7 +92,7 @@ class MaintenanceActions(QObject):
         self.runner.set_output(success if opened else failure)
 
     def open_advanced_display_settings(self):
-        self.window_actions.open_or_focus_window_titles(
+        self.windows.open_or_focus_titles(
             ["Advanced display"],
             lambda: self.shell_open("ms-settings:display-advanced"),
         )
@@ -101,14 +102,14 @@ class MaintenanceActions(QObject):
         self.runner.set_output("Opened Display Settings.")
 
     def open_downloads(self):
-        opened = self.window_actions.open_or_focus_explorer_title(
+        opened = self.explorer_windows.open_or_focus_title(
             "Downloads", lambda: subprocess.Popen(["explorer", "shell:downloads"])
         )
         self._report_open(opened, "Opened Downloads folder.", "Could not open Downloads folder.")
 
     def open_startup_folder(self):
         path = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup")
-        opened = self.window_actions.open_or_focus_folder_path(path, lambda: os.startfile(path))
+        opened = self.explorer_windows.open_or_focus_folder(path, lambda: os.startfile(path))
         self._report_open(opened, "Opened Startup folder.", "Could not open Startup folder.")
 
     def open_sound_settings(self):
@@ -117,12 +118,12 @@ class MaintenanceActions(QObject):
 
     def open_temp_folder(self):
         path = tempfile.gettempdir()
-        opened = self.window_actions.open_or_focus_folder_path(path, lambda: os.startfile(path))
+        opened = self.explorer_windows.open_or_focus_folder(path, lambda: os.startfile(path))
         self._report_open(opened, "Opened Temp folder.", "Could not open Temp folder.")
 
     def open_prefetch_folder(self):
         path = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "Prefetch")
-        opened = self.window_actions.open_or_focus_folder_path(path, lambda: os.startfile(path))
+        opened = self.explorer_windows.open_or_focus_folder(path, lambda: os.startfile(path))
         self._report_open(opened, "Opened Prefetch folder.", "Could not open Prefetch folder.")
 
     def open_clipboard_history(self):
