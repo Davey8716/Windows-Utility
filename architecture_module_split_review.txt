@@ -1,8 +1,6 @@
 Windows Resurface: Module Splitting and Coupling Review
-=======================================================
 
 Folder Creator companion app
-----------------------------
 
 Code Folder Creator/main.py needs splitting too. Its MainWindow.__init__ is approximately 645 lines of widget construction, layout, initial state, and signal wiring.
 
@@ -16,10 +14,7 @@ Extract UI components such as:
 
 Code Folder Creator/folder_creator/ui/nested_ui_controller.py should then split into template, build, and output-location controllers. It currently even defines open_output_folder twice, at lines 481 and 550.
 
-Code Folder Creator/folder_creator/features/tree/nested_folder_manager.py also mixes tree-widget manipulation, text parsing, serialization, filesystem creation, sorting, and importing. Extract the pure outline parser and filesystem builder; leave widget-specific operations in a tree controller.
-
 Recommended order
------------------
 
 1. Add characterization tests for command execution, drive operations, and Folder Creator UI behaviour.
 

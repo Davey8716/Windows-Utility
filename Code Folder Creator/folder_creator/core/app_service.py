@@ -1,40 +1,44 @@
 from folder_creator.core.state_manager import StateManager
 from folder_creator.features.templates.template_IO_layer import TemplatePaths, TemplateService
-from folder_creator.features.tree.nested_folder_manager import NestedFolderManager
+from folder_creator.features.tree.filesystem_builder import FolderStructureBuilder
+from folder_creator.features.tree.outline_parser import parse_indented_text
+from folder_creator.features.tree.tree_controller import TreeController
 from pathlib import Path
 from shutil import copy
 
 class AppService:
 
     def __init__(self, tree_widget):
-        self.nested_manager = NestedFolderManager(tree_widget)
+        self.tree_controller = TreeController(tree_widget)
+        self.folder_builder = FolderStructureBuilder()
         self.template_service = TemplateService()
         self.state_manager = StateManager()
         self.template_paths =  TemplatePaths()
         self.state = self.state_manager.load_state()
 
     def add_folder(self):
-        self.nested_manager.add_root_folder()
+        self.tree_controller.add_root_folder()
 
     def add_subfolder(self):
-        self.nested_manager.add_subfolder()
+        self.tree_controller.add_subfolder()
 
     def remove_selected(self):
-        self.nested_manager.remove_selected_folders()
+        self.tree_controller.remove_selected_folders()
 
     def remove_all(self):
-        self.nested_manager.remove_all_folders()
+        self.tree_controller.remove_all_folders()
 
     def build_tree(self, base_path, timestamp_mode=None):
-        return self.nested_manager.build_folders(base_path, timestamp_mode)
+        nodes = self.tree_controller.serialize_build_tree()
+        return self.folder_builder.build(nodes, base_path, timestamp_mode)
 
     def save_template(self, parent):
-        return self.template_service.save_from_tree(parent, self.nested_manager)
+        return self.template_service.save_from_tree(parent, self.tree_controller)
     
     def load_template_data(self, path):
         data = self.template_service.load_template(
             path,
-            self.nested_manager.parse_indented_text
+            parse_indented_text,
         )
         return data if data is not None else None
 

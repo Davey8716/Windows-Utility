@@ -1,18 +1,12 @@
 
 from __future__ import annotations
 from PySide6.QtCore import Qt
-from PySide6.QtCore import QDir
 from PySide6.QtWidgets import QTreeWidgetItem
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QTreeWidgetItemIterator
-from datetime import datetime
 import os
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
-
-Node = Dict[str, Any]
-
 IGNORED_IMPORT_DIRS = {
     ".git",
     ".mypy_cache",
@@ -26,7 +20,7 @@ IGNORED_IMPORT_DIRS = {
     "venv",
 }
 
-class NestedFolderManager:
+class TreeController:
     def __init__(self, tree_widget):
         self.tree = tree_widget
         self.auto_number_enabled = False
@@ -36,6 +30,13 @@ class NestedFolderManager:
         for i in range(self.tree.topLevelItemCount()):
             data.append(self._serialize_item(self.tree.topLevelItem(i)))
         return data
+
+    def serialize_build_tree(self):
+        """Return filesystem-builder input without exposing Qt tree items."""
+        return [
+            self._serialize_build_item(self.tree.topLevelItem(i))
+            for i in range(self.tree.topLevelItemCount())
+        ]
     
     def deserialize_tree(self, data,renumber = False):
         self.tree.setUpdatesEnabled(False)
@@ -100,6 +101,16 @@ class NestedFolderManager:
             ]
         }
 
+    def _serialize_build_item(self, item):
+        return {
+            "name": item.text(0),
+            "kind": "file" if item.data(0, Qt.UserRole) == "file" else "folder",
+            "children": [
+                self._serialize_build_item(item.child(i))
+                for i in range(item.childCount())
+            ],
+        }
+
     def _deserialize_item(self, data, parent):
         item = self._make_tree_item(data.get("name", "Unnamed"))
 
@@ -159,164 +170,6 @@ class NestedFolderManager:
 
         QTimer.singleShot(0, tick)
 
-    def _count_leading_ws(self,line: str) -> Tuple[int, str]:
-        """
-        Returns (indent_count, stripped_line) where indent_count is the number of
-        leading whitespace chars (tabs count as 1 here; we normalize later).
-        """
-        m = re.match(r"^([ \t]*)(.*)$", line)
-        ws = m.group(1)
-        text = m.group(2)
-        return len(ws), text
-
-    def parse_indented_text(self,text: str) -> List[Node]:
-        """
-        Parses an indented outline into a tree structure:
-        - Each non-empty line is a folder name.
-        - Indentation defines parent/child.
-        - Supports tabs or spaces (or even mixed, but prefer consistent).
-        Returns a list of root nodes (same format as your JSON templates).
-        """
-        # Preprocess lines: keep original indentation; drop empty/comment lines
-        raw_lines = []
-        for raw in text.splitlines():
-            if not raw.strip():
-                continue
-            # optional: allow comments
-            if raw.lstrip().startswith("#"):
-                continue
-            raw_lines.append(raw.rstrip("\n\r"))
-
-        if not raw_lines:
-            return []
-
-        # Determine indentation unit (best-effort):
-        # Find the smallest positive indent across lines (after normalization).
-        # We'll treat a tab as 4 spaces for indent-unit detection only.
-        indents = []
-        for line in raw_lines:
-            ws_len, stripped = self._count_leading_ws(line)
-            if not stripped.strip():
-                continue
-            # normalize tabs for indent detection
-            ws = line[:ws_len].replace("\t", " " * 4)
-            n = len(ws)
-            if n > 0:
-                indents.append(n)
-
-        indent_unit = min(indents) if indents else 4  # if everything is root-level
-
-        roots: List[Node] = []
-        stack: List[Tuple[int, Node]] = []  # (depth, node)
-
-        for line in raw_lines:
-            ws_len, name = self._count_leading_ws(line)
-            name = name.strip()
-
-            # normalize indent: tabs -> 4 spaces for depth computation
-            ws_norm = line[:ws_len].replace("\t", " " * 4)
-            indent_len = len(ws_norm)
-
-            # Depth as "indent steps"
-            depth = indent_len // indent_unit if indent_unit > 0 else 0
-
-            node: Node = {"name": name, "children": []}
-
-            if not stack:
-                roots.append(node)
-                stack.append((depth, node))
-                continue
-
-            # If depth is greater than last, it's a child of last
-            last_depth, last_node = stack[-1]
-            if depth > last_depth:
-                last_node["children"].append(node)
-                stack.append((depth, node))
-                continue
-
-            # Otherwise pop until we find parent depth < current depth
-            while stack and stack[-1][0] >= depth:
-                stack.pop()
-
-            if not stack:
-                roots.append(node)
-                stack.append((depth, node))
-            else:
-                stack[-1][1]["children"].append(node)
-                stack.append((depth, node))
-
-        return roots
-    
-    def build_folders(self, base_path, timestamp_mode=None):
-        base_dir = QDir(base_path)
-
-        if self.tree.topLevelItemCount() == 0:
-            return "empty", "Tree is empty."
-
-        try:
-            for i in range(self.tree.topLevelItemCount()):
-                item = self.tree.topLevelItem(i)
-
-                name = item.text(0).strip()
-
-                if timestamp_mode:
-                    stamp = self._build_timestamp(timestamp_mode)
-                    name = f"{name}_{stamp}"
-
-                full_path = base_dir.filePath(name)
-
-                if QDir(full_path).exists():
-                    return "exists", "Folder structure already exists."
-
-                base_dir.mkpath(name)
-
-                child_dir = QDir(full_path)
-
-                for j in range(item.childCount()):
-                    self._mk_dirs(child_dir, item.child(j))
-
-            return "success", "Folder structure created successfully."
-
-        except Exception:
-            return "error", "Error creating folder structure."
-
-    def _build_timestamp(self, mode):
-        now = datetime.now()
-
-        if mode == "ISO":
-            return now.strftime("%Y-%m-%d")
-
-        if mode == "UK":
-            return now.strftime("%d-%m-%Y")
-
-        if mode == "US":
-            return now.strftime("%m-%d-%Y")
-
-        return ""
-                        
-    def _mk_dirs(self, parent_dir, item):
-        name = item.text(0).strip()
-        if not name:
-            return
-
-        is_file = item.data(0, Qt.UserRole) == "file"
-
-        if is_file:
-            file_path = Path(parent_dir.filePath(name))
-            try:
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                file_path.touch(exist_ok=True)
-            except Exception:
-                pass
-            return
-
-        # folder
-        parent_dir.mkpath(name)
-        child_dir = QDir(parent_dir.filePath(name))
-
-        for i in range(item.childCount()):
-            self._mk_dirs(child_dir, item.child(i))
-                
     def add_root_folder(self):
         default_base = "New Folder"
         

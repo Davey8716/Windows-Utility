@@ -627,21 +627,21 @@ class MainWindow(QMainWindow):
         )
 
         self.add_folder_btn.clicked.connect(
-            lambda: (self.service.nested_manager.add_root_folder(), self.ui_state.update_build_button_state())
+            lambda: (self.service.tree_controller.add_root_folder(), self.ui_state.update_build_button_state())
         )
         self.add_subfolder_btn.clicked.connect(
-            lambda: (self.service.nested_manager.add_subfolder(), self.ui_state.update_build_button_state())
+            lambda: (self.service.tree_controller.add_subfolder(), self.ui_state.update_build_button_state())
         )
         self.remove_btn.clicked.connect(
             lambda: (
-                self.service.nested_manager.remove_selected_folders(),
+                self.service.tree_controller.remove_selected_folders(),
                 self.ui_state.update_build_button_state(),
                 QTimer.singleShot(0, self.ui_state.update_nested_build_state),
             )
         )
         self.remove_all_btn.clicked.connect(
             lambda: (
-                self.service.nested_manager.remove_all_folders(),
+                self.service.tree_controller.remove_all_folders(),
                 self.load_user_template_dropdown.setCurrentIndex(0),
                 self.load_default_template_dropdown.setCurrentIndex(0),
                 setattr(self.nested_ui, "_current_loaded_template", None),
@@ -656,7 +656,7 @@ class MainWindow(QMainWindow):
                 None
                 if i in (0, 1, 6, 10, 14)
                 else (
-                    self.service.nested_manager.add_file(
+                    self.service.tree_controller.add_file(
                         {
                             2: "main.py",
                             3: "script.js",

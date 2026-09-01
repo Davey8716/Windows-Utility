@@ -6,6 +6,7 @@ from PySide6.QtGui import QFont, QKeyEvent, QKeySequence, QPainter
 from PySide6.QtWidgets import QApplication, QAbstractItemView, QTreeWidget
 
 from folder_creator.ui import styles
+from folder_creator.features.tree.outline_parser import parse_indented_text
 
 
 class SmartTreeWidget(QTreeWidget):
@@ -120,7 +121,7 @@ class SmartTreeWidget(QTreeWidget):
                 # ----------------------------
                 try:
                     if p.is_dir():
-                        result = window.service.nested_manager.import_folder_tree(str(p))
+                        result = window.service.tree_controller.import_folder_tree(str(p))
                         imported = True
                         skipped_count += len(result.get("skipped", [])) if result else 0
 
@@ -244,10 +245,10 @@ class SmartTreeWidget(QTreeWidget):
                 return
 
             try:
-                data = window.service.nested_manager.parse_indented_text(text)
+                data = parse_indented_text(text)
 
                 self.clear()
-                window.service.nested_manager.deserialize_tree(data)
+                window.service.tree_controller.deserialize_tree(data)
                 
                 # ---- Select root item like other import methods ----
                 if self.topLevelItemCount() > 0:

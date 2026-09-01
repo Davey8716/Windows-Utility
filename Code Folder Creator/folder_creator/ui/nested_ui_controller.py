@@ -3,9 +3,10 @@ from PySide6.QtCore import QFileSystemWatcher
 from pathlib import Path
 from shutil import copy
 from PySide6.QtWidgets import QApplication
-from PySide6.QtWidgets import QTreeWidgetItemIterator
 from folder_creator.core.system_paths import get_desktop_path
-import os, re
+from folder_creator.features.tree.outline_parser import parse_indented_text
+import os
+import re
 from PySide6.QtCore import QTimer
 
 class NestedUIController:
@@ -72,7 +73,7 @@ class NestedUIController:
                 self._loading_template = False
                 return
 
-            self.service.nested_manager.deserialize_tree(
+            self.service.tree_controller.deserialize_tree(
                 data,
                 renumber=auto_number_was_enabled
             )
@@ -94,7 +95,7 @@ class NestedUIController:
                     root = self.tree.topLevelItem(0)
                     self.tree.setCurrentItem(root)
 
-                self.service.nested_manager.expand_all_animated()
+                self.service.tree_controller.expand_all_animated()
                 self.window.load_default_template_dropdown.setCurrentIndex(0)
                 self.window.ui_state.update_build_button_state()
                 self._loading_template = False
@@ -199,7 +200,7 @@ class NestedUIController:
         directory = str(Path(file_path).parent.resolve())
         self.window.template_path_line.setText(directory)
 
-        data = self.service.nested_manager.serialize_tree()
+        data = self.service.tree_controller.serialize_tree()
 
         suffix = Path(file_path).suffix.lower()
 
@@ -246,7 +247,7 @@ class NestedUIController:
             )
             return
 
-        self.service.nested_manager.sort_tree()
+        self.service.tree_controller.sort_tree()
 
         if self.tree.topLevelItemCount() > 0:
             root = self.tree.topLevelItem(0)
@@ -313,12 +314,12 @@ class NestedUIController:
         )
     
     def remove_all_folders(self):
-        self.service.nested_manager.remove_all_folders()
+        self.service.tree_controller.remove_all_folders()
         self.window.load_default_template_dropdown.setCurrentIndex(0)
         self.window.ui_state.update_build_button_state()
         
     def toggle_auto_number_folders(self, checked: bool):
-        manager = self.service.nested_manager
+        manager = self.service.tree_controller
         manager.auto_number_enabled = checked
 
         if self.tree.topLevelItemCount() > 0:
@@ -364,9 +365,9 @@ class NestedUIController:
 
         self.tree.clear()
 
-        data = self.service.nested_manager.parse_indented_text(text)
-        self.service.nested_manager.deserialize_tree(data)
-        self.service.nested_manager.expand_all_animated()
+        data = parse_indented_text(text)
+        self.service.tree_controller.deserialize_tree(data)
+        self.service.tree_controller.expand_all_animated()
         self.window.update_expand_button_text()
 
         if self.tree.topLevelItemCount() > 0:

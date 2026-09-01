@@ -1,11 +1,12 @@
 import json
 import sys
 import os
-import sys
 import shutil
 from typing import Any
 from PySide6.QtWidgets import QFileDialog
 from pathlib import Path
+
+from folder_creator.features.tree.outline_parser import parse_indented_text
 
 class TemplatePaths:
 
@@ -87,7 +88,7 @@ class TemplateService:
     # Load
     # ---------------------------------------------------------
 
-    def load_into_tree(self, parent, tree_manager):
+    def load_into_tree(self, parent, tree_controller):
         file_path, _ = QFileDialog.getOpenFileName(
             parent,
             "Load Template",
@@ -101,17 +102,17 @@ class TemplateService:
         try:
             data = self.load_template(
                 file_path,
-                tree_manager.parse_indented_text
+                parse_indented_text,
             )
 
-            tree_manager.deserialize_tree(data)
+            tree_controller.deserialize_tree(data)
             return "success", "Template loaded"
 
         except Exception:
             return "error", "Error loading template"
 
-    def save_from_tree(self, parent, tree_manager):
-        if tree_manager.tree.topLevelItemCount() == 0:
+    def save_from_tree(self, parent, tree_controller):
+        if tree_controller.tree.topLevelItemCount() == 0:
             return "empty", "Tree is empty."
 
         file_path, _ = QFileDialog.getSaveFileName(
@@ -124,5 +125,5 @@ class TemplateService:
         if not file_path:
             return "cancelled", ""
 
-        data = tree_manager.serialize_tree()
+        data = tree_controller.serialize_tree()
         return self.save_json(file_path, data)
