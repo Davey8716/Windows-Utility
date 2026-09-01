@@ -14,6 +14,8 @@ from resurface.features.desktop.folder_service import DesktopFolderService
 from resurface.features.desktop.screenshot_service import ScreenshotService
 from resurface.features.desktop.zen_mode import ZenModeService
 from resurface.features.folder_creator.launcher import FolderCreatorLauncher
+from resurface.features.hover_window_controls.migration import import_standalone_data
+from resurface.features.hover_window_controls.service import HoverWindowControlsService
 from resurface.features.drives.drive_monitor import DriveMonitor
 from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
@@ -77,6 +79,8 @@ class UtilityControlApp(
         super().__init__()
 
         self.state = load_state()
+        if import_standalone_data(self.state):
+            save_state(self.state)
         self.saved_state = self.state
         styles.set_theme(bool(self.state.get("theme_dark", True)))
         self.setWindowTitle("Windows Resurface")
@@ -140,6 +144,11 @@ class UtilityControlApp(
             self.command_runner,
             self.explorer_windows,
             self.window_management,
+            self,
+        )
+        self.hover_window_controls = HoverWindowControlsService(
+            self.state,
+            save_state,
             self,
         )
         self.tray_manager = TrayIconManager(self)
@@ -219,6 +228,10 @@ class UtilityControlApp(
         )
         self.external_drive_controller.start()
         self.tray_manager.create_tray_icon()
+        self.hover_window_controls.settings_changed.connect(
+            lambda _enabled, _dwell: self.tray_manager.sync_hover_controls_action()
+        )
+        self.hover_window_controls.start()
         self.screen_mover.configure(
             app_hwnd=int(self.winId()),
             self_action_dispatch=self._screen_mover_bridge.dispatch,
@@ -359,6 +372,9 @@ class UtilityControlApp(
     def set_screen_mover_enabled(self, enabled: bool) -> None:
         self.screen_mover_settings_controller.set_enabled(enabled)
 
+    def set_hover_window_controls_enabled(self, enabled: bool) -> None:
+        self.hover_window_controls.set_enabled(enabled)
+
     def reset_screen_mover_settings(self) -> None:
         self.screen_mover_settings_controller.reset_settings()
 
@@ -385,6 +401,11 @@ class UtilityControlApp(
 
         try:
             self.monitor_rule_watcher.stop()
+        except Exception:
+            pass
+
+        try:
+            self.hover_window_controls.stop()
         except Exception:
             pass
 

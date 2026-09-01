@@ -15,6 +15,7 @@ Feel free to clone the repo, explore the code, adapt it to your own setup, and m
 ## Features
 
 - Move, minimize, or maximize windows from a contrast-aware title-bar dock, with configurable mouse activation and global keyboard shortcuts
+- Activate supported minimize, maximize, restore, and close buttons by dwelling over them, with calibration for custom title bars and optional taskbar-preview restoration
 - Keep the app always on top, switch theme, toggle tooltips, and enable Zen Mode to hide desktop icons
 - Warn before lock, log out, restart, or shutdown when external drives are still connected
 - Show plug and unplug notifications for removable drives
@@ -39,6 +40,12 @@ Feel free to clone the repo, explore the code, adapt it to your own setup, and m
   - `psutil`
   - `pynput`
   - `Pillow`
+  - `uiautomation`
+  - `opencv-python-headless`
+
+AutoHotkey v2 is optional. It is required only for restoring a minimized window
+by dwelling over its taskbar preview; caption-button hover controls continue to
+work without it.
 
 This app uses Windows-specific APIs and utilities, so it is not intended for macOS or Linux.
 
@@ -56,7 +63,7 @@ From the repository root:
 cd "Code Windows Resurface"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install PySide6 pywin32 psutil pynput Pillow
+pip install -r requirements.txt
 python main.py
 ```
 
@@ -68,6 +75,7 @@ The left side is the everyday tools area:
 
 - `User Interface`: theme, always-on-top, tooltips, desktop Zen Mode, power actions, minimize-after-use
 - `Screen Mover`: master enable control, mouse trigger, and configurable keyboard shortcuts for moving, minimizing, or maximizing the foreground window
+- `Hover Window Controls`: dwell timing, caption-button activation, taskbar status, calibration, export, and learned-profile management
 - `Monitor Rules`: automatically place newly opened application windows on an assigned display, preserving their current size, restoring captured geometry, or maximizing them
 - `External Drive Reminder Options`: connected drive display plus leave and plug/unplug reminders
 - `General Organising Utilities`: screenshots, desktop layout backup/restore, bookmarks export, taskbar backup, master backup path
@@ -87,6 +95,11 @@ The right side panel contains:
 The app stores its settings here:
 
 - `%LOCALAPPDATA%\Windows Resurface\app_state.json`
+- `%LOCALAPPDATA%\Windows Resurface\hover-window-controls\vision-cache` for learned caption profiles
+
+On the first integrated run, compatible preferences and learned profiles are
+copied from the standalone `%LOCALAPPDATA%\Hover Window Controls` location (and
+its older `No Click Min Max Restore` location). The originals are not removed.
 
 Screen Mover settings are stored with the rest of Windows Resurface. They are
 independent of the standalone Browser App Mover application and are not imported

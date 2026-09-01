@@ -11,6 +11,7 @@ __pycache__/minimize_all.cpython-314.pyc
 *.pyc
 *.pyc
 *.json
+!.python-exe-builder.json
 screen_mover_state.json
 *.json
 screen_mover_state.json
@@ -26,3 +27,4 @@ screen_mover_state.json
 .VSCodeCounter/2026-02-07_20-14-08/results.csv
 /.VSCodeCounter
 /.VSCodeCounter
+!.python-exe-builder.json

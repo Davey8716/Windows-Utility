@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "pyinstaller": {
+    "collect_all": [
+      "uiautomation"
+    ]
+  }
+}

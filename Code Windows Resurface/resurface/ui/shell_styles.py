@@ -40,14 +40,12 @@ def summary_value_style() -> str:
 
 def summary_frame_style() -> str:
     return f"""
-        QFrame#OverviewSummary, QFrame#MonitorRulesEmptyState,
-        QFrame#HoverWindowControlsPlaceholder {{
+        QFrame#OverviewSummary, QFrame#MonitorRulesEmptyState {{
             background-color: {H.qcolor_css(T.SURFACE_BG)};
             border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             border-radius: 8px;
         }}
-        QFrame#OverviewSummary QLabel, QFrame#MonitorRulesEmptyState QLabel,
-        QFrame#HoverWindowControlsPlaceholder QLabel {{
+        QFrame#OverviewSummary QLabel, QFrame#MonitorRulesEmptyState QLabel {{
             border: none;
             background: transparent;
         }}
@@ -309,4 +307,3 @@ def tooltip_style() -> str:
             font-weight: 700;
         }}
     """
-

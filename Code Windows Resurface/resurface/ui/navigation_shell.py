@@ -56,7 +56,7 @@ class NavigationShell(QWidget):
             "hover_window_controls",
             "Hover Window Controls",
             "\ue7f4",
-            "Coming soon — configure floating window controls and hover actions.",
+            "Activate minimize, maximize, restore, close, and taskbar previews by dwelling over their controls.",
         ),
     )
 
@@ -267,7 +267,6 @@ class NavigationShell(QWidget):
         for name in (
             "OverviewSummary",
             "MonitorRulesEmptyState",
-            "HoverWindowControlsPlaceholder",
         ):
             for frame in self.findChildren(QFrame, name):
                 frame.setStyleSheet(styles.summary_frame_style())
