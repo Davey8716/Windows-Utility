@@ -12,7 +12,6 @@ Extract UI components such as:
     ui/post_build_panel.py
     ui/main_window.py
 
-Code Folder Creator/folder_creator/ui/nested_ui_controller.py should then split into template, build, and output-location controllers. It currently even defines open_output_folder twice, at lines 481 and 550.
 
 Recommended order
 

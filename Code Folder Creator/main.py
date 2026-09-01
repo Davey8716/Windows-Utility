@@ -614,7 +614,6 @@ class MainWindow(QMainWindow):
         self.tree.addFolderShortcut.connect(self.add_folder_btn.click)
         self.tree.addSubfolderShortcut.connect(self.add_subfolder_btn.click)
         self.tree.saveTemplateShortcut.connect(self.save_template_btn.click)
-        self.tree.loadTemplateShortcut.connect(self.nested_ui.load_template)
         self.tree.itemChanged.connect(self.ui_state.update_build_button_state)
         self.tree.itemChanged.connect(self.enforce_tree_name_limit)
         self.tree.itemChanged.connect(self.ui_state.update_nested_build_state)
@@ -635,16 +634,6 @@ class MainWindow(QMainWindow):
         self.remove_btn.clicked.connect(
             lambda: (
                 self.service.tree_controller.remove_selected_folders(),
-                self.ui_state.update_build_button_state(),
-                QTimer.singleShot(0, self.ui_state.update_nested_build_state),
-            )
-        )
-        self.remove_all_btn.clicked.connect(
-            lambda: (
-                self.service.tree_controller.remove_all_folders(),
-                self.load_user_template_dropdown.setCurrentIndex(0),
-                self.load_default_template_dropdown.setCurrentIndex(0),
-                setattr(self.nested_ui, "_current_loaded_template", None),
                 self.ui_state.update_build_button_state(),
                 QTimer.singleShot(0, self.ui_state.update_nested_build_state),
             )
@@ -678,11 +667,6 @@ class MainWindow(QMainWindow):
             )
         )
 
-        self.open_folder_build_toggle.toggled.connect(
-            lambda v: self.service.state_manager.update("open_folder_after_build", v)
-        )
-        self.base_path_line.textChanged.connect(self.ui_state.update_build_button_state)
-
         state = self.service.state
         styles.apply_app_theme(QApplication.instance())
 
@@ -708,7 +692,7 @@ class MainWindow(QMainWindow):
         self.close_app_after_build_toggle.setEnabled(not self.minimize_after_build_toggle.isChecked())
         self.minimize_after_build_toggle.setEnabled(not self.close_app_after_build_toggle.isChecked())
 
-        self.nested_ui.refresh_user_templates_dropdown()
+        self.nested_ui.template_controller.refresh_user_templates_dropdown()
         self.update_expand_button_text()
         self.ui_state.update_build_button_state()
         self.ui_state.update_nested_build_state()
