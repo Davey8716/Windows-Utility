@@ -1,7 +1,8 @@
+import os
 from pathlib import Path
 from shutil import copy
 
-from PySide6.QtCore import QFileSystemWatcher, QTimer
+from PySide6.QtCore import QFileSystemWatcher, QTimer, Qt
 from PySide6.QtWidgets import QFileDialog
 
 from folder_creator.features.tree.outline_parser import parse_indented_text
@@ -235,3 +236,7 @@ class TemplateController:
         window.tree.fileDropped.connect(self.load_template_from_path)
         window.tree.loadTemplateShortcut.connect(self.load_template)
         window.save_template_btn.clicked.connect(self.create_template)
+        window.load_user_template_dropdown.setContextMenuPolicy(Qt.CustomContextMenu)
+        window.load_user_template_dropdown.customContextMenuRequested.connect(
+            lambda _position: os.startfile(str(self.service.template_paths.user_dir))
+        )

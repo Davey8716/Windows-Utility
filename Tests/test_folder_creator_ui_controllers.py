@@ -38,6 +38,9 @@ def qapp():
 class TreeWidget(QTreeWidget):
     fileDropped = Signal(str)
     loadTemplateShortcut = Signal()
+    addFolderShortcut = Signal()
+    addSubfolderShortcut = Signal()
+    saveTemplateShortcut = Signal()
 
 
 class CallRecorder:
@@ -89,6 +92,18 @@ class TreeControllerStub:
     def renumber_loaded_tree(self):
         pass
 
+    def add_root_folder(self):
+        pass
+
+    def add_subfolder(self):
+        pass
+
+    def remove_selected_folders(self):
+        pass
+
+    def add_file(self, _filename):
+        pass
+
 
 def make_window(tmp_path):
     user_dir = tmp_path / "user"
@@ -121,14 +136,23 @@ def make_window(tmp_path):
         minimize_after_build_toggle=QCheckBox(),
         close_app_after_build_toggle=QCheckBox(),
         save_template_btn=QPushButton(),
+        add_folder_btn=QPushButton(),
+        add_subfolder_btn=QPushButton(),
+        remove_btn=QPushButton(),
         sort_btn=QPushButton(),
         find_btn=QPushButton(),
+        expand_tree_btn=QPushButton(),
+        expand_folders_collapse_btn=QPushButton(),
         remove_all_btn=QPushButton(),
         build_folders_btn=QPushButton(),
         output_location_btn=QPushButton(),
         default_to_desktop_btn=QPushButton(),
+        file_dropdown=QComboBox(),
         update_build_button_state=lambda: None,
         update_expand_button_text=lambda: None,
+        enforce_tree_name_limit=lambda *_args: None,
+        tree_gui_stretch=lambda: None,
+        toggle_tree_expand=lambda: None,
     )
     window.load_user_template_dropdown.addItems(["User Templates", "Custom"])
     window.load_default_template_dropdown.addItems(
