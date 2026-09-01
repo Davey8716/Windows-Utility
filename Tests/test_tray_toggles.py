@@ -37,6 +37,16 @@ def _copy_source_icon(path: Path) -> Path:
     return path
 
 
+def test_tray_manager_has_no_hover_controls_action() -> None:
+    _app()
+    window = QObject()
+    manager = TrayIconManager(window)
+
+    assert not hasattr(manager, "hover_controls_action")
+    assert not hasattr(manager, "sync_hover_controls_action")
+    assert not hasattr(manager, "toggle_hover_controls")
+
+
 def test_application_icon_candidates_prioritize_env_var(monkeypatch, tmp_path) -> None:
     env_icon = tmp_path / "from-env.ico"
     fake_exe = tmp_path / "Windows Resurface.exe"
@@ -212,36 +222,6 @@ def test_tray_screen_mover_action_syncs_and_dispatches() -> None:
 
     assert window.enabled_calls == [True]
     assert manager.screen_mover_action.isChecked()
-
-
-def test_tray_hover_controls_action_syncs_and_dispatches() -> None:
-    _app()
-
-    class FakeWindow(QObject):
-        def __init__(self):
-            super().__init__()
-            self.hover_window_controls = SimpleNamespace(enabled=False)
-            self.enabled_calls = []
-
-        def set_hover_window_controls_enabled(self, enabled):
-            self.enabled_calls.append(enabled)
-            self.hover_window_controls.enabled = enabled
-
-    window = FakeWindow()
-    manager = TrayIconManager(window)
-    manager.hover_controls_action = QAction(
-        "Hover Window Controls Enabled", window
-    )
-    manager.hover_controls_action.setCheckable(True)
-
-    manager.sync_hover_controls_action()
-    assert not manager.hover_controls_action.isChecked()
-
-    manager.toggle_hover_controls(True)
-    manager.sync_hover_controls_action()
-
-    assert window.enabled_calls == [True]
-    assert manager.hover_controls_action.isChecked()
 
 
 def test_tray_zen_mode_uses_composed_user_interface_page() -> None:

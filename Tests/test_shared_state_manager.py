@@ -166,6 +166,38 @@ def test_owned_save_preserves_unknown_disk_keys_and_ignores_unowned_input(tmp_pa
     }
 
 
+def test_deprecated_keys_are_not_loaded_or_preserved(tmp_path):
+    config_path = tmp_path / "app_state.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "owned": 3,
+                "retired": "remove",
+                "future_key": "preserve",
+            }
+        ),
+        encoding="utf-8",
+    )
+    manager = JsonStateManager(
+        app_dir_name="Ownership Test",
+        config_filename="app_state.json",
+        defaults={"owned": 0},
+        preserve_unknown_keys=True,
+        deprecated_keys={"retired"},
+        config_path_resolver=lambda: config_path,
+    )
+
+    assert manager.load_state() == {
+        "owned": 3,
+        "future_key": "preserve",
+    }
+    manager.save_state(manager.load_state())
+    assert json.loads(config_path.read_text(encoding="utf-8")) == {
+        "owned": 3,
+        "future_key": "preserve",
+    }
+
+
 def test_owned_optional_key_does_not_require_unknown_key_preservation(tmp_path):
     config_path = tmp_path / "app_state.json"
     manager = JsonStateManager(

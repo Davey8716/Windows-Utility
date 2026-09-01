@@ -63,40 +63,6 @@ class FakeTrayManager:
     def sync_screen_mover_action(self):
         self.sync_calls += 1
 
-    def sync_hover_controls_action(self):
-        self.sync_calls += 1
-
-
-class FakeHoverWindowControlsService(QObject):
-    settings_changed = Signal(bool, int)
-
-    def __init__(self, state, _save_state, parent=None):
-        super().__init__(parent)
-        self.enabled = bool(state.get("hover_window_controls_enabled", True))
-        self.dwell_ms = int(state.get("hover_window_controls_dwell_ms", 750))
-        self.taskbar_restore_available = False
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
-
-    def set_enabled(self, enabled):
-        self.enabled = bool(enabled)
-        self.settings_changed.emit(self.enabled, self.dwell_ms)
-
-    def set_dwell_ms(self, dwell_ms):
-        self.dwell_ms = int(dwell_ms)
-        self.settings_changed.emit(self.enabled, self.dwell_ms)
-
-    def calibrate(self, _parent=None):
-        pass
-
-    def clear_learned_buttons(self):
-        pass
-
-
 class FakeStyle:
     def unpolish(self, _widget):
         pass
@@ -198,16 +164,13 @@ class FakeWindow:
 
 def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     state = copy.deepcopy(state)
-    state["hover_window_controls_migration_completed"] = True
+    state["retired_features_cleanup_version"] = 1
     monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
     monkeypatch.setattr(main, "save_state", lambda _state: None)
     monkeypatch.setattr(application_pages, "save_state", lambda _state: None)
     monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
     monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
     monkeypatch.setattr(main, "TrayIconManager", FakeTrayManager)
-    monkeypatch.setattr(
-        main, "HoverWindowControlsService", FakeHoverWindowControlsService
-    )
     monkeypatch.setattr(main, "resolve_application_icon", lambda _window: QIcon())
     monkeypatch.setattr(main.DriveMonitor, "start", lambda _self: None)
     monkeypatch.setattr(
@@ -363,6 +326,7 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         }
         assert not hasattr(window, "right_tools_panel")
         assert not hasattr(window, "left_page_contents")
+        assert not hasattr(window, "hover_window_controls")
         assert all(
             shell.page_by_id[page_id].isAncestorOf(content)
             for page_id, content in mounted_content.items()
@@ -372,12 +336,17 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         assert hover_item.data(Qt.ItemDataRole.UserRole) == "hover_window_controls"
         window.navigate_to_page("hover_window_controls")
         hover_page = window.pages.hover_window_controls_page
-        assert hover_page.enabled_button.isChecked()
-        assert hover_page.dwell_combo.currentData() == 750
-        assert hover_page.calibrate_button.text() == "Calibrate Application…"
-        assert shell.page_by_id["hover_window_controls"].findChild(
+        placeholder = shell.page_by_id["hover_window_controls"].findChild(
             QFrame, "HoverWindowControlsPlaceholder"
-        ) is None
+        )
+        assert placeholder is not None
+        message = hover_page.findChild(
+            QLabel, "HoverWindowControlsRemovedMessage"
+        )
+        assert message.text() == "Hover Window Controls has been removed."
+        assert not hasattr(hover_page, "enabled_button")
+        assert not hasattr(hover_page, "dwell_combo")
+        assert not hasattr(hover_page, "calibrate_button")
     finally:
         window._quit_requested = True
         window.close()

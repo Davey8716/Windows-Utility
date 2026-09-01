@@ -3,5 +3,3 @@ pywin32
 psutil
 pynput
 Pillow
-uiautomation>=2.0.29,<3
-opencv-python-headless>=4.11,<6

@@ -9,6 +9,7 @@ if project_root_str not in sys.path:
 
 from Shared.app_state_defaults import (
     SHARED_APP_STATE_DEFAULTS,
+    WINDOWS_RESURFACE_DEPRECATED_STATE_KEYS,
     WINDOWS_RESURFACE_DEFAULTS,
     WINDOWS_RESURFACE_STATE_KEYS,
 )
@@ -49,6 +50,7 @@ def _create_manager() -> JsonStateManager:
         legacy_value_transforms=LEGACY_VALUE_TRANSFORMS,
         preserve_unknown_keys=True,
         owned_keys=WINDOWS_RESURFACE_STATE_KEYS,
+        deprecated_keys=WINDOWS_RESURFACE_DEPRECATED_STATE_KEYS,
         config_path_resolver=get_config_path,
         legacy_config_path_resolver=lambda: LEGACY_CONFIG_PATH,
     )

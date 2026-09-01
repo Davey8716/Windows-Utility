@@ -107,6 +107,7 @@ class JsonStateManager:
         persist_defaults_on_missing: bool = False,
         preserve_unknown_keys: bool = False,
         owned_keys: Iterable[str] | None = None,
+        deprecated_keys: Iterable[str] | None = None,
         lock_timeout_seconds: float = 5.0,
         config_path_resolver=None,
         legacy_config_path_resolver=None,
@@ -120,6 +121,7 @@ class JsonStateManager:
         self.persist_defaults_on_missing = persist_defaults_on_missing
         self.preserve_unknown_keys = preserve_unknown_keys
         self.owned_keys = frozenset(owned_keys) if owned_keys is not None else None
+        self.deprecated_keys = frozenset(deprecated_keys or ())
         self.lock_timeout_seconds = max(0.0, float(lock_timeout_seconds))
         self._config_path_resolver = config_path_resolver
         self._legacy_config_path_resolver = legacy_config_path_resolver
@@ -212,7 +214,11 @@ class JsonStateManager:
             if not isinstance(source, dict):
                 continue
             for key, value in source.items():
-                if key not in merged and key not in self.default_state:
+                if (
+                    key not in merged
+                    and key not in self.default_state
+                    and key not in self.deprecated_keys
+                ):
                     merged[key] = value
         return merged
 

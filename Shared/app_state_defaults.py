@@ -23,9 +23,7 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "mmb_activation_enabled": True,
     "screen_mover_activation_button": "middle",
     "title_bar_dock_enabled": True,
-    "hover_window_controls_enabled": True,
-    "hover_window_controls_dwell_ms": 750,
-    "hover_window_controls_migration_completed": False,
+    "retired_features_cleanup_version": 0,
     "screen_mover_keyboard_hotkeys": {
         "FAR_LEFT": "",
         "LEFT": "",
@@ -57,6 +55,14 @@ WINDOWS_RESURFACE_STATE_KEYS = frozenset(
         "desktop_screenshot_last_path",
         "desktop_zen_mode_enabled",
         "minimize_all_enabled",
+    }
+)
+
+WINDOWS_RESURFACE_DEPRECATED_STATE_KEYS = frozenset(
+    {
+        "hover_window_controls_enabled",
+        "hover_window_controls_dwell_ms",
+        "hover_window_controls_migration_completed",
     }
 )
 
