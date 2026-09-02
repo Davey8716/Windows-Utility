@@ -2,9 +2,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication, QLabel, QMessageBox
 
 from resurface.core.app_paths import MasterBackupPathsMixin
+from resurface.ui import styles
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.application_pages import ApplicationPageComposer
 
@@ -115,6 +117,25 @@ def test_hover_export_path_is_html_escaped(tmp_path):
     assert f">{destination}</a>" not in prompt
 
 
+def test_hover_export_path_link_uses_current_theme_color(tmp_path):
+    destination = tmp_path / "Master Backup" / "Hover Window Controls"
+
+    try:
+        for is_dark, link_color in ((True, "#ffffff"), (False, "#000000")):
+            styles.set_theme(is_dark)
+            app = FakeApp(destination, QMessageBox.StandardButton.Cancel)
+
+            composer_for(app)._export_hover_controls()
+
+            prompt = app.modal_calls[0][0][2]
+            assert (
+                f'style="color: {link_color}; text-decoration: underline;"'
+                in prompt
+            )
+    finally:
+        styles.set_theme(True)
+
+
 def test_hover_export_path_link_reports_open_failure(tmp_path):
     destination = tmp_path / "Master Backup" / "Hover Window Controls"
     app = FakeApp(
@@ -197,6 +218,7 @@ def test_modal_message_link_callback_is_wired_to_rich_text_label(monkeypatch):
     monkeypatch.setattr(QMessageBox, "exec", capture_dialog)
     host = MessageHost()
     try:
+        styles.set_theme(True)
         host._show_modal_message(
             QMessageBox.Icon.NoIcon,
             "Linked message",
@@ -213,10 +235,14 @@ def test_modal_message_link_callback_is_wired_to_rich_text_label(monkeypatch):
             & Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
         assert not label.openExternalLinks()
+        assert dialogs[0].styleSheet() == styles.message_box_style()
+        assert label.palette().color(QPalette.ColorRole.Link).name() == "#ffffff"
+        assert label.palette().color(QPalette.ColorRole.LinkVisited).name() == "#ffffff"
 
         label.linkActivated.emit("destination")
         assert activated == ["destination"]
     finally:
+        styles.set_theme(True)
         host.close()
         host.deleteLater()
         qt_app.processEvents()

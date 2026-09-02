@@ -3,7 +3,7 @@ from typing import Callable
 
 from resurface.ui import styles
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QPainterPath, QPixmap, QRegion
+from PySide6.QtGui import QPainterPath, QPalette, QPixmap, QRegion
 from PySide6.QtWidgets import (
     QDialogButtonBox,
     QGridLayout,
@@ -120,6 +120,11 @@ class WindowMessageMixin:
         text_label.setTextFormat(Qt.TextFormat.RichText)
         text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         text_label.setOpenExternalLinks(False)
+        palette = text_label.palette()
+        link_color = styles.message_box_link_color()
+        palette.setColor(QPalette.ColorRole.Link, link_color)
+        palette.setColor(QPalette.ColorRole.LinkVisited, link_color)
+        text_label.setPalette(palette)
         text_label.linkActivated.connect(link_activated)
 
     def _suppress_message_box_icon_label(self, message_box: QMessageBox) -> None:

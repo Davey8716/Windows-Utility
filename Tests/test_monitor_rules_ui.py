@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -492,6 +493,13 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
             assert (
                 confirmation.styleSheet()
                 == monitor_rules_ui.styles.message_box_style()
+            )
+            link_color = "#ffffff" if is_dark else "#000000"
+            assert label.palette().color(QPalette.ColorRole.Link).name() == link_color
+            assert label.palette().color(QPalette.ColorRole.LinkVisited).name() == link_color
+            assert (
+                f'style="color: {link_color}; text-decoration: underline;"'
+                in confirmation.text()
             )
 
             timed_args, timed_kwargs = timed_messages[-1]

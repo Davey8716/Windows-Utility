@@ -345,11 +345,14 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
                 return None
             destination = backup_dir / "Monitor Rules"
             destination_text = escape(str(destination))
+            link_color = styles.message_box_link_color().name()
             answer = self._show_modal_message(
                 QMessageBox.Icon.NoIcon,
                 "Export Monitor Rules",
                 "Export Monitor Rules data to:<br>"
-                f'<a href="open-export-destination">{destination_text}</a>',
+                f'<a href="open-export-destination" '
+                f'style="color: {link_color}; text-decoration: underline;">'
+                f"{destination_text}</a>",
                 QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Save,
                 link_activated=lambda _link: self._open_export_directory(destination),

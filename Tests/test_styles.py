@@ -64,6 +64,20 @@ def test_all_button_styles_share_the_standard_corner_radius():
 
 
 @pytest.mark.parametrize(
+    ("is_dark", "link_color"),
+    [(True, "#ffffff"), (False, "#000000")],
+)
+def test_message_box_links_are_white_in_dark_mode_and_black_in_light_mode(
+    is_dark,
+    link_color,
+):
+    styles.set_theme(is_dark)
+
+    assert styles.message_box_link_color().name() == link_color
+    assert "QMessageBox QLabel a {" not in styles.message_box_style()
+
+
+@pytest.mark.parametrize(
     "style_factory",
     [
         styles.organizing_combo_style,

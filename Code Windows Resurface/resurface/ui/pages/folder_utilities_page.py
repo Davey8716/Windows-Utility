@@ -67,6 +67,9 @@ class FolderUtilitiesPage(PageControls):
         self._save_name.setChecked(False)
         self._input.clear()
 
+    # def _delete_requested(self) -> None:
+    #     for name in
+
     def _request_create(self) -> None:
         name = self._input.text().strip()
         if name:

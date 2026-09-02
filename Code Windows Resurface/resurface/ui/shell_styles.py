@@ -147,6 +147,10 @@ def message_box_style(radius: int = 10) -> str:
         }}
     """
 
+
+def message_box_link_color() -> QColor:
+    return T.TEXT_LIGHT if T.THEME_IS_DARK else QColor(0, 0, 0)
+
 def message_popup_menu_style(radius: int = 10) -> str:
     radius = T.POPUP_CORNER_RADIUS
     border = H.qcolor_css(T.SURFACE_BORDER)

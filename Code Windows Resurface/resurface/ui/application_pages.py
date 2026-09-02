@@ -311,11 +311,14 @@ class ApplicationPageComposer:
                 )
 
         destination_text = escape(str(destination))
+        link_color = styles.message_box_link_color().name()
         answer = self.app._show_modal_message(
             QMessageBox.Icon.NoIcon,
             "Export Hover Data",
             "Export Hover Window Controls data to:<br>"
-            f'<a href="open-export-destination">{destination_text}</a>',
+            f'<a href="open-export-destination" '
+            f'style="color: {link_color}; text-decoration: underline;">'
+            f"{destination_text}</a>",
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
             link_activated=open_destination,
