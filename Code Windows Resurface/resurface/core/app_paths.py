@@ -126,6 +126,11 @@ class MasterBackupPathsMixin:
             return str(base_path)
         return str(base_path / "Bookmarks")
 
+    def get_default_hover_controls_export_dir(self) -> str:
+        path_type = self._get_app_module_attr("Path", Path)
+        base_dir = self._get_master_backup_dir().strip() or str(path_type.home())
+        return str(path_type(base_dir) / "Hover Window Controls")
+
     def get_default_desktop_layout_path(self) -> str:
         path_type = self._get_app_module_attr("Path", Path)
         base_dir = self._get_master_backup_dir().strip() or str(path_type.home())

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QFileDialog, QFrame, QGridLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from resurface.core.state_manager import save_state
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
@@ -279,28 +279,33 @@ class ApplicationPageComposer:
             )
 
     def _export_hover_controls(self) -> None:
-        destination = QFileDialog.getExistingDirectory(
-            self.app,
-            "Export Hover Window Controls data",
-            str(Path.home()),
+        destination = Path(self.app.get_default_hover_controls_export_dir())
+        answer = self.app._show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            "Export Hover Data",
+            f"Export Hover Window Controls data to:\n{destination}",
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
         )
-        if not destination:
+        if answer != QMessageBox.StandardButton.Save:
             return
         try:
-            result = self.app.hover_window_controls.export_all_data(
-                Path(destination)
-            )
+            destination.mkdir(parents=True, exist_ok=True)
+            result = self.app.hover_window_controls.export_all_data(destination)
         except Exception as error:
-            QMessageBox.critical(
-                self.app,
+            self.app._show_modal_message(
+                QMessageBox.Icon.Critical,
                 "Export failed",
                 f"Hover Window Controls data could not be exported.\n\n{error}",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Ok,
             )
             return
-        QMessageBox.information(
-            self.app,
+        self.app._show_timed_message(
+            QMessageBox.Icon.Information,
             "Hover data exported",
             f"The export was created successfully.\n\n{result.directory}",
+            show_close_now_button=True,
         )
 
     def _clear_hover_controls_cache(self) -> None:
