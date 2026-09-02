@@ -16,7 +16,7 @@ def title_bar_control_style(*, close_button: bool = False) -> str:
             border: none;
             border-radius: {T.BUTTON_CORNER_RADIUS}px;
             padding: 0px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
         }}
         QToolButton:hover {{ background-color: {hover}; }}
@@ -24,7 +24,7 @@ def title_bar_control_style(*, close_button: bool = False) -> str:
     """
 
 def page_title_style() -> str:
-    return H.label_style(font_size=28, bold=True, color=T.theme_text_color())
+    return H.label_style(font_size=24, bold=True, color=T.theme_text_color())
 
 def page_description_style() -> str:
     return H.label_style(font_size=14, bold=False, color=T.theme_muted_text_color())
