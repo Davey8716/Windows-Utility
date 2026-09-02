@@ -61,7 +61,10 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         root.setContentsMargins(24, 24, 24, 24)
         root.setSpacing(12)
         action_grid = QGridLayout()
-        action_grid.setContentsMargins(0, 0, 0, 0)
+        # Inset the action controls within the panel.  Keeping this on the grid
+        # (rather than changing its columns) preserves the existing alignment
+        # and spacing of both rows of buttons.
+        action_grid.setContentsMargins(12, 12, 12, 0)
         action_grid.setHorizontalSpacing(6)
         action_grid.setVerticalSpacing(root.spacing())
         # summary = QLabel(
