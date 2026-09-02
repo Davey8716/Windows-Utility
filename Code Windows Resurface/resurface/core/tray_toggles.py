@@ -23,6 +23,7 @@ class TrayIconManager(QObject):
         self.tray = None
         self.zen_mode_action = None
         self.screen_mover_action = None
+        self.hover_controls_action = None
         self.monitor_rules_action = None
 
     def _resolve_tray_icon(self):
@@ -54,6 +55,13 @@ class TrayIconManager(QObject):
         self.screen_mover_action.setCheckable(True)
         self.screen_mover_action.toggled.connect(self.toggle_screen_mover)
         menu.addAction(self.screen_mover_action)
+
+        self.hover_controls_action = QAction(
+            "Hover Window Controls Enabled", self.app
+        )
+        self.hover_controls_action.setCheckable(True)
+        self.hover_controls_action.toggled.connect(self.toggle_hover_controls)
+        menu.addAction(self.hover_controls_action)
 
         self.monitor_rules_action = QAction("Monitor Rules Enabled", self.app)
         self.monitor_rules_action.setCheckable(True)
@@ -101,7 +109,25 @@ class TrayIconManager(QObject):
     def sync_actions(self):
         self.sync_zen_mode_action()
         self.sync_screen_mover_action()
+        self.sync_hover_controls_action()
         self.sync_monitor_rules_action()
+
+    def sync_hover_controls_action(self):
+        if not self.hover_controls_action:
+            return
+        service = getattr(self.app, "hover_window_controls", None)
+        enabled = bool(
+            getattr(
+                service,
+                "enabled",
+                getattr(self.app, "state", {}).get(
+                    "hover_window_controls_enabled", True
+                ),
+            )
+        )
+        self.hover_controls_action.blockSignals(True)
+        self.hover_controls_action.setChecked(enabled)
+        self.hover_controls_action.blockSignals(False)
 
     def sync_monitor_rules_action(self):
         if not self.monitor_rules_action:
@@ -144,6 +170,13 @@ class TrayIconManager(QObject):
             setter(enabled)
         else:
             self.sync_screen_mover_action()
+
+    def toggle_hover_controls(self, enabled: bool):
+        setter = getattr(self.app, "set_hover_window_controls_enabled", None)
+        if callable(setter):
+            setter(enabled)
+        else:
+            self.sync_hover_controls_action()
 
     def toggle_monitor_rules(self, enabled: bool):
         setter = getattr(self.app, "set_monitor_rules_enabled", None)

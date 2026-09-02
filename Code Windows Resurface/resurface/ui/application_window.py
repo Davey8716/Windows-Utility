@@ -8,13 +8,14 @@ from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 
 from resurface.core.app_paths import MasterBackupPathsMixin
 from resurface.core.instance_runtime import WM_APP_RESTORE_INSTANCE
-from resurface.core.retired_features import cleanup_retired_features
 from resurface.core.state_manager import load_state, save_state
 from resurface.core.tray_toggles import TrayIconManager, resolve_application_icon
 from resurface.features.desktop.folder_service import DesktopFolderService
 from resurface.features.desktop.screenshot_service import ScreenshotService
 from resurface.features.desktop.zen_mode import ZenModeService
 from resurface.features.folder_creator.launcher import FolderCreatorLauncher
+from resurface.features.hover_window_controls.migration import import_standalone_data
+from resurface.features.hover_window_controls.service import HoverWindowControlsService
 from resurface.features.drives.drive_monitor import DriveMonitor
 from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
@@ -78,7 +79,7 @@ class UtilityControlApp(
         super().__init__()
 
         self.state = load_state()
-        if cleanup_retired_features(self.state):
+        if import_standalone_data(self.state):
             save_state(self.state)
         self.saved_state = self.state
         styles.set_theme(bool(self.state.get("theme_dark", True)))
@@ -145,6 +146,11 @@ class UtilityControlApp(
             self.window_management,
             self,
         )
+        self.hover_window_controls = HoverWindowControlsService(
+            self.state,
+            save_state,
+            self,
+        )
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
         self.screen_mover = ScreenMover(name="WindowsResurfaceMain")
@@ -184,6 +190,7 @@ class UtilityControlApp(
                 self.external_drive_controller.apply_connected_drives_style
             ),
             screen_mover_settings_page=self.pages.screen_mover_settings_page,
+            hover_window_controls_page=self.pages.hover_window_controls_page,
             user_interface_page=self.pages.user_interface_page,
             maintenance_page=self.pages.maintenance_page,
             drive_space_page=self.pages.drive_space_page,
@@ -222,6 +229,10 @@ class UtilityControlApp(
         )
         self.external_drive_controller.start()
         self.tray_manager.create_tray_icon()
+        self.hover_window_controls.settings_changed.connect(
+            lambda _enabled, _dwell: self.tray_manager.sync_hover_controls_action()
+        )
+        self.hover_window_controls.start()
         self.screen_mover.configure(
             app_hwnd=int(self.winId()),
             self_action_dispatch=self._screen_mover_bridge.dispatch,
@@ -362,6 +373,9 @@ class UtilityControlApp(
     def set_screen_mover_enabled(self, enabled: bool) -> None:
         self.screen_mover_settings_controller.set_enabled(enabled)
 
+    def set_hover_window_controls_enabled(self, enabled: bool) -> None:
+        self.hover_window_controls.set_enabled(enabled)
+
     def reset_screen_mover_settings(self) -> None:
         self.screen_mover_settings_controller.reset_settings()
 
@@ -388,6 +402,11 @@ class UtilityControlApp(
 
         try:
             self.monitor_rule_watcher.stop()
+        except Exception:
+            pass
+
+        try:
+            self.hover_window_controls.stop()
         except Exception:
             pass
 

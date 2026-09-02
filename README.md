@@ -69,7 +69,7 @@ The left side is the everyday tools area:
 
 - `User Interface`: theme, always-on-top, tooltips, desktop Zen Mode, power actions, minimize-after-use
 - `Screen Mover`: master enable control, mouse trigger, and configurable keyboard shortcuts for moving, minimizing, or maximizing the foreground window
-- `Hover Window Controls`: retained as a placeholder for the removed feature
+- `Hover Window Controls`: enable dwell actions, choose the delay, calibrate custom title bars, export hover data, and clear learned buttons
 - `Monitor Rules`: automatically place newly opened application windows on an assigned display, preserving their current size, restoring captured geometry, or maximizing them
 - `External Drive Reminder Options`: connected drive display plus leave and plug/unplug reminders
 - `General Organising Utilities`: screenshots, desktop layout backup/restore, bookmarks export, taskbar backup, master backup path
@@ -99,6 +99,20 @@ Minimize, and Maximize. Empty shortcut fields are disabled. The tray menu's
 `Screen Mover Enabled` action mirrors the master control in the main window, and
 `Reset Screen Mover Defaults` restores the middle mouse trigger and clears all
 shortcuts without changing other app settings.
+
+Hover Window Controls settings are stored in the main Windows Resurface state
+file. Learned caption-button profiles and export metadata are stored under
+`%LOCALAPPDATA%\Windows Resurface\hover-window-controls`. On first launch after
+the feature is installed, valid settings and learned profiles from the
+standalone Hover Window Controls app are copied into this location without
+altering the standalone data. Caption-button dwell actions work without any
+additional software. Restoring minimized windows through taskbar previews also
+requires AutoHotkey v2; when it is unavailable, only that optional behavior is
+disabled.
+
+The Hover Window Controls page can capture an open application's title-bar
+controls for calibration. Hover automation pauses while calibration or export
+is active and resumes afterward when the feature is enabled.
 
 Monitor Rules are evaluated from top to bottom while Windows Resurface is open
 or hidden in the system tray. Rules can match an exact executable path or an

@@ -1,8 +1,9 @@
 """Construction and page-specific signal wiring for the main application UI."""
 
 from dataclasses import dataclass
+from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFileDialog, QFrame, QGridLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from resurface.core.state_manager import save_state
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
@@ -233,9 +234,19 @@ class ApplicationPageComposer:
         )
         shell.mount_content("windows_utilities", windows_utilities_page)
 
+        hover_service = app.hover_window_controls
         hover_page = HoverWindowControlsPage(
+            self.state,
+            app.register_tooltip,
+            taskbar_restore_available=hover_service.taskbar_restore_available,
             parent=shell.content_parent("hover_window_controls"),
         )
+        hover_page.enabled_changed.connect(hover_service.set_enabled)
+        hover_page.dwell_changed.connect(hover_service.set_dwell_ms)
+        hover_page.calibration_requested.connect(self._calibrate_hover_controls)
+        hover_page.export_requested.connect(self._export_hover_controls)
+        hover_page.clear_requested.connect(self._clear_hover_controls_cache)
+        hover_service.settings_changed.connect(hover_page.sync_settings)
         shell.mount_content("hover_window_controls", hover_page)
         shell.finish_page_layouts()
 
@@ -256,6 +267,61 @@ class ApplicationPageComposer:
         )
         overview_page.refresh(self.state, getattr(app, "_overview_connected_drives", set()))
         return pages
+
+    def _calibrate_hover_controls(self) -> None:
+        try:
+            self.app.hover_window_controls.calibrate(self.app)
+        except Exception as error:
+            QMessageBox.warning(
+                self.app,
+                "Calibration failed",
+                f"Hover Window Controls calibration could not be opened.\n\n{error}",
+            )
+
+    def _export_hover_controls(self) -> None:
+        destination = QFileDialog.getExistingDirectory(
+            self.app,
+            "Export Hover Window Controls data",
+            str(Path.home()),
+        )
+        if not destination:
+            return
+        try:
+            result = self.app.hover_window_controls.export_all_data(
+                Path(destination)
+            )
+        except Exception as error:
+            QMessageBox.critical(
+                self.app,
+                "Export failed",
+                f"Hover Window Controls data could not be exported.\n\n{error}",
+            )
+            return
+        QMessageBox.information(
+            self.app,
+            "Hover data exported",
+            f"The export was created successfully.\n\n{result.directory}",
+        )
+
+    def _clear_hover_controls_cache(self) -> None:
+        answer = QMessageBox.warning(
+            self.app,
+            "Clear all learned buttons?",
+            "This permanently removes every learned caption-button image and "
+            "all manual calibration data. Hover preferences are kept.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self.app.hover_window_controls.clear_learned_buttons()
+        except OSError as error:
+            QMessageBox.warning(
+                self.app,
+                "Could not clear learned buttons",
+                str(error),
+            )
 
     def _wire_user_interface_page(self, page: UserInterfacePage) -> None:
         app = self.app

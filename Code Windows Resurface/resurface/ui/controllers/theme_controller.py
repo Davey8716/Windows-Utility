@@ -74,6 +74,7 @@ class ApplicationThemeController:
         refresh_master_backup_path: Callable[[], None],
         refresh_connected_drives_style: Callable[[], None],
         screen_mover_settings_page=None,
+        hover_window_controls_page=None,
         user_interface_page=None,
         maintenance_page=None,
         drive_space_page=None,
@@ -85,6 +86,7 @@ class ApplicationThemeController:
         self._refresh_master_backup_path = refresh_master_backup_path
         self._refresh_connected_drives_style = refresh_connected_drives_style
         self.screen_mover_settings_page = screen_mover_settings_page
+        self.hover_window_controls_page = hover_window_controls_page
         self.user_interface_page = user_interface_page
         self.maintenance_page = maintenance_page
         self.drive_space_page = drive_space_page
@@ -171,6 +173,8 @@ class ApplicationThemeController:
             self.maintenance_page.apply_theme()
         if self.drive_space_page is not None:
             self.drive_space_page.apply_theme()
+        if self.hover_window_controls_page is not None:
+            self.hover_window_controls_page.apply_theme()
 
         for label in self.root.findChildren(QLabel, "PageTitle"):
             label.setStyleSheet(styles.page_title_style())
