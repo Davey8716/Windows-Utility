@@ -158,6 +158,11 @@ def _patch_window_placement(monkeypatch, *, rect=(100, 100, 900, 700), show_cmd=
     )
     monkeypatch.setattr(
         win32_windows.win32gui,
+        "SetWindowPlacement",
+        lambda *args: calls.append(("placement", args)),
+    )
+    monkeypatch.setattr(
+        win32_windows.win32gui,
         "ShowWindow",
         lambda *args: calls.append(("show", args)),
     )
@@ -201,6 +206,61 @@ def test_saved_geometry_is_clamped_and_maximize_is_applied_after_move(monkeypatc
         make_rule(placement_mode="maximize"),
         monitors=[target],
     )
+    assert [call[0] for call in calls] == ["position", "show"]
+    assert calls[-1] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
+
+
+def test_already_maximized_rule_moves_with_single_window_placement(monkeypatch):
+    calls = _patch_window_placement(
+        monkeypatch,
+        show_cmd=win32_windows.win32con.SW_SHOWMAXIMIZED,
+    )
+    target = {
+        "device": r"\\.\DISPLAY2",
+        "work": (-1280, 0, 0, 984),
+    }
+
+    assert win32_windows.apply_monitor_rule(
+        100,
+        make_rule(placement_mode="maximize"),
+        monitors=[target],
+    )
+
+    assert calls == [
+        (
+            "placement",
+            (
+                100,
+                (
+                    0,
+                    win32_windows.win32con.SW_SHOWMAXIMIZED,
+                    (0, 0),
+                    (-1280, 0),
+                    (-1180, 100, -380, 700),
+                ),
+            ),
+        )
+    ]
+
+
+def test_minimized_window_is_restored_moved_and_maximized(monkeypatch):
+    calls = _patch_window_placement(
+        monkeypatch,
+        show_cmd=win32_windows.win32con.SW_SHOWMINIMIZED,
+    )
+    target = {
+        "device": r"\\.\DISPLAY2",
+        "work": (1920, 0, 3840, 1040),
+    }
+
+    assert win32_windows.apply_monitor_rule(
+        100,
+        make_rule(placement_mode="maximize"),
+        monitors=[target],
+    )
+
+    assert [call[0] for call in calls] == ["show", "position", "show"]
+    assert calls[0] == ("show", (100, win32_windows.win32con.SW_RESTORE))
     assert calls[-1] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
 
 

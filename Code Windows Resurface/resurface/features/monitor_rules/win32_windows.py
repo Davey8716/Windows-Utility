@@ -151,14 +151,12 @@ def enumerate_eligible_windows(*, app_hwnd=None) -> list[dict]:
     return windows
 
 
-def _normal_window_rect(hwnd) -> tuple[int, int, int, int]:
+def _window_placement_rect(hwnd) -> tuple[tuple, tuple[int, int, int, int]]:
     placement = win32gui.GetWindowPlacement(hwnd)
     show_command = placement[1]
     if show_command in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
-        rect = placement[4]
-        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-        return tuple(rect)
-    return tuple(win32gui.GetWindowRect(hwnd))
+        return placement, tuple(placement[4])
+    return placement, tuple(win32gui.GetWindowRect(hwnd))
 
 
 def capture_window_geometry(hwnd) -> dict | None:
@@ -210,7 +208,8 @@ def apply_monitor_rule(hwnd, rule: dict, *, monitors=None) -> bool:
         if target is None or not win32gui.IsWindow(hwnd):
             return False
 
-        rect = _normal_window_rect(hwnd)
+        placement, rect = _window_placement_rect(hwnd)
+        show_command = placement[1]
         left, top, right, bottom = rect
         width, height = max(1, right - left), max(1, bottom - top)
         target_work = tuple(target["work"])
@@ -231,6 +230,21 @@ def apply_monitor_rule(hwnd, rule: dict, *, monitors=None) -> bool:
             y = target_work[1] + (top - source_work[1])
 
         x, y = _clamped_position(target_work, x, y, width, height)
+        if mode == "maximize" and show_command == win32con.SW_SHOWMAXIMIZED:
+            win32gui.SetWindowPlacement(
+                hwnd,
+                (
+                    placement[0],
+                    win32con.SW_SHOWMAXIMIZED,
+                    placement[2],
+                    (target_work[0], target_work[1]),
+                    (x, y, x + width, y + height),
+                ),
+            )
+            return True
+
+        if show_command in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
         win32gui.SetWindowPos(
             hwnd,
             win32con.HWND_TOP,
@@ -257,4 +271,3 @@ def _left_mouse_pressed() -> bool:
 
 def _window_exists(hwnd) -> bool:
     return bool(win32gui.IsWindow(hwnd))
-
