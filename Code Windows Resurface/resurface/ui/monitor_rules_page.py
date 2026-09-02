@@ -375,14 +375,12 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
             )
             return None
         if not safety_backup:
-            message_box = QMessageBox(self)
-            message_box.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-            message_box.setStyleSheet(styles.message_box_style())
-            message_box.setIcon(QMessageBox.Icon.Information)
-            message_box.setWindowTitle("Monitor Rules Exported")
-            message_box.setText(f"Monitor rules were exported to:\n{path}")
-            message_box.setStandardButtons(QMessageBox.StandardButton.Ok)
-            message_box.exec()
+            self._show_timed_message(
+                QMessageBox.Icon.Information,
+                "Monitor Rules Exported",
+                f"Monitor rules were exported to:\n{path}",
+                show_close_now_button=True,
+            )
         return path
 
     def _import_rules(self) -> None:

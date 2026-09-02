@@ -452,6 +452,7 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
         get_master_backup_dir=lambda: str(tmp_path),
     )
     captured = []
+    timed_messages = []
 
     def accept_and_capture(dialog):
         captured.append(dialog)
@@ -460,11 +461,16 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
         return QMessageBox.StandardButton.Ok
 
     monkeypatch.setattr(monitor_rules_ui.QMessageBox, "exec", accept_and_capture)
+    monkeypatch.setattr(
+        page,
+        "_show_timed_message",
+        lambda *args, **kwargs: timed_messages.append((args, kwargs)),
+    )
     try:
         for is_dark in (True, False):
             monitor_rules_ui.styles.set_theme(is_dark)
             exported_path = page._export_rules()
-            confirmation = captured[-2]
+            confirmation = captured[-1]
             assert confirmation.parent() is page
             assert confirmation.windowTitle() == "Export Monitor Rules"
             assert str(exported_path.parent) in confirmation.text()
@@ -488,19 +494,13 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
                 == monitor_rules_ui.styles.message_box_style()
             )
 
-            acknowledgement = captured[-1]
-            assert acknowledgement.parent() is page
-            assert acknowledgement.windowTitle() == "Monitor Rules Exported"
-            assert acknowledgement.text() == (
-                f"Monitor rules were exported to:\n{exported_path}"
+            timed_args, timed_kwargs = timed_messages[-1]
+            assert timed_args == (
+                QMessageBox.Icon.Information,
+                "Monitor Rules Exported",
+                f"Monitor rules were exported to:\n{exported_path}",
             )
-            assert acknowledgement.icon() == QMessageBox.Icon.Information
-            assert acknowledgement.standardButtons() == QMessageBox.StandardButton.Ok
-            assert acknowledgement.windowFlags() & Qt.WindowType.FramelessWindowHint
-            assert (
-                acknowledgement.styleSheet()
-                == monitor_rules_ui.styles.message_box_style()
-            )
+            assert timed_kwargs == {"show_close_now_button": True}
     finally:
         monitor_rules_ui.styles.set_theme(True)
         page.deleteLater()
