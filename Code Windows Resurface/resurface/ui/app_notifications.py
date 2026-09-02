@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Callable
 
 from resurface.ui import styles
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer
@@ -101,10 +102,25 @@ class WindowMessageMixin:
     def _prepare_message_box_layout(self, message_box: QMessageBox) -> None:
         self._suppress_message_box_icon_label(message_box)
         self._balance_message_box_text_padding(message_box)
+        self._configure_message_box_links(message_box)
         self._apply_message_box_accessory(message_box)
         self._center_message_box_text_block(message_box)
         self._ensure_timed_close_button(message_box)
         self._center_message_box_buttons(message_box)
+
+    def _configure_message_box_links(self, message_box: QMessageBox) -> None:
+        link_activated = getattr(message_box, "_link_activated", None)
+        if link_activated is None:
+            return
+
+        text_label = message_box.findChild(QLabel, "qt_msgbox_label")
+        if text_label is None:
+            return
+
+        text_label.setTextFormat(Qt.TextFormat.RichText)
+        text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        text_label.setOpenExternalLinks(False)
+        text_label.linkActivated.connect(link_activated)
 
     def _suppress_message_box_icon_label(self, message_box: QMessageBox) -> None:
         if not getattr(message_box, "_suppress_standard_icon", False):
@@ -329,6 +345,7 @@ class WindowMessageMixin:
         text_minimum_width: int | None = None,
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
+        link_activated: Callable[[str], None] | None = None,
     ) -> int:
         try:
             message_box = QMessageBox(self)
@@ -336,6 +353,9 @@ class WindowMessageMixin:
             return self._message_box_button("Cancel")
         self._apply_message_box_icon(message_box, icon)
         message_box.setWindowTitle(title)
+        message_box._link_activated = link_activated
+        if link_activated is not None:
+            message_box.setTextFormat(Qt.TextFormat.RichText)
         message_box.setText(text)
         if accessory_icon_path:
             message_box._accessory_icon_path = Path(accessory_icon_path)

@@ -1,1 +1,0 @@
-{"rules": [{"id": "new", "name": "Imported Rule", "enabled": true, "reapply_if_moved": false, "executable_name": "discord.exe", "executable_path": "C:\\Apps\\Discord.exe", "match_exact_path": true, "title_contains": "", "class_name": "", "target_device": "\\\\.\\DISPLAY2", "target_label": "Monitor 2", "placement_mode": "keep_size", "saved_geometry": null}]}

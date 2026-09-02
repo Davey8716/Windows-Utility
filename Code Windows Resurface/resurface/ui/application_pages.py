@@ -1,6 +1,7 @@
 """Construction and page-specific signal wiring for the main application UI."""
 
 from dataclasses import dataclass
+from html import escape
 from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
@@ -280,12 +281,40 @@ class ApplicationPageComposer:
 
     def _export_hover_controls(self) -> None:
         destination = Path(self.app.get_default_hover_controls_export_dir())
+
+        def open_destination(_link: str) -> None:
+            try:
+                destination.mkdir(parents=True, exist_ok=True)
+                opened = self.app.explorer_windows.open_or_focus_folder(
+                    str(destination)
+                )
+            except Exception as error:
+                self.app._show_modal_message(
+                    QMessageBox.Icon.Critical,
+                    "Open export folder failed",
+                    f"The export folder could not be opened.\n\n{error}",
+                    QMessageBox.StandardButton.Ok,
+                    QMessageBox.StandardButton.Ok,
+                )
+                return
+            if not opened:
+                self.app._show_modal_message(
+                    QMessageBox.Icon.Critical,
+                    "Open export folder failed",
+                    f"The export folder could not be opened.\n\n{destination}",
+                    QMessageBox.StandardButton.Ok,
+                    QMessageBox.StandardButton.Ok,
+                )
+
+        destination_text = escape(str(destination))
         answer = self.app._show_modal_message(
             QMessageBox.Icon.NoIcon,
             "Export Hover Data",
-            f"Export Hover Window Controls data to:\n{destination}",
+            "Export Hover Window Controls data to:<br>"
+            f'<a href="open-export-destination">{destination_text}</a>',
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
+            link_activated=open_destination,
         )
         if answer != QMessageBox.StandardButton.Save:
             return
