@@ -1017,8 +1017,20 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             for button in folder_page.findChildren(QPushButton)
             if button.text() == "Folder To Desktop"
         )
-        assert folder_creator.size().width() == folder_desktop.size().width() == 250
-        folder_row = window.pages.folder_utilities_page._names.parentWidget()
+        folder_utilities = window.pages.folder_utilities_page
+        folder_name = folder_utilities._names
+        save_name = folder_utilities._save_name
+        folder_row = folder_name.parentWidget()
+        assert all(
+            control.width() == 250
+            for control in (folder_name, folder_desktop, save_name, folder_creator)
+        )
+        assert folder_name.mapTo(folder_page, QPoint()).x() == save_name.mapTo(
+            folder_page, QPoint()
+        ).x()
+        assert folder_desktop.mapTo(folder_page, QPoint()).x() == folder_creator.mapTo(
+            folder_page, QPoint()
+        ).x()
         assert folder_creator.mapTo(folder_page, QPoint()).y() == (
             folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
         )
@@ -1045,11 +1057,23 @@ def test_folder_utilities_places_creator_below_quick_folder_action(monkeypatch):
             for button in folder_page.findChildren(QPushButton)
             if button.text() == "Folder Creator"
         )
-        folder_row = window.pages.folder_utilities_page._names.parentWidget()
+        folder_utilities = window.pages.folder_utilities_page
+        folder_name = folder_utilities._names
+        save_name = folder_utilities._save_name
+        folder_row = folder_name.parentWidget()
         folder_desktop = folder_row.findChild(QPushButton)
 
         assert folder_desktop is not None
-        assert folder_creator.width() == folder_desktop.width() == 250
+        assert all(
+            control.width() == 250
+            for control in (folder_name, folder_desktop, save_name, folder_creator)
+        )
+        assert folder_name.mapTo(folder_page, QPoint()).x() == save_name.mapTo(
+            folder_page, QPoint()
+        ).x()
+        assert folder_desktop.mapTo(folder_page, QPoint()).x() == folder_creator.mapTo(
+            folder_page, QPoint()
+        ).x()
         assert folder_creator.mapTo(folder_page, QPoint()).y() == (
             folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
         )
