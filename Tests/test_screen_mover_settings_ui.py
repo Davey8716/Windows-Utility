@@ -53,11 +53,14 @@ class FakeHotkeyManager:
 
 
 class FakeHoverWindowControlsService(QObject):
-    settings_changed = Signal(bool, int)
+    settings_changed = Signal(bool, bool, int)
 
     def __init__(self, state, _save_state, parent=None):
         super().__init__(parent)
         self.enabled = bool(state.get("hover_window_controls_enabled", True))
+        self.taskbar_restore_enabled = bool(
+            state.get("hover_taskbar_restore_enabled", True)
+        )
         self.dwell_ms = int(state.get("hover_window_controls_dwell_ms", 750))
         self.taskbar_restore_available = False
         self.started = False
@@ -70,11 +73,27 @@ class FakeHoverWindowControlsService(QObject):
 
     def set_enabled(self, enabled):
         self.enabled = bool(enabled)
-        self.settings_changed.emit(self.enabled, self.dwell_ms)
+        self.settings_changed.emit(
+            self.enabled,
+            self.taskbar_restore_enabled,
+            self.dwell_ms,
+        )
+
+    def set_taskbar_restore_enabled(self, enabled):
+        self.taskbar_restore_enabled = bool(enabled)
+        self.settings_changed.emit(
+            self.enabled,
+            self.taskbar_restore_enabled,
+            self.dwell_ms,
+        )
 
     def set_dwell_ms(self, dwell_ms):
         self.dwell_ms = int(dwell_ms)
-        self.settings_changed.emit(self.enabled, self.dwell_ms)
+        self.settings_changed.emit(
+            self.enabled,
+            self.taskbar_restore_enabled,
+            self.dwell_ms,
+        )
 
 
 class FakeTrayManager:
@@ -365,9 +384,13 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         window.navigate_to_page("hover_window_controls")
         hover_page = window.pages.hover_window_controls_page
         assert hover_page.enabled_button.text() == "Hover Controls On"
+        assert hover_page.taskbar_restore_button.text() == "Taskbar Restoration On"
+        assert not hasattr(hover_page, "caption_controls_button")
         assert hover_page.dwell_combo.currentData() == 750
         assert hover_page.calibrate_button.text() == "Calibrate Application…"
-        assert "requires AutoHotkey v2" in hover_page.taskbar_status.text()
+        assert not hasattr(hover_page, "taskbar_status")
+        assert not hover_page.taskbar_restore_button.isEnabled()
+        assert "requires AutoHotkey v2" in hover_page.taskbar_requirement.text()
     finally:
         window._quit_requested = True
         window.close()

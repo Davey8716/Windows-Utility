@@ -208,6 +208,7 @@ class HoverController(QObject):
         super().__init__(parent)
         self._window_api = window_api
         self._auxiliary_monitor = auxiliary_monitor
+        self._caption_controls_enabled = True
         self._engine = HoverDecisionEngine(
             dwell_ms,
             transient_grace_ms=transient_grace_ms,
@@ -222,7 +223,8 @@ class HoverController(QObject):
         self._window_api.start()
         if self._auxiliary_monitor is not None:
             self._auxiliary_monitor.start()
-        self._timer.start()
+        if self._caption_controls_enabled:
+            self._timer.start()
 
     def stop(self) -> None:
         self._timer.stop()
@@ -241,7 +243,20 @@ class HoverController(QObject):
         self._engine.reset()
         if self._auxiliary_monitor is not None:
             self._auxiliary_monitor.resume()
-        self._timer.start()
+        if self._caption_controls_enabled:
+            self._timer.start()
+
+    def set_caption_controls_enabled(self, enabled: bool) -> None:
+        """Enable or pause caption polling without changing auxiliary monitors."""
+        enabled = bool(enabled)
+        if enabled == self._caption_controls_enabled:
+            return
+        self._caption_controls_enabled = enabled
+        self._engine.reset()
+        if enabled:
+            self._timer.start()
+        else:
+            self._timer.stop()
 
     def set_dwell_ms(self, dwell_ms: int) -> None:
         self._engine.set_dwell_ms(dwell_ms)

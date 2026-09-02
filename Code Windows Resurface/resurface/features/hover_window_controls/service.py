@@ -39,7 +39,7 @@ def normalized_dwell_ms(value: object) -> int:
 
 
 class HoverWindowControlsService(QObject):
-    settings_changed = Signal(bool, int)
+    settings_changed = Signal(bool, bool, int)
 
     def __init__(
         self,
@@ -54,6 +54,9 @@ class HoverWindowControlsService(QObject):
         self._save_state = save_state
         self.data_root = data_root or windows_resurface_data_directory()
         self.enabled = bool(state.get("hover_window_controls_enabled", True))
+        self.taskbar_restore_enabled = bool(
+            state.get("hover_taskbar_restore_enabled", True)
+        )
         self.dwell_ms = normalized_dwell_ms(
             state.get("hover_window_controls_dwell_ms", DEFAULT_DWELL_MS)
         )
@@ -80,8 +83,7 @@ class HoverWindowControlsService(QObject):
             return
         self.controller.start()
         self._started = True
-        if not self.enabled:
-            self.controller.suspend()
+        self._apply_runtime_settings()
 
     def stop(self) -> None:
         if not self._started:
@@ -97,7 +99,18 @@ class HoverWindowControlsService(QObject):
         self.enabled = enabled
         self.state["hover_window_controls_enabled"] = enabled
         if self._started and not self._busy:
-            self.controller.resume() if enabled else self.controller.suspend()
+            self.controller.set_caption_controls_enabled(enabled)
+        self._persist()
+
+    def set_taskbar_restore_enabled(self, enabled: bool) -> None:
+        enabled = bool(enabled)
+        if enabled == self.taskbar_restore_enabled:
+            self._emit_settings()
+            return
+        self.taskbar_restore_enabled = enabled
+        self.state["hover_taskbar_restore_enabled"] = enabled
+        if self._started and not self._busy:
+            self._set_taskbar_monitor_enabled(enabled)
         self._persist()
 
     def set_dwell_ms(self, dwell_ms: object) -> None:
@@ -141,6 +154,7 @@ class HoverWindowControlsService(QObject):
                 "schema_version": 1,
                 "hover": {
                     "enabled": self.enabled,
+                    "taskbar_restore_enabled": self.taskbar_restore_enabled,
                     "dwell_ms": self.dwell_ms,
                 },
             }
@@ -153,17 +167,32 @@ class HoverWindowControlsService(QObject):
             self._finish_operation()
 
     def _suspend_for_operation(self) -> None:
-        if self._started and self.enabled:
+        if self._started:
             self.controller.suspend()
 
     def _finish_operation(self) -> None:
         self._busy = False
-        if self._started and self.enabled:
+        if self._started:
             self.controller.resume()
+            self._apply_runtime_settings()
+
+    def _apply_runtime_settings(self) -> None:
+        self.controller.set_caption_controls_enabled(self.enabled)
+        self._set_taskbar_monitor_enabled(self.taskbar_restore_enabled)
+
+    def _set_taskbar_monitor_enabled(self, enabled: bool) -> None:
+        if enabled and self.taskbar_restore_available:
+            self.taskbar_monitor.resume()
+        else:
+            self.taskbar_monitor.suspend()
 
     def _persist(self) -> None:
         self._save_state(self.state)
         self._emit_settings()
 
     def _emit_settings(self) -> None:
-        self.settings_changed.emit(self.enabled, self.dwell_ms)
+        self.settings_changed.emit(
+            self.enabled,
+            self.taskbar_restore_enabled,
+            self.dwell_ms,
+        )

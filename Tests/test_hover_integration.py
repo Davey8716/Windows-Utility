@@ -28,6 +28,9 @@ class FakeController:
     def set_dwell_ms(self, dwell_ms):
         self.calls.append(("dwell", dwell_ms))
 
+    def set_caption_controls_enabled(self, enabled):
+        self.calls.append(("caption", enabled))
+
 
 class FakeWindowApi:
     def __init__(self, *args, **kwargs):
@@ -49,7 +52,12 @@ def _service(monkeypatch, tmp_path, state):
     )
     monkeypatch.setattr(service_module, "Win32WindowApi", FakeWindowApi)
     monkeypatch.setattr(
-        service_module, "TaskbarRestoreMonitor", lambda **_kwargs: object()
+        service_module,
+        "TaskbarRestoreMonitor",
+        lambda **_kwargs: SimpleNamespace(
+            resume=lambda: None,
+            suspend=lambda: None,
+        ),
     )
     monkeypatch.setattr(service_module, "HoverController", FakeController)
     monkeypatch.setattr(
@@ -79,19 +87,21 @@ def test_service_owns_start_settings_and_idempotent_shutdown(monkeypatch, tmp_pa
     service, saves = _service(monkeypatch, tmp_path, state)
     emitted = []
     service.settings_changed.connect(
-        lambda enabled, dwell: emitted.append((enabled, dwell))
+        lambda enabled, taskbar, dwell: emitted.append(
+            (enabled, taskbar, dwell)
+        )
     )
 
     service.start()
     service.start()
-    assert service.controller.calls == ["start", "suspend"]
+    assert service.controller.calls == ["start", ("caption", False)]
 
     service.set_enabled(True)
     service.set_dwell_ms(1126)
-    assert service.controller.calls[-2:] == ["resume", ("dwell", 1250)]
+    assert service.controller.calls[-2:] == [("caption", True), ("dwell", 1250)]
     assert state["hover_window_controls_enabled"] is True
     assert state["hover_window_controls_dwell_ms"] == 1250
-    assert emitted[-1] == (True, 1250)
+    assert emitted[-1] == (True, True, 1250)
     assert len(saves) == 2
 
     service.stop()
@@ -135,7 +145,11 @@ def test_calibration_uses_live_capture_and_resumes(monkeypatch, tmp_path):
         "save_provider",
         "clear_provider",
     }
-    assert service.controller.calls[-2:] == ["suspend", "resume"]
+    assert service.controller.calls[-3:] == [
+        "suspend",
+        "resume",
+        ("caption", True),
+    ]
 
 
 def test_export_writes_integrated_settings_and_resumes(monkeypatch, tmp_path):
@@ -152,11 +166,43 @@ def test_export_writes_integrated_settings_and_resumes(monkeypatch, tmp_path):
 
     assert result.directory == destination / "Hover Export"
     assert service.window_api.exported_to == destination
-    assert service.controller.calls[-2:] == ["suspend", "resume"]
+    assert service.controller.calls[-3:] == [
+        "suspend",
+        "resume",
+        ("caption", True),
+    ]
     assert json.loads((data_root / "settings.json").read_text(encoding="utf-8")) == {
         "schema_version": 1,
-        "hover": {"enabled": True, "dwell_ms": 1000},
+        "hover": {
+            "enabled": True,
+            "taskbar_restore_enabled": True,
+            "dwell_ms": 1000,
+        },
     }
+
+
+def test_service_runs_taskbar_restoration_independently(monkeypatch, tmp_path):
+    state = {
+        "hover_window_controls_enabled": True,
+        "hover_taskbar_restore_enabled": True,
+    }
+    service, _saves = _service(monkeypatch, tmp_path, state)
+    monitor_calls = []
+    service.taskbar_monitor = SimpleNamespace(
+        resume=lambda: monitor_calls.append("resume"),
+        suspend=lambda: monitor_calls.append("suspend"),
+    )
+    service.taskbar_restore_available = True
+
+    service.start()
+    service.set_enabled(False)
+    service.set_taskbar_restore_enabled(False)
+    service.set_taskbar_restore_enabled(True)
+
+    assert state["hover_window_controls_enabled"] is False
+    assert state["hover_taskbar_restore_enabled"] is True
+    assert service.controller.calls[-1] == ("caption", False)
+    assert monitor_calls == ["resume", "suspend", "resume"]
 
 
 def test_clear_learned_buttons_is_forwarded(monkeypatch, tmp_path):

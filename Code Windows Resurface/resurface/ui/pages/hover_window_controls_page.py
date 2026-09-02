@@ -16,6 +16,7 @@ from resurface.ui.tooltips import tooltip_text
 
 class HoverWindowControlsPage(PageControls):
     enabled_changed = Signal(bool)
+    taskbar_restore_enabled_changed = Signal(bool)
     dwell_changed = Signal(int)
     calibration_requested = Signal()
     export_requested = Signal()
@@ -33,6 +34,9 @@ class HoverWindowControlsPage(PageControls):
         self.content_layout.setSpacing(16)
 
         enabled = bool(settings.get("hover_window_controls_enabled", True))
+        taskbar_restore_enabled = bool(
+            settings.get("hover_taskbar_restore_enabled", True)
+        )
         dwell_ms = normalized_dwell_ms(
             settings.get("hover_window_controls_dwell_ms", 750)
         )
@@ -51,9 +55,34 @@ class HoverWindowControlsPage(PageControls):
         self.dwell_combo.setProperty("styleFontSize", 14)
         self.dwell_combo.setStyleSheet(styles.organizing_combo_style(14))
         styles.fit_page_combo_width(self.dwell_combo, font_size=14)
-        self.add_two_column_control_row(
-            self.content_layout, self.enabled_button, self.dwell_combo
+        self.taskbar_restore_button = self.make_toggle_button(
+            "Taskbar Restoration", taskbar_restore_enabled
         )
+        self.bind_toggle_state_text(
+            self.taskbar_restore_button, "Taskbar Restoration"
+        )
+        self.add_two_column_control_row(
+            self.content_layout,
+            self.enabled_button,
+            self.taskbar_restore_button,
+        )
+        self.content_layout.addWidget(
+            self.dwell_combo, 0, Qt.AlignmentFlag.AlignHCenter
+        )
+
+        self.taskbar_requirement = QLabel(self)
+        self.taskbar_requirement.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.taskbar_requirement.setWordWrap(True)
+        self.taskbar_requirement.setProperty("styleFontSize", 12)
+        self.taskbar_requirement.setStyleSheet(styles.label_style(font_size=12))
+        if not taskbar_restore_available:
+            self.taskbar_restore_button.setEnabled(False)
+            self.taskbar_requirement.setText(
+                "Taskbar restoration requires AutoHotkey v2."
+            )
+            self.content_layout.addWidget(
+                self.taskbar_requirement, 0, Qt.AlignmentFlag.AlignHCenter
+            )
 
         self.calibrate_button = self.style_action_button(
             QPushButton("Calibrate Application…", self)
@@ -69,24 +98,6 @@ class HoverWindowControlsPage(PageControls):
         )
         self.content_layout.addWidget(
             self.clear_button, 0, Qt.AlignmentFlag.AlignHCenter
-        )
-
-        self.taskbar_status = QLabel(self)
-        self.taskbar_status.setObjectName("HoverTaskbarRestoreStatus")
-        self.taskbar_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.taskbar_status.setWordWrap(True)
-        self.taskbar_status.setProperty("styleFontSize", 12)
-        self.taskbar_status.setStyleSheet(styles.label_style(font_size=12))
-        self.taskbar_status.setText(
-            "Taskbar preview restoration is available."
-            if taskbar_restore_available
-            else (
-                "Taskbar preview restoration requires AutoHotkey v2. "
-                "Caption-button hover controls remain available."
-            )
-        )
-        self.content_layout.addWidget(
-            self.taskbar_status, 0, Qt.AlignmentFlag.AlignHCenter
         )
 
         self.register_tooltip(
@@ -106,6 +117,9 @@ class HoverWindowControlsPage(PageControls):
         )
 
         self.enabled_button.toggled.connect(self.enabled_changed)
+        self.taskbar_restore_button.toggled.connect(
+            self.taskbar_restore_enabled_changed
+        )
         self.dwell_combo.currentIndexChanged.connect(self._dwell_selected)
         self.calibrate_button.clicked.connect(self.calibration_requested)
         self.export_button.clicked.connect(self.export_requested)
@@ -116,13 +130,26 @@ class HoverWindowControlsPage(PageControls):
         if value is not None:
             self.dwell_changed.emit(int(value))
 
-    def sync_settings(self, enabled: bool, dwell_ms: int) -> None:
+    def sync_settings(
+        self,
+        enabled: bool,
+        taskbar_restore_enabled: bool,
+        dwell_ms: int,
+    ) -> None:
         self.enabled_button.blockSignals(True)
         self.enabled_button.setChecked(bool(enabled))
         self.enabled_button.setText(
             "Hover Controls On" if enabled else "Hover Controls Off"
         )
         self.enabled_button.blockSignals(False)
+        self.taskbar_restore_button.blockSignals(True)
+        self.taskbar_restore_button.setChecked(bool(taskbar_restore_enabled))
+        self.taskbar_restore_button.setText(
+            "Taskbar Restoration On"
+            if taskbar_restore_enabled
+            else "Taskbar Restoration Off"
+        )
+        self.taskbar_restore_button.blockSignals(False)
         index = self.dwell_combo.findData(normalized_dwell_ms(dwell_ms))
         if index >= 0:
             self.dwell_combo.blockSignals(True)
@@ -130,4 +157,4 @@ class HoverWindowControlsPage(PageControls):
             self.dwell_combo.blockSignals(False)
 
     def apply_theme(self) -> None:
-        self.taskbar_status.setStyleSheet(styles.label_style(font_size=12))
+        self.taskbar_requirement.setStyleSheet(styles.label_style(font_size=12))

@@ -364,6 +364,18 @@ class HoverControllerFailureTests(unittest.TestCase):
         self.assertEqual(api.timeouts, [])
         self.assertEqual(api.executed, [])
 
+    def test_caption_poll_can_pause_without_stopping_auxiliary_monitor(self):
+        api = FakeWindowApi([])
+        api.start = lambda: None
+        auxiliary = FakeAuxiliaryMonitor()
+        controller = HoverController(api, auxiliary_monitor=auxiliary)
+
+        controller.start()
+        controller.set_caption_controls_enabled(False)
+
+        self.assertEqual(auxiliary.calls, ["start"])
+        self.assertFalse(controller._timer.isActive())
+
 
 if __name__ == "__main__":
     unittest.main()

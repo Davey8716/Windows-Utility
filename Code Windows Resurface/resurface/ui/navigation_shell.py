@@ -56,7 +56,7 @@ class NavigationShell(QWidget):
             "hover_window_controls",
             "Hover Window Controls",
             "\ue7f4",
-            "Activate minimize, maximize, restore, close, and taskbar previews by dwelling over their controls.",
+            "Dwell over window buttons or a taskbar icon to activate its action.",
         ),
     )
 

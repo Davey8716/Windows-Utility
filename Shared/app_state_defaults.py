@@ -24,6 +24,7 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "screen_mover_activation_button": "middle",
     "title_bar_dock_enabled": True,
     "hover_window_controls_enabled": True,
+    "hover_taskbar_restore_enabled": True,
     "hover_window_controls_dwell_ms": 750,
     "hover_window_controls_migration_completed": False,
     "screen_mover_keyboard_hotkeys": {

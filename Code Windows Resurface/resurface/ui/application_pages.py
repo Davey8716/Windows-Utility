@@ -244,6 +244,9 @@ class ApplicationPageComposer:
             parent=shell.content_parent("hover_window_controls"),
         )
         hover_page.enabled_changed.connect(hover_service.set_enabled)
+        hover_page.taskbar_restore_enabled_changed.connect(
+            hover_service.set_taskbar_restore_enabled
+        )
         hover_page.dwell_changed.connect(hover_service.set_dwell_ms)
         hover_page.calibration_requested.connect(self._calibrate_hover_controls)
         hover_page.export_requested.connect(self._export_hover_controls)
