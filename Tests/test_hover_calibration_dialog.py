@@ -12,6 +12,7 @@ from PySide6.QtGui import QColor, QImage
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QDialogButtonBox,
     QLabel,
     QMessageBox,
     QSpinBox,
@@ -21,6 +22,7 @@ from resurface.features.hover_window_controls.ui.calibration import (
     CALIBRATION_DIALOG_SIZE,
     CalibrationDialog,
     LiveCalibrationDialog,
+    _apply_frameless_window_style,
     action_glyph_geometry,
 )
 from resurface.features.hover_window_controls.core.hover_controller import CaptionAction
@@ -329,16 +331,61 @@ class CalibrationDialogTests(unittest.TestCase):
         self.assertEqual(horizontal.text(), "X (Horizontal)")
         self.assertEqual(vertical.text(), "Y (Vertical)")
 
-    def test_has_fixed_size_and_close_only_native_chrome(self):
+    def test_has_fixed_size_and_no_native_chrome(self):
         dialog = self.make_dialog()
         self.assertEqual(
             (dialog.width(), dialog.height()),
             CALIBRATION_DIALOG_SIZE,
         )
         flags = dialog.windowFlags()
-        self.assertTrue(flags & Qt.WindowType.WindowCloseButtonHint)
-        self.assertFalse(flags & Qt.WindowType.WindowMinimizeButtonHint)
+        self.assertTrue(flags & Qt.WindowType.FramelessWindowHint)
         self.assertFalse(flags & Qt.WindowType.WindowMaximizeButtonHint)
+
+        dialog.show()
+        self.app.processEvents()
+        button_box = dialog.findChild(QDialogButtonBox)
+        button_box.button(QDialogButtonBox.StandardButton.Close).click()
+        self.app.processEvents()
+        self.assertFalse(dialog.isVisible())
+
+    def test_native_window_style_removes_caption_and_frame(self):
+        dialog = MagicMock()
+        dialog.winId.return_value = 123
+        user32 = MagicMock()
+        original_style = 0x00CF0000
+        user32.GetWindowLongW.return_value = original_style
+
+        with patch(
+            "resurface.features.hover_window_controls.ui.calibration.ctypes.windll.user32",
+            user32,
+        ), patch(
+            "resurface.features.hover_window_controls.ui.calibration._apply_native_window_appearance"
+        ) as apply_appearance:
+            _apply_frameless_window_style(dialog)
+
+        removed_styles = (
+            0x00C00000
+            | 0x00080000
+            | 0x00020000
+            | 0x00010000
+            | 0x00040000
+        )
+        user32.GetWindowLongW.assert_called_once_with(123, -16)
+        user32.SetWindowLongW.assert_called_once_with(
+            123,
+            -16,
+            original_style & ~removed_styles,
+        )
+        user32.SetWindowPos.assert_called_once_with(
+            123,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0x0002 | 0x0001 | 0x0004 | 0x0020,
+        )
+        apply_appearance.assert_called_once_with(dialog)
 
     def test_clear_learned_buttons_confirms_and_refreshes(self):
         applications = [self.example]

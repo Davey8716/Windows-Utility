@@ -196,6 +196,52 @@ def _apply_native_window_appearance(dialog: QDialog) -> None:
         pass
 
 
+def _apply_frameless_window_style(dialog: QDialog) -> None:
+    """Remove the native Windows caption and fixed-window frame."""
+    try:
+        hwnd = int(dialog.winId())
+        if not hwnd:
+            return
+
+        user32 = ctypes.windll.user32
+        get_window_long = user32.GetWindowLongW
+        set_window_long = user32.SetWindowLongW
+        set_window_pos = user32.SetWindowPos
+
+        GWL_STYLE = -16
+        WS_CAPTION = 0x00C00000
+        WS_SYSMENU = 0x00080000
+        WS_MINIMIZEBOX = 0x00020000
+        WS_MAXIMIZEBOX = 0x00010000
+        WS_THICKFRAME = 0x00040000
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_FRAMECHANGED = 0x0020
+
+        style = get_window_long(hwnd, GWL_STYLE)
+        style &= ~(
+            WS_CAPTION
+            | WS_SYSMENU
+            | WS_MINIMIZEBOX
+            | WS_MAXIMIZEBOX
+            | WS_THICKFRAME
+        )
+        set_window_long(hwnd, GWL_STYLE, style)
+        set_window_pos(
+            hwnd,
+            0,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+        )
+    except (AttributeError, OSError, TypeError, ValueError):
+        pass
+    _apply_native_window_appearance(dialog)
+
+
 def validate_assignments(
     assignments: dict[CaptionAction, tuple[int, int, int, int]],
     image_size: tuple[int, int],
@@ -670,8 +716,9 @@ class CalibrationDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("CalibrationDialog")
-        self.setWindowFlags(_CLOSE_ONLY_DIALOG_FLAGS)
-        _apply_native_window_appearance(self)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
+        _apply_frameless_window_style(self)
         self.setStyleSheet(_calibration_stylesheet())
         self.setFixedSize(*CALIBRATION_DIALOG_SIZE)
         self.setWindowTitle("Calibration Explorer")
@@ -834,7 +881,7 @@ class CalibrationDialog(QDialog):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        _apply_native_window_appearance(self)
+        _apply_frameless_window_style(self)
 
     def _clear_learned_buttons(self) -> None:
         if self._clear_provider is None:
