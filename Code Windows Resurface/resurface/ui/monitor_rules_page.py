@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import copy
+from html import escape
 from pathlib import Path
+from typing import Callable
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -25,6 +27,7 @@ from resurface.features.monitor_rules import (
     normalize_monitor_rules,
 )
 from resurface.ui import styles
+from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.monitor_rule_editor_dialog import (
     PLACEMENT_LABELS,
     MonitorRuleEditorDialog,
@@ -33,7 +36,7 @@ from resurface.ui.monitor_rule_editor_dialog import (
 )
 
 
-class MonitorRulesPage(QFrame):
+class MonitorRulesPage(WindowMessageMixin, QFrame):
     def __init__(
         self,
         parent,
@@ -42,6 +45,7 @@ class MonitorRulesPage(QFrame):
         app_hwnd,
         on_rules_changed,
         get_master_backup_dir=None,
+        open_backup_folder: Callable[[str], bool] | None = None,
     ):
         super().__init__(parent)
         self.setObjectName("MonitorRulesEmptyState")
@@ -49,6 +53,7 @@ class MonitorRulesPage(QFrame):
         self._on_rules_changed = on_rules_changed
         self._has_backup_destination = callable(get_master_backup_dir)
         self._repository = MonitorRulesRepository(get_master_backup_dir)
+        self._open_backup_folder = open_backup_folder
         self.rules = normalize_monitor_rules(copy.deepcopy(rules))
         self._sort_ascending = True
 
@@ -298,7 +303,56 @@ class MonitorRulesPage(QFrame):
     def _backup_directory(self) -> Path | None:
         return self._repository.backup_directory()
 
+    def _open_export_directory(self, destination: Path) -> None:
+        try:
+            destination.mkdir(parents=True, exist_ok=True)
+            if self._open_backup_folder is not None:
+                opened = self._open_backup_folder(str(destination))
+            else:
+                opened = QDesktopServices.openUrl(
+                    QUrl.fromLocalFile(str(destination))
+                )
+        except Exception as exc:
+            self._show_modal_message(
+                QMessageBox.Icon.Critical,
+                "Open export folder failed",
+                f"The export folder could not be opened.\n\n{exc}",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        if not opened:
+            self._show_modal_message(
+                QMessageBox.Icon.Critical,
+                "Open export folder failed",
+                f"The export folder could not be opened.\n\n{destination}",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Ok,
+            )
+
     def _export_rules(self, _checked=False, *, safety_backup=False) -> Path | None:
+        if not safety_backup:
+            backup_dir = self._backup_directory()
+            if backup_dir is None:
+                QMessageBox.warning(
+                    self,
+                    "Monitor Rules",
+                    "Set a Master Backup Path before exporting monitor rules.",
+                )
+                return None
+            destination = backup_dir / "Monitor Rules"
+            destination_text = escape(str(destination))
+            answer = self._show_modal_message(
+                QMessageBox.Icon.NoIcon,
+                "Export Monitor Rules",
+                "Export Monitor Rules data to:<br>"
+                f'<a href="open-export-destination">{destination_text}</a>',
+                QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Save,
+                link_activated=lambda _link: self._open_export_directory(destination),
+            )
+            if answer != QMessageBox.StandardButton.Save:
+                return None
         try:
             path = self._repository.export_rules(
                 self.rules, safety_backup=safety_backup

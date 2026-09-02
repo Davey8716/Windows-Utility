@@ -3,7 +3,15 @@ import json
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QDialog, QFileDialog, QFrame, QPushButton
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QFileDialog,
+    QFrame,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+)
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 from resurface.ui import application_window as main
@@ -385,7 +393,12 @@ def test_monitor_rules_export_and_import_use_master_backup_path(monkeypatch, tmp
     monkeypatch.setattr(
         monitor_rules_ui.QMessageBox,
         "exec",
-        lambda _message_box: monitor_rules_ui.QMessageBox.StandardButton.Ok,
+        lambda message_box: (
+            monitor_rules_ui.QMessageBox.StandardButton.Save
+            if message_box.standardButtons()
+            & monitor_rules_ui.QMessageBox.StandardButton.Save
+            else monitor_rules_ui.QMessageBox.StandardButton.Ok
+        ),
     )
     commits = []
     page = monitor_rules_ui.MonitorRulesPage(
@@ -442,26 +455,113 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
 
     def accept_and_capture(dialog):
         captured.append(dialog)
-        return monitor_rules_ui.QMessageBox.StandardButton.Ok
+        if dialog.standardButtons() & QMessageBox.StandardButton.Save:
+            return QMessageBox.StandardButton.Save
+        return QMessageBox.StandardButton.Ok
 
     monkeypatch.setattr(monitor_rules_ui.QMessageBox, "exec", accept_and_capture)
     try:
         for is_dark in (True, False):
             monitor_rules_ui.styles.set_theme(is_dark)
             exported_path = page._export_rules()
-            dialog = captured[-1]
-            assert dialog.parent() is page
-            assert dialog.windowTitle() == "Monitor Rules Exported"
-            assert dialog.text() == f"Monitor rules were exported to:\n{exported_path}"
-            assert dialog.icon() == monitor_rules_ui.QMessageBox.Icon.Information
+            confirmation = captured[-2]
+            assert confirmation.parent() is page
+            assert confirmation.windowTitle() == "Export Monitor Rules"
+            assert str(exported_path.parent) in confirmation.text()
+            assert confirmation.icon() == QMessageBox.Icon.NoIcon
             assert (
-                dialog.standardButtons()
-                == monitor_rules_ui.QMessageBox.StandardButton.Ok
+                confirmation.standardButtons()
+                == QMessageBox.StandardButton.Save
+                | QMessageBox.StandardButton.Cancel
             )
-            assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
-            assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style()
+            assert confirmation.standardButton(confirmation.defaultButton()) == (
+                QMessageBox.StandardButton.Save
+            )
+            label = confirmation.findChild(QLabel, "qt_msgbox_label")
+            assert (
+                label.textInteractionFlags()
+                & Qt.TextInteractionFlag.LinksAccessibleByMouse
+            )
+            assert confirmation.windowFlags() & Qt.WindowType.FramelessWindowHint
+            assert (
+                confirmation.styleSheet()
+                == monitor_rules_ui.styles.message_box_style()
+            )
+
+            acknowledgement = captured[-1]
+            assert acknowledgement.parent() is page
+            assert acknowledgement.windowTitle() == "Monitor Rules Exported"
+            assert acknowledgement.text() == (
+                f"Monitor rules were exported to:\n{exported_path}"
+            )
+            assert acknowledgement.icon() == QMessageBox.Icon.Information
+            assert acknowledgement.standardButtons() == QMessageBox.StandardButton.Ok
+            assert acknowledgement.windowFlags() & Qt.WindowType.FramelessWindowHint
+            assert (
+                acknowledgement.styleSheet()
+                == monitor_rules_ui.styles.message_box_style()
+            )
     finally:
         monitor_rules_ui.styles.set_theme(True)
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_export_rules_cancel_does_not_write_file(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    monkeypatch.setattr(
+        monitor_rules_ui.QMessageBox,
+        "exec",
+        lambda _dialog: QMessageBox.StandardButton.Cancel,
+    )
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    try:
+        assert page._export_rules() is None
+        assert not (tmp_path / "Monitor Rules").exists()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_export_rules_path_link_creates_and_opens_folder(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    captured = []
+    opened = []
+
+    def cancel_and_capture(dialog):
+        captured.append(dialog)
+        return QMessageBox.StandardButton.Cancel
+
+    monkeypatch.setattr(monitor_rules_ui.QMessageBox, "exec", cancel_and_capture)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path / "Master & Backup"),
+        open_backup_folder=lambda path: opened.append(path) or True,
+    )
+    try:
+        assert page._export_rules() is None
+        confirmation = captured[0]
+        assert "Master &amp; Backup" in confirmation.text()
+
+        label = confirmation.findChild(QLabel, "qt_msgbox_label")
+        label.linkActivated.emit("open-export-destination")
+
+        destination = tmp_path / "Master & Backup" / "Monitor Rules"
+        assert destination.is_dir()
+        assert opened == [str(destination)]
+        assert list(destination.iterdir()) == []
+    finally:
         page.deleteLater()
         app.processEvents()
 

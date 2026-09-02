@@ -169,6 +169,7 @@ class ApplicationPageComposer:
             app_hwnd=int(app.winId()),
             on_rules_changed=app.set_monitor_rules,
             get_master_backup_dir=app._get_master_backup_dir,
+            open_backup_folder=app.explorer_windows.open_or_focus_folder,
         )
         shell.mount_content("monitor_rules", monitor_rules_page)
 
