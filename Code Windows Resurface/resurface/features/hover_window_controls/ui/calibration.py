@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ctypes
 from typing import Callable, Optional
 
 from PySide6.QtCore import QPoint, QRect, Qt, Signal
@@ -38,6 +39,7 @@ from resurface.features.hover_window_controls.vision.detection import (
     VisionSnapshot,
     rects_overlap,
 )
+from resurface.ui import styles
 
 _ACTION_LABELS = {
     CaptionAction.MINIMIZE: "Minimize",
@@ -50,71 +52,148 @@ _ACTION_ORDER = (
     CaptionAction.CLOSE,
 )
 _TARGET_COLOR = QColor("#ff4050")
-_DARK_STYLESHEET = """
-QDialog#CalibrationDialog {
-    background-color: #1e1e1e;
-    color: #f2f2f2;
-}
+CALIBRATION_DIALOG_SIZE = (650, 530)
+_CLOSE_ONLY_DIALOG_FLAGS = (
+    Qt.WindowType.Dialog
+    | Qt.WindowType.CustomizeWindowHint
+    | Qt.WindowType.WindowTitleHint
+    | Qt.WindowType.WindowCloseButtonHint
+)
+
+
+def _color(value: QColor) -> str:
+    return value.name(QColor.NameFormat.HexRgb)
+
+
+def _calibration_stylesheet() -> str:
+    window_bg = _color(styles.WINDOW_BG)
+    surface_bg = _color(styles.SURFACE_BG)
+    surface_hover = _color(styles.SURFACE_HOVER)
+    surface_border = _color(styles.SURFACE_BORDER)
+    text = _color(styles.theme_text_color())
+    muted = _color(styles.theme_muted_text_color())
+    field_bg = _color(styles.themed_surface_field_bg())
+    field_text = _color(styles.themed_surface_field_text())
+    field_border = _color(styles.themed_surface_field_border())
+    button_bg = _color(styles.themed_button_bg())
+    button_hover = _color(styles.themed_button_hover())
+    button_pressed = _color(styles.themed_button_pressed())
+    button_border = _color(styles.themed_button_border())
+    button_text = _color(styles.button_text_color())
+    disabled_bg = _color(styles.themed_button_disabled_bg())
+    disabled_text = _color(styles.themed_button_disabled_text())
+    return f"""
+QDialog#CalibrationDialog {{
+    background-color: {window_bg};
+    color: {text};
+    border-radius: 10px;
+}}
 QDialog#CalibrationDialog QLabel,
 QDialog#CalibrationDialog QGroupBox,
-QDialog#CalibrationDialog QCheckBox {
-    color: #f2f2f2;
-}
-QDialog#CalibrationDialog QGroupBox {
-    background-color: #252526;
-    border: 1px solid #555555;
-    border-radius: 5px;
+QDialog#CalibrationDialog QCheckBox {{
+    color: {text};
+}}
+QDialog#CalibrationDialog QGroupBox {{
+    background-color: {surface_bg};
+    border: 1px solid {surface_border};
+    border-radius: 6px;
     margin-top: 10px;
     padding-top: 8px;
-}
-QDialog#CalibrationDialog QGroupBox::title {
+}}
+QDialog#CalibrationDialog QGroupBox::title {{
     subcontrol-origin: margin;
     left: 8px;
     padding: 0 4px;
-}
+}}
 QDialog#CalibrationDialog QComboBox,
-QDialog#CalibrationDialog QSpinBox,
-QDialog#CalibrationDialog QPushButton {
-    background-color: #333333;
-    color: #f2f2f2;
-    border: 1px solid #5f5f5f;
-    border-radius: 4px;
+QDialog#CalibrationDialog QSpinBox {{
+    background-color: {field_bg};
+    color: {field_text};
+    border: 1px solid {field_border};
+    border-radius: 6px;
     padding: 4px 7px;
-}
+}}
+QDialog#CalibrationDialog QPushButton {{
+    background-color: {button_bg};
+    color: {button_text};
+    border: 1px solid {button_border};
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-weight: bold;
+}}
 QDialog#CalibrationDialog QComboBox:hover,
-QDialog#CalibrationDialog QSpinBox:hover,
-QDialog#CalibrationDialog QPushButton:hover {
-    border-color: #3d8bfd;
-}
+QDialog#CalibrationDialog QSpinBox:hover {{
+    background-color: {surface_hover};
+    border-color: {field_border};
+}}
+QDialog#CalibrationDialog QPushButton:hover {{
+    background-color: {button_hover};
+}}
+QDialog#CalibrationDialog QPushButton:pressed {{
+    background-color: {button_pressed};
+}}
 QDialog#CalibrationDialog QComboBox:disabled,
-QDialog#CalibrationDialog QSpinBox:disabled,
-QDialog#CalibrationDialog QPushButton:disabled {
-    background-color: #292929;
-    color: #888888;
-}
-QDialog#CalibrationDialog QComboBox QAbstractItemView {
-    background-color: #252526;
-    color: #f2f2f2;
-    selection-background-color: #3d6f9f;
-    border: 1px solid #5f5f5f;
-}
-QDialog#CalibrationDialog QScrollArea {
-    background-color: #151515;
-    border: 1px solid #555555;
-}
+QDialog#CalibrationDialog QSpinBox:disabled {{
+    background-color: {surface_bg};
+    color: {muted};
+}}
+QDialog#CalibrationDialog QPushButton:disabled {{
+    background-color: {disabled_bg};
+    color: {disabled_text};
+}}
+QDialog#CalibrationDialog QComboBox QAbstractItemView {{
+    background-color: {surface_bg};
+    color: {text};
+    selection-background-color: {surface_hover};
+    border: 1px solid {surface_border};
+}}
+QDialog#CalibrationDialog QScrollArea {{
+    background-color: {surface_bg};
+    border: 1px solid {surface_border};
+    border-radius: 6px;
+}}
 QDialog#CalibrationDialog QScrollBar:vertical,
-QDialog#CalibrationDialog QScrollBar:horizontal {
-    background: #202020;
+QDialog#CalibrationDialog QScrollBar:horizontal {{
+    background: {surface_bg};
     border: none;
-}
+}}
 QDialog#CalibrationDialog QScrollBar::handle:vertical,
-QDialog#CalibrationDialog QScrollBar::handle:horizontal {
-    background: #5a5a5a;
+QDialog#CalibrationDialog QScrollBar::handle:horizontal {{
+    background: {surface_hover};
     border-radius: 4px;
     min-height: 20px;
     min-width: 20px;
-}
+}}
+QDialog#CalibrationDialog QLabel#calibrationStatus,
+QDialog#CalibrationDialog QLabel#liveCalibrationStatus {{
+    color: {muted};
+}}
 """
+
+
+def _apply_native_window_appearance(dialog: QDialog) -> None:
+    """Use close-only native chrome with Windows 11 rounded corners."""
+    try:
+        hwnd = int(dialog.winId())
+        corner_preference = ctypes.c_int(2)  # DWMWCP_ROUND
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            hwnd,
+            33,  # DWMWA_WINDOW_CORNER_PREFERENCE
+            ctypes.byref(corner_preference),
+            ctypes.sizeof(corner_preference),
+        )
+        dark_title_bar = ctypes.c_int(1 if styles.THEME_IS_DARK else 0)
+        for attribute in (20, 19):  # Current and older immersive-dark-mode ids.
+            result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                attribute,
+                ctypes.byref(dark_title_bar),
+                ctypes.sizeof(dark_title_bar),
+            )
+            if result == 0:
+                break
+    except (AttributeError, OSError, TypeError, ValueError):
+        pass
 
 
 def validate_assignments(
@@ -147,7 +226,7 @@ class CalibrationCanvas(QLabel):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setStyleSheet("background-color: #151515; color: #b8b8b8;")
+        self.apply_theme()
         self._pixmap = QPixmap()
         self.reference_rect: Optional[tuple[int, int, int, int]] = None
         self.working_rect: Optional[tuple[int, int, int, int]] = None
@@ -155,6 +234,13 @@ class CalibrationCanvas(QLabel):
         self._drag_start: Optional[QPoint] = None
         self._drag_current: Optional[QPoint] = None
         self.clear_asset()
+
+    def apply_theme(self) -> None:
+        self.setStyleSheet(
+            "background-color: "
+            f"{_color(styles.SURFACE_BG)}; "
+            f"color: {_color(styles.theme_muted_text_color())};"
+        )
 
     def set_asset(self, asset: TrackedAsset) -> bool:
         pixmap = QPixmap(str(asset.image_path))
@@ -339,7 +425,9 @@ class LiveCalibrationDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("CalibrationDialog")
-        self.setStyleSheet(_DARK_STYLESHEET)
+        self.setWindowFlags(_CLOSE_ONLY_DIALOG_FLAGS)
+        _apply_native_window_appearance(self)
+        self.setStyleSheet(_calibration_stylesheet())
         self.setWindowTitle("Calibrate open application")
         self.setModal(True)
         self.snapshot = snapshot
@@ -369,6 +457,7 @@ class LiveCalibrationDialog(QDialog):
         layout.addLayout(action_row)
 
         self.status_label = QLabel()
+        self.status_label.setObjectName("liveCalibrationStatus")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
@@ -409,6 +498,10 @@ class LiveCalibrationDialog(QDialog):
         self.include_checkbox.toggled.connect(self._include_changed)
         self.canvas.rectChanged.connect(self._canvas_changed)
         self._load_action()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        _apply_native_window_appearance(self)
 
     @property
     def current_action(self) -> CaptionAction:
@@ -572,11 +665,15 @@ class CalibrationDialog(QDialog):
                 VisionProfile,
             ]
         ] = None,
+        clear_provider: Optional[Callable[[], None]] = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("CalibrationDialog")
-        self.setStyleSheet(_DARK_STYLESHEET)
+        self.setWindowFlags(_CLOSE_ONLY_DIALOG_FLAGS)
+        _apply_native_window_appearance(self)
+        self.setStyleSheet(_calibration_stylesheet())
+        self.setFixedSize(*CALIBRATION_DIALOG_SIZE)
         self.setWindowTitle("Calibration Explorer")
         self.setModal(True)
         self._application_provider = application_provider
@@ -585,6 +682,7 @@ class CalibrationDialog(QDialog):
         self._target_provider = target_provider
         self._capture_provider = capture_provider
         self._save_provider = save_provider
+        self._clear_provider = clear_provider
         self._selected_application: Optional[TrackedApplication] = None
         self._selected_asset: Optional[TrackedAsset] = None
         self._assets_by_action: dict[
@@ -664,7 +762,6 @@ class CalibrationDialog(QDialog):
 
         self.status_label = QLabel()
         self.status_label.setObjectName("calibrationStatus")
-        self.status_label.setStyleSheet("color: #b8b8b8;")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
@@ -696,6 +793,14 @@ class CalibrationDialog(QDialog):
             spin.valueChanged.connect(self._coordinates_changed)
         layout.addWidget(group)
 
+        footer = QHBoxLayout()
+        self.clear_button: Optional[QPushButton] = None
+        if self._clear_provider is not None:
+            self.clear_button = QPushButton("Clear Learned Buttons…")
+            self.clear_button.setObjectName("clearLearnedButtonsButton")
+            self.clear_button.clicked.connect(self._clear_learned_buttons)
+            footer.addWidget(self.clear_button)
+        footer.addStretch()
         button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save
             | QDialogButtonBox.StandardButton.Close
@@ -708,7 +813,8 @@ class CalibrationDialog(QDialog):
         button_box.button(
             QDialogButtonBox.StandardButton.Close
         ).clicked.connect(self.close)
-        layout.addWidget(button_box)
+        footer.addWidget(button_box)
+        layout.addLayout(footer)
 
         self.application_selector.currentIndexChanged.connect(
             self._application_changed
@@ -725,6 +831,36 @@ class CalibrationDialog(QDialog):
         self.canvas.rectChanged.connect(self._canvas_changed)
         self.refresh_live_targets()
         self.refresh_applications(prompt=False)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        _apply_native_window_appearance(self)
+
+    def _clear_learned_buttons(self) -> None:
+        if self._clear_provider is None:
+            return
+        answer = QMessageBox.warning(
+            self,
+            "Clear all learned buttons?",
+            "This permanently removes every learned caption-button image and "
+            "all manual calibration data. Hover preferences are kept.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self._clear_provider()
+        except OSError as error:
+            QMessageBox.warning(
+                self,
+                "Could not clear learned buttons",
+                str(error),
+            )
+            return
+        self._dirty = False
+        self.refresh_applications(prompt=False)
+        self.status_label.setText("All learned buttons were cleared.")
 
     def refresh_live_targets(self) -> None:
         if self.live_target_selector is None or self._target_provider is None:

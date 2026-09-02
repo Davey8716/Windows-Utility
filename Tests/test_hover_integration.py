@@ -133,6 +133,7 @@ def test_calibration_uses_live_capture_and_resumes(monkeypatch, tmp_path):
         "target_provider",
         "capture_provider",
         "save_provider",
+        "clear_provider",
     }
     assert service.controller.calls[-2:] == ["suspend", "resume"]
 

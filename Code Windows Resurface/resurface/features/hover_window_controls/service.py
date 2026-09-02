@@ -120,6 +120,7 @@ class HoverWindowControlsService(QObject):
                 target_provider=self.window_api.list_calibration_targets,
                 capture_provider=self.window_api.capture_vision_calibration,
                 save_provider=self.window_api.save_vision_calibration,
+                clear_provider=self.clear_learned_buttons,
                 parent=parent,
             )
             dialog.exec()

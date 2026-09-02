@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QRect
+from PySide6.QtCore import QRect, Qt
 from PySide6.QtGui import QColor, QImage
 from PySide6.QtWidgets import (
     QApplication,
@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.features.hover_window_controls.ui.calibration import (
+    CALIBRATION_DIALOG_SIZE,
     CalibrationDialog,
     LiveCalibrationDialog,
     action_glyph_geometry,
@@ -34,6 +35,7 @@ from resurface.features.hover_window_controls.platform.win32 import (
     CalibrationCaptureResult,
     CalibrationTarget,
 )
+from resurface.ui import styles
 
 
 def identity(name: str, *, state: str = "normal") -> ApplicationIdentity:
@@ -316,13 +318,58 @@ class CalibrationDialogTests(unittest.TestCase):
         self.assertFalse(dialog.save_button.isEnabled())
         self.assertIn("missing", dialog.status_label.text())
 
-    def test_uses_dark_theme_and_explicit_coordinate_labels(self):
+    def test_uses_host_theme_and_explicit_coordinate_labels(self):
+        styles.set_theme(False)
+        self.addCleanup(styles.set_theme, True)
         dialog = self.make_dialog()
-        self.assertIn("#1e1e1e", dialog.styleSheet())
+        self.assertIn("#dde3ea", dialog.styleSheet())
+        self.assertIn("#111820", dialog.styleSheet())
         horizontal = dialog.findChild(QLabel, "horizontalCoordinateHeader")
         vertical = dialog.findChild(QLabel, "verticalCoordinateHeader")
         self.assertEqual(horizontal.text(), "X (Horizontal)")
         self.assertEqual(vertical.text(), "Y (Vertical)")
+
+    def test_has_fixed_size_and_close_only_native_chrome(self):
+        dialog = self.make_dialog()
+        self.assertEqual(
+            (dialog.width(), dialog.height()),
+            CALIBRATION_DIALOG_SIZE,
+        )
+        flags = dialog.windowFlags()
+        self.assertTrue(flags & Qt.WindowType.WindowCloseButtonHint)
+        self.assertFalse(flags & Qt.WindowType.WindowMinimizeButtonHint)
+        self.assertFalse(flags & Qt.WindowType.WindowMaximizeButtonHint)
+
+    def test_clear_learned_buttons_confirms_and_refreshes(self):
+        applications = [self.example]
+        clear = MagicMock(side_effect=applications.clear)
+        dialog = CalibrationDialog(
+            lambda: list(applications),
+            lambda application: self.assets[application.key],
+            MagicMock(),
+            clear_provider=clear,
+        )
+        self.addCleanup(dialog.close)
+
+        with patch(
+            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.warning",
+            return_value=QMessageBox.StandardButton.Cancel,
+        ):
+            dialog.clear_button.click()
+        clear.assert_not_called()
+
+        with patch(
+            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.warning",
+            return_value=QMessageBox.StandardButton.Yes,
+        ):
+            dialog.clear_button.click()
+
+        clear.assert_called_once_with()
+        self.assertEqual(dialog.application_selector.count(), 0)
+        self.assertEqual(
+            dialog.status_label.text(),
+            "All learned buttons were cleared.",
+        )
 
     def test_semantic_glyph_geometry_has_no_generic_plus(self):
         target = QRect(10, 10, 30, 30)
@@ -400,6 +447,15 @@ class LiveCalibrationDialogTests(unittest.TestCase):
                 CaptionAction.MINIMIZE: (20, 5, 60, 40),
             },
         )
+
+    def test_has_close_only_native_chrome(self):
+        dialog = LiveCalibrationDialog(self.make_snapshot(), MagicMock())
+        self.addCleanup(dialog.close)
+
+        flags = dialog.windowFlags()
+        self.assertTrue(flags & Qt.WindowType.WindowCloseButtonHint)
+        self.assertFalse(flags & Qt.WindowType.WindowMinimizeButtonHint)
+        self.assertFalse(flags & Qt.WindowType.WindowMaximizeButtonHint)
 
     def test_unchecked_proposals_are_not_saved(self):
         saved = []
