@@ -8,9 +8,11 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QPushButton
 
 
+_RESURFACE_PACKAGE_ROOT = (
+    Path(__file__).resolve().parents[3] / "Code Windows Resurface"
+)
 _RESURFACE_STYLES_PATH = (
-    Path(__file__).resolve().parents[3]
-    / "Code Windows Resurface"
+    _RESURFACE_PACKAGE_ROOT
     / "resurface"
     / "ui"
     / "styles.py"
@@ -22,6 +24,10 @@ def _load_resurface_styles():
     module = sys.modules.get(_RESURFACE_MODULE_NAME)
     if module is not None:
         return module
+
+    package_root = str(_RESURFACE_PACKAGE_ROOT)
+    if package_root not in sys.path:
+        sys.path.insert(0, package_root)
 
     spec = importlib.util.spec_from_file_location(
         _RESURFACE_MODULE_NAME,

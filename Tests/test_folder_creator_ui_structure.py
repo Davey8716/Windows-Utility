@@ -1,5 +1,6 @@
 import ast
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -16,6 +17,33 @@ from folder_creator.ui.output_options_panel import OutputOptionsPanel  # noqa: E
 from folder_creator.ui.post_build_panel import PostBuildPanel  # noqa: E402
 from folder_creator.ui.template_panel import TemplatePanel  # noqa: E402
 from folder_creator.ui.tree_editor_panel import TreeEditorPanel  # noqa: E402
+
+
+def test_folder_creator_initializes_from_its_own_directory(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication; "
+        "from folder_creator.ui.main_window import MainWindow; "
+        "app = QApplication([]); "
+        "window = MainWindow(); "
+        "print(f'FOLDER_CREATOR_READY={window.windowTitle()}')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_READY=Folder Generator" in result.stdout
 
 
 def test_launcher_main_is_small_and_reexports_main_window():
