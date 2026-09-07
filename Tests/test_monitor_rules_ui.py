@@ -2,6 +2,8 @@ import copy
 import json
 from pathlib import Path
 
+import pytest
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
@@ -655,8 +657,8 @@ class FakeMonitorRuleWatcher:
         self.updates = []
         self.stopped = False
 
-    def update_rules(self, rules, app_hwnd=None, *, apply_existing=False):
-        self.updates.append((copy.deepcopy(rules), app_hwnd, apply_existing))
+    def update_rules(self, rules, app_hwnd=None, *, apply_existing=False, apply_rule_ids=None):
+        self.updates.append((copy.deepcopy(rules), app_hwnd, apply_existing, apply_rule_ids))
 
     def stop(self):
         self.stopped = True
@@ -683,3 +685,90 @@ def test_application_persists_rules_updates_watcher_and_stops_it(monkeypatch):
         window.deleteLater()
         app.processEvents()
     assert watcher.stopped is True
+
+
+@pytest.mark.parametrize("save", [True, False])
+@pytest.mark.parametrize("rename", [True, False])
+def test_editor_save_forwards_rule_id_through_application(monkeypatch, save, rename):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(main, "MonitorRuleWatcher", FakeMonitorRuleWatcher)
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["monitor_rules"] = [make_rule()]
+    window = _build_offscreen_window(monkeypatch, state)
+    edited = make_rule(name="New name" if rename else "Discord")
+    during_dialog = []
+
+    class Editor:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            during_dialog.append(len(watcher.updates))
+            return QDialog.DialogCode.Accepted if save else QDialog.DialogCode.Rejected
+
+        def result_rule(self):
+            return edited
+
+    monkeypatch.setattr(monitor_rules_ui, "MonitorRuleEditorDialog", Editor)
+    try:
+        watcher = window.monitor_rule_watcher
+        initial_count = len(watcher.updates)
+        window.pages.monitor_rules_page._edit_rule(0)
+        assert during_dialog == [initial_count]
+        if save:
+            assert len(watcher.updates) == initial_count + 1
+            assert watcher.updates[-1][3] == {"one"}
+            assert watcher.updates[-1][0][0]["name"] == edited["name"]
+            assert window.state["monitor_rules"][0]["name"] == edited["name"]
+            assert "apply_rule_ids" not in window.state["monitor_rules"][0]
+        else:
+            assert len(watcher.updates) == initial_count
+            assert window.state["monitor_rules"][0]["name"] == "Discord"
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        app.processEvents()
+
+
+@pytest.mark.parametrize("save", [True, False])
+def test_add_rule_waits_for_save_before_updating_runtime(monkeypatch, save):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(main, "MonitorRuleWatcher", FakeMonitorRuleWatcher)
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+    added = make_rule("new", "New rule")
+    during_dialog = []
+
+    class Editor:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            during_dialog.append(len(watcher.updates))
+            return QDialog.DialogCode.Accepted if save else QDialog.DialogCode.Rejected
+
+        def result_rule(self):
+            return added
+
+    monkeypatch.setattr(monitor_rules_ui, "MonitorRuleEditorDialog", Editor)
+    try:
+        watcher = window.monitor_rule_watcher
+        initial_count = len(watcher.updates)
+        window.pages.monitor_rules_page._add_rule()
+        assert during_dialog == [initial_count]
+        if save:
+            assert len(watcher.updates) == initial_count + 1
+            assert watcher.updates[-1][3] == {"new"}
+            assert window.state["monitor_rules"][0]["id"] == "new"
+            assert window.state["monitor_rules"][0]["name"] == "New rule"
+        else:
+            assert len(watcher.updates) == initial_count
+            assert window.state["monitor_rules"] == []
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        app.processEvents()

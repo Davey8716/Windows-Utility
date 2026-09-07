@@ -364,8 +364,8 @@ class UtilityControlApp(
     def apply_monitor_rule_settings(self, *, apply_existing=False) -> None:
         self.monitor_rules_controller.apply_settings(apply_existing=apply_existing)
 
-    def set_monitor_rules(self, rules) -> None:
-        self.monitor_rules_controller.set_rules(rules)
+    def set_monitor_rules(self, rules, *, apply_rule_ids=None) -> None:
+        self.monitor_rules_controller.set_rules(rules, apply_rule_ids=apply_rule_ids)
 
     def set_monitor_rules_enabled(self, enabled: bool) -> None:
         self.monitor_rules_controller.set_enabled(enabled)
@@ -540,5 +540,3 @@ class UtilityControlApp(
                 self.tray_manager.tray.icon(),
                 2000
             )
-
-

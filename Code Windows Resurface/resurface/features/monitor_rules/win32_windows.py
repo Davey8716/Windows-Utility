@@ -230,19 +230,6 @@ def apply_monitor_rule(hwnd, rule: dict, *, monitors=None) -> bool:
             y = target_work[1] + (top - source_work[1])
 
         x, y = _clamped_position(target_work, x, y, width, height)
-        if mode == "maximize" and show_command == win32con.SW_SHOWMAXIMIZED:
-            win32gui.SetWindowPlacement(
-                hwnd,
-                (
-                    placement[0],
-                    win32con.SW_SHOWMAXIMIZED,
-                    placement[2],
-                    (target_work[0], target_work[1]),
-                    (x, y, x + width, y + height),
-                ),
-            )
-            return True
-
         if show_command in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
         win32gui.SetWindowPos(

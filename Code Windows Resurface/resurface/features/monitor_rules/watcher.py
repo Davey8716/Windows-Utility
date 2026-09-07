@@ -75,15 +75,19 @@ class MonitorRuleWatcher:
         self._managed: dict[int, str] = {}
         self._off_target_since: dict[int, float] = {}
         self._apply_existing_once = False
+        self._apply_rule_ids: set[str] = set()
 
     @property
     def is_running(self) -> bool:
         with self._lock:
             return bool(self._thread and self._thread.is_alive())
 
-    def update_rules(self, rules, app_hwnd=None, *, apply_existing=False) -> None:
+    def update_rules(
+        self, rules, app_hwnd=None, *, apply_existing=False, apply_rule_ids=None
+    ) -> None:
         normalized = normalize_monitor_rules(copy.deepcopy(rules))
         enabled = [rule for rule in normalized if rule["enabled"]]
+        requested_ids = set(apply_rule_ids or ()) & {rule["id"] for rule in enabled}
         with self._lock:
             changed = enabled != self._rules
             if changed:
@@ -91,7 +95,11 @@ class MonitorRuleWatcher:
                 # including reorder-only changes and rapid successive edits.
                 if self._previous_rules is None:
                     self._previous_rules = self._rules
+            # A save is an explicit action even when all rule values are unchanged.
+            if changed or requested_ids:
                 self._revision += 1
+            self._apply_rule_ids.update(requested_ids)
+            self._apply_rule_ids.intersection_update(rule["id"] for rule in enabled)
             self._configured_rules = normalized
             self._rules = enabled
             if app_hwnd is not None:
@@ -118,7 +126,7 @@ class MonitorRuleWatcher:
             self.start()
         elif not enabled:
             self.stop()
-        elif changed or apply_existing:
+        elif changed or apply_existing or requested_ids:
             self._wake_event.set()
 
     def start(self) -> None:
@@ -182,6 +190,8 @@ class MonitorRuleWatcher:
             revision = self._revision
             apply_existing = self._apply_existing_once
             self._apply_existing_once = False
+            apply_rule_ids = self._apply_rule_ids
+            self._apply_rule_ids = set()
             identities = {
                 hwnd: _identity(details) for hwnd, details in details_by_hwnd.items()
             }
@@ -197,10 +207,14 @@ class MonitorRuleWatcher:
                 rule = first_matching_rule(rules, details)
                 old_rule = first_matching_rule(previous, details) if previous is not None else rule
                 changed = _behavior(old_rule) != _behavior(rule)
-                if apply_existing or is_new or (changed and rule is not None):
+                explicitly_saved = rule is not None and rule["id"] in apply_rule_ids
+                if (
+                    explicitly_saved or apply_existing or is_new
+                    or (changed and rule is not None)
+                ):
                     # Startup skips already-correct windows. New windows and
                     # explicit placement changes must also apply the size/mode.
-                    force = is_new or (
+                    force = explicitly_saved or is_new or (
                         not apply_existing and changed
                         and _placement(old_rule) != _placement(rule)
                     )

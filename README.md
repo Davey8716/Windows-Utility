@@ -121,8 +121,11 @@ are placed when Windows Resurface starts and when applications open. Placement
 is checked for 15 seconds to handle delayed startup and applications restoring
 their own position. Adding, editing, enabling, deleting, or reordering rules also
 places open windows whose effective rule changes; unrelated windows stay untouched.
+Changes in the Add or Edit dialog remain local until Save is clicked. Saving
+immediately applies the rule's matching, target monitor, placement mode, and
+captured geometry to matching open windows. Cancel leaves windows untouched.
 Automatic moves pause while the left mouse button is held. After recovery ends,
-manual moves are allowed unless the rule's “Reapply if moved” option is enabled.
+manual moves are allowed unless the rule's "Reapply if moved" option is enabled.
 If the assigned display is disconnected, no other display is substituted; retries
 stop after recovery unless Reapply is enabled.
 

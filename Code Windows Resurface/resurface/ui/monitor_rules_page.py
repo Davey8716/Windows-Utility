@@ -70,7 +70,9 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         summary = QLabel(
             "The first matching rule wins. Windows are placed at startup and when "
             "applications open, with 15 seconds of recovery. Rule changes also apply "
-            "to affected open windows. Moves pause while the left mouse button is held. "
+            "to affected open windows. Changes in the Add or Edit dialog apply only "
+            "after Save, including full placement on the same monitor. "
+            "Moves pause while the left mouse button is held. "
             "After recovery, manual moves are allowed unless Reapply if moved is enabled.",
             self,
         )
@@ -248,16 +250,19 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
             card_layout.addLayout(actions)
             self.rule_list_layout.addWidget(card)
 
-    def _commit(self) -> None:
+    def _commit(self, *, apply_rule_ids=None) -> None:
         self.rules = normalize_monitor_rules(self.rules)
-        self._on_rules_changed(copy.deepcopy(self.rules))
+        if apply_rule_ids is None:
+            self._on_rules_changed(copy.deepcopy(self.rules))
+        else:
+            self._on_rules_changed(copy.deepcopy(self.rules), apply_rule_ids=apply_rule_ids)
         self._render_rules()
 
     def _add_rule(self) -> None:
         dialog = MonitorRuleEditorDialog(self, app_hwnd=self._app_hwnd)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.rules.append(dialog.result_rule())
-            self._commit()
+            self._commit(apply_rule_ids={self.rules[-1]["id"]})
 
     def _edit_rule(self, index: int) -> None:
         dialog = MonitorRuleEditorDialog(
@@ -267,7 +272,7 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.rules[index] = dialog.result_rule()
-            self._commit()
+            self._commit(apply_rule_ids={self.rules[index]["id"]})
 
     def _delete_rule(self, index: int) -> None:
         message_box = QMessageBox(self)

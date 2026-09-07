@@ -225,7 +225,7 @@ def test_saved_geometry_is_clamped_and_maximize_is_applied_after_move(monkeypatc
     assert calls[-1] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
 
 
-def test_already_maximized_rule_moves_with_single_window_placement(monkeypatch):
+def test_already_maximized_rule_restores_moves_and_maximizes(monkeypatch):
     calls = _patch_window_placement(
         monkeypatch,
         show_cmd=win32_windows.win32con.SW_SHOWMAXIMIZED,
@@ -241,21 +241,10 @@ def test_already_maximized_rule_moves_with_single_window_placement(monkeypatch):
         monitors=[target],
     )
 
-    assert calls == [
-        (
-            "placement",
-            (
-                100,
-                (
-                    0,
-                    win32_windows.win32con.SW_SHOWMAXIMIZED,
-                    (0, 0),
-                    (-1280, 0),
-                    (-1180, 100, -380, 700),
-                ),
-            ),
-        )
-    ]
+    assert [call[0] for call in calls] == ["show", "position", "show"]
+    assert calls[0] == ("show", (100, win32_windows.win32con.SW_RESTORE))
+    assert calls[1][1][2:6] == (-1180, 100, 800, 600)
+    assert calls[2] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
 
 
 def test_minimized_window_is_restored_moved_and_maximized(monkeypatch):
@@ -911,3 +900,140 @@ def test_temporarily_unavailable_window_details_are_seen_again(simulation, monke
     monkeypatch.setattr(watcher_module, "window_details", original)
     d.scan()
     assert len(d.moves) == 1
+
+
+@pytest.mark.parametrize("edit", ["unchanged", "name", "monitor", "mode", "geometry"])
+def test_explicit_save_forces_full_placement_and_wakes_watcher(simulation, monkeypatch, edit):
+    d = simulation
+    rule = make_rule(match_exact_path=False, placement_mode="saved_geometry",
+                     saved_geometry={"x_offset": 0, "y_offset": 0, "width": 800, "height": 600})
+    d.configure([rule], apply_existing=True)
+    d.scan()
+    d.scan(16)
+    d.moves.clear()
+    changed = copy.deepcopy(rule)
+    if edit == "name":
+        changed["name"] = "New name"
+    elif edit == "monitor":
+        changed["target_device"] = r"\\.\DISPLAY3"
+    elif edit == "mode":
+        changed["placement_mode"] = "maximize"
+    elif edit == "geometry":
+        changed["saved_geometry"]["width"] = 1000
+    captured = []
+    original_move = d.move
+    def move(hwnd, applied):
+        captured.append(copy.deepcopy(applied))
+        return original_move(hwnd, applied)
+    monkeypatch.setattr(watcher_module, "apply_monitor_rule", move)
+    d.watcher._thread = type("Thread", (), {"is_alive": lambda self: True})()
+    wakes = []
+    monkeypatch.setattr(d.watcher._wake_event, "set", lambda: wakes.append(True))
+    d.configure([changed], apply_rule_ids={rule["id"]})
+    assert wakes == [True]
+    d.scan(0)
+    d.scan()
+    assert len(d.moves) == 1
+    assert captured == [rule_schema.normalize_monitor_rule(changed)]
+    assert d.watcher._pending[1].force_initial
+    assert d.watcher._pending[1].placed
+    assert d.watcher._apply_rule_ids == set()
+
+
+@pytest.mark.parametrize("blocked", ["disabled", "earlier_match", "filter", "missing_id"])
+def test_explicit_save_honors_matching_and_rule_priority(simulation, blocked):
+    d = simulation
+    first = make_rule(id="first", match_exact_path=False)
+    second = make_rule(id="second", match_exact_path=False)
+    if blocked == "disabled":
+        first["enabled"] = False
+    elif blocked == "filter":
+        first["title_contains"] = "Another window"
+    rules = [second, first] if blocked == "earlier_match" else [first, second]
+    d.configure(rules, apply_existing=True)
+    d.scan()
+    d.scan(16)
+    d.moves.clear()
+    d.configure(rules, apply_rule_ids={"missing" if blocked == "missing_id" else "first"})
+    d.scan()
+    assert d.moves == []
+    assert d.watcher._pending == {}
+
+
+def test_explicit_save_affects_only_requested_rule_windows(simulation):
+    d = simulation
+    d.windows.append({**_matching_window_details(2), "executable_name": "other.exe"})
+    rules = [make_rule(match_exact_path=False),
+             make_rule(id="other", executable_name="other.exe", match_exact_path=False)]
+    d.configure(rules, apply_existing=True)
+    d.scan()
+    d.scan(16)
+    d.moves.clear()
+    d.devices[2] = r"\\.\DISPLAY1"
+    d.configure(rules, apply_rule_ids={"rule-1"})
+    d.scan()
+    assert d.moves == [(1, "rule-1", "keep_size")]
+    assert d.devices[2] == r"\\.\DISPLAY1"
+
+
+def test_saved_rule_waits_for_drag_and_retries_failure_and_reset(simulation):
+    d = simulation
+    d.configure(apply_existing=True)
+    d.scan()
+    d.scan(16)
+    d.moves.clear()
+    d.dragging = True
+    d.configure(apply_rule_ids={"rule-1"})
+    d.scan()
+    deadline = d.watcher._pending[1].deadline
+    assert d.moves == []
+    d.dragging = False
+    d.succeeds = False
+    d.scan()
+    assert not d.watcher._pending[1].placed
+    d.succeeds = True
+    d.scan()
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.scan()
+    assert len(d.moves) == 3
+    assert d.watcher._pending[1].deadline == deadline
+    d.scan(16)
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.scan()
+    assert len(d.moves) == 3
+
+
+def test_rapid_saves_use_latest_rule_and_disabled_requests_are_removed(simulation):
+    d = simulation
+    rule = make_rule(match_exact_path=False)
+    d.configure([rule], apply_existing=True)
+    d.scan()
+    d.moves.clear()
+    d.configure([{**rule, "placement_mode": "maximize"}], apply_rule_ids={"rule-1"})
+    d.configure([rule], apply_rule_ids={"rule-1"})
+    d.scan()
+    assert d.moves == [(1, "rule-1", "keep_size")]
+    d.configure([rule], apply_rule_ids={"rule-1"})
+    d.configure([{**rule, "enabled": False}])
+    assert d.watcher._apply_rule_ids == set()
+    assert d.watcher._pending == {}
+
+
+def test_save_during_placement_retains_new_request(simulation, monkeypatch):
+    d = simulation
+    d.configure(apply_existing=True)
+    d.scan()
+    d.scan(16)
+    d.moves.clear()
+    def save_during_move(hwnd, rule):
+        d.configure(apply_rule_ids={"rule-1"})
+        return d.move(hwnd, rule)
+    monkeypatch.setattr(watcher_module, "apply_monitor_rule", save_during_move)
+    d.configure(apply_rule_ids={"rule-1"})
+    d.scan()
+    assert d.watcher._apply_rule_ids == {"rule-1"}
+    assert not d.watcher._pending[1].placed
+    monkeypatch.setattr(watcher_module, "apply_monitor_rule", d.move)
+    d.scan()
+    assert len(d.moves) == 2
+    assert d.watcher._pending[1].placed

@@ -136,17 +136,19 @@ class MonitorRulesController:
         self._rules_page = rules_page
         self._sync_tray = sync_tray
 
-    def apply_settings(self, *, apply_existing: bool = False) -> None:
+    def apply_settings(self, *, apply_existing: bool = False, apply_rule_ids=None) -> None:
+        options = {} if apply_rule_ids is None else {"apply_rule_ids": apply_rule_ids}
         self.watcher.update_rules(
             self.state.get("monitor_rules", []),
             app_hwnd=int(self._window_handle()),
             apply_existing=apply_existing,
+            **options,
         )
 
-    def set_rules(self, rules) -> None:
+    def set_rules(self, rules, *, apply_rule_ids=None) -> None:
         self.state["monitor_rules"] = normalize_monitor_rules(rules)
         self._save_state(self.state)
-        self.apply_settings()
+        self.apply_settings(apply_rule_ids=apply_rule_ids)
         self._sync_tray()
 
     def set_enabled(self, enabled: bool) -> None:
