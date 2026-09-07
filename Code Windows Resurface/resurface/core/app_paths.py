@@ -95,6 +95,11 @@ class MasterBackupPathsMixin:
         )
 
     def _refresh_master_backup_path_display(self) -> None:
+        rules_page = getattr(
+            getattr(self, "pages", None), "monitor_rules_page", None
+        )
+        if rules_page is not None:
+            rules_page.refresh_export_button()
         page = getattr(
             getattr(self, "pages", None), "organising_utilities_page", None
         )

@@ -170,6 +170,8 @@ class ApplicationPageComposer:
             on_rules_changed=app.set_monitor_rules,
             get_master_backup_dir=app._get_master_backup_dir,
             open_backup_folder=app.explorer_windows.open_or_focus_folder,
+            get_import_baseline=lambda: self.state.get("monitor_rules_import_baseline"),
+            set_import_baseline=app.set_monitor_rules_import_baseline,
         )
         shell.mount_content("monitor_rules", monitor_rules_page)
 

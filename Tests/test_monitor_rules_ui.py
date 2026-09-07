@@ -1,6 +1,7 @@
 import copy
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -17,6 +18,8 @@ from PySide6.QtWidgets import (
 )
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
+from resurface.core.app_paths import MasterBackupPathsMixin
+from resurface.features.monitor_rules import MonitorRulesRepository
 from resurface.ui import application_window as main
 from resurface.ui import monitor_rule_editor_dialog
 from resurface.ui import monitor_rules_page as monitor_rules_ui
@@ -426,6 +429,7 @@ def test_monitor_rules_export_and_import_use_master_backup_path(monkeypatch, tmp
         assert page.export_rules_button.isEnabled()
         assert page.import_rules_button.isEnabled()
         exported_path = page._export_rules()
+        assert not page.export_rules_button.isEnabled()
         assert exported_path.parent == tmp_path / "Monitor Rules"
         payload = json.loads(exported_path.read_text(encoding="utf-8"))
         assert payload["format"] == "windows-resurface-monitor-rules"
@@ -530,7 +534,7 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
 
 
 @pytest.mark.parametrize("saved_during_confirmation", [False, True])
-def test_unchanged_export_shows_only_no_changes_message(
+def test_unchanged_export_silently_disables_button(
     monkeypatch, tmp_path, saved_during_confirmation
 ):
     app = QApplication.instance() or QApplication([])
@@ -558,8 +562,161 @@ def test_unchanged_export_shows_only_no_changes_message(
         assert page.export_rules_button.isEnabled()
         assert page._export_rules() is None
         assert len(confirmations) == int(saved_during_confirmation)
-        assert messages == [(QMessageBox.Icon.Information, "Monitor Rules", "No changes to export")]
+        assert messages == []
+        assert not page.export_rules_button.isEnabled()
         assert len(list((tmp_path / "Monitor Rules").glob("*.json"))) == 1
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+@pytest.mark.parametrize("change", ["add", "edit", "toggle", "delete", "reorder"])
+def test_export_button_tracks_changes_and_reverts(monkeypatch, tmp_path, change):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    rules = [make_rule(), make_rule("two", "Second")]
+    MonitorRulesRepository(lambda: str(tmp_path)).export_rules(rules)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None, rules=rules, app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    try:
+        # A fresh page reads the previously saved baseline from disk.
+        assert not page.export_rules_button.isEnabled()
+        if change == "add":
+            page.rules.append(make_rule("three", "Third"))
+        elif change == "edit":
+            page.rules[0]["name"] = "Edited"
+        elif change == "toggle":
+            page.rules[0]["enabled"] = False
+        elif change == "delete":
+            page.rules.pop()
+        else:
+            page.rules.reverse()
+        page._commit()
+        assert page.export_rules_button.isEnabled()
+        page.rules = copy.deepcopy(rules)
+        page._commit()
+        assert not page.export_rules_button.isEnabled()
+        page.rules = []
+        page._commit()
+        assert not page.export_rules_button.isEnabled()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_export_button_refreshes_for_destination_and_page_display(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    owner = MasterBackupPathsMixin()
+    owner.state = {"master_backup_output_path": str(tmp_path / "first")}
+    monkeypatch.setattr(owner, "_get_app_module_attr", lambda _name, _default: lambda _state: None)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None, rules=[make_rule()], app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=owner._get_master_backup_dir,
+    )
+    owner.pages = SimpleNamespace(monitor_rules_page=page)
+    try:
+        path = page._repository.export_rules(page.rules)
+        page.show()
+        app.processEvents()
+        assert not page.export_rules_button.isEnabled()
+        owner._set_master_backup_dir(str(tmp_path / "second"))
+        assert page.export_rules_button.isEnabled()
+        owner._set_master_backup_dir(str(tmp_path / "first"))
+        assert not page.export_rules_button.isEnabled()
+        page.hide()
+        path.unlink()
+        page.show()
+        app.processEvents()
+        assert page.export_rules_button.isEnabled()
+    finally:
+        page.close()
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_export_comparison_error_keeps_button_available(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None, rules=[make_rule()], app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    warnings = []
+
+    def fail_comparison(_rules):
+        raise OSError("Cannot read backups")
+
+    monkeypatch.setattr(page._repository, "has_export_changes", fail_comparison)
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args: warnings.append(args))
+    try:
+        page.refresh_export_button()
+        assert page.export_rules_button.isEnabled()
+        assert warnings == []
+        page.export_rules_button.click()
+        assert len(warnings) == 1
+        assert "Cannot read backups" in warnings[0][2]
+        assert page.export_rules_button.isEnabled()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+@pytest.mark.parametrize("mode", ["empty", "replace", "merge", "cancel", "invalid", "safety"])
+def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_path, mode):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    initial = [] if mode == "empty" else [make_rule()]
+    imported = [make_rule("imported", "Imported")]
+    source = tmp_path / "import.json"
+    source.write_text(json.dumps({"rules": imported}), encoding="utf-8")
+    state = {"baseline": None}
+    commits = []
+    page = monitor_rules_ui.MonitorRulesPage(
+        None, rules=initial, app_hwnd=999,
+        on_rules_changed=lambda rules: commits.append(copy.deepcopy(rules)),
+        get_master_backup_dir=lambda: str(tmp_path),
+        get_import_baseline=lambda: state["baseline"],
+        set_import_baseline=lambda value: state.update(baseline=value),
+    )
+    monkeypatch.setattr(QFileDialog, "exec", lambda _dialog: QDialog.DialogCode.Accepted)
+    monkeypatch.setattr(QFileDialog, "selectedFiles", lambda _dialog: [str(source)])
+    choice = {"merge": QMessageBox.StandardButton.No, "cancel": QMessageBox.StandardButton.Cancel}
+    monkeypatch.setattr(QMessageBox, "question", lambda *args: choice.get(mode, QMessageBox.StandardButton.Yes))
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args: None)
+    try:
+        if mode in {"cancel", "invalid"}:
+            previous = tmp_path / "previous.json"
+            previous.write_text(json.dumps({"rules": initial}), encoding="utf-8")
+            page._repository.record_import(previous, initial)
+        baseline_before = copy.deepcopy(state["baseline"])
+        if mode == "invalid":
+            source.write_text("broken", encoding="utf-8")
+        if mode == "safety":
+            monkeypatch.setattr(QMessageBox, "exec", lambda _dialog: QMessageBox.StandardButton.Yes)
+            page._delete_all_rules()
+            source = next((tmp_path / "Monitor Rules").glob("monitor_rules_before_delete_*.json"))
+            imported = initial
+            assert page.rules == []
+        commits.clear()
+        before_files = set(tmp_path.rglob("*.json"))
+        page._import_rules()
+        if mode in {"cancel", "invalid"}:
+            assert commits == []
+            assert state["baseline"] == baseline_before
+        else:
+            assert commits
+            assert page.export_rules_button.isEnabled() == (mode == "merge")
+            assert state["baseline"]["source_path"] == str(source.resolve())
+            if mode != "merge":
+                assert page.rules == monitor_rules_ui.normalize_monitor_rules(imported)
+                assert page._export_rules() is None
+        assert set(tmp_path.rglob("*.json")) == before_files
     finally:
         page.deleteLater()
         app.processEvents()
@@ -713,12 +870,14 @@ class FakeMonitorRuleWatcher:
         self.stopped = True
 
 
-def test_application_persists_rules_updates_watcher_and_stops_it(monkeypatch):
+def test_application_persists_rules_updates_watcher_and_stops_it(monkeypatch, tmp_path):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(main, "MonitorRuleWatcher", FakeMonitorRuleWatcher)
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     window = _build_offscreen_window(monkeypatch, state)
     watcher = window.monitor_rule_watcher
+    saved_states = []
+    monkeypatch.setattr(main, "save_state", lambda value: saved_states.append(copy.deepcopy(value)))
     try:
         assert watcher.updates[0][0] == []
         assert watcher.updates[0][2] is True
@@ -728,6 +887,17 @@ def test_application_persists_rules_updates_watcher_and_stops_it(monkeypatch):
         assert window.state["monitor_rules"][0]["id"] == "one"
         assert watcher.updates[-1][0][0]["target_device"] == r"\\.\DISPLAY2"
         assert watcher.updates[-1][2] is False
+        source = tmp_path / "import.json"
+        source.write_text(json.dumps({"rules": [make_rule()]}), encoding="utf-8")
+        page = window.pages.monitor_rules_page
+        page._repository.record_import(source, [make_rule()])
+        assert saved_states[-1]["monitor_rules_import_baseline"]["source_path"] == str(source.resolve())
+        restored = json.loads(json.dumps(saved_states[-1]))
+        repository = MonitorRulesRepository(
+            lambda: window._get_master_backup_dir(),
+            get_import_baseline=lambda: restored["monitor_rules_import_baseline"],
+        )
+        assert not repository.has_export_changes([make_rule()])
     finally:
         window._quit_requested = True
         window.close()

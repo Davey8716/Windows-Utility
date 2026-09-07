@@ -367,6 +367,10 @@ class UtilityControlApp(
     def set_monitor_rules(self, rules, *, apply_rule_ids=None) -> None:
         self.monitor_rules_controller.set_rules(rules, apply_rule_ids=apply_rule_ids)
 
+    def set_monitor_rules_import_baseline(self, baseline: dict | None) -> None:
+        self.state["monitor_rules_import_baseline"] = baseline
+        save_state(self.state)
+
     def set_monitor_rules_enabled(self, enabled: bool) -> None:
         self.monitor_rules_controller.set_enabled(enabled)
 

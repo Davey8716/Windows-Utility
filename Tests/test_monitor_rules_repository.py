@@ -151,3 +151,70 @@ def test_failed_export_does_not_advance_baseline(monkeypatch, tmp_path):
             repository.export_rules(rules)
     assert repository.has_export_changes(rules)
     assert repository.export_rules(rules) is not None
+
+
+def test_import_baseline_survives_restart_and_tracks_edits(tmp_path):
+    state = {}
+    def repository():
+        return MonitorRulesRepository(
+            lambda: str(tmp_path),
+            get_import_baseline=lambda: state.get("baseline"),
+            set_import_baseline=lambda value: state.update(baseline=value),
+        )
+    source = tmp_path / "import.json"
+    rules = [make_rule()]
+    source.write_text(json.dumps({"rules": rules}), encoding="utf-8")
+    repo = repository()
+    repo.record_import(source, repo.import_rules(source))
+    state = json.loads(json.dumps(state))
+    restarted = repository()
+    assert not restarted.has_export_changes(rules)
+    assert restarted.export_rules(rules) is None
+    rules[0]["enabled"] = False
+    assert restarted.has_export_changes(rules)
+    rules[0]["enabled"] = True
+    assert not restarted.has_export_changes(rules)
+    assert not (tmp_path / "Monitor Rules").exists()
+
+
+@pytest.mark.parametrize("invalidate", ["delete", "edit", "malformed", "destination"])
+def test_invalid_import_baseline_falls_back_to_regular_export(tmp_path, invalidate):
+    destination = tmp_path
+    repo = MonitorRulesRepository(lambda: str(destination))
+    original = [make_rule()]
+    repo.export_rules(original)
+    imported = [make_rule("imported", "Imported")]
+    source = tmp_path / "source.json"
+    source.write_text(json.dumps({"rules": imported}), encoding="utf-8")
+    repo.record_import(source, imported)
+    assert not repo.has_export_changes(imported)
+    if invalidate == "delete":
+        source.unlink()
+    elif invalidate == "edit":
+        source.write_text(json.dumps({"rules": original}), encoding="utf-8")
+    elif invalidate == "malformed":
+        source.write_text("broken", encoding="utf-8")
+    else:
+        destination = tmp_path / "new"
+    assert repo.has_export_changes(imported)
+    assert repo.has_export_changes(original) == (invalidate == "destination")
+
+
+def test_regular_export_supersedes_import_but_safety_backup_does_not(tmp_path):
+    state = {}
+    repo = MonitorRulesRepository(
+        lambda: str(tmp_path),
+        get_import_baseline=lambda: state.get("baseline"),
+        set_import_baseline=lambda value: state.update(baseline=value),
+    )
+    rules = [make_rule()]
+    source = repo.export_rules(rules, safety_backup=True)
+    repo.record_import(source, rules)
+    baseline = copy.deepcopy(state["baseline"])
+    assert repo.export_rules(rules, safety_backup=True) is not None
+    assert state["baseline"] == baseline
+    rules[0]["name"] = "Edited"
+    assert repo.export_rules(rules) is not None
+    assert state["baseline"] is None
+    assert not repo.has_export_changes(rules)
+    assert repo.has_export_changes([make_rule()])

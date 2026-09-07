@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -28,9 +29,58 @@ class MonitorRulesRepository:
         get_master_backup_dir: Callable[[], str] | None = None,
         *,
         now: Callable[[], datetime] = datetime.now,
+        get_import_baseline: Callable[[], dict | None] | None = None,
+        set_import_baseline: Callable[[dict | None], None] | None = None,
     ) -> None:
         self._get_master_backup_dir = get_master_backup_dir
         self._now = now
+        self._get_import_baseline = get_import_baseline
+        self._set_import_baseline = set_import_baseline
+        self._import_baseline = None
+
+    @staticmethod
+    def _fingerprint(rules: list[dict]) -> str:
+        normalized = normalize_monitor_rules(copy.deepcopy(rules))
+        encoded = json.dumps(normalized, sort_keys=True, ensure_ascii=True).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _destination_key(self) -> str | None:
+        directory = self.backup_directory()
+        return str(directory.resolve()) if directory is not None else None
+
+    def _store_import_baseline(self, baseline: dict | None) -> None:
+        if self._set_import_baseline is not None:
+            self._set_import_baseline(copy.deepcopy(baseline))
+        self._import_baseline = copy.deepcopy(baseline)
+
+    def record_import(self, path: str | Path, imported_rules: list[dict]) -> None:
+        """Record the file contents only after the user accepts the import."""
+        self._store_import_baseline({
+            "source_path": str(Path(path).resolve()),
+            "fingerprint": self._fingerprint(imported_rules),
+            "backup_destination": self._destination_key(),
+        })
+
+    def _valid_import_fingerprint(self) -> str | None:
+        baseline = (
+            self._get_import_baseline()
+            if self._get_import_baseline is not None
+            else self._import_baseline
+        )
+        if not isinstance(baseline, dict):
+            return None
+        try:
+            if baseline.get("backup_destination") != self._destination_key():
+                return None
+            source = baseline.get("source_path")
+            fingerprint = baseline.get("fingerprint")
+            if not isinstance(source, str) or not source or not isinstance(fingerprint, str):
+                return None
+            if self._fingerprint(self.import_rules(source)) == fingerprint:
+                return fingerprint
+        except (OSError, TypeError, ValueError):
+            pass
+        return None
 
     def backup_directory(self) -> Path | None:
         if not callable(self._get_master_backup_dir):
@@ -39,7 +89,10 @@ class MonitorRulesRepository:
         return Path(raw_path) if raw_path else None
 
     def has_export_changes(self, rules: list[dict]) -> bool:
-        """Compare with the newest compatible regular export at this destination."""
+        """Compare with an accepted import, or the latest compatible export."""
+        imported_fingerprint = self._valid_import_fingerprint()
+        if imported_fingerprint is not None:
+            return self._fingerprint(rules) != imported_fingerprint
         backup_dir = self.backup_directory()
         if backup_dir is None:
             return True
@@ -92,6 +145,8 @@ class MonitorRulesRepository:
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        if not safety_backup:
+            self._store_import_baseline(None)
         return path
 
     def import_rules(self, path: str | Path) -> list[dict]:

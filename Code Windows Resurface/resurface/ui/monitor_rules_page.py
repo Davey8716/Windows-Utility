@@ -46,13 +46,19 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         on_rules_changed,
         get_master_backup_dir=None,
         open_backup_folder: Callable[[str], bool] | None = None,
+        get_import_baseline: Callable[[], dict | None] | None = None,
+        set_import_baseline: Callable[[dict | None], None] | None = None,
     ):
         super().__init__(parent)
         self.setObjectName("MonitorRulesEmptyState")
         self._app_hwnd = app_hwnd
         self._on_rules_changed = on_rules_changed
         self._has_backup_destination = callable(get_master_backup_dir)
-        self._repository = MonitorRulesRepository(get_master_backup_dir)
+        self._repository = MonitorRulesRepository(
+            get_master_backup_dir,
+            get_import_baseline=get_import_baseline,
+            set_import_baseline=set_import_baseline,
+        )
         self._open_backup_folder = open_backup_folder
         self.rules = normalize_monitor_rules(copy.deepcopy(rules))
         self._sort_ascending = True
@@ -142,6 +148,20 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         except Exception:
             return set()
 
+    def refresh_export_button(self) -> None:
+        has_changes = False
+        if self.rules:
+            try:
+                has_changes = self._repository.has_export_changes(self.rules)
+            except (OSError, TypeError, ValueError):
+                # Keep export available so an explicit attempt can report the error.
+                has_changes = True
+        self.export_rules_button.setEnabled(has_changes)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self.refresh_export_button()
+
     def _clear_rule_widgets(self) -> None:
         while self.rule_list_layout.count():
             item = self.rule_list_layout.takeAt(0)
@@ -154,7 +174,7 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         any_enabled = any(rule["enabled"] for rule in self.rules)
         self.turn_off_all_button.setEnabled(bool(self.rules))
         self.delete_all_button.setEnabled(bool(self.rules))
-        self.export_rules_button.setEnabled(bool(self.rules))
+        self.refresh_export_button()
         self.alphabet_sort_button.setEnabled(len(self.rules) > 1)
         self.turn_off_all_button.setText(
             "Turn Off All" if any_enabled else "Turn On All"
@@ -346,14 +366,6 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
                 QMessageBox.StandardButton.Ok,
             )
 
-    def _show_no_export_changes(self) -> None:
-        self._show_timed_message(
-            QMessageBox.Icon.Information,
-            "Monitor Rules",
-            "No changes to export",
-            show_close_now_button=True,
-        )
-
     def _export_rules(self, _checked=False, *, safety_backup=False) -> Path | None:
         if not safety_backup:
             backup_dir = self._backup_directory()
@@ -370,7 +382,7 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
                 QMessageBox.warning(self, "Monitor Rules", f"Could not export monitor rules:\n{exc}")
                 return None
             if not has_changes:
-                self._show_no_export_changes()
+                self.refresh_export_button()
                 return None
             destination = backup_dir / "Monitor Rules"
             destination_text = escape(str(destination))
@@ -406,9 +418,8 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
                 f"Could not export monitor rules:\n{exc}",
             )
             return None
+        self.refresh_export_button()
         if path is None:
-            if not safety_backup:
-                self._show_no_export_changes()
             return None
         if not safety_backup:
             self._show_timed_message(
@@ -444,6 +455,7 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
             QMessageBox.warning(self, "Import Monitor Rules", str(exc))
             return
 
+        source_rules = copy.deepcopy(imported)
         if self.rules:
             choice = QMessageBox.question(
                 self,
@@ -463,6 +475,11 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
                 imported = list(by_id.values())
         self.rules = imported
         self._commit()
+        try:
+            self._repository.record_import(selected_files[0], source_rules)
+        except (OSError, TypeError, ValueError) as exc:
+            QMessageBox.warning(self, "Import Monitor Rules", f"Could not remember the imported backup:\n{exc}")
+        self.refresh_export_button()
 
     def _move_rule(self, index: int, direction: int) -> None:
         target = index + direction
