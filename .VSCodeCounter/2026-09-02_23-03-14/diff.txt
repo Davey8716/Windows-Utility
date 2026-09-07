@@ -1,0 +1,50 @@
+Date : 2026-09-02 23:03:14
+Directory : c:\Users\davey\Desktop\Projects\Win-11-Resurface
+Total : 15 files,  331 codes, 3 comments, 35 blanks, all 369 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |         15 |        331 |          3 |         35 |        369 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++---------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                                      | files      | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                         |         15 |        331 |          3 |         35 |        369 |
+| Code Folder Creator                                                                                                       |          1 |          5 |          0 |          1 |          6 |
+| Code Folder Creator\folder_creator                                                                                        |          1 |          5 |          0 |          1 |          6 |
+| Code Folder Creator\folder_creator\ui                                                                                     |          1 |          5 |          0 |          1 |          6 |
+| Code Windows Resurface                                                                                                    |          8 |         29 |          3 |          0 |         32 |
+| Code Windows Resurface\resurface                                                                                          |          8 |         29 |          3 |          0 |         32 |
+| Code Windows Resurface\resurface\features                                                                                 |          1 |         13 |          0 |          0 |         13 |
+| Code Windows Resurface\resurface\features\monitor_rules                                                                   |          1 |         13 |          0 |          0 |         13 |
+| Code Windows Resurface\resurface\ui                                                                                       |          7 |         16 |          3 |          0 |         19 |
+| Code Windows Resurface\resurface\ui (Files)                                                                               |          5 |         11 |          3 |          0 |         14 |
+| Code Windows Resurface\resurface\ui\pages                                                                                 |          2 |          5 |          0 |          0 |          5 |
+| Tests                                                                                                                     |          6 |        297 |          0 |         34 |        331 |
++---------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++---------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                                                  | language | code       | comment    | blank      | total      |
++---------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\styles.py                          | Python   |          5 |          0 |          1 |          6 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\monitor_rules\win32_windows.py | Python   |         13 |          0 |          0 |         13 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\app_notifications.py                 | Python   |          5 |          0 |          0 |          5 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\application_pages.py                 | Python   |          3 |          0 |          0 |          3 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\control_styles.py                    | Python   |          0 |         -1 |          0 |         -1 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\monitor_rules_page.py                | Python   |          3 |          0 |          0 |          3 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\hover_window_controls_page.py  | Python   |          2 |          0 |          0 |          2 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\page_controls.py               | Python   |          3 |          0 |          0 |          3 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\shell_styles.py                      | Python   |          0 |          4 |          0 |          4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_folder_creator_ui_structure.py                                | Python   |         24 |          0 |          4 |         28 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_hover_export_ui.py                                            | Python   |         21 |          0 |          5 |         26 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_monitor_rules.py                                              | Python   |         52 |          0 |          8 |         60 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_monitor_rules_ui.py                                           | Python   |          8 |          0 |          0 |          8 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_settings_ui.py                                   | Python   |        181 |          0 |         14 |        195 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_styles.py                                                     | Python   |         11 |          0 |          3 |         14 |
+| Total                                                                                                                     |          |        331 |          3 |         35 |        369 |
++---------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+

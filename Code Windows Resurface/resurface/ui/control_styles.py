@@ -478,4 +478,3 @@ def organizing_combo_style(font_size: int) -> str:
         border=T.themed_button_border(),
         text=T.dropdown_text_color(),
     )
-

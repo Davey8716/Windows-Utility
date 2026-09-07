@@ -70,7 +70,10 @@ class PageControls(QWidget):
         return row, layout
 
     def add_two_column_control_row(
-        self, parent_layout: QVBoxLayout, left_widget: QWidget, right_widget: QWidget
+        self,
+        parent_layout: QVBoxLayout,
+        left_widget: QWidget,
+        right_widget: QWidget,
     ) -> QWidget:
         row, layout = self.make_two_column_control_row()
         if left_widget.property("pageControlRole") != "wide":

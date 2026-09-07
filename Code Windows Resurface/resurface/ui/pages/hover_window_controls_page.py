@@ -31,7 +31,7 @@ class HoverWindowControlsPage(PageControls):
         parent=None,
     ) -> None:
         super().__init__("hover_window_controls", register_tooltip, parent)
-        self.content_layout.setSpacing(16)
+        self.content_layout.setSpacing(8)
 
         enabled = bool(settings.get("hover_window_controls_enabled", True))
         taskbar_restore_enabled = bool(
@@ -75,6 +75,8 @@ class HoverWindowControlsPage(PageControls):
         self.taskbar_requirement.setWordWrap(True)
         self.taskbar_requirement.setProperty("styleFontSize", 12)
         self.taskbar_requirement.setStyleSheet(styles.label_style(font_size=12))
+        # An unused child label would otherwise cover the first button at (0, 0).
+        self.taskbar_requirement.setVisible(not taskbar_restore_available)
         if not taskbar_restore_available:
             self.taskbar_restore_button.setEnabled(False)
             self.taskbar_requirement.setText(
@@ -91,7 +93,9 @@ class HoverWindowControlsPage(PageControls):
             QPushButton("Export Hover Data…", self)
         )
         self.add_two_column_control_row(
-            self.content_layout, self.calibrate_button, self.export_button
+            self.content_layout,
+            self.calibrate_button,
+            self.export_button,
         )
         self.clear_button = self.style_action_button(
             QPushButton("Clear Learned Buttons…", self)
