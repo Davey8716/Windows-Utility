@@ -346,6 +346,14 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
                 QMessageBox.StandardButton.Ok,
             )
 
+    def _show_no_export_changes(self) -> None:
+        self._show_timed_message(
+            QMessageBox.Icon.Information,
+            "Monitor Rules",
+            "No changes to export",
+            show_close_now_button=True,
+        )
+
     def _export_rules(self, _checked=False, *, safety_backup=False) -> Path | None:
         if not safety_backup:
             backup_dir = self._backup_directory()
@@ -355,6 +363,14 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
                     "Monitor Rules",
                     "Set a Master Backup Path before exporting monitor rules.",
                 )
+                return None
+            try:
+                has_changes = self._repository.has_export_changes(self.rules)
+            except (OSError, TypeError, ValueError) as exc:
+                QMessageBox.warning(self, "Monitor Rules", f"Could not export monitor rules:\n{exc}")
+                return None
+            if not has_changes:
+                self._show_no_export_changes()
                 return None
             destination = backup_dir / "Monitor Rules"
             destination_text = escape(str(destination))
@@ -389,6 +405,10 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
                 "Monitor Rules",
                 f"Could not export monitor rules:\n{exc}",
             )
+            return None
+        if path is None:
+            if not safety_backup:
+                self._show_no_export_changes()
             return None
         if not safety_backup:
             self._show_timed_message(

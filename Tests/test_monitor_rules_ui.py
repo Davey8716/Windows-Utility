@@ -483,6 +483,7 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
     try:
         for is_dark in (True, False):
             monitor_rules_ui.styles.set_theme(is_dark)
+            page.rules[0]["name"] = f"Discord {is_dark}"
             exported_path = page._export_rules()
             confirmation = captured[-1]
             assert confirmation.parent() is page
@@ -528,6 +529,42 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
         app.processEvents()
 
 
+@pytest.mark.parametrize("saved_during_confirmation", [False, True])
+def test_unchanged_export_shows_only_no_changes_message(
+    monkeypatch, tmp_path, saved_during_confirmation
+):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    messages = []
+    confirmations = []
+
+    def confirm(*args, **kwargs):
+        confirmations.append(args)
+        page._repository.export_rules(page.rules)
+        return QMessageBox.StandardButton.Save
+
+    monkeypatch.setattr(page, "_show_modal_message", confirm)
+    monkeypatch.setattr(page, "_show_timed_message", lambda *args, **kwargs: messages.append(args))
+    try:
+        if not saved_during_confirmation:
+            page._repository.export_rules(page.rules)
+        assert page.export_rules_button.isEnabled()
+        assert page._export_rules() is None
+        assert len(confirmations) == int(saved_during_confirmation)
+        assert messages == [(QMessageBox.Icon.Information, "Monitor Rules", "No changes to export")]
+        assert len(list((tmp_path / "Monitor Rules").glob("*.json"))) == 1
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
 def test_export_rules_cancel_does_not_write_file(monkeypatch, tmp_path):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
@@ -546,6 +583,7 @@ def test_export_rules_cancel_does_not_write_file(monkeypatch, tmp_path):
     try:
         assert page._export_rules() is None
         assert not (tmp_path / "Monitor Rules").exists()
+        assert page._repository.has_export_changes(page.rules)
     finally:
         page.deleteLater()
         app.processEvents()
