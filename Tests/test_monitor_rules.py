@@ -225,7 +225,7 @@ def test_saved_geometry_is_clamped_and_maximize_is_applied_after_move(monkeypatc
     assert calls[-1] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
 
 
-def test_already_maximized_rule_restores_moves_and_maximizes(monkeypatch):
+def test_already_maximized_rule_falls_back_when_single_placement_misses_target(monkeypatch):
     calls = _patch_window_placement(
         monkeypatch,
         show_cmd=win32_windows.win32con.SW_SHOWMAXIMIZED,
@@ -241,10 +241,10 @@ def test_already_maximized_rule_restores_moves_and_maximizes(monkeypatch):
         monitors=[target],
     )
 
-    assert [call[0] for call in calls] == ["show", "position", "show"]
-    assert calls[0] == ("show", (100, win32_windows.win32con.SW_RESTORE))
-    assert calls[1][1][2:6] == (-1180, 100, 800, 600)
-    assert calls[2] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
+    assert [call[0] for call in calls] == ["placement", "show", "position", "show"]
+    assert calls[1] == ("show", (100, win32_windows.win32con.SW_RESTORE))
+    assert calls[2][1][2:6] == (-1180, 100, 800, 600)
+    assert calls[3] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
 
 
 def test_minimized_window_is_restored_moved_and_maximized(monkeypatch):
@@ -263,9 +263,63 @@ def test_minimized_window_is_restored_moved_and_maximized(monkeypatch):
         monitors=[target],
     )
 
+    assert [call[0] for call in calls] == ["placement", "show", "position", "show"]
+    assert calls[1] == ("show", (100, win32_windows.win32con.SW_RESTORE))
+    assert calls[-1] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
+
+
+@pytest.mark.parametrize("show_cmd", [2, 3])
+def test_maximize_rule_reaches_target_without_restore_animation(monkeypatch, show_cmd):
+    calls = _patch_window_placement(monkeypatch, show_cmd=show_cmd)
+    target = {"device": r"\\.\DISPLAY2", "work": (-1280, 0, 0, 984)}
+    monkeypatch.setattr(
+        win32_windows, "window_monitor_device",
+        lambda _hwnd: target["device"] if calls else r"\\.\DISPLAY1",
+    )
+
+    assert win32_windows.apply_monitor_rule(
+        100, make_rule(placement_mode="maximize"), monitors=[target]
+    )
+
+    assert calls == [("placement", (100, (
+        0, win32_windows.win32con.SW_SHOWMAXIMIZED,
+        (0, 0), (-1280, 0), (-1180, 100, -380, 700),
+    )))]
+
+
+def test_maximized_window_already_on_target_is_not_maximized_again(monkeypatch):
+    calls = _patch_window_placement(
+        monkeypatch, show_cmd=win32_windows.win32con.SW_SHOWMAXIMIZED
+    )
+    target = {"device": r"\\.\DISPLAY2", "work": (0, 0, 1920, 1040)}
+    monkeypatch.setattr(
+        win32_windows, "window_monitor_device", lambda _hwnd: target["device"]
+    )
+
+    assert win32_windows.apply_monitor_rule(
+        100, make_rule(placement_mode="maximize"), monitors=[target]
+    )
+    assert calls == []
+
+
+def test_maximize_placement_error_preserves_existing_move_fallback(monkeypatch):
+    calls = _patch_window_placement(
+        monkeypatch, show_cmd=win32_windows.win32con.SW_SHOWMAXIMIZED
+    )
+    target = {"device": r"\\.\DISPLAY2", "work": (-1280, 0, 0, 984)}
+
+    def fail_placement(*_args):
+        raise OSError("Window rejected placement")
+
+    monkeypatch.setattr(win32_windows.win32gui, "SetWindowPlacement", fail_placement)
+
+    assert win32_windows.apply_monitor_rule(
+        100, make_rule(placement_mode="maximize"), monitors=[target]
+    )
     assert [call[0] for call in calls] == ["show", "position", "show"]
     assert calls[0] == ("show", (100, win32_windows.win32con.SW_RESTORE))
-    assert calls[-1] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
+    assert calls[1][1][2:6] == (-1180, 100, 800, 600)
+    assert calls[2] == ("show", (100, win32_windows.win32con.SW_MAXIMIZE))
 
 
 def test_missing_monitor_leaves_window_untouched(monkeypatch):

@@ -230,6 +230,36 @@ def apply_monitor_rule(hwnd, rule: dict, *, monitors=None) -> bool:
             y = target_work[1] + (top - source_work[1])
 
         x, y = _clamped_position(target_work, x, y, width, height)
+        if mode == "maximize" and show_command in (
+            win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED
+        ):
+            if (
+                show_command == win32con.SW_SHOWMAXIMIZED
+                and window_monitor_device(hwnd).casefold()
+                == normalized["target_device"].casefold()
+            ):
+                return True
+            # Avoid a visible restore/maximize cycle, including taskbar restores.
+            # Some apps ignore cross-monitor SetWindowPlacement, so retain the
+            # existing move sequence unless the target monitor is confirmed.
+            try:
+                win32gui.SetWindowPlacement(
+                    hwnd,
+                    (
+                        placement[0],
+                        win32con.SW_SHOWMAXIMIZED,
+                        placement[2],
+                        (target_work[0], target_work[1]),
+                        (x, y, x + width, y + height),
+                    ),
+                )
+                if (
+                    window_monitor_device(hwnd).casefold()
+                    == normalized["target_device"].casefold()
+                ):
+                    return True
+            except (win32gui.error, OSError):
+                pass
         if show_command in (win32con.SW_SHOWMINIMIZED, win32con.SW_SHOWMAXIMIZED):
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
         win32gui.SetWindowPos(
