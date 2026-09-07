@@ -17,15 +17,18 @@ class PathApp(MasterBackupPathsMixin):
 
 
 class FakeHoverService:
-    def __init__(self, *, error=None):
+    def __init__(self, *, error=None, result=True):
         self.error = error
+        self.result = result
         self.destinations = []
 
     def export_all_data(self, destination):
         self.destinations.append(destination)
         if self.error is not None:
             raise self.error
-        return SimpleNamespace(directory=destination / "Hover Export")
+        if not self.result:
+            return None
+        return SimpleNamespace(directory=destination)
 
 
 class FakeExplorerService:
@@ -45,12 +48,16 @@ class FakeApp:
         response,
         *,
         export_error=None,
+        export_result=True,
         folder_opened=True,
     ):
         self.state = {}
         self.destination = destination
         self.response = response
-        self.hover_window_controls = FakeHoverService(error=export_error)
+        self.hover_window_controls = FakeHoverService(
+            error=export_error,
+            result=export_result,
+        )
         self.explorer_windows = FakeExplorerService(opened=folder_opened)
         self.modal_calls = []
         self.timed_calls = []
@@ -90,6 +97,7 @@ def test_hover_export_confirms_then_exports_to_master_subfolder(tmp_path):
     assert str(destination) in app.modal_calls[0][0][2]
     assert callable(app.modal_calls[0][1]["link_activated"])
     assert app.timed_calls[0][0][1] == "Hover data exported"
+    assert str(destination) in app.timed_calls[0][0][2]
 
 
 def test_hover_export_path_link_creates_and_opens_destination(tmp_path):
@@ -200,6 +208,20 @@ def test_hover_export_failure_uses_styled_pyside_modal(tmp_path):
     assert error_args[0] == QMessageBox.Icon.Critical
     assert error_args[1] == "Export failed"
     assert "disk unavailable" in error_args[2]
+    assert app.timed_calls == []
+
+
+def test_unchanged_hover_data_does_not_show_exported_message(tmp_path):
+    destination = tmp_path / "Master Backup" / "Hover Window Controls"
+    app = FakeApp(
+        destination,
+        QMessageBox.StandardButton.Save,
+        export_result=False,
+    )
+
+    composer_for(app)._export_hover_controls()
+
+    assert app.hover_window_controls.destinations == [destination]
     assert app.timed_calls == []
 
 

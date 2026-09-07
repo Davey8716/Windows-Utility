@@ -1670,7 +1670,7 @@ class VisionCache:
     def export_all_data(
         self,
         destination_parent: Path,
-    ) -> DataExportResult:
+    ) -> DataExportResult | None:
         with self._io_lock:
             return export_application_data(
                 destination_parent,
@@ -2280,7 +2280,7 @@ class CaptionVisionDetector:
         destination_parent: Path,
         *,
         idle_timeout_s: float = 5.0,
-    ) -> DataExportResult:
+    ) -> DataExportResult | None:
         deadline = time.monotonic() + idle_timeout_s
         while True:
             with self._lock:

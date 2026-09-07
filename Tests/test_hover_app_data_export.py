@@ -65,10 +65,9 @@ class ApplicationDataExportTests(unittest.TestCase):
 
         result = self.export()
 
-        current_copy = result.directory / DISPLAY_NAME
         legacy_copy = result.directory / LEGACY_DATA_DIRECTORY
         copied_image = (
-            current_copy / "vision-cache" / "example" / "caption.jpg"
+            result.directory / "vision-cache" / "example" / "caption.jpg"
         )
         self.assertEqual(copied_image.read_bytes(), b"jpeg-data")
         self.assertEqual(
@@ -86,13 +85,20 @@ class ApplicationDataExportTests(unittest.TestCase):
         manifest = json.loads(
             (result.directory / "export_manifest.json").read_text("utf-8")
         )
-        self.assertEqual(manifest["schema_version"], 1)
+        self.assertEqual(manifest["schema_version"], 2)
         self.assertEqual(manifest["application"], DISPLAY_NAME)
+        self.assertEqual(manifest["layout"], "direct")
+        self.assertEqual(
+            manifest["managed_entries"],
+            [LEGACY_DATA_DIRECTORY, "settings.json", "vision-cache"],
+        )
         self.assertEqual(
             manifest["included_roots"],
             [DISPLAY_NAME, LEGACY_DATA_DIRECTORY],
         )
         self.assertNotIn(str(self.current), json.dumps(manifest))
+        self.assertEqual(result.directory, self.destination)
+        self.assertFalse((self.destination / DISPLAY_NAME).exists())
 
     def test_succeeds_without_cache_or_legacy_root(self):
         for child in (self.current / "vision-cache").iterdir():
@@ -110,22 +116,85 @@ class ApplicationDataExportTests(unittest.TestCase):
         result = self.export()
 
         self.assertTrue(
-            (result.directory / DISPLAY_NAME / "settings.json").is_file()
+            (result.directory / "settings.json").is_file()
         )
         self.assertFalse(
             (result.directory / LEGACY_DATA_DIRECTORY).exists()
         )
         self.assertEqual(result.included_roots, (DISPLAY_NAME,))
 
-    def test_timestamp_collision_adds_numeric_suffix(self):
+    def test_changed_export_updates_the_direct_copy(self):
+        self.export()
+        (self.current / "settings.json").write_text(
+            '{"schema_version": 2}',
+            "utf-8",
+        )
+        result = self.export()
+
+        self.assertEqual(result.directory, self.destination)
+        self.assertEqual(
+            (self.destination / "settings.json").read_text("utf-8"),
+            '{"schema_version": 2}',
+        )
+
+    def test_unchanged_export_is_skipped(self):
         first = self.export()
+
         second = self.export()
 
-        self.assertNotEqual(first.directory, second.directory)
-        self.assertEqual(
-            second.directory.name,
-            f"{first.directory.name} (2)",
+        self.assertIsNone(second)
+        self.assertEqual(first.directory, self.destination)
+
+    def test_json_change_creates_a_new_export(self):
+        first = self.export()
+        (self.current / "settings.json").write_text(
+            '{"schema_version": 2}',
+            "utf-8",
         )
+
+        second = self.export()
+
+        self.assertIsNotNone(second)
+        self.assertEqual(second.directory, first.directory)
+
+    def test_removed_source_entry_is_removed_from_direct_export(self):
+        self.export()
+        (self.current / "settings.json").unlink()
+
+        self.export()
+
+        self.assertFalse((self.destination / "settings.json").exists())
+        manifest = json.loads(
+            (self.destination / "export_manifest.json").read_text("utf-8")
+        )
+        self.assertNotIn("settings.json", manifest["managed_entries"])
+
+    def test_existing_timestamped_exports_are_left_untouched(self):
+        historical = self.destination / (
+            f"{DISPLAY_NAME} Export - 2026-07-29_10-00-00"
+        )
+        historical.mkdir()
+        marker = historical / "old.json"
+        marker.write_text("old", "utf-8")
+
+        self.export()
+
+        self.assertEqual(marker.read_text("utf-8"), "old")
+
+    def test_unmanaged_destination_entry_is_not_overwritten(self):
+        existing = self.destination / "settings.json"
+        existing.write_text("user data", "utf-8")
+
+        with self.assertRaisesRegex(DataExportError, "unmanaged data"):
+            self.export()
+
+        self.assertEqual(existing.read_text("utf-8"), "user data")
+
+    def test_temporary_file_change_does_not_create_a_new_export(self):
+        self.export()
+        (self.current / ".settings.json.tmp").write_text("partial", "utf-8")
+
+        self.assertIsNone(self.export())
 
     def test_excludes_incomplete_atomic_temporary_files(self):
         (self.current / ".settings.json.tmp").write_text("partial", "utf-8")
@@ -134,7 +203,7 @@ class ApplicationDataExportTests(unittest.TestCase):
 
         result = self.export()
 
-        exported = result.directory / DISPLAY_NAME
+        exported = result.directory
         self.assertFalse((exported / ".settings.json.tmp").exists())
         self.assertFalse(
             (
@@ -160,12 +229,7 @@ class ApplicationDataExportTests(unittest.TestCase):
                 now=self.now,
             )
 
-        self.assertFalse(
-            any(
-                path.name.startswith(f"{DISPLAY_NAME} Export")
-                for path in destination.iterdir()
-            )
-        )
+        self.assertFalse(any(destination.iterdir()))
 
     def test_rejects_symlink_without_completed_export(self):
         linked = self.current / "linked"
@@ -212,6 +276,32 @@ class ApplicationDataExportTests(unittest.TestCase):
             self.export(rename=fail_rename)
 
         self.assertFalse(any(self.destination.iterdir()))
+
+    def test_update_failure_restores_previous_direct_export(self):
+        self.export()
+        original_settings = (self.destination / "settings.json").read_bytes()
+        (self.current / "settings.json").write_text(
+            '{"schema_version": 2}', "utf-8"
+        )
+        calls = 0
+
+        def fail_during_install(source, destination):
+            nonlocal calls
+            calls += 1
+            if calls == 5:
+                raise OSError("rename failed")
+            return source.rename(destination)
+
+        with self.assertRaisesRegex(DataExportError, "could not be completed"):
+            self.export(rename=fail_during_install)
+
+        self.assertEqual(
+            (self.destination / "settings.json").read_bytes(),
+            original_settings,
+        )
+        self.assertFalse(
+            any("rollback" in path.name for path in self.destination.iterdir())
+        )
 
 
 if __name__ == "__main__":

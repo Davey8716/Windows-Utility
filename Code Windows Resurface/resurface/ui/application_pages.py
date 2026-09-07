@@ -339,6 +339,8 @@ class ApplicationPageComposer:
                 QMessageBox.StandardButton.Ok,
             )
             return
+        if result is None:
+            return
         self.app._show_timed_message(
             QMessageBox.Icon.Information,
             "Hover data exported",

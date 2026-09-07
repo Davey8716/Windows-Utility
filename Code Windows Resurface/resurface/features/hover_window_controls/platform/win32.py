@@ -1205,7 +1205,7 @@ class Win32WindowApi:
     def export_all_data(
         self,
         destination_parent: Path,
-    ) -> DataExportResult:
+    ) -> DataExportResult | None:
         return self._vision.export_all_data(destination_parent)
 
     def _window_bounds(
