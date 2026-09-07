@@ -173,8 +173,6 @@ class ApplicationThemeController:
             self.maintenance_page.apply_theme()
         if self.drive_space_page is not None:
             self.drive_space_page.apply_theme()
-        if self.hover_window_controls_page is not None:
-            self.hover_window_controls_page.apply_theme()
 
         for label in self.root.findChildren(QLabel, "PageTitle"):
             label.setStyleSheet(styles.page_title_style())

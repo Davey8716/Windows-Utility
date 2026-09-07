@@ -391,7 +391,6 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         assert hover_page.calibrate_button.text() == "Calibrate Application…"
         assert not hasattr(hover_page, "taskbar_status")
         assert not hover_page.taskbar_restore_button.isEnabled()
-        assert "requires AutoHotkey v2" in hover_page.taskbar_requirement.text()
     finally:
         window._quit_requested = True
         window.close()

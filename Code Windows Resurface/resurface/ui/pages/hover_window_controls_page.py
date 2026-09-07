@@ -1,7 +1,7 @@
 """Settings page for dwell-based window caption controls."""
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QComboBox, QLabel, QPushButton
+from PySide6.QtWidgets import QComboBox, QPushButton
 
 from resurface.features.hover_window_controls.app.identity import (
     DWELL_STEP_MS,
@@ -70,21 +70,8 @@ class HoverWindowControlsPage(PageControls):
             self.dwell_combo, 0, Qt.AlignmentFlag.AlignHCenter
         )
 
-        self.taskbar_requirement = QLabel(self)
-        self.taskbar_requirement.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.taskbar_requirement.setWordWrap(True)
-        self.taskbar_requirement.setProperty("styleFontSize", 12)
-        self.taskbar_requirement.setStyleSheet(styles.label_style(font_size=12))
-        # An unused child label would otherwise cover the first button at (0, 0).
-        self.taskbar_requirement.setVisible(not taskbar_restore_available)
         if not taskbar_restore_available:
             self.taskbar_restore_button.setEnabled(False)
-            self.taskbar_requirement.setText(
-                "Taskbar restoration requires AutoHotkey v2."
-            )
-            self.content_layout.addWidget(
-                self.taskbar_requirement, 0, Qt.AlignmentFlag.AlignHCenter
-            )
 
         self.calibrate_button = self.style_action_button(
             QPushButton("Calibrate Application…", self)
@@ -160,5 +147,3 @@ class HoverWindowControlsPage(PageControls):
             self.dwell_combo.setCurrentIndex(index)
             self.dwell_combo.blockSignals(False)
 
-    def apply_theme(self) -> None:
-        self.taskbar_requirement.setStyleSheet(styles.label_style(font_size=12))
