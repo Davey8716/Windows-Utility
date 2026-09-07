@@ -34,6 +34,7 @@ class FolderUtilitiesPage(PageControls):
         self._input.setPlaceholderText("Folder name")
         self.register_tooltip(self._input, tooltip_text("folder_name_input"))
         self._save_name = self.style_action_button(QPushButton("Save Name"))
+        self._save_name.setProperty("lightModeBlackDisabledText", True)
         self._delete_name = self.style_action_button(QPushButton("Delete Name"))
         self.register_tooltip(self._delete_name, tooltip_text("delete_name"))
 

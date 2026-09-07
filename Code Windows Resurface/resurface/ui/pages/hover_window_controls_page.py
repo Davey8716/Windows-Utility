@@ -88,6 +88,7 @@ class HoverWindowControlsPage(PageControls):
         self.export_button = self.style_action_button(
             QPushButton("Export Hover Data…", self)
         )
+        self.export_button.setProperty("lightModeBlackDisabledText", True)
         self.import_button = self.style_action_button(
             QPushButton("Import Hover Data…", self)
         )

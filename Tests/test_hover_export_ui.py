@@ -97,6 +97,7 @@ def test_hover_export_button_reflects_change_callback():
         changes.append(False)
         page.refresh_export_button()
         assert not page.export_button.isEnabled()
+        assert page.export_button.property("lightModeBlackDisabledText") is True
 
         changes.append(True)
         page.sync_settings(True, True, 750)

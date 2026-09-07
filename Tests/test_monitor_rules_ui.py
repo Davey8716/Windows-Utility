@@ -673,6 +673,7 @@ def test_export_button_tracks_changes_and_reverts(monkeypatch, tmp_path, change)
     try:
         # A fresh page reads the previously saved baseline from disk.
         assert not page.export_rules_button.isEnabled()
+        assert page.export_rules_button.property("lightModeBlackDisabledText") is True
         if change == "add":
             page.rules.append(make_rule("three", "Third"))
         elif change == "edit":

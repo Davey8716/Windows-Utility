@@ -127,6 +127,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         action_grid.addWidget(self.turn_off_all_button, 0, 2)
         action_grid.addWidget(self.delete_all_button, 0, 3)
         self.export_rules_button = QPushButton("Export Rules", self.rules_frame)
+        self.export_rules_button.setProperty("lightModeBlackDisabledText", True)
         self.export_rules_button.setToolTip(
             "Export monitor rules to the Master Backup Path"
         )
