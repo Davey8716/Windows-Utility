@@ -274,6 +274,12 @@ class MonitorRuleWatcher:
                 return
             if _left_mouse_pressed():
                 self._off_target_since.pop(hwnd, None)
+                # A successful placement remains under short-term recovery so
+                # applications that restore their own position can be corrected.
+                # If the user is now dragging that window and reapply is off,
+                # treat the manual move as authoritative and end its recovery.
+                if recovery is not None and recovery.placed and not rule["reapply_if_moved"]:
+                    self._pending.pop(hwnd, None)
                 return
             if recovery is None:
                 if not rule["reapply_if_moved"]:

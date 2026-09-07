@@ -687,6 +687,40 @@ def test_dragging_pauses_moves_without_extending_deadline(simulation):
     assert len(d.moves) == 1
 
 
+def test_manual_drag_ends_successful_recovery_when_reapply_is_disabled(simulation):
+    d = simulation
+    d.configure(apply_existing=True)
+    d.scan()
+    assert len(d.moves) == 1
+    assert d.watcher._pending[1].placed is True
+
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.dragging = True
+    d.scan()
+    assert len(d.moves) == 1
+    assert d.watcher._pending == {}
+
+    d.dragging = False
+    d.scan()
+    assert len(d.moves) == 1
+
+
+def test_manual_drag_only_pauses_recovery_when_reapply_is_enabled(simulation):
+    d = simulation
+    d.configure([make_rule(match_exact_path=False, reapply_if_moved=True)],
+                apply_existing=True)
+    d.scan()
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.dragging = True
+    d.scan()
+    assert len(d.moves) == 1
+    assert 1 in d.watcher._pending
+
+    d.dragging = False
+    d.scan()
+    assert len(d.moves) == 2
+
+
 @pytest.mark.parametrize("change", ["add", "edit", "enable", "delete", "reorder"])
 def test_rule_changes_place_affected_open_windows(simulation, change):
     d = simulation

@@ -183,6 +183,17 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         ]
         assert len(details) == 2
         assert all("\nTarget: Monitor 2\nPlacement: Maximize" in text for text in details)
+        assert all("\nReapply if moved: Disabled" in text for text in details)
+
+        page.rules[0]["reapply_if_moved"] = True
+        page._render_rules()
+        enabled_details = (
+            page.rule_list_layout.itemAt(0)
+            .widget()
+            .findChild(monitor_rules_ui.QLabel, "MonitorRuleDetails")
+            .text()
+        )
+        assert "\nReapply if moved: Enabled" in enabled_details
 
         page.rules[0]["target_device"] = r"\\.\MISSING"
         page._render_rules()

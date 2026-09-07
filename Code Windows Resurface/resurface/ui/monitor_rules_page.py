@@ -73,7 +73,8 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
             "to affected open windows. Changes in the Add or Edit dialog apply only "
             "after Save, including full placement on the same monitor. "
             "Moves pause while the left mouse button is held. "
-            "After recovery, manual moves are allowed unless Reapply if moved is enabled.",
+            "Dragging a placed window ends recovery when Reapply if moved is disabled; "
+            "when enabled, placement resumes after the drag.",
             self,
         )
         summary.setWordWrap(True)
@@ -220,8 +221,10 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
             )
             if filters:
                 details += "\nFilters: " + ", ".join(filters)
-            if rule["reapply_if_moved"]:
-                details += "\nReapply if moved is enabled"
+            details += (
+                "\nReapply if moved: "
+                + ("Enabled" if rule["reapply_if_moved"] else "Disabled")
+            )
             detail_label = QLabel(details, card)
             detail_label.setObjectName("MonitorRuleDetails")
             detail_label.setWordWrap(True)

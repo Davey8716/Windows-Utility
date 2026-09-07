@@ -126,6 +126,8 @@ immediately applies the rule's matching, target monitor, placement mode, and
 captured geometry to matching open windows. Cancel leaves windows untouched.
 Automatic moves pause while the left mouse button is held. After recovery ends,
 manual moves are allowed unless the rule's "Reapply if moved" option is enabled.
+During recovery, manually dragging a window also ends recovery for that window when
+"Reapply if moved" is disabled.
 If the assigned display is disconnected, no other display is substituted; retries
 stop after recovery unless Reapply is enabled.
 
