@@ -8,6 +8,7 @@ from typing import Callable
 
 from PySide6.QtCore import QObject, Signal
 
+from resurface.core.instance_runtime import current_instance_scope
 from resurface.features.hover_window_controls.app.identity import (
     DEFAULT_DWELL_MS,
     DWELL_STEP_MS,
@@ -69,7 +70,10 @@ class HoverWindowControlsService(QObject):
             legacy_base_dir=None,
         )
         vision = CaptionVisionDetector(cache)
-        self.window_api = Win32WindowApi(vision=vision)
+        self.window_api = Win32WindowApi(
+            vision=vision,
+            allowed_self_hwnd_provider=self._allowed_self_window_handle,
+        )
         self.taskbar_monitor = TaskbarRestoreMonitor(dwell_ms=self.dwell_ms)
         self.controller = HoverController(
             self.window_api,
@@ -80,6 +84,18 @@ class HoverWindowControlsService(QObject):
         self.taskbar_restore_available = InstalledAutoHotkeyRunner().available()
         self._started = False
         self._busy = False
+
+    def _allowed_self_window_handle(self) -> int | None:
+        if current_instance_scope()[0] != "exe":
+            return None
+        parent = self.parent()
+        if parent is None or not hasattr(parent, "winId"):
+            return None
+        try:
+            hwnd = int(parent.winId())
+        except (RuntimeError, TypeError, ValueError):
+            return None
+        return hwnd or None
 
     def start(self) -> None:
         if self._started:

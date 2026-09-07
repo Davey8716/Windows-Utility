@@ -1,0 +1,8 @@
+Wording gets cut off inside the folder to desktop drop down list for the light theme + this section needs a delete entry that removes from the GUI and the JSON that contains the entry.
+
+The Black writing overall is horrible non contrasty on the blue buttons, need a different shade of black.
+
+
+
+
+

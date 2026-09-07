@@ -8,7 +8,7 @@ import winreg
 from ctypes import wintypes
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from resurface.features.hover_window_controls.platform.accessibility import (
     AccessibleCaptionTarget,
@@ -498,6 +498,7 @@ class Win32WindowApi:
         self,
         accessibility: Optional[CaptionAccessibilityDetector] = None,
         vision: Optional[CaptionVisionDetector] = None,
+        allowed_self_hwnd_provider: Optional[Callable[[], Optional[int]]] = None,
     ) -> None:
         if os.name != "nt":
             raise OSError(f"{DISPLAY_NAME} only supports Windows")
@@ -508,6 +509,7 @@ class Win32WindowApi:
         self._version = ctypes.WinDLL("version", use_last_error=True)
         self._accessibility = accessibility or CaptionAccessibilityDetector()
         self._vision = vision or CaptionVisionDetector()
+        self._allowed_self_hwnd_provider = allowed_self_hwnd_provider
         self._process_metadata_cache: dict[int, tuple[str, str, str]] = {}
         self._theme = self._application_theme()
         self._configure_functions()
@@ -663,6 +665,25 @@ class Win32WindowApi:
         self._accessibility.start()
         self._vision.start()
 
+    def _is_window_eligible(
+        self,
+        hwnd: wintypes.HWND,
+        process_id: Optional[int] = None,
+    ) -> bool:
+        """Allow external windows and, explicitly, one same-process window."""
+        if process_id is None:
+            process_id = self._window_process_id(hwnd)
+        if process_id != os.getpid():
+            return True
+        if self._allowed_self_hwnd_provider is None:
+            return False
+        try:
+            allowed_hwnd = self._allowed_self_hwnd_provider()
+        except Exception:
+            return False
+        hwnd_value = getattr(hwnd, "value", hwnd)
+        return bool(allowed_hwnd) and int(hwnd_value or 0) == int(allowed_hwnd)
+
     def stop(self) -> None:
         self._vision.stop()
         self._accessibility.stop()
@@ -688,6 +709,10 @@ class Win32WindowApi:
 
         class_name = self._window_class(hwnd)
         if class_name in TASKBAR_CLASSES:
+            return HoverProbe.no_target(hwnd_value)
+
+        process_id = self._window_process_id(hwnd)
+        if not self._is_window_eligible(hwnd, process_id):
             return HoverProbe.no_target(hwnd_value)
 
         bounds = self._window_bounds(hwnd)
@@ -737,7 +762,6 @@ class Win32WindowApi:
         ):
             return HoverProbe.no_target(hwnd_value)
 
-        process_id = self._window_process_id(hwnd)
         accessible_target = None
         if (
             bounds[0] <= point.x < bounds[2]
@@ -1110,7 +1134,7 @@ class Win32WindowApi:
             if class_name in TASKBAR_CLASSES or not title:
                 return True
             process_id = self._window_process_id(hwnd)
-            if process_id == os.getpid():
+            if not self._is_window_eligible(hwnd, process_id):
                 return True
             _path, _version, application_name = self._process_metadata(
                 process_id
@@ -1152,6 +1176,10 @@ class Win32WindowApi:
                 error="Windows did not provide usable window bounds."
             )
         process_id = self._window_process_id(hwnd)
+        if not self._is_window_eligible(hwnd, process_id):
+            return CalibrationCaptureResult(
+                error="This Windows Resurface window cannot be calibrated."
+            )
         ex_style = int(self._get_window_long(hwnd, GWL_EXSTYLE))
         context = self._vision_context(
             hwnd,

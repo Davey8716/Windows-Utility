@@ -34,6 +34,7 @@ class FakeController:
 
 class FakeWindowApi:
     def __init__(self, *args, **kwargs):
+        self.init_kwargs = kwargs
         self.cleared = False
         self.exported_to = None
         self.imported_from = None
@@ -96,6 +97,29 @@ def test_dwell_normalization_clamps_and_steps():
     assert normalized_dwell_ms(200) == 500
     assert normalized_dwell_ms(1126) == 1250
     assert normalized_dwell_ms(5000) == 2000
+
+
+def test_self_window_provider_is_packaged_only(monkeypatch):
+    parent = SimpleNamespace(winId=lambda: 321)
+    owner = SimpleNamespace(parent=lambda: parent)
+
+    monkeypatch.setattr(
+        service_module, "current_instance_scope", lambda: ("source", object())
+    )
+    assert HoverWindowControlsService._allowed_self_window_handle(owner) is None
+
+    monkeypatch.setattr(
+        service_module, "current_instance_scope", lambda: ("exe", object())
+    )
+    assert HoverWindowControlsService._allowed_self_window_handle(owner) == 321
+
+
+def test_service_supplies_lazy_self_window_provider(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+
+    provider = service.window_api.init_kwargs["allowed_self_hwnd_provider"]
+    assert callable(provider)
+    assert provider() is None
 
 
 def test_service_owns_start_settings_and_idempotent_shutdown(monkeypatch, tmp_path):

@@ -1,3 +1,4 @@
+import os
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -48,6 +49,75 @@ from resurface.features.hover_window_controls.vision.detection import (
 
 
 class Win32MappingTests(unittest.TestCase):
+    def test_same_process_window_requires_explicit_matching_handle(self):
+        api = Win32WindowApi.__new__(Win32WindowApi)
+        api._allowed_self_hwnd_provider = None
+
+        self.assertTrue(api._is_window_eligible(100, os.getpid() + 1))
+        self.assertFalse(api._is_window_eligible(100, os.getpid()))
+
+        api._allowed_self_hwnd_provider = lambda: 100
+        self.assertTrue(api._is_window_eligible(100, os.getpid()))
+        self.assertFalse(api._is_window_eligible(101, os.getpid()))
+
+    def test_same_process_provider_failure_is_safely_rejected(self):
+        api = Win32WindowApi.__new__(Win32WindowApi)
+        api._allowed_self_hwnd_provider = lambda: (_ for _ in ()).throw(
+            RuntimeError("window destroyed")
+        )
+
+        self.assertFalse(api._is_window_eligible(100, os.getpid()))
+
+    def test_calibration_targets_include_only_approved_self_window(self):
+        api = Win32WindowApi.__new__(Win32WindowApi)
+        api._user32 = MagicMock()
+        api._user32.IsWindowVisible.return_value = True
+        api._user32.IsIconic.return_value = False
+        api._user32.EnumWindows.side_effect = lambda callback, _data: [
+            callback(hwnd, 0) for hwnd in (100, 101, 200)
+        ]
+        api._enum_windows_callback_type = lambda callback: callback
+        api._get_window_long = MagicMock(return_value=0)
+        api._window_class = MagicMock(return_value="QtWindow")
+        api._window_title = MagicMock(side_effect=lambda hwnd: f"Window {hwnd}")
+        api._window_bounds = MagicMock(return_value=(0, 0, 600, 400))
+        api._window_process_id = MagicMock(
+            side_effect=lambda hwnd: (
+                os.getpid() if int(hwnd) < 200 else os.getpid() + 1
+            )
+        )
+        api._process_metadata = MagicMock(
+            return_value=(r"c:\apps\example.exe", "1", "Example")
+        )
+        api._allowed_self_hwnd_provider = lambda: 100
+
+        targets = api.list_calibration_targets()
+
+        self.assertEqual([target.hwnd for target in targets], [100, 200])
+
+    def test_live_probe_rejects_unapproved_same_process_window_early(self):
+        api = Win32WindowApi.__new__(Win32WindowApi)
+        api._user32 = MagicMock()
+
+        def set_cursor(point):
+            point._obj.x = 10
+            point._obj.y = 10
+            return True
+
+        api._user32.GetCursorPos.side_effect = set_cursor
+        api._user32.WindowFromPoint.return_value = 101
+        api._user32.GetAncestor.return_value = 101
+        api._window_class = MagicMock(return_value="QtDialog")
+        api._window_process_id = MagicMock(return_value=os.getpid())
+        api._window_bounds = MagicMock()
+        api._allowed_self_hwnd_provider = lambda: 100
+
+        result = api.probe_at_cursor()
+
+        self.assertIs(result.status, ProbeStatus.NO_TARGET)
+        self.assertEqual(result.hwnd, 101)
+        api._window_bounds.assert_not_called()
+
     def test_export_is_forwarded_to_vision_detector(self):
         api = Win32WindowApi.__new__(Win32WindowApi)
         api._vision = MagicMock()
@@ -146,6 +216,22 @@ class Win32MappingTests(unittest.TestCase):
 
         self.assertFalse(missing_identity.succeeded)
         self.assertIn("identity", missing_identity.error)
+
+    def test_live_capture_rejects_unapproved_same_process_window(self):
+        api = Win32WindowApi.__new__(Win32WindowApi)
+        api._user32 = MagicMock()
+        api._user32.IsWindow.return_value = True
+        api._user32.IsWindowVisible.return_value = True
+        api._user32.IsIconic.return_value = False
+        api._window_class = MagicMock(return_value="QtDialog")
+        api._window_bounds = MagicMock(return_value=(0, 0, 600, 400))
+        api._window_process_id = MagicMock(return_value=os.getpid())
+        api._allowed_self_hwnd_provider = lambda: 200
+
+        result = api.capture_vision_calibration(100)
+
+        self.assertFalse(result.succeeded)
+        self.assertIn("cannot be calibrated", result.error)
 
     def test_live_capture_reports_protected_capture_and_success(self):
         api = Win32WindowApi.__new__(Win32WindowApi)

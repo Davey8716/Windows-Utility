@@ -12,6 +12,8 @@ More icon use for buttons ?
 
 Button Sizes in general, colours relative to state
 
+The Black writing overall is horrible non contrasty on the blue buttons, need a different shade of black.
+
 I agree. User-configurable Quick Actions would make the overview much more useful than a fixed selection.
 A strong interaction model would be:
 - Right-click any actionable button anywhere in the app.
