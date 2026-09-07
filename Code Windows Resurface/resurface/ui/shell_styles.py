@@ -32,6 +32,26 @@ def page_description_style() -> str:
 def page_section_heading_style() -> str:
     return H.label_style(font_size=17, bold=True, color=T.theme_text_color())
 
+def monitor_rules_help_button_style() -> str:
+    return f"""
+        QToolButton#MonitorRulesHelpButton {{
+            color: {H.qcolor_css(T.theme_text_color())};
+            background-color: {H.qcolor_css(T.SURFACE_BG)};
+            border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
+            border-radius: 14px;
+            padding: 0px;
+            font-size: 16px;
+            font-weight: bold;
+        }}
+        QToolButton#MonitorRulesHelpButton:hover {{
+            background-color: {H.qcolor_css(T.SURFACE_HOVER)};
+            border-color: {H.qcolor_css(T.STATUS_ACCENT)};
+        }}
+        QToolButton#MonitorRulesHelpButton:pressed {{
+            background-color: {H.qcolor_css(T.STATUS_ACCENT)};
+        }}
+    """
+
 def summary_label_style() -> str:
     return H.label_style(font_size=13, bold=False, color=T.theme_muted_text_color())
 

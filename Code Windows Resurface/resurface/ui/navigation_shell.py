@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QStackedWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -264,6 +265,8 @@ class NavigationShell(QWidget):
         self.navigation_list.setStyleSheet(styles.navigation_list_style())
         self.version_label.setStyleSheet(styles.sidebar_version_label_style())
         self._refresh_navigation_icons()
+        for button in self.findChildren(QToolButton, "MonitorRulesHelpButton"):
+            button.setStyleSheet(styles.monitor_rules_help_button_style())
         for name in (
             "OverviewSummary",
             "MonitorRulesEmptyState",

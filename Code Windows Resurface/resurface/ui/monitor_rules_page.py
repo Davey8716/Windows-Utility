@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -36,7 +38,24 @@ from resurface.ui.monitor_rule_editor_dialog import (
 )
 
 
-class MonitorRulesPage(WindowMessageMixin, QFrame):
+MONITOR_RULES_HELP_TEXT = (
+    "Rules are checked from top to bottom, and the first complete match wins. "
+    "Enabled rules place matching windows when Windows Resurface starts and when "
+    "applications open. For 15 seconds after a window is detected or a rule is "
+    "applied, placement can be retried if the application moves itself. Changes "
+    "made in Add Rule or Edit Rule take effect only after Save; saved placement "
+    "changes also apply to matching open windows already on the target monitor. "
+    "Placement pauses while the left mouse button is held. If you drag a window "
+    "after it has been placed, short-term recovery ends when Reapply if moved is "
+    "off. When it is on, placement resumes after the drag and continues to return "
+    "the window to its target monitor."
+)
+RULES_FRAME_WIDTH = 685
+RULES_FRAME_LAYOUT_MARGIN = 15
+RULES_FRAME_VISIBLE_INSET = 16
+
+
+class MonitorRulesPage(WindowMessageMixin, QWidget):
     def __init__(
         self,
         parent,
@@ -50,7 +69,7 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         set_import_baseline: Callable[[dict | None], None] | None = None,
     ):
         super().__init__(parent)
-        self.setObjectName("MonitorRulesEmptyState")
+        self.setObjectName("MonitorRulesPage")
         self._app_hwnd = app_hwnd
         self._on_rules_changed = on_rules_changed
         self._has_backup_destination = callable(get_master_backup_dir)
@@ -64,33 +83,33 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         self._sort_ascending = True
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(24, 24, 24, 24)
+        root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(12)
+
+        self.rules_frame = QFrame(self)
+        self.rules_frame.setObjectName("MonitorRulesEmptyState")
+        self.rules_frame.setFixedWidth(RULES_FRAME_WIDTH)
+        panel_layout = QVBoxLayout(self.rules_frame)
+        panel_layout.setContentsMargins(
+            RULES_FRAME_LAYOUT_MARGIN,
+            RULES_FRAME_LAYOUT_MARGIN,
+            RULES_FRAME_LAYOUT_MARGIN,
+            RULES_FRAME_LAYOUT_MARGIN,
+        )
+        panel_layout.setSpacing(12)
         action_grid = QGridLayout()
         # Inset the action controls within the panel.  Keeping this on the grid
         # (rather than changing its columns) preserves the existing alignment
         # and spacing of both rows of buttons.
-        action_grid.setContentsMargins(12, 12, 12, 0)
+        action_grid.setContentsMargins(0, 0, 0, 0)
         action_grid.setHorizontalSpacing(6)
-        action_grid.setVerticalSpacing(root.spacing())
-        summary = QLabel(
-            "The first matching rule wins. Windows are placed at startup and when "
-            "applications open, with 15 seconds of recovery. Rule changes also apply "
-            "to affected open windows. Changes in the Add or Edit dialog apply only "
-            "after Save, including full placement on the same monitor. "
-            "Moves pause while the left mouse button is held. "
-            "Dragging a placed window ends recovery when Reapply if moved is disabled; "
-            "when enabled, placement resumes after the drag.",
-            self,
-        )
-        summary.setWordWrap(True)
-        summary.setStyleSheet(styles.page_description_style())
-        root.addWidget(summary)
-        self.add_button = QPushButton("Add Rule", self)
+        action_grid.setVerticalSpacing(panel_layout.spacing())
+
+        self.add_button = QPushButton("Add Rule", self.rules_frame)
         self.add_button.setToolTip("Create an automatic application placement rule")
-        self.alphabet_sort_button = QPushButton("A–Z", self)
-        self.turn_off_all_button = QPushButton("Turn Off All", self)
-        self.delete_all_button = QPushButton("Delete All", self)
+        self.alphabet_sort_button = QPushButton("A–Z", self.rules_frame)
+        self.turn_off_all_button = QPushButton("Turn Off All", self.rules_frame)
+        self.delete_all_button = QPushButton("Delete All", self.rules_frame)
         self.delete_all_button.setToolTip("Delete all monitor rules")
 
         self.alphabet_sort_button.setAccessibleName("Sort monitor rules alphabetically")
@@ -107,40 +126,76 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         action_grid.addWidget(self.add_button, 0, 1)
         action_grid.addWidget(self.turn_off_all_button, 0, 2)
         action_grid.addWidget(self.delete_all_button, 0, 3)
-        self.export_rules_button = QPushButton("Export Rules", self)
+        self.export_rules_button = QPushButton("Export Rules", self.rules_frame)
         self.export_rules_button.setToolTip(
             "Export monitor rules to the Master Backup Path"
         )
-        self.import_rules_button = QPushButton("Import Rules", self)
+        self.import_rules_button = QPushButton("Import Rules", self.rules_frame)
         self.import_rules_button.setToolTip(
             "Import monitor rules from a backup file"
         )
         _style_button(self.export_rules_button)
         _style_button(self.import_rules_button)
+        for button in (
+            self.alphabet_sort_button,
+            self.add_button,
+            self.turn_off_all_button,
+            self.delete_all_button,
+            self.export_rules_button,
+            self.import_rules_button,
+        ):
+            button.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
         self.export_rules_button.clicked.connect(self._export_rules)
         self.import_rules_button.clicked.connect(self._import_rules)
         action_grid.addWidget(self.export_rules_button, 1, 2)
         action_grid.addWidget(self.import_rules_button, 1, 3)
-        minimum_column_width = max(
-            button.sizeHint().width()
-            for button in (
-                self.alphabet_sort_button,
-                self.add_button,
-                self.turn_off_all_button,
-                self.delete_all_button,
-            )
-        )
         for column in range(4):
-            action_grid.setColumnMinimumWidth(column, minimum_column_width)
             action_grid.setColumnStretch(column, 1)
-        root.addLayout(action_grid)
+        panel_layout.addLayout(action_grid)
 
-        self.rule_list = QWidget(self)
+        self.help_row = QWidget(self)
+        self.help_row.setFixedWidth(RULES_FRAME_WIDTH)
+        help_layout = QHBoxLayout(self.help_row)
+        help_layout.setContentsMargins(0, 0, RULES_FRAME_VISIBLE_INSET, 0)
+        help_layout.setSpacing(0)
+        self.help_button = QToolButton(self.help_row)
+        self.help_button.setObjectName("MonitorRulesHelpButton")
+        self.help_button.setText("?")
+        self.help_button.setFixedSize(28, 28)
+        self.help_button.setAccessibleName("Monitor Rules help")
+        self.help_button.setToolTip("How Monitor Rules work")
+        self.help_button.setStyleSheet(styles.monitor_rules_help_button_style())
+        self.help_button.clicked.connect(self._show_rules_help)
+        help_layout.addStretch(1)
+        help_layout.addWidget(self.help_button, 0, Qt.AlignmentFlag.AlignVCenter)
+        root.addWidget(self.help_row, 0, Qt.AlignmentFlag.AlignHCenter)
+        root.addWidget(self.rules_frame, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        self.rule_list = QWidget(self.rules_frame)
         self.rule_list_layout = QVBoxLayout(self.rule_list)
         self.rule_list_layout.setContentsMargins(0, 0, 0, 0)
         self.rule_list_layout.setSpacing(10)
-        root.addWidget(self.rule_list)
+        panel_layout.addWidget(self.rule_list)
+        self.apply_theme()
         self._render_rules()
+
+    def apply_theme(self) -> None:
+        self.rules_frame.setStyleSheet(styles.summary_frame_style())
+        self.help_button.setStyleSheet(styles.monitor_rules_help_button_style())
+
+    def _show_rules_help(self, _checked=False) -> None:
+        self._show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            "How Monitor Rules Work",
+            MONITOR_RULES_HELP_TEXT,
+            QMessageBox.StandardButton.Ok,
+            QMessageBox.StandardButton.Ok,
+            minimum_popup_width=520,
+            text_minimum_width=450,
+        )
 
     def _available_devices(self) -> set[str]:
         try:

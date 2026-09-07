@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QToolButton,
+    QWidget,
 )
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
@@ -49,6 +51,48 @@ def make_rule(
     }
 
 
+def test_monitor_rules_help_button_opens_reviewed_theme_aware_dialog(
+    monkeypatch,
+):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    captured = []
+
+    def capture(dialog):
+        captured.append(dialog)
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(QMessageBox, "exec", capture)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+    )
+    try:
+        for is_dark, expected_surface in ((True, "#222a36"), (False, "#eef2f6")):
+            monitor_rules_ui.styles.set_theme(is_dark)
+            page.apply_theme()
+            assert expected_surface in page.help_button.styleSheet()
+            assert "border-radius: 14px" in page.help_button.styleSheet()
+
+            page.help_button.click()
+            dialog = captured[-1]
+            assert dialog.parent() is page
+            assert dialog.windowTitle() == "How Monitor Rules Work"
+            assert dialog.text() == monitor_rules_ui.MONITOR_RULES_HELP_TEXT
+            assert dialog.standardButtons() == QMessageBox.StandardButton.Ok
+            assert dialog.standardButton(dialog.defaultButton()) == (
+                QMessageBox.StandardButton.Ok
+            )
+            assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+            assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style()
+    finally:
+        monitor_rules_ui.styles.set_theme(True)
+        page.deleteLater()
+        app.processEvents()
+
+
 def monitors():
     return [
         {
@@ -76,16 +120,35 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         on_rules_changed=lambda rules: commits.append(rules),
     )
     try:
-        assert isinstance(page, QFrame)
-        assert page.objectName() == "MonitorRulesEmptyState"
+        assert isinstance(page, QWidget)
+        assert page.objectName() == "MonitorRulesPage"
+        assert isinstance(page.rules_frame, QFrame)
+        assert page.rules_frame.objectName() == "MonitorRulesEmptyState"
+        assert page.help_button.parentWidget() is page.help_row
+        assert page.help_row.parentWidget() is page
+        assert page.rules_frame.parentWidget() is page
+        assert not page.help_button.isAncestorOf(page.rules_frame)
+        assert not page.rules_frame.isAncestorOf(page.help_button)
         margins = page.layout().contentsMargins()
         assert (margins.left(), margins.top(), margins.right(), margins.bottom()) == (
-            24,
-            24,
-            24,
-            24,
+            0,
+            0,
+            0,
+            0,
         )
         assert page.layout().spacing() == 12
+        panel_margins = page.rules_frame.layout().contentsMargins()
+        assert (
+            panel_margins.left(),
+            panel_margins.top(),
+            panel_margins.right(),
+            panel_margins.bottom(),
+        ) == (15, 15, 15, 15)
+        assert isinstance(page.help_button, QToolButton)
+        assert page.help_button.text() == "?"
+        assert page.help_button.size().width() == page.help_button.size().height() == 28
+        assert page.help_button.accessibleName() == "Monitor Rules help"
+        assert page.help_button.toolTip() == "How Monitor Rules work"
         assert page.add_button.isEnabled()
         assert page.turn_off_all_button.isEnabled()
         assert page.turn_off_all_button.text() == "Turn Off All"
@@ -96,23 +159,49 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         page.resize(760, page.sizeHint().height())
         page.show()
         app.processEvents()
-        top_buttons = (
-            page.alphabet_sort_button,
-            page.add_button,
-            page.turn_off_all_button,
-            page.delete_all_button,
+        assert page.rules_frame.width() == 685
+        frame_left = page.rules_frame.x()
+        frame_right_gap = page.width() - page.rules_frame.geometry().right() - 1
+        assert abs(frame_left - frame_right_gap) <= 1
+        first_button_position = page.alphabet_sort_button.mapTo(
+            page.rules_frame, page.alphabet_sort_button.rect().topLeft()
         )
+        delete_button_right = page.delete_all_button.mapTo(
+            page.rules_frame, page.delete_all_button.rect().topRight()
+        ).x()
+        assert first_button_position.x() == 16
+        assert first_button_position.y() == 16
+        assert page.rules_frame.width() - delete_button_right - 1 == 16
         assert page.export_rules_button.width() == page.turn_off_all_button.width()
         assert page.export_rules_button.x() == page.turn_off_all_button.x()
         assert page.import_rules_button.width() == page.delete_all_button.width()
         assert page.import_rules_button.x() == page.delete_all_button.x()
+        help_right = page.help_button.mapTo(
+            page, page.help_button.rect().topRight()
+        ).x()
+        delete_right = page.delete_all_button.mapTo(
+            page, page.delete_all_button.rect().topRight()
+        ).x()
+        assert help_right == delete_right
+        assert page.help_button.geometry().bottom() < page.rules_frame.geometry().top()
 
         page.resize(900, page.height())
         app.processEvents()
+        assert page.rules_frame.width() == 685
+        frame_left = page.rules_frame.x()
+        frame_right_gap = page.width() - page.rules_frame.geometry().right() - 1
+        assert abs(frame_left - frame_right_gap) <= 1
         assert page.export_rules_button.geometry().x() == page.turn_off_all_button.geometry().x()
         assert page.export_rules_button.width() == page.turn_off_all_button.width()
         assert page.import_rules_button.geometry().x() == page.delete_all_button.geometry().x()
         assert page.import_rules_button.width() == page.delete_all_button.width()
+        help_right = page.help_button.mapTo(
+            page, page.help_button.rect().topRight()
+        ).x()
+        delete_right = page.delete_all_button.mapTo(
+            page, page.delete_all_button.rect().topRight()
+        ).x()
+        assert help_right == delete_right
         initial_cards = [
             page.rule_list_layout.itemAt(index).widget()
             for index in range(page.rule_list_layout.count())
@@ -881,8 +970,13 @@ def test_application_persists_rules_updates_watcher_and_stops_it(monkeypatch, tm
     try:
         assert watcher.updates[0][0] == []
         assert watcher.updates[0][2] is True
-        assert window.pages.monitor_rules_page.objectName() == "MonitorRulesEmptyState"
-        assert "border-radius: 8px" in window.pages.monitor_rules_page.styleSheet()
+        assert window.pages.monitor_rules_page.objectName() == "MonitorRulesPage"
+        assert window.pages.monitor_rules_page.rules_frame.objectName() == (
+            "MonitorRulesEmptyState"
+        )
+        assert "border-radius: 8px" in (
+            window.pages.monitor_rules_page.rules_frame.styleSheet()
+        )
         window.set_monitor_rules([make_rule()])
         assert window.state["monitor_rules"][0]["id"] == "one"
         assert watcher.updates[-1][0][0]["target_device"] == r"\\.\DISPLAY2"
