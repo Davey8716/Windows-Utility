@@ -5,6 +5,21 @@ import pytest
 from resurface.features.monitor_rules import rule_schema, watcher as watcher_module, win32_windows
 
 
+@pytest.fixture(autouse=True)
+def isolated_window_state(monkeypatch):
+    # Every watcher test uses simulated windows, never the user's desktop.
+    monkeypatch.setattr(watcher_module, "enumerate_eligible_windows", lambda **kwargs: [])
+    monkeypatch.setattr(watcher_module, "apply_monitor_rule", lambda *args, **kwargs: False)
+    monkeypatch.setattr(watcher_module, "_left_mouse_pressed", lambda: False)
+    monkeypatch.setattr(
+        watcher_module, "window_details",
+        lambda hwnd, **kwargs: next((copy.deepcopy(d) for d in
+            watcher_module.enumerate_eligible_windows(**kwargs)
+            if d["hwnd"] == hwnd), None),
+    )
+    monkeypatch.setattr(watcher_module, "window_monitor_device", lambda hwnd: "")
+
+
 def make_rule(**overrides):
     rule = {
         "id": "rule-1",
@@ -324,6 +339,7 @@ def test_startup_initialization_places_existing_matches_once(monkeypatch):
     rule = make_rule(match_exact_path=False, reapply_if_moved=False)
     watcher = watcher_module.MonitorRuleWatcher()
     placed = []
+    device = [r"\\.\DISPLAY1"]
     monkeypatch.setattr(watcher, "start", lambda: None)
     monkeypatch.setattr(
         watcher_module,
@@ -333,12 +349,12 @@ def test_startup_initialization_places_existing_matches_once(monkeypatch):
     monkeypatch.setattr(
         watcher_module,
         "window_monitor_device",
-        lambda _hwnd: r"\\.\DISPLAY1",
+        lambda _hwnd: device[0],
     )
     monkeypatch.setattr(
         watcher_module,
         "apply_monitor_rule",
-        lambda hwnd, _rule: placed.append(hwnd) or True,
+        lambda hwnd, _rule: placed.append(hwnd) or device.__setitem__(0, _rule["target_device"]) or True,
     )
 
     watcher.update_rules([rule], app_hwnd=999, apply_existing=True)
@@ -385,7 +401,6 @@ def test_startup_initialization_manages_successful_reapply_matches(monkeypatch):
         "enumerate_eligible_windows",
         lambda **_kwargs: [_matching_window_details()],
     )
-    monkeypatch.setattr(watcher_module, "_window_exists", lambda _hwnd: True)
     monkeypatch.setattr(
         watcher_module,
         "window_monitor_device",
@@ -536,310 +551,363 @@ def test_watcher_starts_only_for_enabled_rules_and_stops_cleanly():
     assert not watcher.is_running
 
 
-def test_rule_changes_cancel_pending_matches_and_request_a_fresh_baseline():
-    watcher = watcher_module.MonitorRuleWatcher()
-    original = rule_schema.normalize_monitor_rule(make_rule(match_exact_path=False))
-    watcher._rules = [original]
-    watcher._thread = type("Thread", (), {"is_alive": lambda self: True})()
-    watcher._pending = {123: 999.0}
-    changed = make_rule(match_exact_path=False, title_contains="Main")
-
-    watcher.update_rules([changed])
-
-    assert watcher._pending == {}
-    assert watcher._baseline_pending is True
-
 
 def _matching_window_details(hwnd=1):
     return {
-        "hwnd": hwnd,
-        "title": "Discord",
-        "class_name": "Main",
-        "executable_name": "discord.exe",
-        "executable_path": "",
-        "process_id": 10,
-        "process_started_at": 100.0,
+        "hwnd": hwnd, "title": "Discord", "class_name": "Main",
+        "executable_name": "discord.exe", "executable_path": "",
+        "process_id": 10, "process_started_at": 100.0,
     }
 
 
-def _running_watcher_with_rule(rule):
-    watcher = watcher_module.MonitorRuleWatcher()
-    normalized = rule_schema.normalize_monitor_rule(rule)
-    watcher._configured_rules = [normalized]
-    watcher._rules = [normalized] if normalized["enabled"] else []
-    watcher._thread = type("Thread", (), {"is_alive": lambda self: True})()
-    return watcher
+@pytest.fixture
+def simulation(monkeypatch):
+    class Desktop:
+        now = 10.0
+        dragging = False
+        succeeds = True
+        reset_after_move = False
+
+        def __init__(self):
+            self.windows = [_matching_window_details()]
+            self.devices = {1: r"\\.\DISPLAY1"}
+            self.moves = []
+            self.watcher = watcher_module.MonitorRuleWatcher()
+            monkeypatch.setattr(self.watcher, "start", lambda: None)
+            monkeypatch.setattr(self.watcher, "stop", lambda: None)
+
+        def move(self, hwnd, rule):
+            self.moves.append((hwnd, rule["id"], rule["placement_mode"]))
+            if self.succeeds and not self.reset_after_move:
+                self.devices[hwnd] = rule["target_device"]
+            return self.succeeds
+
+        def scan(self, seconds=0.5):
+            self.now += seconds
+            self.watcher._scan_once()
+
+        def configure(self, rules=None, **kwargs):
+            self.watcher.update_rules(
+                [make_rule(match_exact_path=False)] if rules is None else rules,
+                **kwargs)
+
+    desktop = Desktop()
+    monkeypatch.setattr(watcher_module.time, "monotonic", lambda: desktop.now)
+    monkeypatch.setattr(watcher_module, "enumerate_eligible_windows",
+                        lambda **kwargs: copy.deepcopy(desktop.windows))
+    monkeypatch.setattr(watcher_module, "window_monitor_device",
+                        lambda hwnd: desktop.devices.get(hwnd, ""))
+    monkeypatch.setattr(watcher_module, "apply_monitor_rule", desktop.move)
+    monkeypatch.setattr(watcher_module, "_left_mouse_pressed", lambda: desktop.dragging)
+    return desktop
 
 
-def test_enabling_reapply_enrolls_an_existing_correctly_placed_window(monkeypatch):
-    watcher = _running_watcher_with_rule(
-        make_rule(match_exact_path=False, reapply_if_moved=False)
-    )
-    enabled_rule = make_rule(match_exact_path=False, reapply_if_moved=True)
-    details = _matching_window_details()
-    placed = []
-    monkeypatch.setattr(
-        watcher_module,
-        "enumerate_eligible_windows",
-        lambda **_kwargs: [copy.deepcopy(details)],
-    )
-    monkeypatch.setattr(watcher_module, "_window_exists", lambda _hwnd: True)
-    monkeypatch.setattr(
-        watcher_module,
-        "window_monitor_device",
-        lambda _hwnd: enabled_rule["target_device"],
-    )
-    monkeypatch.setattr(
-        watcher_module,
-        "apply_monitor_rule",
-        lambda hwnd, _rule: placed.append(hwnd) or True,
-    )
-
-    watcher.update_rules([enabled_rule])
-    watcher._scan_once()
-
-    assert watcher._managed == {1: "rule-1"}
-    assert watcher._enroll_rule_ids == set()
-    assert placed == []
+@pytest.mark.parametrize("existing", [True, False])
+def test_late_matching_and_failed_placement_recover(simulation, existing):
+    d = simulation
+    rule = make_rule(match_exact_path=False, title_contains="Ready")
+    window = d.windows[0]
+    d.windows = [window] if existing else []
+    d.configure([rule], apply_existing=True)
+    d.scan()
+    if not existing:
+        d.windows = [window]
+        d.scan()
+    d.scan(6)
+    window["title"] = "Ready"
+    d.succeeds = False
+    d.scan()
+    assert len(d.moves) == 1
+    assert 1 in d.watcher._pending
+    d.succeeds = True
+    d.scan()
+    d.scan()
+    assert len(d.moves) == 2
+    assert d.devices[1] == rule["target_device"]
 
 
-def test_enabling_reapply_moves_existing_off_target_window_after_settle(monkeypatch):
-    watcher = _running_watcher_with_rule(
-        make_rule(match_exact_path=False, reapply_if_moved=False)
-    )
-    enabled_rule = make_rule(match_exact_path=False, reapply_if_moved=True)
-    details = _matching_window_details()
-    placed = []
-    current_time = [10.0]
-    monkeypatch.setattr(
-        watcher_module,
-        "enumerate_eligible_windows",
-        lambda **_kwargs: [copy.deepcopy(details)],
-    )
-    monkeypatch.setattr(watcher_module, "_window_exists", lambda _hwnd: True)
-    monkeypatch.setattr(
-        watcher_module,
-        "window_monitor_device",
-        lambda _hwnd: r"\\.\DISPLAY1",
-    )
-    monkeypatch.setattr(watcher_module, "_left_mouse_pressed", lambda: False)
-    monkeypatch.setattr(watcher_module.time, "monotonic", lambda: current_time[0])
-    monkeypatch.setattr(
-        watcher_module,
-        "apply_monitor_rule",
-        lambda hwnd, _rule: placed.append(hwnd) or True,
-    )
-
-    watcher.update_rules([enabled_rule])
-    watcher._scan_once()
-    assert placed == []
-    current_time[0] += watcher_module.REAPPLY_SETTLE_SECONDS + 0.1
-    watcher._scan_once()
-    assert placed == [1]
+@pytest.mark.parametrize("existing", [True, False])
+def test_app_position_reset_is_corrected_only_during_recovery(simulation, existing):
+    d = simulation
+    window = d.windows[0]
+    d.windows = [window] if existing else []
+    d.configure(apply_existing=True)
+    d.scan()
+    if not existing:
+        d.windows = [window]
+        d.scan()
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.scan(5)
+    assert len(d.moves) == 2
+    d.scan(15)
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.scan()
+    assert len(d.moves) == 2
+    assert d.watcher._pending == {}
 
 
-def test_reenabling_rule_immediately_moves_existing_off_target_window(monkeypatch):
-    disabled_rule = make_rule(
-        enabled=False,
-        match_exact_path=False,
-        reapply_if_moved=True,
-    )
-    enabled_rule = {**disabled_rule, "enabled": True}
-    watcher = watcher_module.MonitorRuleWatcher()
-    details = _matching_window_details()
-    placed = []
-    monkeypatch.setattr(watcher, "start", lambda: None)
-    monkeypatch.setattr(
-        watcher_module,
-        "enumerate_eligible_windows",
-        lambda **_kwargs: [copy.deepcopy(details)],
-    )
-    monkeypatch.setattr(watcher_module, "_window_exists", lambda _hwnd: True)
-    monkeypatch.setattr(
-        watcher_module,
-        "window_monitor_device",
-        lambda _hwnd: r"\\.\DISPLAY1",
-    )
-    monkeypatch.setattr(
-        watcher_module,
-        "apply_monitor_rule",
-        lambda hwnd, _rule: placed.append(hwnd) or True,
-    )
-
-    watcher.update_rules([disabled_rule])
-    watcher.update_rules([enabled_rule])
-    watcher._scan_once()
-
-    assert placed == [1]
-    assert watcher._managed == {1: "rule-1"}
-    assert watcher._enroll_rule_ids == set()
-    assert watcher._immediate_rule_ids == set()
+@pytest.mark.parametrize("mode", ["keep_size", "maximize", "saved_geometry"])
+def test_new_window_applies_mode_even_on_target_but_startup_skips(simulation, mode):
+    d = simulation
+    rule = make_rule(match_exact_path=False, placement_mode=mode,
+                     saved_geometry={"x_offset": 0, "y_offset": 0, "width": 800, "height": 600})
+    d.devices[1] = rule["target_device"]
+    d.configure([rule], apply_existing=True)
+    d.scan()
+    assert d.moves == []
+    d.windows.append(_matching_window_details(2))
+    d.devices[2] = rule["target_device"]
+    d.scan()
+    d.scan()
+    assert d.moves == [(2, "rule-1", mode)]
 
 
-def test_reenabling_rule_enrolls_existing_window_already_on_target(monkeypatch):
-    disabled_rule = make_rule(
-        enabled=False,
-        match_exact_path=False,
-        reapply_if_moved=True,
-    )
-    enabled_rule = {**disabled_rule, "enabled": True}
-    watcher = watcher_module.MonitorRuleWatcher()
-    placed = []
-    monkeypatch.setattr(watcher, "start", lambda: None)
-    monkeypatch.setattr(
-        watcher_module,
-        "enumerate_eligible_windows",
-        lambda **_kwargs: [_matching_window_details()],
-    )
-    monkeypatch.setattr(watcher_module, "_window_exists", lambda _hwnd: True)
-    monkeypatch.setattr(
-        watcher_module,
-        "window_monitor_device",
-        lambda _hwnd: enabled_rule["target_device"],
-    )
-    monkeypatch.setattr(
-        watcher_module,
-        "apply_monitor_rule",
-        lambda hwnd, _rule: placed.append(hwnd) or True,
-    )
-
-    watcher.update_rules([disabled_rule])
-    watcher.update_rules([enabled_rule])
-    watcher._scan_once()
-
-    assert placed == []
-    assert watcher._managed == {1: "rule-1"}
+@pytest.mark.parametrize("reapply", [False, True])
+def test_missing_display_expires_unless_reapply_enabled(simulation, reapply):
+    d = simulation
+    d.succeeds = False
+    d.configure([make_rule(match_exact_path=False, reapply_if_moved=reapply)],
+                apply_existing=True)
+    d.scan()
+    d.scan(14)
+    assert len(d.moves) == 2
+    d.scan(1)
+    count = len(d.moves)
+    d.succeeds = True
+    d.scan(1)
+    assert len(d.moves) == count + int(reapply)
 
 
-def test_reenabling_rule_wakes_running_watcher_and_applies_immediately(monkeypatch):
-    disabled_rule = make_rule(
-        enabled=False,
-        match_exact_path=False,
-        reapply_if_moved=True,
-    )
-    other_rule = make_rule(
-        id="other",
-        executable_name="other.exe",
-        enabled=True,
-        match_exact_path=False,
-    )
-    enabled_rule = {**disabled_rule, "enabled": True}
-    watcher = watcher_module.MonitorRuleWatcher()
-    watcher._configured_rules = [
-        rule_schema.normalize_monitor_rule(disabled_rule),
-        rule_schema.normalize_monitor_rule(other_rule),
-    ]
-    watcher._rules = [rule_schema.normalize_monitor_rule(other_rule)]
-    watcher._thread = type("Thread", (), {"is_alive": lambda self: True})()
-    wake_calls = []
-    placed = []
-    monkeypatch.setattr(watcher._wake_event, "set", lambda: wake_calls.append(True))
-    monkeypatch.setattr(
-        watcher_module,
-        "enumerate_eligible_windows",
-        lambda **_kwargs: [_matching_window_details()],
-    )
-    monkeypatch.setattr(watcher_module, "_window_exists", lambda _hwnd: True)
-    monkeypatch.setattr(
-        watcher_module,
-        "window_monitor_device",
-        lambda _hwnd: r"\\.\DISPLAY1",
-    )
-    monkeypatch.setattr(
-        watcher_module,
-        "apply_monitor_rule",
-        lambda hwnd, _rule: placed.append(hwnd) or True,
-    )
-
-    watcher.update_rules([enabled_rule, other_rule])
-    watcher._scan_once()
-
-    assert wake_calls == [True]
-    assert placed == [1]
+def test_dragging_pauses_moves_without_extending_deadline(simulation):
+    d = simulation
+    d.dragging = True
+    d.configure(apply_existing=True)
+    d.scan()
+    deadline = d.watcher._pending[1].deadline
+    d.scan(5)
+    assert d.moves == []
+    d.dragging = False
+    d.scan()
+    assert len(d.moves) == 1
+    assert d.watcher._pending[1].deadline == deadline
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.dragging = True
+    d.scan(15)
+    d.dragging = False
+    d.scan()
+    assert len(d.moves) == 1
 
 
-def test_reenabling_rule_without_reapply_does_not_enroll_existing_window(monkeypatch):
-    disabled_rule = make_rule(
-        enabled=False,
-        match_exact_path=False,
-        reapply_if_moved=False,
-    )
-    watcher = watcher_module.MonitorRuleWatcher()
-    monkeypatch.setattr(watcher, "start", lambda: None)
-
-    watcher.update_rules([disabled_rule])
-    watcher.update_rules([{**disabled_rule, "enabled": True}])
-
-    assert watcher._enroll_rule_ids == set()
-    assert watcher._immediate_rule_ids == set()
-
-
-def test_rapid_rule_transitions_clear_stale_immediate_requests(monkeypatch):
-    disabled_rule = make_rule(enabled=False, reapply_if_moved=True)
-    enabled_rule = {**disabled_rule, "enabled": True}
-    watcher = watcher_module.MonitorRuleWatcher()
-    monkeypatch.setattr(watcher, "start", lambda: None)
-
-    watcher.update_rules([disabled_rule])
-    watcher.update_rules([enabled_rule])
-    assert watcher._immediate_rule_ids == {"rule-1"}
-
-    watcher.update_rules([disabled_rule])
-    assert watcher._enroll_rule_ids == set()
-    assert watcher._immediate_rule_ids == set()
-
-    watcher.update_rules([enabled_rule])
-    assert watcher._immediate_rule_ids == {"rule-1"}
-
-    watcher.update_rules([])
-    watcher.update_rules([enabled_rule])
-    assert watcher._enroll_rule_ids == set()
-    assert watcher._immediate_rule_ids == set()
+@pytest.mark.parametrize("change", ["add", "edit", "enable", "delete", "reorder"])
+def test_rule_changes_place_affected_open_windows(simulation, change):
+    d = simulation
+    first = make_rule(id="first", match_exact_path=False)
+    second = make_rule(id="second", match_exact_path=False, target_device=r"\\.\DISPLAY3")
+    before = {"add": [], "edit": [first], "enable": [{**second, "enabled": False}],
+              "delete": [first, second], "reorder": [first, second]}[change]
+    after = {"add": [second], "edit": [{**second, "id": "first"}],
+             "enable": [second], "delete": [second], "reorder": [second, first]}[change]
+    d.configure(before, apply_existing=True)
+    d.scan()
+    d.scan(16)
+    d.moves.clear()
+    d.configure(after)
+    d.scan()
+    assert len(d.moves) == 1
+    assert d.devices[1] == second["target_device"]
 
 
-def test_disabling_reapply_immediately_clears_management_and_enrollment():
-    watcher = _running_watcher_with_rule(
-        make_rule(match_exact_path=False, reapply_if_moved=True)
-    )
-    watcher._managed[1] = "rule-1"
-    watcher._off_target_since[1] = 10.0
-    watcher._enroll_rule_ids.add("rule-1")
-
-    watcher.update_rules(
-        [make_rule(match_exact_path=False, reapply_if_moved=False)]
-    )
-
-    assert watcher._managed == {}
-    assert watcher._off_target_since == {}
-    assert watcher._enroll_rule_ids == set()
-
-
-def test_reapply_enrollment_respects_ordered_first_match(monkeypatch):
-    first = rule_schema.normalize_monitor_rule(
-        make_rule(id="first", match_exact_path=False, reapply_if_moved=True)
-    )
-    second = rule_schema.normalize_monitor_rule(
-        make_rule(id="second", match_exact_path=False, reapply_if_moved=True)
-    )
-    watcher = watcher_module.MonitorRuleWatcher()
-    watcher._rules = [first, second]
-    watcher._enroll_rule_ids = {"second"}
-
-    watcher._enroll_existing_windows(
-        {1: _matching_window_details()},
-        {"second"},
-    )
-
-    assert watcher._managed == {}
-    assert watcher._enroll_rule_ids == set()
+def test_cosmetic_and_unrelated_edits_preserve_pending_deadline(simulation):
+    d = simulation
+    rule = make_rule(match_exact_path=False, title_contains="Ready")
+    d.configure([rule], apply_existing=True)
+    d.scan()
+    recovery = d.watcher._pending[1]
+    d.configure([{**rule, "name": "Renamed", "target_label": "My screen"},
+                 make_rule(id="other", executable_name="other.exe", match_exact_path=False)])
+    d.scan()
+    assert d.watcher._pending[1] is recovery
+    d.windows[0]["title"] = "Ready"
+    d.scan()
+    assert len(d.moves) == 1
+    assert d.watcher._pending[1].deadline == recovery.deadline
 
 
-def test_initial_reapply_rule_does_not_queue_existing_window_enrollment(monkeypatch):
-    watcher = watcher_module.MonitorRuleWatcher()
-    monkeypatch.setattr(watcher, "start", lambda: None)
+def test_unrelated_windows_and_cosmetic_edits_do_not_restart_recovery(simulation):
+    d = simulation
+    rule = make_rule(match_exact_path=False)
+    d.configure([rule], apply_existing=True)
+    d.scan()
+    d.scan(16)
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.moves.clear()
+    d.configure([{**rule, "name": "New name"},
+                 make_rule(id="other", executable_name="other.exe", match_exact_path=False)])
+    d.scan()
+    assert d.moves == []
+    assert d.watcher._pending == {}
 
-    watcher.update_rules(
-        [make_rule(match_exact_path=False, reapply_if_moved=True)]
-    )
 
-    assert watcher._enroll_rule_ids == set()
+def test_disabling_and_rapid_edits_do_not_leave_stale_work(simulation):
+    d = simulation
+    d.configure(apply_existing=True)
+    d.scan()
+    d.moves.clear()
+    d.configure([make_rule(match_exact_path=False, target_device=r"\\.\DISPLAY3")])
+    d.configure([])
+    d.scan()
+    assert d.moves == []
+    assert d.watcher._pending == {}
+    assert d.watcher._managed == {}
+
+
+def test_reapply_toggle_enrolls_then_stops_enforcement(simulation):
+    d = simulation
+    rule = make_rule(match_exact_path=False)
+    d.configure([rule], apply_existing=True)
+    d.scan()
+    d.configure([{**rule, "reapply_if_moved": True}])
+    d.scan()
+    assert d.watcher._managed == {1: "rule-1"}
+    assert len(d.moves) == 1
+    d.scan(16)
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.dragging = True
+    d.scan()
+    assert len(d.moves) == 1
+    d.dragging = False
+    d.scan()
+    d.scan(1)
+    assert len(d.moves) == 2
+    d.configure([rule])
+    assert d.watcher._managed == {}
+
+
+def test_hidden_window_and_reused_handle_get_fresh_recovery(simulation):
+    d = simulation
+    d.configure(apply_existing=True)
+    d.scan()
+    first = d.watcher._pending[1]
+    window = d.windows.pop()
+    d.scan()
+    assert d.watcher._pending == {}
+    d.windows.append(window)
+    d.scan()
+    assert d.watcher._pending[1] is not first
+    second = d.watcher._pending[1]
+    window["process_started_at"] += 1
+    d.scan()
+    assert d.watcher._pending[1].identity != second.identity
+    assert len(d.moves) == 3
+
+
+def test_edit_during_enumeration_uses_latest_rules(simulation, monkeypatch):
+    d = simulation
+    d.configure(apply_existing=True)
+    def enumerate_and_edit(**kwargs):
+        d.configure([make_rule(match_exact_path=False, target_device=r"\\.\DISPLAY3")])
+        return copy.deepcopy(d.windows)
+    monkeypatch.setattr(watcher_module, "enumerate_eligible_windows", enumerate_and_edit)
+    d.scan()
+    assert d.devices[1] == r"\\.\DISPLAY3"
+
+
+def test_edit_during_placement_does_not_commit_stale_success(simulation, monkeypatch):
+    d = simulation
+    d.configure(apply_existing=True)
+    def move_and_edit(hwnd, rule):
+        d.configure([])
+        return True
+    monkeypatch.setattr(watcher_module, "apply_monitor_rule", move_and_edit)
+    d.scan()
+    assert d.watcher._pending == {}
+    assert d.watcher._managed == {}
+
+
+def test_identity_change_before_placement_does_not_move_replacement(simulation, monkeypatch):
+    d = simulation
+    d.configure(apply_existing=True)
+    monkeypatch.setattr(watcher_module, "window_details",
+                        lambda *args, **kwargs: {**d.windows[0], "process_id": 999})
+    d.scan()
+    assert d.moves == []
+    assert d.watcher._pending == {}
+
+
+@pytest.mark.parametrize("reapply", [False, True])
+def test_reenable_after_stopping_all_rules_places_existing_window(simulation, reapply):
+    d = simulation
+    rule = make_rule(match_exact_path=False, reapply_if_moved=reapply)
+    d.configure([rule], apply_existing=True)
+    d.scan()
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.configure([{**rule, "enabled": False}])
+    # No scan runs while all rules are disabled.
+    d.configure([rule])
+    d.scan()
+    assert len(d.moves) == 2
+
+
+def test_failed_move_cannot_succeed_after_exact_deadline(simulation):
+    d = simulation
+    d.succeeds = False
+    d.configure(apply_existing=True)
+    d.scan()
+    d.succeeds = True
+    d.scan(15)
+    assert len(d.moves) == 1
+    assert d.watcher._pending == {}
+
+
+def test_placement_mode_edit_applies_on_same_monitor(simulation):
+    d = simulation
+    d.configure(apply_existing=True)
+    d.scan()
+    d.configure([make_rule(match_exact_path=False, placement_mode="maximize")])
+    d.scan()
+    assert d.moves[-1] == (1, "rule-1", "maximize")
+    assert len(d.moves) == 2
+
+
+def test_edit_wakes_running_watcher_without_clearing_pending(simulation, monkeypatch):
+    d = simulation
+    d.configure(apply_existing=True)
+    d.scan()
+    recovery = d.watcher._pending[1]
+    d.watcher._thread = type("Thread", (), {"is_alive": lambda self: True})()
+    wakes = []
+    monkeypatch.setattr(d.watcher._wake_event, "set", lambda: wakes.append(True))
+    d.configure([make_rule(match_exact_path=False, name="Renamed")])
+    assert wakes == [True]
+    assert d.watcher._pending[1] is recovery
+    assert not d.watcher._baseline_pending
+
+
+@pytest.mark.parametrize("change", ["delete", "reorder"])
+def test_equivalent_winning_rule_preserves_reapply_management(simulation, change):
+    d = simulation
+    first = make_rule(id="first", match_exact_path=False, reapply_if_moved=True)
+    second = {**first, "id": "second"}
+    d.configure([first, second], apply_existing=True)
+    d.scan()
+    d.scan(16)
+    d.configure([second] if change == "delete" else [second, first])
+    d.scan()
+    assert d.watcher._managed == {1: "second"}
+    assert d.watcher._pending == {}
+    d.devices[1] = r"\\.\DISPLAY1"
+    d.scan()
+    d.scan(1)
+    assert d.moves[-1][1] == "second"
+
+
+def test_temporarily_unavailable_window_details_are_seen_again(simulation, monkeypatch):
+    d = simulation
+    d.configure(apply_existing=True)
+    original = watcher_module.window_details
+    monkeypatch.setattr(watcher_module, "window_details", lambda *args, **kwargs: None)
+    d.scan()
+    assert d.moves == []
+    monkeypatch.setattr(watcher_module, "window_details", original)
+    d.scan()
+    assert len(d.moves) == 1

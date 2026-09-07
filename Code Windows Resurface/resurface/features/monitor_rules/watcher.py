@@ -3,22 +3,56 @@
 from __future__ import annotations
 
 import copy
+from dataclasses import dataclass
 import threading
 import time
 
 from .rule_schema import first_matching_rule, normalize_monitor_rules
 from .win32_windows import (
     _left_mouse_pressed,
-    _window_exists,
     apply_monitor_rule,
     enumerate_eligible_windows,
+    window_details,
     window_monitor_device,
 )
 
-
 POLL_INTERVAL_SECONDS = 0.5
-MATCH_RETRY_SECONDS = 5.0
+MATCH_RETRY_SECONDS = 15.0
 REAPPLY_SETTLE_SECONDS = 0.6
+
+
+def _identity(details):
+    return (
+        int(details.get("process_id", 0)),
+        float(details.get("process_started_at", 0.0)),
+    )
+
+
+def _behavior(rule):
+    if rule is None:
+        return None
+    return {
+        key: value for key, value in rule.items()
+        if key not in {"id", "name", "target_label"}
+    }
+
+
+def _placement(rule):
+    if rule is None:
+        return None
+    return (
+        rule["target_device"].casefold(),
+        rule["placement_mode"],
+        rule["saved_geometry"] if rule["placement_mode"] == "saved_geometry" else None,
+    )
+
+
+@dataclass
+class _Recovery:
+    identity: tuple[int, float]
+    deadline: float
+    force_initial: bool
+    placed: bool = False
 
 
 class MonitorRuleWatcher:
@@ -32,14 +66,14 @@ class MonitorRuleWatcher:
         self._thread = None
         self._configured_rules: list[dict] = []
         self._rules: list[dict] = []
+        self._previous_rules: list[dict] | None = None
+        self._revision = 0
         self._app_hwnd = None
         self._baseline_pending = True
         self._seen: dict[int, tuple[int, float]] = {}
-        self._pending: dict[int, float] = {}
+        self._pending: dict[int, _Recovery] = {}
         self._managed: dict[int, str] = {}
         self._off_target_since: dict[int, float] = {}
-        self._enroll_rule_ids: set[str] = set()
-        self._immediate_rule_ids: set[str] = set()
         self._apply_existing_once = False
 
     @property
@@ -51,72 +85,40 @@ class MonitorRuleWatcher:
         normalized = normalize_monitor_rules(copy.deepcopy(rules))
         enabled = [rule for rule in normalized if rule["enabled"]]
         with self._lock:
-            old_configured_by_id = {
-                rule["id"]: rule for rule in self._configured_rules
-            }
-            new_configured_by_id = {rule["id"]: rule for rule in normalized}
-            old_by_id = {rule["id"]: rule for rule in self._rules}
-            new_by_id = {rule["id"]: rule for rule in enabled}
-            changed_ids = {
-                rule_id
-                for rule_id in set(old_by_id) | set(new_by_id)
-                if old_by_id.get(rule_id) != new_by_id.get(rule_id)
-            }
+            changed = enabled != self._rules
+            if changed:
+                # Compare the last scanned configuration with the latest edit,
+                # including reorder-only changes and rapid successive edits.
+                if self._previous_rules is None:
+                    self._previous_rules = self._rules
+                self._revision += 1
             self._configured_rules = normalized
             self._rules = enabled
             if app_hwnd is not None:
                 self._app_hwnd = int(app_hwnd)
             running = bool(self._thread and self._thread.is_alive())
+            by_id = {rule["id"]: rule for rule in enabled}
             for hwnd, rule_id in list(self._managed.items()):
-                if rule_id in changed_ids:
+                # Retain removed IDs until the scan can transfer management
+                # to an equivalent winning rule, or discard it if no rule wins.
+                if rule_id in by_id and not by_id[rule_id]["reapply_if_moved"]:
                     self._managed.pop(hwnd, None)
                     self._off_target_since.pop(hwnd, None)
-            for rule_id in changed_ids:
-                old_rule = old_by_id.get(rule_id)
-                new_rule = new_by_id.get(rule_id)
-                old_configured_rule = old_configured_by_id.get(rule_id)
-                was_reenabled = (
-                    old_configured_rule is not None
-                    and not old_configured_rule.get("enabled")
-                    and new_rule is not None
-                    and new_rule.get("reapply_if_moved")
-                )
-                should_enroll = was_reenabled or (
-                    old_rule is not None
-                    and new_rule is not None
-                    and new_rule.get("reapply_if_moved")
-                )
-                if should_enroll:
-                    self._enroll_rule_ids.add(rule_id)
-                    if was_reenabled:
-                        self._immediate_rule_ids.add(rule_id)
-                else:
-                    self._enroll_rule_ids.discard(rule_id)
-                    self._immediate_rule_ids.discard(rule_id)
-            removed_ids = set(old_configured_by_id) - set(new_configured_by_id)
-            for rule_id in removed_ids:
-                self._enroll_rule_ids.discard(rule_id)
-                self._immediate_rule_ids.discard(rule_id)
-            if changed_ids and running:
-                # Treat ordinary edits as a fresh baseline. Explicit reapply
-                # enrollment requests are handled separately below.
+            if not enabled:
+                # The stopped watcher will not scan the disabled configuration.
+                self._previous_rules = []
                 self._pending.clear()
-                self._baseline_pending = True
-            should_start = bool(enabled)
-            if not should_start:
-                self._enroll_rule_ids.clear()
-                self._immediate_rule_ids.clear()
+                self._managed.clear()
+                self._off_target_since.clear()
                 self._apply_existing_once = False
             elif apply_existing:
                 self._apply_existing_once = True
-            if should_start and not running:
-                self._baseline_pending = True
 
-        if should_start and not running:
+        if enabled and not running:
             self.start()
-        elif not should_start:
+        elif not enabled:
             self.stop()
-        elif changed_ids:
+        elif changed or apply_existing:
             self._wake_event.set()
 
     def start(self) -> None:
@@ -150,15 +152,6 @@ class MonitorRuleWatcher:
             if not thread.is_alive():
                 self._thread = None
 
-    def _snapshot(self):
-        with self._lock:
-            return (
-                copy.deepcopy(self._rules),
-                self._app_hwnd,
-                set(self._enroll_rule_ids),
-                set(self._immediate_rule_ids),
-            )
-
     def _run(self) -> None:
         try:
             while not self._stop_event.is_set():
@@ -173,139 +166,121 @@ class MonitorRuleWatcher:
                     self._thread = None
 
     def _scan_once(self) -> None:
-        rules, app_hwnd, enroll_rule_ids, immediate_rule_ids = self._snapshot()
-        if not rules:
-            return
+        with self._lock:
+            if not self._rules:
+                return
+            app_hwnd = self._app_hwnd
         details_by_hwnd = {
             details["hwnd"]: details
             for details in enumerate_eligible_windows(app_hwnd=app_hwnd)
         }
-        eligible_identities = {
-            hwnd: (
-                int(details.get("process_id", 0)),
-                float(details.get("process_started_at", 0.0)),
-            )
-            for hwnd, details in details_by_hwnd.items()
-        }
         now = time.monotonic()
-
         with self._lock:
+            rules = self._rules
+            previous = self._previous_rules
+            self._previous_rules = None
+            revision = self._revision
             apply_existing = self._apply_existing_once
             self._apply_existing_once = False
-            if self._baseline_pending:
-                new_identities = set()
-                self._baseline_pending = False
-            else:
-                new_identities = {
-                    hwnd
-                    for hwnd, identity in eligible_identities.items()
-                    if self._seen.get(hwnd) != identity
-                }
-
-            for hwnd in list(self._seen):
-                if self._seen[hwnd] != eligible_identities.get(hwnd):
+            identities = {
+                hwnd: _identity(details) for hwnd, details in details_by_hwnd.items()
+            }
+            for hwnd, identity in self._seen.items():
+                if identities.get(hwnd) != identity:
                     self._pending.pop(hwnd, None)
                     self._managed.pop(hwnd, None)
                     self._off_target_since.pop(hwnd, None)
 
-            self._seen = dict(eligible_identities)
-            for hwnd in new_identities:
-                self._pending[hwnd] = now + MATCH_RETRY_SECONDS
-
-            pending = dict(self._pending)
-
-        if apply_existing:
             for hwnd, details in details_by_hwnd.items():
+                identity = identities[hwnd]
+                is_new = not self._baseline_pending and self._seen.get(hwnd) != identity
                 rule = first_matching_rule(rules, details)
-                if rule is None:
-                    continue
-                already_on_target = (
-                    window_monitor_device(hwnd).casefold()
-                    == rule["target_device"].casefold()
-                )
-                placed = already_on_target or apply_monitor_rule(hwnd, rule)
-                if placed and rule.get("reapply_if_moved"):
-                    with self._lock:
-                        self._managed[hwnd] = rule["id"]
-
-        for hwnd, deadline in pending.items():
-            details = details_by_hwnd.get(hwnd)
-            rule = first_matching_rule(rules, details) if details else None
-            if rule is not None:
-                placed = apply_monitor_rule(hwnd, rule)
-                with self._lock:
-                    self._pending.pop(hwnd, None)
-                    if placed and rule["reapply_if_moved"]:
-                        self._managed[hwnd] = rule["id"]
-            elif now >= deadline:
-                with self._lock:
-                    self._pending.pop(hwnd, None)
-
-        if enroll_rule_ids:
-            rules = self._enroll_existing_windows(
-                details_by_hwnd,
-                enroll_rule_ids,
-                immediate_rule_ids,
-            )
-        self._enforce_managed_windows(rules, now)
-
-    def _enroll_existing_windows(
-        self,
-        details_by_hwnd: dict[int, dict],
-        requested_rule_ids: set[str],
-        immediate_rule_ids: set[str] | None = None,
-    ) -> list[dict]:
-        immediate_rule_ids = immediate_rule_ids or set()
-        candidates = []
-        with self._lock:
-            active_requests = requested_rule_ids & self._enroll_rule_ids
-            active_immediate = active_requests & immediate_rule_ids
-            current_rules = copy.deepcopy(self._rules)
-            if not active_requests:
-                return current_rules
-
-            for hwnd, details in details_by_hwnd.items():
-                rule = first_matching_rule(current_rules, details)
-                if (
-                    rule is not None
-                    and rule["id"] in active_requests
-                    and rule.get("reapply_if_moved")
-                ):
-                    self._managed[hwnd] = rule["id"]
-                    self._off_target_since.pop(hwnd, None)
-                    if rule["id"] in active_immediate:
-                        candidates.append((hwnd, rule))
-
-            self._enroll_rule_ids.difference_update(active_requests)
-            self._immediate_rule_ids.difference_update(active_requests)
-
-        for hwnd, rule in candidates:
-            if (
-                window_monitor_device(hwnd).casefold()
-                != rule["target_device"].casefold()
-            ):
-                apply_monitor_rule(hwnd, rule)
-        return current_rules
-
-    def _enforce_managed_windows(self, rules: list[dict], now: float) -> None:
-        by_id = {rule["id"]: rule for rule in rules}
-        with self._lock:
-            managed = dict(self._managed)
-        dragging = _left_mouse_pressed()
-        for hwnd, rule_id in managed.items():
-            rule = by_id.get(rule_id)
-            if rule is None or not rule.get("reapply_if_moved") or not _window_exists(hwnd):
-                with self._lock:
+                old_rule = first_matching_rule(previous, details) if previous is not None else rule
+                changed = _behavior(old_rule) != _behavior(rule)
+                if apply_existing or is_new or (changed and rule is not None):
+                    # Startup skips already-correct windows. New windows and
+                    # explicit placement changes must also apply the size/mode.
+                    force = is_new or (
+                        not apply_existing and changed
+                        and _placement(old_rule) != _placement(rule)
+                    )
+                    self._pending[hwnd] = _Recovery(
+                        identity, now + MATCH_RETRY_SECONDS, force
+                    )
+                if changed:
                     self._managed.pop(hwnd, None)
                     self._off_target_since.pop(hwnd, None)
-                continue
-            if window_monitor_device(hwnd).casefold() == rule["target_device"].casefold():
-                with self._lock:
-                    self._off_target_since.pop(hwnd, None)
-                continue
-            with self._lock:
+                    if rule is None:
+                        self._pending.pop(hwnd, None)
+                elif hwnd in self._managed and rule is not None:
+                    # Equivalent rules may have different IDs after reordering.
+                    self._managed[hwnd] = rule["id"]
+
+            self._seen = identities
+            self._baseline_pending = False
+            for hwnd, recovery in list(self._pending.items()):
+                if now >= recovery.deadline:
+                    self._pending.pop(hwnd, None)
+            candidates = set(self._pending) | set(self._managed)
+
+        for hwnd in candidates:
+            self._place_window(hwnd, revision, now)
+
+    def _place_window(self, hwnd: int, revision: int, now: float) -> None:
+        # Refresh identity and matching details immediately before acting. Hold
+        # the lock through placement so a concurrent edit cannot apply an old rule.
+        with self._lock:
+            if revision != self._revision:
+                return
+            details = window_details(hwnd, app_hwnd=self._app_hwnd)
+            if details is None or _identity(details) != self._seen.get(hwnd):
+                self._seen.pop(hwnd, None)
+                self._pending.pop(hwnd, None)
+                self._managed.pop(hwnd, None)
+                self._off_target_since.pop(hwnd, None)
+                return
+            rule = first_matching_rule(self._rules, details)
+            if rule is None:
+                self._managed.pop(hwnd, None)
+                self._off_target_since.pop(hwnd, None)
+                return
+            recovery = self._pending.get(hwnd)
+            if recovery is not None and recovery.identity != _identity(details):
+                self._pending.pop(hwnd, None)
+                return
+            if rule["reapply_if_moved"]:
+                # Keep enforcement available even if a display is currently absent.
+                self._managed[hwnd] = rule["id"]
+            else:
+                self._managed.pop(hwnd, None)
+            on_target = window_monitor_device(hwnd).casefold() == rule["target_device"].casefold()
+            force = recovery is not None and recovery.force_initial and not recovery.placed
+            if on_target and not force:
+                self._off_target_since.pop(hwnd, None)
+                return
+            if _left_mouse_pressed():
+                self._off_target_since.pop(hwnd, None)
+                return
+            if recovery is None:
+                if not rule["reapply_if_moved"]:
+                    return
                 since = self._off_target_since.setdefault(hwnd, now)
-            if not dragging and now - since >= REAPPLY_SETTLE_SECONDS:
-                if apply_monitor_rule(hwnd, rule):
-                    with self._lock:
-                        self._off_target_since.pop(hwnd, None)
+                if now - since < REAPPLY_SETTLE_SECONDS:
+                    return
+            placed = apply_monitor_rule(hwnd, rule)
+            # Also guard against reentrant callbacks changing the configuration.
+            if revision != self._revision:
+                return
+            fresh = window_details(hwnd, app_hwnd=self._app_hwnd)
+            if fresh is None or _identity(fresh) != self._seen.get(hwnd):
+                self._seen.pop(hwnd, None)
+                self._pending.pop(hwnd, None)
+                self._managed.pop(hwnd, None)
+                self._off_target_since.pop(hwnd, None)
+                return
+            if _behavior(first_matching_rule(self._rules, fresh)) != _behavior(rule):
+                return
+            if placed:
+                if recovery is not None:
+                    recovery.placed = True
+                self._off_target_since.pop(hwnd, None)

@@ -67,11 +67,16 @@ class MonitorRulesPage(WindowMessageMixin, QFrame):
         action_grid.setContentsMargins(12, 12, 12, 0)
         action_grid.setHorizontalSpacing(6)
         action_grid.setVerticalSpacing(root.spacing())
-        # summary = QLabel(
-        #     "Rules are checked from top to bottom. The first complete match wins.", self
-        # )
-        # summary.setWordWrap(True)
-        # summary.setStyleSheet(styles.page_description_style())
+        summary = QLabel(
+            "The first matching rule wins. Windows are placed at startup and when "
+            "applications open, with 15 seconds of recovery. Rule changes also apply "
+            "to affected open windows. Moves pause while the left mouse button is held. "
+            "After recovery, manual moves are allowed unless Reapply if moved is enabled.",
+            self,
+        )
+        summary.setWordWrap(True)
+        summary.setStyleSheet(styles.page_description_style())
+        root.addWidget(summary)
         self.add_button = QPushButton("Add Rule", self)
         self.add_button.setToolTip("Create an automatic application placement rule")
         self.alphabet_sort_button = QPushButton("A–Z", self)

@@ -116,11 +116,15 @@ is active and resumes afterward when the feature is enabled.
 
 Monitor Rules are evaluated from top to bottom while Windows Resurface is open
 or hidden in the system tray. Rules can match an exact executable path or an
-executable name, with optional title and window-class filters. Existing windows
-are left untouched until a rule is explicitly tested; newly opened matching
-windows are moved automatically. A rule can optionally be reapplied if its
-managed window is dragged to another monitor. If the assigned display is not
-connected, the window is left alone.
+executable name, with optional title and window-class filters. Matching windows
+are placed when Windows Resurface starts and when applications open. Placement
+is checked for 15 seconds to handle delayed startup and applications restoring
+their own position. Adding, editing, enabling, deleting, or reordering rules also
+places open windows whose effective rule changes; unrelated windows stay untouched.
+Automatic moves pause while the left mouse button is held. After recovery ends,
+manual moves are allowed unless the rule's “Reapply if moved” option is enabled.
+If the assigned display is disconnected, no other display is substituted; retries
+stop after recovery unless Reapply is enabled.
 
 The visible title-bar mover dock is suppressed for executables installed beneath
 a Steam library's `steamapps\common` directory. Configured keyboard shortcuts
