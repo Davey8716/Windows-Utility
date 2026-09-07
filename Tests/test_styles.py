@@ -2,7 +2,9 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import qInstallMessageHandler
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QComboBox
 
 from resurface.ui import styles
 from resurface.ui import control_styles, shell_styles, style_helpers, style_tokens
@@ -111,6 +113,50 @@ def test_standard_dropdown_categories_share_modern_blue_treatment(
     assert "padding: 6px 10px;" in stylesheet
     assert "QComboBox:disabled" in stylesheet
     assert "QComboBox:disabled::drop-down" in stylesheet
+    assert "font-size: 10.5pt;" in stylesheet
+    assert "font-size: 14px;" not in stylesheet
+
+
+@pytest.mark.parametrize(
+    "style_factory",
+    [
+        styles.organizing_combo_style,
+        styles.surfaced_combo_style,
+        styles.connected_drives_combo_style,
+        styles.power_combo_style,
+        styles.combo_style,
+    ],
+)
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_dropdown_popups_use_valid_point_sized_fonts_without_qt_warning(
+    style_factory,
+    is_dark,
+):
+    styles.set_theme(is_dark)
+    app = QApplication.instance() or QApplication([])
+    combo = QComboBox()
+    combo.addItems(["First", "Second"])
+    combo.setStyleSheet(style_factory(14))
+    messages = []
+    previous_handler = qInstallMessageHandler(
+        lambda _message_type, _context, message: messages.append(message)
+    )
+    try:
+        combo.show()
+        app.processEvents()
+        combo.showPopup()
+        app.processEvents()
+        combo.hidePopup()
+
+        assert combo.font().pointSizeF() > 0
+        assert combo.view().font().pointSizeF() > 0
+        assert not any(
+            "QFont::setPointSize: Point size <= 0" in message
+            for message in messages
+        )
+    finally:
+        combo.close()
+        qInstallMessageHandler(previous_handler)
 
 
 @pytest.mark.parametrize(

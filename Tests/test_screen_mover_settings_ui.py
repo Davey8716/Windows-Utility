@@ -269,7 +269,8 @@ def test_folder_to_desktop_starts_empty_and_saved_selection_populates_input(monk
         ] == ["Reports", "Invoices"]
         page._names.setCurrentIndex(1)
         assert page._input.text() == "Invoices"
-        assert page._save_name.isCheckable()
+        assert not page._save_name.isCheckable()
+        assert not page._save_name.isEnabled()
         assert not page._save_name.isChecked()
         assert page._save_name.width() == 250
     finally:

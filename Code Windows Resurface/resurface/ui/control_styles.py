@@ -238,6 +238,8 @@ def _modern_combo_style(
     font_family: str | None = None,
 ) -> str:
     font_size = H.coerce_font_size(font_size, 14) or 14
+    font_point_size = font_size * 72 / 96
+    font_point_rule = f"font-size: {font_point_size:g}pt;"
     popup_background = popup_background or background
     popup_text = popup_text or text
     disabled_text = disabled_text or T.themed_button_disabled_text()
@@ -246,11 +248,12 @@ def _modern_combo_style(
     return f"""
         QComboBox {{
             {H.label_style(
-                font_size=font_size,
+                font_size=None,
                 bold=True,
                 color=text,
                 font_family=font_family,
             )}
+            {font_point_rule}
             background-color: {H.qcolor_css(background)};
             border: 1px solid {H.qcolor_css(border)};
             border-radius: 6px;
@@ -306,6 +309,7 @@ def _modern_combo_style(
             height: 6px;
         }}
         QComboBox QAbstractItemView {{
+            {font_point_rule}
             background-color: {H.qcolor_css(popup_background)};
             color: {H.qcolor_css(popup_text)};
             selection-background-color: {H.qcolor_css(hover)};
