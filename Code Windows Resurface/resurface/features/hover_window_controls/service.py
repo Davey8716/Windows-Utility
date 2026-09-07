@@ -15,6 +15,9 @@ from resurface.features.hover_window_controls.app.identity import (
     MIN_DWELL_MS,
     windows_resurface_data_directory,
 )
+from resurface.features.hover_window_controls.app.data_export import (
+    validate_application_data_export,
+)
 from resurface.features.hover_window_controls.core.hover_controller import HoverController
 from resurface.features.hover_window_controls.platform.taskbar_preview import (
     InstalledAutoHotkeyRunner,
@@ -163,6 +166,33 @@ class HoverWindowControlsService(QObject):
                 encoding="utf-8",
             )
             return self.window_api.export_all_data(destination_parent)
+        finally:
+            self._finish_operation()
+
+    def validate_import(self, source_directory: Path) -> dict:
+        return validate_application_data_export(source_directory)
+
+    def import_all_data(self, source_directory: Path):
+        if self._busy:
+            raise RuntimeError("Hover Window Controls is already busy")
+        self._busy = True
+        self._suspend_for_operation()
+        try:
+            result = self.window_api.import_all_data(source_directory)
+            hover = result.settings["hover"]
+            self.enabled = bool(hover["enabled"])
+            self.taskbar_restore_enabled = bool(
+                hover["taskbar_restore_enabled"]
+            )
+            self.dwell_ms = normalized_dwell_ms(hover["dwell_ms"])
+            self.state["hover_window_controls_enabled"] = self.enabled
+            self.state["hover_taskbar_restore_enabled"] = (
+                self.taskbar_restore_enabled
+            )
+            self.state["hover_window_controls_dwell_ms"] = self.dwell_ms
+            self.controller.set_dwell_ms(self.dwell_ms)
+            self._persist()
+            return result
         finally:
             self._finish_operation()
 

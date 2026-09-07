@@ -4,7 +4,17 @@ from dataclasses import dataclass
 from html import escape
 from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import QFrame, QGridLayout, QLabel, QMessageBox, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QDialog,
+    QFileDialog,
+    QFrame,
+    QGridLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from resurface.core.state_manager import save_state
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
@@ -252,6 +262,7 @@ class ApplicationPageComposer:
         hover_page.dwell_changed.connect(hover_service.set_dwell_ms)
         hover_page.calibration_requested.connect(self._calibrate_hover_controls)
         hover_page.export_requested.connect(self._export_hover_controls)
+        hover_page.import_requested.connect(self._import_hover_controls)
         hover_page.clear_requested.connect(self._clear_hover_controls_cache)
         hover_service.settings_changed.connect(hover_page.sync_settings)
         shell.mount_content("hover_window_controls", hover_page)
@@ -345,6 +356,77 @@ class ApplicationPageComposer:
             QMessageBox.Icon.Information,
             "Hover data exported",
             f"The export was created successfully.\n\n{result.directory}",
+            show_close_now_button=True,
+        )
+
+    def _import_hover_controls(self) -> None:
+        start_dir = self.app.get_default_hover_controls_export_dir()
+        dialog = QFileDialog(
+            self.app,
+            "Import Hover Data",
+            start_dir,
+            "Hover data manifest (export_manifest.json);;JSON files (*.json)",
+        )
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        dialog.setStyleSheet(styles.file_dialog_style())
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        selected_files = dialog.selectedFiles()
+        if not selected_files:
+            return
+        manifest_path = Path(selected_files[0])
+        if manifest_path.name.casefold() != "export_manifest.json":
+            self.app._show_modal_message(
+                QMessageBox.Icon.Warning,
+                "Import Hover Data",
+                "Select the export_manifest.json file from a Hover Window "
+                "Controls backup.",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        source_directory = manifest_path.parent
+        try:
+            self.app.hover_window_controls.validate_import(source_directory)
+        except Exception as error:
+            self.app._show_modal_message(
+                QMessageBox.Icon.Warning,
+                "Import Hover Data",
+                f"The selected Hover Window Controls backup is invalid.\n\n{error}",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        answer = self.app._show_modal_message(
+            QMessageBox.Icon.Warning,
+            "Import Hover Data",
+            "Replace the current Hover Window Controls settings and learned "
+            "button data with this backup?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            result = self.app.hover_window_controls.import_all_data(
+                source_directory
+            )
+        except Exception as error:
+            self.app._show_modal_message(
+                QMessageBox.Icon.Critical,
+                "Import failed",
+                f"Hover Window Controls data could not be imported.\n\n{error}",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+        self.app._show_timed_message(
+            QMessageBox.Icon.Information,
+            "Hover data imported",
+            f"The backup was imported successfully.\n\n{result.source_directory}",
             show_close_now_button=True,
         )
 

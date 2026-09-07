@@ -20,6 +20,7 @@ class HoverWindowControlsPage(PageControls):
     dwell_changed = Signal(int)
     calibration_requested = Signal()
     export_requested = Signal()
+    import_requested = Signal()
     clear_requested = Signal()
 
     def __init__(
@@ -79,16 +80,21 @@ class HoverWindowControlsPage(PageControls):
         self.export_button = self.style_action_button(
             QPushButton("Export Hover Data…", self)
         )
-        self.add_two_column_control_row(
-            self.content_layout,
-            self.calibrate_button,
-            self.export_button,
+        self.import_button = self.style_action_button(
+            QPushButton("Import Hover Data…", self)
         )
         self.clear_button = self.style_action_button(
             QPushButton("Clear Learned Buttons…", self)
         )
-        self.content_layout.addWidget(
-            self.clear_button, 0, Qt.AlignmentFlag.AlignHCenter
+        self.add_two_column_control_row(
+            self.content_layout,
+            self.calibrate_button,
+            self.clear_button,
+        )
+        self.add_two_column_control_row(
+            self.content_layout,
+            self.import_button,
+            self.export_button,
         )
 
         self.register_tooltip(
@@ -104,6 +110,9 @@ class HoverWindowControlsPage(PageControls):
             self.export_button, tooltip_text("hover_controls_export")
         )
         self.register_tooltip(
+            self.import_button, tooltip_text("hover_controls_import")
+        )
+        self.register_tooltip(
             self.clear_button, tooltip_text("hover_controls_clear")
         )
 
@@ -114,6 +123,7 @@ class HoverWindowControlsPage(PageControls):
         self.dwell_combo.currentIndexChanged.connect(self._dwell_selected)
         self.calibrate_button.clicked.connect(self.calibration_requested)
         self.export_button.clicked.connect(self.export_requested)
+        self.import_button.clicked.connect(self.import_requested)
         self.clear_button.clicked.connect(self.clear_requested)
 
     def _dwell_selected(self) -> None:

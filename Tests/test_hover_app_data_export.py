@@ -9,6 +9,8 @@ from unittest.mock import patch
 from resurface.features.hover_window_controls.app.data_export import (
     DataExportError,
     export_application_data,
+    import_application_data,
+    validate_application_data_export,
 )
 from resurface.features.hover_window_controls.app.identity import (
     DISPLAY_NAME,
@@ -302,6 +304,94 @@ class ApplicationDataExportTests(unittest.TestCase):
         self.assertFalse(
             any("rollback" in path.name for path in self.destination.iterdir())
         )
+
+    def test_import_restores_settings_profiles_and_legacy_profiles(self):
+        exported_settings = {
+            "schema_version": 1,
+            "hover": {
+                "enabled": True,
+                "taskbar_restore_enabled": False,
+                "dwell_ms": 1000,
+            },
+        }
+        (self.current / "settings.json").write_text(
+            json.dumps(exported_settings), "utf-8"
+        )
+        self.export()
+        active = self.root / "active" / "hover-window-controls"
+        active_cache = active / "vision-cache" / "stale"
+        active_cache.mkdir(parents=True)
+        (active / "settings.json").write_text("stale", "utf-8")
+        (active_cache / "old.json").write_text("stale", "utf-8")
+
+        result = import_application_data(
+            self.destination,
+            current_root=active,
+        )
+
+        self.assertEqual(result.source_directory, self.destination.resolve())
+        self.assertEqual(result.settings["hover"]["enabled"], True)
+        self.assertEqual(
+            json.loads((active / "settings.json").read_text("utf-8")),
+            exported_settings,
+        )
+        self.assertTrue(
+            (active / "vision-cache" / "example" / "caption.jpg").is_file()
+        )
+        self.assertTrue(
+            (
+                active
+                / "vision-cache"
+                / "old-example"
+                / "manifest_old.json"
+            ).is_file()
+        )
+        self.assertFalse((active / "vision-cache" / "stale").exists())
+
+    def test_import_validation_rejects_an_invalid_manifest(self):
+        (self.destination / "export_manifest.json").write_text(
+            '{"schema_version": 1}', "utf-8"
+        )
+
+        with self.assertRaisesRegex(DataExportError, "manifest is invalid"):
+            validate_application_data_export(self.destination)
+
+    def test_import_failure_restores_existing_application_data(self):
+        (self.current / "settings.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "hover": {
+                        "enabled": True,
+                        "taskbar_restore_enabled": True,
+                        "dwell_ms": 750,
+                    },
+                }
+            ),
+            "utf-8",
+        )
+        self.export()
+        active = self.root / "active" / "hover-window-controls"
+        active.mkdir(parents=True)
+        original = active / "settings.json"
+        original.write_text("original", "utf-8")
+        calls = 0
+
+        def fail_install(source, destination):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise OSError("install failed")
+            return source.rename(destination)
+
+        with self.assertRaisesRegex(DataExportError, "imported safely"):
+            import_application_data(
+                self.destination,
+                current_root=active,
+                rename=fail_install,
+            )
+
+        self.assertEqual(original.read_text("utf-8"), "original")
 
 
 if __name__ == "__main__":

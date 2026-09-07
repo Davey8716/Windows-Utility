@@ -22,6 +22,7 @@ TOOLTIP_TEXT = {
     "hover_controls_dwell": "Chooses how long the pointer must remain over a supported window control before it activates.",
     "hover_controls_calibrate": "Captures and adjusts learned button positions for applications with custom title bars.",
     "hover_controls_export": "Exports Hover Window Controls settings and learned profiles to the Hover Window Controls folder inside the master backup path.",
+    "hover_controls_import": "Imports Hover Window Controls settings and learned profiles from a validated backup.",
     "hover_controls_clear": "Permanently removes learned caption images and manual calibration data without changing preferences.",
     "idle_plugged_reminder": "Controls warnings when you lock, log out, restart, shut down, or use this app's power actions with an external drive still connected.",
     "plug_unplug_notify": "Controls notifications for drive plug and unplug events.",

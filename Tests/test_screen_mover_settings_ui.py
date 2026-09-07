@@ -389,6 +389,7 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         assert not hasattr(hover_page, "caption_controls_button")
         assert hover_page.dwell_combo.currentData() == 750
         assert hover_page.calibrate_button.text() == "Calibrate Application…"
+        assert hover_page.import_button.text() == "Import Hover Data…"
         assert not hasattr(hover_page, "taskbar_status")
         assert not hover_page.taskbar_restore_button.isEnabled()
     finally:

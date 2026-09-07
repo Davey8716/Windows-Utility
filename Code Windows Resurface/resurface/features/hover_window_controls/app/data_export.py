@@ -11,7 +11,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from resurface.features.hover_window_controls.app.identity import DISPLAY_NAME
+from resurface.features.hover_window_controls.app.identity import (
+    DISPLAY_NAME,
+    LEGACY_DATA_DIRECTORY,
+)
 
 EXPORT_SCHEMA_VERSION = 2
 EXPORT_MANIFEST_NAME = "export_manifest.json"
@@ -25,6 +28,12 @@ class DataExportError(RuntimeError):
 class DataExportResult:
     directory: Path
     included_roots: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DataImportResult:
+    source_directory: Path
+    settings: dict
 
 
 def _is_within(path: Path, directory: Path) -> bool:
@@ -208,6 +217,120 @@ def _copy_current_contents(source: Path, staging: Path) -> list[str]:
             ) from error
         names.append(entry.name)
     return names
+
+
+def validate_application_data_export(source_directory: Path) -> dict:
+    """Validate a direct-layout export and return its hover settings."""
+    if source_directory.is_symlink():
+        raise DataExportError("The selected hover-data backup cannot be a symbolic link.")
+    source_directory = source_directory.resolve()
+    if not source_directory.is_dir():
+        raise DataExportError("The selected hover-data backup is not a usable folder.")
+    manifest = _read_direct_manifest(source_directory)
+    if manifest is None:
+        raise DataExportError("The selected folder is not a Hover Window Controls backup.")
+    managed = list(manifest["managed_entries"])
+    _managed_fingerprint(source_directory, managed)
+    if "settings.json" not in managed:
+        raise DataExportError("The hover-data backup does not contain settings.json.")
+    try:
+        settings = json.loads(
+            (source_directory / "settings.json").read_text(encoding="utf-8")
+        )
+        hover = settings["hover"]
+    except (OSError, KeyError, TypeError, ValueError) as error:
+        raise DataExportError("The hover-data backup settings are invalid.") from error
+    if (
+        not isinstance(settings, dict)
+        or settings.get("schema_version") != 1
+        or not isinstance(hover, dict)
+        or type(hover.get("enabled")) is not bool
+        or type(hover.get("taskbar_restore_enabled")) is not bool
+        or type(hover.get("dwell_ms")) is not int
+    ):
+        raise DataExportError("The hover-data backup settings are invalid.")
+    return settings
+
+
+def import_application_data(
+    source_directory: Path,
+    *,
+    current_root: Path,
+    rename: Callable[[Path, Path], Path] = Path.rename,
+) -> DataImportResult:
+    """Replace current hover data with a validated direct-layout export."""
+    source_directory = source_directory.resolve()
+    if current_root.is_symlink():
+        raise DataExportError(
+            "The active Hover Window Controls data folder cannot be a "
+            "symbolic link."
+        )
+    current_root = current_root.resolve()
+    if (
+        source_directory == current_root
+        or _is_within(source_directory, current_root)
+        or _is_within(current_root, source_directory)
+    ):
+        raise DataExportError(
+            "Choose a hover-data backup outside the active application-data folder."
+        )
+    settings = validate_application_data_export(source_directory)
+    manifest = _read_direct_manifest(source_directory)
+    managed = list(manifest["managed_entries"])
+    staging = current_root.parent / (
+        f".{current_root.name}.import.tmp-{uuid.uuid4().hex}"
+    )
+    rollback = current_root.parent / (
+        f".{current_root.name}.import.rollback-{uuid.uuid4().hex}"
+    )
+    moved_current = False
+    try:
+        staging.mkdir(parents=True)
+        for name in managed:
+            if name == LEGACY_DATA_DIRECTORY:
+                continue
+            source = source_directory / name
+            target = staging / name
+            if source.is_dir():
+                _copy_tree(source, target)
+            elif source.is_file() and not source.is_symlink():
+                shutil.copy2(source, target)
+            else:
+                raise DataExportError(
+                    f"Unsupported hover-data backup entry: {name}"
+                )
+        legacy_cache = (
+            source_directory / LEGACY_DATA_DIRECTORY / "vision-cache"
+        )
+        if legacy_cache.is_dir():
+            target_cache = staging / "vision-cache"
+            target_cache.mkdir(exist_ok=True)
+            for profile in sorted(legacy_cache.iterdir(), key=lambda item: item.name):
+                target = target_cache / profile.name
+                if target.exists():
+                    continue
+                if profile.is_dir() and not profile.is_symlink():
+                    _copy_tree(profile, target)
+        if current_root.exists():
+            rename(current_root, rollback)
+            moved_current = True
+        rename(staging, current_root)
+        if moved_current:
+            shutil.rmtree(rollback, ignore_errors=True)
+    except DataExportError:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    except OSError as error:
+        if moved_current and not current_root.exists() and rollback.exists():
+            try:
+                rollback.rename(current_root)
+            except OSError:
+                pass
+        shutil.rmtree(staging, ignore_errors=True)
+        raise DataExportError(
+            "The hover-data backup could not be imported safely."
+        ) from error
+    return DataImportResult(source_directory, settings)
 
 
 def export_application_data(

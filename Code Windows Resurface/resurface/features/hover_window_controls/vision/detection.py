@@ -26,8 +26,10 @@ from resurface.features.hover_window_controls.app.identity import (
 )
 from resurface.features.hover_window_controls.app.data_export import (
     DataExportError,
+    DataImportResult,
     DataExportResult,
     export_application_data,
+    import_application_data,
 )
 from resurface.features.hover_window_controls.core.hover_controller import CaptionAction
 
@@ -1682,6 +1684,13 @@ class VisionCache:
                 ),
             )
 
+    def import_all_data(self, source_directory: Path) -> DataImportResult:
+        with self._io_lock:
+            return import_application_data(
+                source_directory,
+                current_root=self.base_dir.parent,
+            )
+
 
 class CaptionVisionDetector:
     """Captures on the Qt thread and performs CV/cache I/O off-thread."""
@@ -2295,6 +2304,34 @@ class CaptionVisionDetector:
             time.sleep(0.01)
         try:
             return self.cache.export_all_data(destination_parent)
+        finally:
+            with self._lock:
+                self._busy = False
+
+    def import_all_data(
+        self,
+        source_directory: Path,
+        *,
+        idle_timeout_s: float = 5.0,
+    ) -> DataImportResult:
+        deadline = time.monotonic() + idle_timeout_s
+        while True:
+            with self._lock:
+                if not self._busy:
+                    self._busy = True
+                    break
+            if time.monotonic() >= deadline:
+                raise DataExportError(
+                    "Caption data is still being updated. Try importing "
+                    "again in a moment."
+                )
+            time.sleep(0.01)
+        try:
+            result = self.cache.import_all_data(source_directory)
+            self._profiles.clear()
+            self._observed_assets.clear()
+            self._pending_observations.clear()
+            return result
         finally:
             with self._lock:
                 self._busy = False

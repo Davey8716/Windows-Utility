@@ -36,6 +36,7 @@ class FakeWindowApi:
     def __init__(self, *args, **kwargs):
         self.cleared = False
         self.exported_to = None
+        self.imported_from = None
 
     def clear_vision_cache(self):
         self.cleared = True
@@ -43,6 +44,20 @@ class FakeWindowApi:
     def export_all_data(self, destination):
         self.exported_to = destination
         return SimpleNamespace(directory=destination / "Hover Export")
+
+    def import_all_data(self, source):
+        self.imported_from = source
+        return SimpleNamespace(
+            source_directory=source,
+            settings={
+                "schema_version": 1,
+                "hover": {
+                    "enabled": False,
+                    "taskbar_restore_enabled": False,
+                    "dwell_ms": 1250,
+                },
+            },
+        )
 
 
 def _service(monkeypatch, tmp_path, state):
@@ -179,6 +194,32 @@ def test_export_writes_integrated_settings_and_resumes(monkeypatch, tmp_path):
             "dwell_ms": 1000,
         },
     }
+
+
+def test_import_applies_settings_persists_and_resumes(monkeypatch, tmp_path):
+    state = {
+        "hover_window_controls_enabled": True,
+        "hover_taskbar_restore_enabled": True,
+        "hover_window_controls_dwell_ms": 750,
+    }
+    service, saves = _service(monkeypatch, tmp_path / "active", state)
+    source = tmp_path / "backup"
+    service.start()
+
+    result = service.import_all_data(source)
+
+    assert result.source_directory == source
+    assert service.window_api.imported_from == source
+    assert state["hover_window_controls_enabled"] is False
+    assert state["hover_taskbar_restore_enabled"] is False
+    assert state["hover_window_controls_dwell_ms"] == 1250
+    assert saves[-1] == state
+    assert service.controller.calls[-4:] == [
+        "suspend",
+        ("dwell", 1250),
+        "resume",
+        ("caption", False),
+    ]
 
 
 def test_service_runs_taskbar_restoration_independently(monkeypatch, tmp_path):

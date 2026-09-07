@@ -14,7 +14,10 @@ from resurface.features.hover_window_controls.platform.accessibility import (
     AccessibleCaptionTarget,
     CaptionAccessibilityDetector,
 )
-from resurface.features.hover_window_controls.app.data_export import DataExportResult
+from resurface.features.hover_window_controls.app.data_export import (
+    DataExportResult,
+    DataImportResult,
+)
 from resurface.features.hover_window_controls.app.identity import DISPLAY_NAME
 from resurface.features.hover_window_controls.core.hover_controller import (
     CaptionAction,
@@ -1207,6 +1210,9 @@ class Win32WindowApi:
         destination_parent: Path,
     ) -> DataExportResult | None:
         return self._vision.export_all_data(destination_parent)
+
+    def import_all_data(self, source_directory: Path) -> DataImportResult:
+        return self._vision.import_all_data(source_directory)
 
     def _window_bounds(
         self, hwnd: wintypes.HWND

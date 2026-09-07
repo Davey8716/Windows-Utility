@@ -3,10 +3,10 @@ from types import SimpleNamespace
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette
-from PySide6.QtWidgets import QApplication, QLabel, QMessageBox
+from PySide6.QtWidgets import QApplication, QDialog, QLabel, QMessageBox
 
 from resurface.core.app_paths import MasterBackupPathsMixin
-from resurface.ui import styles
+from resurface.ui import application_pages, styles
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.application_pages import ApplicationPageComposer
 
@@ -222,6 +222,111 @@ def test_unchanged_hover_data_does_not_show_exported_message(tmp_path):
     composer_for(app)._export_hover_controls()
 
     assert app.hover_window_controls.destinations == [destination]
+    assert app.timed_calls == []
+
+
+def test_hover_import_selects_validates_confirms_and_imports(
+    monkeypatch,
+    tmp_path,
+):
+    destination = tmp_path / "Master Backup" / "Hover Window Controls"
+    manifest = destination / "export_manifest.json"
+    validated = []
+    imported = []
+
+    class FakeFileDialog:
+        class Option:
+            DontUseNativeDialog = object()
+
+        class FileMode:
+            ExistingFile = object()
+
+        class AcceptMode:
+            AcceptOpen = object()
+
+        def __init__(self, *_args):
+            pass
+
+        def setOption(self, *_args):
+            pass
+
+        def setFileMode(self, *_args):
+            pass
+
+        def setAcceptMode(self, *_args):
+            pass
+
+        def setWindowFlag(self, *_args):
+            pass
+
+        def setStyleSheet(self, *_args):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+        def selectedFiles(self):
+            return [str(manifest)]
+
+    monkeypatch.setattr(application_pages, "QFileDialog", FakeFileDialog)
+    app = FakeApp(destination, QMessageBox.StandardButton.Yes)
+    app.hover_window_controls.validate_import = validated.append
+
+    def import_data(source):
+        imported.append(source)
+        return SimpleNamespace(source_directory=source)
+
+    app.hover_window_controls.import_all_data = import_data
+
+    composer_for(app)._import_hover_controls()
+
+    assert validated == [destination]
+    assert imported == [destination]
+    assert app.modal_calls[0][0][1] == "Import Hover Data"
+    assert app.timed_calls[0][0][1] == "Hover data imported"
+    assert str(destination) in app.timed_calls[0][0][2]
+
+
+def test_hover_import_cancel_does_not_replace_data(monkeypatch, tmp_path):
+    destination = tmp_path / "Hover Window Controls"
+
+    class CancelledFileDialog:
+        class Option:
+            DontUseNativeDialog = object()
+
+        class FileMode:
+            ExistingFile = object()
+
+        class AcceptMode:
+            AcceptOpen = object()
+
+        def __init__(self, *_args):
+            pass
+
+        def setOption(self, *_args):
+            pass
+
+        def setFileMode(self, *_args):
+            pass
+
+        def setAcceptMode(self, *_args):
+            pass
+
+        def setWindowFlag(self, *_args):
+            pass
+
+        def setStyleSheet(self, *_args):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(application_pages, "QFileDialog", CancelledFileDialog)
+    app = FakeApp(destination, QMessageBox.StandardButton.Yes)
+
+    composer_for(app)._import_hover_controls()
+
+    assert app.modal_calls == []
     assert app.timed_calls == []
 
 
