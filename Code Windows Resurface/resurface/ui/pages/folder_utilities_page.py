@@ -20,6 +20,7 @@ class FolderUtilitiesPage(PageControls):
         creator.clicked.connect(self.folder_creator_requested.emit)
         self.register_tooltip(creator, tooltip_text("folder_creator_launcher"))
         create = self.style_action_button(QPushButton("Folder To Desktop"))
+        self._create_folder = create
         create.setProperty("lightModePlaceholderButton", True)
         self.register_tooltip(create, tooltip_text("folder_to_desktop"))
         self._names = QComboBox()
@@ -50,9 +51,7 @@ class FolderUtilitiesPage(PageControls):
         secondary_layout.addWidget(self._delete_name, 1, 0)
         self.content_layout.addWidget(secondary, 0, Qt.AlignmentFlag.AlignHCenter)
         self.refresh_saved_names()
-        self._input.textChanged.connect(
-            lambda text: self._set_name_action_state(create, text)
-        )
+        self._input.textChanged.connect(self._set_name_action_state)
         create.clicked.connect(self._request_create)
         self._save_name.clicked.connect(self._request_save)
         self._delete_name.clicked.connect(self._request_delete)
@@ -65,6 +64,7 @@ class FolderUtilitiesPage(PageControls):
         self._names.blockSignals(True); self._names.clear(); self._names.addItems(names)
         self._names.setCurrentIndex(-1); self._names.setEditText(text); self._names.blockSignals(False)
         self._delete_name.setEnabled(bool(names))
+        self._set_name_action_state(text)
 
     def focus_name_input(self) -> None:
         self._input.setFocus(Qt.FocusReason.ShortcutFocusReason)
@@ -89,13 +89,22 @@ class FolderUtilitiesPage(PageControls):
 
     def _request_save(self) -> None:
         name = self._input.text().strip()
-        if name:
+        if name and not self._name_is_saved(name):
             self.save_name_requested.emit(name)
 
-    def _set_name_action_state(self, create: QPushButton, text: str) -> None:
-        enabled = bool(text.strip())
-        create.setEnabled(enabled)
-        self._save_name.setEnabled(enabled)
+    def _name_is_saved(self, name: str) -> bool:
+        key = name.strip().casefold()
+        return bool(key) and any(
+            self._names.itemText(index).strip().casefold() == key
+            for index in range(self._names.count())
+        )
+
+    def _set_name_action_state(self, text: str) -> None:
+        clean_name = text.strip()
+        self._create_folder.setEnabled(bool(clean_name))
+        self._save_name.setEnabled(
+            bool(clean_name) and not self._name_is_saved(clean_name)
+        )
 
     def _request_create(self) -> None:
         name = self._input.text().strip()

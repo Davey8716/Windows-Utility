@@ -57,15 +57,19 @@ def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
         assert not page._save_name.isEnabled()
         page.refresh_saved_names(["Reports"])
         assert page._delete_name.isEnabled()
-        page._names.setEditText(" Reports ")
+        page._names.setEditText("New Folder")
         assert page._save_name.isEnabled()
         page._save_name.click()
+        assert save_requests == ["New Folder"]
         page._names.setEditText(" Reports ")
+        assert not page._save_name.isEnabled()
+        assert page._create_folder.isEnabled()
+        page._request_save()
         page._delete_name.click()
         page._request_create()
         save_position = page._save_name.mapTo(page, page._save_name.rect().topLeft())
         delete_position = page._delete_name.mapTo(page, page._delete_name.rect().topLeft())
-        assert save_requests == ["Reports"]
+        assert save_requests == ["New Folder"]
         assert delete_requests == ["Reports"]
         assert create_requests == ["Reports"]
         assert delete_position.x() == save_position.x()
@@ -74,10 +78,15 @@ def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
         assert not page._save_name.isCheckable()
         page.folder_name_saved(["Reports", "Invoices"], "Reports")
         assert page._input.text() == "Reports"
+        assert not page._save_name.isEnabled()
         assert [page._names.itemText(index) for index in range(page._names.count())] == [
             "Reports",
             "Invoices"
         ]
+        page.refresh_saved_names(["poo"])
+        page._names.setEditText(" POO ")
+        assert not page._save_name.isEnabled()
+        assert page._create_folder.isEnabled()
         page.folder_name_deleted(["Invoices"])
         assert page._input.text() == ""
         page.folder_name_deleted([])
