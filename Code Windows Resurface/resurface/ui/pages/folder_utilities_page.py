@@ -8,7 +8,9 @@ from resurface.ui.tooltips import tooltip_text
 
 
 class FolderUtilitiesPage(PageControls):
-    create_folder_requested = Signal(str, bool)
+    create_folder_requested = Signal(str)
+    save_name_requested = Signal(str)
+    delete_name_requested = Signal(str)
     folder_creator_requested = Signal()
 
     def __init__(self, register_tooltip, parent=None):
@@ -30,11 +32,11 @@ class FolderUtilitiesPage(PageControls):
         self._input = self._names.lineEdit()
         self._input.setPlaceholderText("Folder name")
         self.register_tooltip(self._input, tooltip_text("folder_name_input"))
-        self._save_name = self.make_toggle_button("Save Name")
-        self._delete_name = self.make_toggle_button("Delete Name")
+        self._save_name = self.style_action_button(QPushButton("Save Name"))
+        self._delete_name = self.style_action_button(QPushButton("Delete Name"))
         self.register_tooltip(self._delete_name, tooltip_text("delete_name"))
 
-        self.register_tooltip(self._save_name, "Save the next successfully created folder name for future use.")
+        self.register_tooltip(self._save_name, "Save this folder name for future use.")
         row = QWidget(); row.setProperty("centeredControlGrid", True)
         row.setFixedWidth(self.CONTROL_ROW_WIDTH)
         row.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -48,15 +50,21 @@ class FolderUtilitiesPage(PageControls):
         secondary_layout.addWidget(self._delete_name, 1, 0)
         self.content_layout.addWidget(secondary, 0, Qt.AlignmentFlag.AlignHCenter)
         self.refresh_saved_names()
-        self._input.textChanged.connect(lambda text: create.setEnabled(bool(text.strip())))
+        self._input.textChanged.connect(
+            lambda text: self._set_name_action_state(create, text)
+        )
         create.clicked.connect(self._request_create)
+        self._save_name.clicked.connect(self._request_save)
+        self._delete_name.clicked.connect(self._request_delete)
         create.setEnabled(False)
+        self._save_name.setEnabled(False)
 
     def refresh_saved_names(self, names: list[str] | None = None) -> None:
         names = load_saved_folder_names() if names is None else names
         text = self._input.text()
         self._names.blockSignals(True); self._names.clear(); self._names.addItems(names)
         self._names.setCurrentIndex(-1); self._names.setEditText(text); self._names.blockSignals(False)
+        self._delete_name.setEnabled(bool(names))
 
     def focus_name_input(self) -> None:
         self._input.setFocus(Qt.FocusReason.ShortcutFocusReason)
@@ -64,13 +72,32 @@ class FolderUtilitiesPage(PageControls):
     def folder_created(self, saved_names: list[str] | None = None) -> None:
         if saved_names is not None:
             self.refresh_saved_names(saved_names)
-        self._save_name.setChecked(False)
         self._input.clear()
 
-    # def _delete_requested(self) -> None:
-    #     for name in
+    def folder_name_saved(self, saved_names: list[str], saved_name: str) -> None:
+        self.refresh_saved_names(saved_names)
+        self._names.setCurrentText(saved_name)
+
+    def folder_name_deleted(self, saved_names: list[str]) -> None:
+        self._input.clear()
+        self.refresh_saved_names(saved_names)
+
+    def _request_delete(self) -> None:
+        name = self._input.text().strip()
+        if name:
+            self.delete_name_requested.emit(name)
+
+    def _request_save(self) -> None:
+        name = self._input.text().strip()
+        if name:
+            self.save_name_requested.emit(name)
+
+    def _set_name_action_state(self, create: QPushButton, text: str) -> None:
+        enabled = bool(text.strip())
+        create.setEnabled(enabled)
+        self._save_name.setEnabled(enabled)
 
     def _request_create(self) -> None:
         name = self._input.text().strip()
         if name:
-            self.create_folder_requested.emit(name, self._save_name.isChecked())
+            self.create_folder_requested.emit(name)

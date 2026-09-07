@@ -39,6 +39,53 @@ def test_split_pages_are_independent_widgets():
             page.deleteLater()
 
 
+def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
+    app = _app()
+    page = FolderUtilitiesPage(lambda _widget, _text: None)
+    delete_requests = []
+    save_requests = []
+    create_requests = []
+    page.delete_name_requested.connect(delete_requests.append)
+    page.save_name_requested.connect(save_requests.append)
+    page.create_folder_requested.connect(create_requests.append)
+    try:
+        page.show()
+        app.processEvents()
+        page.refresh_saved_names([])
+        assert not page._delete_name.isEnabled()
+        page._names.setEditText("   ")
+        assert not page._save_name.isEnabled()
+        page.refresh_saved_names(["Reports"])
+        assert page._delete_name.isEnabled()
+        page._names.setEditText(" Reports ")
+        assert page._save_name.isEnabled()
+        page._save_name.click()
+        page._names.setEditText(" Reports ")
+        page._delete_name.click()
+        page._request_create()
+        save_position = page._save_name.mapTo(page, page._save_name.rect().topLeft())
+        delete_position = page._delete_name.mapTo(page, page._delete_name.rect().topLeft())
+        assert save_requests == ["Reports"]
+        assert delete_requests == ["Reports"]
+        assert create_requests == ["Reports"]
+        assert delete_position.x() == save_position.x()
+        assert delete_position.y() > save_position.y()
+        assert not page._delete_name.isCheckable()
+        assert not page._save_name.isCheckable()
+        page.folder_name_saved(["Reports", "Invoices"], "Reports")
+        assert page._input.text() == "Reports"
+        assert [page._names.itemText(index) for index in range(page._names.count())] == [
+            "Reports",
+            "Invoices"
+        ]
+        page.folder_name_deleted(["Invoices"])
+        assert page._input.text() == ""
+        page.folder_name_deleted([])
+        assert not page._delete_name.isEnabled()
+    finally:
+        page.deleteLater()
+
+
 def test_screen_mover_reset_uses_page_settings_signal_and_api():
     _app()
     page = ScreenMoverSettingsPage(

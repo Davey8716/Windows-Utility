@@ -4,7 +4,11 @@ from pathlib import Path
 
 from PySide6.QtCore import QTimer
 
-from resurface.core.saved_folder_names import add_saved_folder_name
+from resurface.core.saved_folder_names import (
+    add_saved_folder_name,
+    load_saved_folder_names,
+    remove_saved_folder_name,
+)
 from resurface.features.desktop.folder_service import FolderCreationStatus
 from resurface.features.folder_creator.launcher import (
     DEFAULT_WINDOW_TITLES,
@@ -63,6 +67,46 @@ class FolderActionsController:
                 f"Created desktop folder:\n{result.path}", show_close_now_button=True,
             )
         self.organising_actions.run_with_optional_minimize(action)
+
+    def save_folder_name(self, name: str) -> None:
+        clean_name = name.strip()
+        if not clean_name:
+            return
+        saved_names = add_saved_folder_name(clean_name)
+        page = getattr(
+            getattr(self.app, "pages", None), "folder_utilities_page", None
+        )
+        if page is not None:
+            page.folder_name_saved(saved_names, clean_name)
+
+    def delete_saved_folder_name(self, name: str) -> None:
+        clean_name = name.strip()
+        saved_names = load_saved_folder_names()
+        matching_name = next(
+            (value for value in saved_names if value.casefold() == clean_name.casefold()),
+            None,
+        )
+        if matching_name is None:
+            return
+
+        answer = self.app._show_modal_message(
+            self.app._message_box_icon("Question"),
+            "Delete Saved Folder Name",
+            f'Delete the saved folder name "{matching_name}"?',
+            self.app._message_box_button("Yes") | self.app._message_box_button("No"),
+            self.app._message_box_button("No"),
+        )
+        if answer != self.app._message_box_button("Yes"):
+            return
+
+        updated_names = remove_saved_folder_name(matching_name)
+        if any(value.casefold() == matching_name.casefold() for value in updated_names):
+            return
+        page = getattr(
+            getattr(self.app, "pages", None), "folder_utilities_page", None
+        )
+        if page is not None:
+            page.folder_name_deleted(updated_names)
 
     def open_folder_creator(self) -> None:
         root = self.launcher.resolve_project_root()

@@ -87,3 +87,17 @@ def add_saved_folder_name(name: str, path: Path | None = None) -> list[str]:
     if save_saved_folder_names(updated, path):
         return updated
     return names
+
+
+def remove_saved_folder_name(name: str, path: Path | None = None) -> list[str]:
+    clean_name = name.strip()
+    names = load_saved_folder_names(path)
+    if not clean_name:
+        return names
+    key = clean_name.casefold()
+    updated = [value for value in names if value.casefold() != key]
+    if updated == names:
+        return names
+    if save_saved_folder_names(updated, path):
+        return updated
+    return names
