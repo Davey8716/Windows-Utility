@@ -1208,8 +1208,24 @@ class Win32WindowApi:
     def export_all_data(
         self,
         destination_parent: Path,
+        settings: dict | None = None,
     ) -> DataExportResult | None:
-        return self._vision.export_all_data(destination_parent)
+        if settings is None:
+            return self._vision.export_all_data(destination_parent)
+        return self._vision.export_all_data(
+            destination_parent,
+            settings=settings,
+        )
+
+    def has_export_changes(
+        self,
+        destination_directory: Path,
+        settings: dict,
+    ) -> bool:
+        return self._vision.has_export_changes(
+            destination_directory,
+            settings,
+        )
 
     def import_all_data(self, source_directory: Path) -> DataImportResult:
         return self._vision.import_all_data(source_directory)

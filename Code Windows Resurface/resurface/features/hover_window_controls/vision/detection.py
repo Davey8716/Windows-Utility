@@ -29,6 +29,7 @@ from resurface.features.hover_window_controls.app.data_export import (
     DataImportResult,
     DataExportResult,
     export_application_data,
+    has_application_data_export_changes,
     import_application_data,
 )
 from resurface.features.hover_window_controls.core.hover_controller import CaptionAction
@@ -1672,6 +1673,7 @@ class VisionCache:
     def export_all_data(
         self,
         destination_parent: Path,
+        settings: dict | None = None,
     ) -> DataExportResult | None:
         with self._io_lock:
             return export_application_data(
@@ -1682,6 +1684,24 @@ class VisionCache:
                     if self.legacy_base_dir is not None
                     else None
                 ),
+                settings=settings,
+            )
+
+    def has_export_changes(
+        self,
+        destination_directory: Path,
+        settings: dict,
+    ) -> bool:
+        with self._io_lock:
+            return has_application_data_export_changes(
+                destination_directory,
+                current_root=self.base_dir.parent,
+                legacy_root=(
+                    self.legacy_base_dir.parent
+                    if self.legacy_base_dir is not None
+                    else None
+                ),
+                settings=settings,
             )
 
     def import_all_data(self, source_directory: Path) -> DataImportResult:
@@ -2288,6 +2308,7 @@ class CaptionVisionDetector:
         self,
         destination_parent: Path,
         *,
+        settings: dict | None = None,
         idle_timeout_s: float = 5.0,
     ) -> DataExportResult | None:
         deadline = time.monotonic() + idle_timeout_s
@@ -2303,10 +2324,19 @@ class CaptionVisionDetector:
                 )
             time.sleep(0.01)
         try:
-            return self.cache.export_all_data(destination_parent)
+            if settings is None:
+                return self.cache.export_all_data(destination_parent)
+            return self.cache.export_all_data(destination_parent, settings=settings)
         finally:
             with self._lock:
                 self._busy = False
+
+    def has_export_changes(
+        self,
+        destination_directory: Path,
+        settings: dict,
+    ) -> bool:
+        return self.cache.has_export_changes(destination_directory, settings)
 
     def import_all_data(
         self,

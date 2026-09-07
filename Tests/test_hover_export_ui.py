@@ -9,6 +9,7 @@ from resurface.core.app_paths import MasterBackupPathsMixin
 from resurface.ui import application_pages, styles
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.application_pages import ApplicationPageComposer
+from resurface.ui.pages.hover_window_controls_page import HoverWindowControlsPage
 
 
 class PathApp(MasterBackupPathsMixin):
@@ -21,6 +22,10 @@ class FakeHoverService:
         self.error = error
         self.result = result
         self.destinations = []
+        self.has_changes = True
+
+    def has_export_changes(self, _destination):
+        return self.has_changes
 
     def export_all_data(self, destination):
         self.destinations.append(destination)
@@ -75,6 +80,49 @@ class FakeApp:
 
 def composer_for(app):
     return ApplicationPageComposer(app, shell=None)
+
+
+def test_hover_export_button_reflects_change_callback():
+    qt_app = QApplication.instance() or QApplication([])
+    changes = [True]
+    page = HoverWindowControlsPage(
+        {},
+        lambda *_args: None,
+        has_export_changes=lambda: changes[-1],
+    )
+    try:
+        page.refresh_export_button()
+        assert page.export_button.isEnabled()
+
+        changes.append(False)
+        page.refresh_export_button()
+        assert not page.export_button.isEnabled()
+
+        changes.append(True)
+        page.sync_settings(True, True, 750)
+        assert page.export_button.isEnabled()
+
+        def fail_comparison():
+            raise OSError("backup unavailable")
+
+        page._has_export_changes = fail_comparison
+        page.refresh_export_button()
+        assert page.export_button.isEnabled()
+    finally:
+        page.close()
+        page.deleteLater()
+        qt_app.processEvents()
+
+
+def test_unchanged_hover_data_skips_export_confirmation(tmp_path):
+    destination = tmp_path / "Hover Window Controls"
+    app = FakeApp(destination, QMessageBox.StandardButton.Save)
+    app.hover_window_controls.has_changes = False
+
+    composer_for(app)._export_hover_controls()
+
+    assert app.modal_calls == []
+    assert app.hover_window_controls.destinations == []
 
 
 def test_hover_export_path_uses_dedicated_master_backup_subfolder(tmp_path):

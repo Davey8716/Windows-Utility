@@ -91,11 +91,20 @@ def _copy_tree(source: Path, destination: Path) -> None:
         ) from error
 
 
-def _managed_fingerprint(directory: Path, names: list[str]) -> str:
-    """Return a stable fingerprint for managed top-level entries."""
+def _entries_fingerprint(
+    entries_by_name: dict[str, Path | bytes],
+) -> str:
+    """Return a stable fingerprint for logical top-level entries."""
     digest = hashlib.sha256()
-    for name in sorted(names):
-        root = directory / name
+    for name in sorted(entries_by_name):
+        root_or_bytes = entries_by_name[name]
+        digest.update(b"entry\0" + name.encode("utf-8") + b"\0")
+        if isinstance(root_or_bytes, bytes):
+            digest.update(b"file\0" + name.encode("utf-8") + b"\0")
+            digest.update(root_or_bytes)
+            digest.update(b"\0")
+            continue
+        root = root_or_bytes
         if root.is_symlink():
             raise DataExportError(
                 f"Application-data source cannot be a symbolic link: {root.name}"
@@ -104,7 +113,6 @@ def _managed_fingerprint(directory: Path, names: list[str]) -> str:
             raise DataExportError(
                 f"Application-data source is unavailable: {root.name}"
             )
-        digest.update(b"entry\0" + name.encode("utf-8") + b"\0")
         if root.is_file():
             entries = [root]
         elif root.is_dir():
@@ -122,11 +130,20 @@ def _managed_fingerprint(directory: Path, names: list[str]) -> str:
                 f"Unsupported application-data entry: {root.name}"
             )
         for entry in entries:
+            relative_path = entry.relative_to(root)
+            if entry != root and any(
+                _is_atomic_temporary(Path(part))
+                for part in relative_path.parts
+            ):
+                continue
             if entry.is_symlink():
                 raise DataExportError(
                     f"Cannot export symbolic link: {entry.name}"
                 )
-            relative = entry.relative_to(directory).as_posix().encode("utf-8")
+            relative_suffix = (
+                "" if entry == root else f"/{relative_path.as_posix()}"
+            )
+            relative = f"{name}{relative_suffix}".encode("utf-8")
             if entry.is_dir():
                 digest.update(b"dir\0" + relative + b"\0")
                 continue
@@ -145,6 +162,61 @@ def _managed_fingerprint(directory: Path, names: list[str]) -> str:
                 ) from error
             digest.update(b"\0")
     return digest.hexdigest()
+
+
+def _managed_fingerprint(directory: Path, names: list[str]) -> str:
+    return _entries_fingerprint(
+        {name: directory / name for name in names}
+    )
+
+
+def _settings_bytes(settings: dict) -> bytes:
+    return json.dumps(settings, indent=2, sort_keys=True).encode("utf-8")
+
+
+def _current_export_entries(
+    current_root: Path,
+    legacy_root: Optional[Path],
+    settings: dict,
+) -> dict[str, Path | bytes]:
+    entries: dict[str, Path | bytes] = {}
+    if current_root.is_symlink():
+        raise DataExportError(
+            "Application-data source cannot be a symbolic link: "
+            f"{current_root.name}"
+        )
+    if current_root.exists():
+        if not current_root.is_dir():
+            raise DataExportError(
+                f"Application-data source is unavailable: {current_root.name}"
+            )
+        try:
+            children = sorted(
+                current_root.iterdir(), key=lambda item: item.name
+            )
+        except OSError as error:
+            raise DataExportError(
+                f"Cannot read application-data folder: {current_root.name}"
+            ) from error
+    else:
+        children = []
+    for entry in children:
+        if _is_atomic_temporary(entry) or entry.name == "settings.json":
+            continue
+        if entry.name == EXPORT_MANIFEST_NAME:
+            raise DataExportError(
+                "Application data contains the reserved file "
+                f"{EXPORT_MANIFEST_NAME}."
+            )
+        entries[entry.name] = entry
+    entries["settings.json"] = _settings_bytes(settings)
+    if legacy_root is not None and legacy_root.exists():
+        if legacy_root.name in entries:
+            raise DataExportError(
+                f"Application-data entries conflict at: {legacy_root.name}"
+            )
+        entries[legacy_root.name] = legacy_root
+    return entries
 
 
 def _read_direct_manifest(directory: Path) -> dict | None:
@@ -181,7 +253,47 @@ def _read_direct_manifest(directory: Path) -> dict | None:
     return manifest
 
 
-def _copy_current_contents(source: Path, staging: Path) -> list[str]:
+def has_application_data_export_changes(
+    destination_directory: Path,
+    *,
+    current_root: Path,
+    settings: dict,
+    legacy_root: Optional[Path] = None,
+) -> bool:
+    """Return whether live hover data differs from the direct export."""
+    if destination_directory.is_symlink():
+        raise DataExportError(
+            "The hover-data export destination cannot be a symbolic link."
+        )
+    if not destination_directory.exists():
+        return True
+    destination_directory = destination_directory.resolve()
+    if not destination_directory.is_dir():
+        raise DataExportError(
+            "The hover-data export destination is not a usable folder."
+        )
+    manifest = _read_direct_manifest(destination_directory)
+    if manifest is None:
+        return True
+    current_entries = _current_export_entries(
+        current_root,
+        legacy_root,
+        settings,
+    )
+    managed = list(manifest["managed_entries"])
+    if managed != sorted(current_entries):
+        return True
+    return _entries_fingerprint(current_entries) != _managed_fingerprint(
+        destination_directory,
+        managed,
+    )
+
+
+def _copy_current_contents(
+    source: Path,
+    staging: Path,
+    settings: dict | None = None,
+) -> list[str]:
     names = []
     try:
         entries = sorted(source.iterdir(), key=lambda item: item.name)
@@ -191,6 +303,8 @@ def _copy_current_contents(source: Path, staging: Path) -> list[str]:
         ) from error
     for entry in entries:
         if _is_atomic_temporary(entry):
+            continue
+        if settings is not None and entry.name == "settings.json":
             continue
         if entry.name == EXPORT_MANIFEST_NAME:
             raise DataExportError(
@@ -216,6 +330,9 @@ def _copy_current_contents(source: Path, staging: Path) -> list[str]:
                 f"Cannot copy application-data entry: {entry.name}"
             ) from error
         names.append(entry.name)
+    if settings is not None:
+        (staging / "settings.json").write_bytes(_settings_bytes(settings))
+        names.append("settings.json")
     return names
 
 
@@ -338,6 +455,7 @@ def export_application_data(
     *,
     current_root: Path,
     legacy_root: Optional[Path] = None,
+    settings: dict | None = None,
     now: Optional[datetime] = None,
     rename: Callable[[Path, Path], Path] = Path.rename,
 ) -> DataExportResult | None:
@@ -374,6 +492,14 @@ def export_application_data(
             )
         roots.append(source)
 
+    if settings is not None and not has_application_data_export_changes(
+        destination_parent,
+        current_root=roots[0],
+        legacy_root=roots[1] if len(roots) > 1 else None,
+        settings=settings,
+    ):
+        return None
+
     timestamp = now or datetime.now(timezone.utc)
     staging = destination_parent / (
         f".{DISPLAY_NAME}.export.tmp-{uuid.uuid4().hex}"
@@ -386,7 +512,7 @@ def export_application_data(
     backed_up: list[str] = []
     try:
         staging.mkdir()
-        managed = _copy_current_contents(roots[0], staging)
+        managed = _copy_current_contents(roots[0], staging, settings)
         if len(roots) > 1:
             legacy_name = roots[1].name
             if legacy_name in managed:

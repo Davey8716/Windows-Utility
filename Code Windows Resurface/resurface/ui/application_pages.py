@@ -253,6 +253,9 @@ class ApplicationPageComposer:
             self.state,
             app.register_tooltip,
             taskbar_restore_available=hover_service.taskbar_restore_available,
+            has_export_changes=lambda: hover_service.has_export_changes(
+                Path(app.get_default_hover_controls_export_dir())
+            ),
             parent=shell.content_parent("hover_window_controls"),
         )
         hover_page.enabled_changed.connect(hover_service.set_enabled)
@@ -295,9 +298,28 @@ class ApplicationPageComposer:
                 "Calibration failed",
                 f"Hover Window Controls calibration could not be opened.\n\n{error}",
             )
+        finally:
+            self._refresh_hover_export_button()
+
+    def _refresh_hover_export_button(self) -> None:
+        page = getattr(
+            getattr(self.app, "pages", None),
+            "hover_window_controls_page",
+            None,
+        )
+        if page is not None:
+            page.refresh_export_button()
 
     def _export_hover_controls(self) -> None:
         destination = Path(self.app.get_default_hover_controls_export_dir())
+        try:
+            if not self.app.hover_window_controls.has_export_changes(
+                destination
+            ):
+                self._refresh_hover_export_button()
+                return
+        except (OSError, RuntimeError, TypeError, ValueError):
+            pass
 
         def open_destination(_link: str) -> None:
             try:
@@ -350,6 +372,7 @@ class ApplicationPageComposer:
                 QMessageBox.StandardButton.Ok,
             )
             return
+        self._refresh_hover_export_button()
         if result is None:
             return
         self.app._show_timed_message(
@@ -423,6 +446,7 @@ class ApplicationPageComposer:
                 QMessageBox.StandardButton.Ok,
             )
             return
+        self._refresh_hover_export_button()
         self.app._show_timed_message(
             QMessageBox.Icon.Information,
             "Hover data imported",
@@ -449,6 +473,8 @@ class ApplicationPageComposer:
                 "Could not clear learned buttons",
                 str(error),
             )
+        finally:
+            self._refresh_hover_export_button()
 
     def _wire_user_interface_page(self, page: UserInterfacePage) -> None:
         app = self.app

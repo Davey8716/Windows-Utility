@@ -1,5 +1,7 @@
 """Settings page for dwell-based window caption controls."""
 
+from typing import Callable
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QComboBox, QPushButton
 
@@ -29,10 +31,12 @@ class HoverWindowControlsPage(PageControls):
         register_tooltip,
         *,
         taskbar_restore_available: bool = True,
+        has_export_changes: Callable[[], bool] | None = None,
         parent=None,
     ) -> None:
         super().__init__("hover_window_controls", register_tooltip, parent)
         self.content_layout.setSpacing(8)
+        self._has_export_changes = has_export_changes
 
         enabled = bool(settings.get("hover_window_controls_enabled", True))
         taskbar_restore_enabled = bool(
@@ -126,6 +130,19 @@ class HoverWindowControlsPage(PageControls):
         self.import_button.clicked.connect(self.import_requested)
         self.clear_button.clicked.connect(self.clear_requested)
 
+    def refresh_export_button(self) -> None:
+        has_changes = True
+        if self._has_export_changes is not None:
+            try:
+                has_changes = bool(self._has_export_changes())
+            except Exception:
+                has_changes = True
+        self.export_button.setEnabled(has_changes)
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self.refresh_export_button()
+
     def _dwell_selected(self) -> None:
         value = self.dwell_combo.currentData()
         if value is not None:
@@ -156,4 +173,5 @@ class HoverWindowControlsPage(PageControls):
             self.dwell_combo.blockSignals(True)
             self.dwell_combo.setCurrentIndex(index)
             self.dwell_combo.blockSignals(False)
+        self.refresh_export_button()
 

@@ -146,6 +146,22 @@ class HoverWindowControlsService(QObject):
     def clear_learned_buttons(self) -> None:
         self.window_api.clear_vision_cache()
 
+    def _data_settings(self) -> dict:
+        return {
+            "schema_version": 1,
+            "hover": {
+                "enabled": self.enabled,
+                "taskbar_restore_enabled": self.taskbar_restore_enabled,
+                "dwell_ms": self.dwell_ms,
+            },
+        }
+
+    def has_export_changes(self, destination_directory: Path) -> bool:
+        return self.window_api.has_export_changes(
+            destination_directory,
+            self._data_settings(),
+        )
+
     def export_all_data(self, destination_parent: Path):
         if self._busy:
             raise RuntimeError("Hover Window Controls is already busy")
@@ -153,19 +169,15 @@ class HoverWindowControlsService(QObject):
         self._suspend_for_operation()
         try:
             self.data_root.mkdir(parents=True, exist_ok=True)
-            settings = {
-                "schema_version": 1,
-                "hover": {
-                    "enabled": self.enabled,
-                    "taskbar_restore_enabled": self.taskbar_restore_enabled,
-                    "dwell_ms": self.dwell_ms,
-                },
-            }
+            settings = self._data_settings()
             (self.data_root / "settings.json").write_text(
                 json.dumps(settings, indent=2, sort_keys=True),
                 encoding="utf-8",
             )
-            return self.window_api.export_all_data(destination_parent)
+            return self.window_api.export_all_data(
+                destination_parent,
+                settings=settings,
+            )
         finally:
             self._finish_operation()
 

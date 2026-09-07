@@ -41,9 +41,13 @@ class FakeWindowApi:
     def clear_vision_cache(self):
         self.cleared = True
 
-    def export_all_data(self, destination):
+    def export_all_data(self, destination, settings=None):
         self.exported_to = destination
+        self.exported_settings = settings
         return SimpleNamespace(directory=destination / "Hover Export")
+
+    def has_export_changes(self, _destination, _settings):
+        return True
 
     def import_all_data(self, source):
         self.imported_from = source

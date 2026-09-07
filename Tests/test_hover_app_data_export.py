@@ -9,6 +9,7 @@ from unittest.mock import patch
 from resurface.features.hover_window_controls.app.data_export import (
     DataExportError,
     export_application_data,
+    has_application_data_export_changes,
     import_application_data,
     validate_application_data_export,
 )
@@ -58,6 +59,54 @@ class ApplicationDataExportTests(unittest.TestCase):
         }
         arguments.update(changes)
         return export_application_data(self.destination, **arguments)
+
+    def live_settings(self, *, enabled=True, dwell_ms=750):
+        return {
+            "schema_version": 1,
+            "hover": {
+                "enabled": enabled,
+                "taskbar_restore_enabled": True,
+                "dwell_ms": dwell_ms,
+            },
+        }
+
+    def has_changes(self, settings):
+        return has_application_data_export_changes(
+            self.destination,
+            current_root=self.current,
+            legacy_root=self.legacy,
+            settings=settings,
+        )
+
+    def test_change_check_tracks_live_settings_and_exported_files(self):
+        settings = self.live_settings()
+        self.assertTrue(self.has_changes(settings))
+
+        self.export(settings=settings)
+
+        self.assertFalse(self.has_changes(settings))
+        self.assertTrue(self.has_changes(self.live_settings(enabled=False)))
+        self.assertFalse(self.has_changes(settings))
+        (self.current / "vision-cache" / "example" / "caption.jpg").write_bytes(
+            b"changed"
+        )
+        self.assertTrue(self.has_changes(settings))
+
+    def test_change_check_ignores_temporary_files(self):
+        settings = self.live_settings()
+        self.export(settings=settings)
+        (self.current / ".settings.json.tmp").write_text("partial", "utf-8")
+
+        self.assertFalse(self.has_changes(settings))
+
+    def test_export_with_live_settings_skips_an_unchanged_backup(self):
+        settings = self.live_settings(dwell_ms=1000)
+        first = self.export(settings=settings)
+
+        second = self.export(settings=settings)
+
+        self.assertEqual(first.directory, self.destination)
+        self.assertIsNone(second)
 
     def test_exports_current_and_legacy_trees_with_manifest(self):
         source_image = (
