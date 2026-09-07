@@ -1,7 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication, QDialog, QLabel, QMessageBox
 
@@ -108,6 +108,32 @@ def test_hover_export_button_reflects_change_callback():
         page._has_export_changes = fail_comparison
         page.refresh_export_button()
         assert page.export_button.isEnabled()
+    finally:
+        page.close()
+        page.deleteLater()
+        qt_app.processEvents()
+
+
+def test_dwell_dropdown_matches_and_aligns_with_hover_toggle():
+    qt_app = QApplication.instance() or QApplication([])
+    page = HoverWindowControlsPage({}, lambda *_args: None)
+    try:
+        page.resize(800, page.sizeHint().height())
+        page.show()
+        qt_app.processEvents()
+
+        assert page.dwell_combo.width() == page.enabled_button.width()
+        assert page.dwell_combo.width() == page.LEFT_CONTROL_COLUMN_WIDTH
+        assert page.dwell_combo.mapTo(page, QPoint()).x() == (
+            page.enabled_button.mapTo(page, QPoint()).x()
+        )
+        assert page.dwell_combo.parentWidget() is page.dwell_row
+        assert page.dwell_row.width() == page.CONTROL_ROW_WIDTH
+
+        page.dwell_combo.setCurrentIndex(page.dwell_combo.findData(1250))
+        assert page.dwell_combo.currentData() == 1250
+        page.sync_settings(True, True, 1750)
+        assert page.dwell_combo.currentData() == 1750
     finally:
         page.close()
         page.deleteLater()

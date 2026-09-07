@@ -3,7 +3,7 @@
 from typing import Callable
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QComboBox, QPushButton
+from PySide6.QtWidgets import QComboBox, QPushButton, QWidget
 
 from resurface.features.hover_window_controls.app.identity import (
     DWELL_STEP_MS,
@@ -71,8 +71,12 @@ class HoverWindowControlsPage(PageControls):
             self.enabled_button,
             self.taskbar_restore_button,
         )
-        self.content_layout.addWidget(
-            self.dwell_combo, 0, Qt.AlignmentFlag.AlignHCenter
+        self.dwell_combo.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
+        self.dwell_spacer = QWidget(self)
+        self.dwell_row = self.add_two_column_control_row(
+            self.content_layout,
+            self.dwell_combo,
+            self.dwell_spacer,
         )
 
         if not taskbar_restore_available:
