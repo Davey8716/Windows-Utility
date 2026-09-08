@@ -84,18 +84,13 @@ def composer_for(app):
 
 def test_hover_export_button_reflects_change_callback():
     qt_app = QApplication.instance() or QApplication([])
-    changes = [True]
+    changes = [False]
     page = HoverWindowControlsPage(
         {},
         lambda *_args: None,
         has_export_changes=lambda: changes[-1],
     )
     try:
-        page.refresh_export_button()
-        assert page.export_button.isEnabled()
-
-        changes.append(False)
-        page.refresh_export_button()
         assert not page.export_button.isEnabled()
         assert page.export_button.property("lightModeBlackDisabledText") is True
 
@@ -108,6 +103,21 @@ def test_hover_export_button_reflects_change_callback():
 
         page._has_export_changes = fail_comparison
         page.refresh_export_button()
+        assert page.export_button.isEnabled()
+    finally:
+        page.close()
+        page.deleteLater()
+        qt_app.processEvents()
+
+
+def test_hover_export_button_starts_enabled_when_data_has_changed():
+    qt_app = QApplication.instance() or QApplication([])
+    page = HoverWindowControlsPage(
+        {},
+        lambda *_args: None,
+        has_export_changes=lambda: True,
+    )
+    try:
         assert page.export_button.isEnabled()
     finally:
         page.close()

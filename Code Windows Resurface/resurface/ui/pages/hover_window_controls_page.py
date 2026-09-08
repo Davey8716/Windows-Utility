@@ -134,6 +134,7 @@ class HoverWindowControlsPage(PageControls):
         self.export_button.clicked.connect(self.export_requested)
         self.import_button.clicked.connect(self.import_requested)
         self.clear_button.clicked.connect(self.clear_requested)
+        self.refresh_export_button()
 
     def refresh_export_button(self) -> None:
         has_changes = True
