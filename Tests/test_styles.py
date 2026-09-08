@@ -66,6 +66,28 @@ def test_all_button_styles_share_the_standard_corner_radius():
 
 
 @pytest.mark.parametrize(
+    ("is_dark", "background", "text", "border"),
+    [
+        (True, "#222a36", "#ffffff", "#5d6b7d"),
+        (False, "#f5f5f0", "#111820", "#787878"),
+    ],
+)
+def test_tooltips_use_rounded_corners_and_theme_colors(
+    is_dark,
+    background,
+    text,
+    border,
+):
+    styles.set_theme(is_dark)
+    stylesheet = styles.tooltip_style()
+
+    assert f"background-color: {background};" in stylesheet
+    assert f"color: {text};" in stylesheet
+    assert f"border: {styles.POPUP_BORDER_WIDTH}px solid {border};" in stylesheet
+    assert f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;" in stylesheet
+
+
+@pytest.mark.parametrize(
     ("is_dark", "link_color"),
     [(True, "#ffffff"), (False, "#000000")],
 )
