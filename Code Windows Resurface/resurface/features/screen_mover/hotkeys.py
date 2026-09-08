@@ -174,22 +174,18 @@ class GlobalHotkeyManager:
         self.listener_factory = listener_factory
         self.listener = None
         self.hotkeys: dict[str, str] = {}
-        self.enabled = False
 
     def update_hotkeys(
         self,
         hotkeys: Mapping[str, object] | None,
-        *,
-        enabled: bool = True,
     ) -> None:
         normalized = active_hotkeys(hotkeys)
-        if normalized == self.hotkeys and bool(enabled) == self.enabled:
+        if normalized == self.hotkeys:
             return
 
         self.stop()
         self.hotkeys = normalized
-        self.enabled = bool(enabled)
-        if not self.enabled or not self.hotkeys:
+        if not self.hotkeys:
             return
 
         bindings = {

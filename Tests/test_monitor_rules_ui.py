@@ -1074,10 +1074,14 @@ def test_delete_all_creates_safety_backup(monkeypatch, tmp_path):
 class FakeMonitorRuleWatcher:
     def __init__(self, *args, **kwargs):
         self.updates = []
+        self.manual_moves = []
         self.stopped = False
 
     def update_rules(self, rules, app_hwnd=None, *, apply_existing=False, apply_rule_ids=None):
         self.updates.append((copy.deepcopy(rules), app_hwnd, apply_existing, apply_rule_ids))
+
+    def note_manual_move(self, hwnd):
+        self.manual_moves.append(hwnd)
 
     def stop(self):
         self.stopped = True

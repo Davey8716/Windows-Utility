@@ -160,6 +160,30 @@ class MonitorRuleWatcher:
             if not thread.is_alive():
                 self._thread = None
 
+    def note_manual_move(self, hwnd: int) -> None:
+        """Apply rule precedence after a shortcut moves a window."""
+        now = time.monotonic()
+        should_wake = False
+        with self._lock:
+            details = window_details(hwnd, app_hwnd=self._app_hwnd)
+            rule = first_matching_rule(self._rules, details) if details else None
+            if rule is None:
+                return
+
+            self._seen[hwnd] = _identity(details)
+            self._pending.pop(hwnd, None)
+            if not rule["reapply_if_moved"]:
+                self._managed.pop(hwnd, None)
+                self._off_target_since.pop(hwnd, None)
+                return
+
+            self._managed[hwnd] = rule["id"]
+            self._off_target_since[hwnd] = now
+            should_wake = True
+
+        if should_wake:
+            self._wake_event.set()
+
     def _run(self) -> None:
         try:
             while not self._stop_event.is_set():

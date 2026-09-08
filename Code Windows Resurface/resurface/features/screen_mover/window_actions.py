@@ -9,15 +9,9 @@ import win32con
 import win32gui
 
 
-DOCK_ACTIONS = (
-    ("FAR_LEFT", "<<"),
-    ("LEFT", "<"),
-    ("RIGHT", ">"),
-    ("FAR_RIGHT", ">>"),
-    ("MINIMIZE", "_"),
-    ("MAXIMIZE", "[]"),
+WINDOW_ACTIONS = frozenset(
+    {"FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT", "MINIMIZE", "MAXIMIZE"}
 )
-DOCK_ACTIONS_DICT = dict(DOCK_ACTIONS)
 MONITOR_MOVE_ACTIONS = {"FAR_LEFT", "LEFT", "RIGHT", "FAR_RIGHT"}
 
 
@@ -31,44 +25,6 @@ def _resolve_target_monitor_index(current_idx, monitor_count, direction):
     if direction == "FAR_RIGHT":
         return monitor_count - 1
     return current_idx
-
-
-def _monitor_handles():
-    return [monitor[0] for monitor in win32api.EnumDisplayMonitors()]
-
-
-def get_window_monitor_position(hwnd):
-    try:
-        monitor_handles = _monitor_handles()
-    except Exception:
-        return None, 0
-
-    monitor_count = len(monitor_handles)
-    if monitor_count == 0:
-        return None, 0
-
-    try:
-        current_monitor = win32api.MonitorFromWindow(hwnd)
-        current_idx = monitor_handles.index(current_monitor)
-    except Exception:
-        return None, monitor_count
-
-    return current_idx, monitor_count
-
-
-def window_supports_maximize(hwnd):
-    try:
-        if not hwnd or not win32gui.IsWindow(hwnd):
-            return True
-    except Exception:
-        return True
-
-    try:
-        style = int(win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE))
-    except Exception:
-        return True
-
-    return bool(style & win32con.WS_MAXIMIZEBOX)
 
 
 def window_is_fullscreen(hwnd, rect=None):
@@ -103,39 +59,12 @@ def window_is_fullscreen(hwnd, rect=None):
     )
 
 
-def get_visible_dock_actions(hwnd):
-    current_idx, monitor_count = get_window_monitor_position(hwnd)
-    visible_monitor_actions = set()
-
-    if monitor_count > 1:
-        if current_idx is None:
-            visible_monitor_actions = set(MONITOR_MOVE_ACTIONS)
-        else:
-            if current_idx > 0:
-                visible_monitor_actions.update({"FAR_LEFT", "LEFT"})
-            if current_idx < monitor_count - 1:
-                visible_monitor_actions.update({"RIGHT", "FAR_RIGHT"})
-
-    visible_actions = tuple(
-        action
-        for action, _label in DOCK_ACTIONS
-        if action not in MONITOR_MOVE_ACTIONS or action in visible_monitor_actions
-    )
-
-    if "MAXIMIZE" in visible_actions and not window_supports_maximize(hwnd):
-        visible_actions = tuple(
-            action for action in visible_actions if action != "MAXIMIZE"
-        )
-
-    return visible_actions
-
-
 def move_window_to_monitor(hwnd, direction):
     try:
         monitors = win32api.EnumDisplayMonitors()
         if len(monitors) < 2:
             print("[MOVE] Only one monitor detected; skipping move.")
-            return
+            return False
 
         current_monitor = win32api.MonitorFromWindow(hwnd)
         monitor_handles = [monitor[0] for monitor in monitors]
@@ -143,7 +72,7 @@ def move_window_to_monitor(hwnd, direction):
             current_idx = monitor_handles.index(current_monitor)
         except ValueError:
             print("[MOVE] Could not resolve current monitor.")
-            return
+            return False
 
         target_idx = _resolve_target_monitor_index(
             current_idx,
@@ -151,7 +80,7 @@ def move_window_to_monitor(hwnd, direction):
             direction,
         )
         if target_idx == current_idx:
-            return
+            return False
 
         source_info = win32api.GetMonitorInfo(monitor_handles[current_idx])
         target_info = win32api.GetMonitorInfo(monitor_handles[target_idx])
@@ -196,29 +125,35 @@ def move_window_to_monitor(hwnd, direction):
             win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
 
         print(f"[MOVE] Window moved {direction} to monitor index {target_idx}.")
+        return True
     except Exception as exc:
         print(f"[ERROR] move_window_to_monitor: {exc}")
+        return False
 
 
 def minimize_window(hwnd):
     try:
         win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+        return True
     except Exception as exc:
         print(f"[ERROR] minimize_window: {exc}")
+        return False
 
 
 def maximize_window(hwnd):
     try:
         win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+        return True
     except Exception as exc:
         print(f"[ERROR] maximize_window: {exc}")
+        return False
 
 
 def perform_window_action(hwnd, action):
     if action == "MINIMIZE":
-        minimize_window(hwnd)
-        return
+        return minimize_window(hwnd)
     if action == "MAXIMIZE":
-        maximize_window(hwnd)
-        return
-    move_window_to_monitor(hwnd, action)
+        return maximize_window(hwnd)
+    if action in MONITOR_MOVE_ACTIONS:
+        return move_window_to_monitor(hwnd, action)
+    return False

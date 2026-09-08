@@ -775,6 +775,85 @@ def test_manual_drag_only_pauses_recovery_when_reapply_is_enabled(simulation):
     assert len(d.moves) == 2
 
 
+def test_shortcut_move_ends_recovery_when_reapply_is_disabled(monkeypatch):
+    rule = rule_schema.normalize_monitor_rule(
+        make_rule(match_exact_path=False, reapply_if_moved=False)
+    )
+    watcher = watcher_module.MonitorRuleWatcher()
+    watcher._rules = [rule]
+    details = _matching_window_details()
+    watcher._seen[1] = watcher_module._identity(details)
+    watcher._pending[1] = watcher_module._Recovery(
+        watcher_module._identity(details),
+        100.0,
+        True,
+        placed=True,
+    )
+    watcher._managed[1] = rule["id"]
+    watcher._off_target_since[1] = 5.0
+    monkeypatch.setattr(
+        watcher_module,
+        "window_details",
+        lambda _hwnd, **_kwargs: copy.deepcopy(details),
+    )
+
+    watcher.note_manual_move(1)
+
+    assert watcher._pending == {}
+    assert watcher._managed == {}
+    assert watcher._off_target_since == {}
+
+
+def test_shortcut_move_keeps_enforcement_and_uses_settle_delay(monkeypatch):
+    rule = rule_schema.normalize_monitor_rule(
+        make_rule(match_exact_path=False, reapply_if_moved=True)
+    )
+    watcher = watcher_module.MonitorRuleWatcher()
+    watcher._rules = [rule]
+    details = _matching_window_details()
+    placed = []
+    monkeypatch.setattr(watcher_module.time, "monotonic", lambda: 10.0)
+    monkeypatch.setattr(
+        watcher_module,
+        "window_details",
+        lambda _hwnd, **_kwargs: copy.deepcopy(details),
+    )
+    monkeypatch.setattr(
+        watcher_module,
+        "window_monitor_device",
+        lambda _hwnd: r"\\.\DISPLAY1",
+    )
+    monkeypatch.setattr(
+        watcher_module,
+        "apply_monitor_rule",
+        lambda hwnd, _rule: placed.append(hwnd) or True,
+    )
+
+    watcher.note_manual_move(1)
+
+    assert watcher._pending == {}
+    assert watcher._managed == {1: rule["id"]}
+    assert watcher._off_target_since == {1: 10.0}
+    watcher._place_window(1, watcher._revision, 10.5)
+    assert placed == []
+    watcher._place_window(1, watcher._revision, 10.7)
+    assert placed == [1]
+
+
+def test_shortcut_move_without_matching_rule_does_not_change_tracking(monkeypatch):
+    watcher = watcher_module.MonitorRuleWatcher()
+    watcher._managed[1] = "existing"
+    monkeypatch.setattr(
+        watcher_module,
+        "window_details",
+        lambda _hwnd, **_kwargs: _matching_window_details(),
+    )
+
+    watcher.note_manual_move(1)
+
+    assert watcher._managed == {1: "existing"}
+
+
 @pytest.mark.parametrize("change", ["add", "edit", "enable", "delete", "reorder"])
 def test_rule_changes_place_affected_open_windows(simulation, change):
     d = simulation

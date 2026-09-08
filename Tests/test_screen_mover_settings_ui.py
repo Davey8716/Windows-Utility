@@ -45,8 +45,8 @@ class FakeHotkeyManager:
     def __init__(self, _callback=None):
         self.calls = []
 
-    def update_hotkeys(self, hotkeys, *, enabled):
-        self.calls.append((hotkeys, enabled))
+    def update_hotkeys(self, hotkeys):
+        self.calls.append(hotkeys)
 
     def stop(self):
         pass
@@ -98,14 +98,10 @@ class FakeHoverWindowControlsService(QObject):
 
 class FakeTrayManager:
     def __init__(self, _window=None):
-        self.sync_calls = 0
         self.tray = None
 
     def create_tray_icon(self):
         pass
-
-    def sync_screen_mover_action(self):
-        self.sync_calls += 1
 
 class FakeStyle:
     def unpolish(self, _widget):
@@ -168,41 +164,28 @@ class FakeToggle:
 
 class FakeWindow:
     apply_screen_mover_settings = main.UtilityControlApp.apply_screen_mover_settings
-    set_screen_mover_enabled = main.UtilityControlApp.set_screen_mover_enabled
     reset_screen_mover_settings = main.UtilityControlApp.reset_screen_mover_settings
 
     def __init__(self):
         self.state = {
-            "title_bar_dock_enabled": False,
-            "screen_mover_activation_button": "right",
-            "mmb_activation_enabled": False,
             "screen_mover_keyboard_hotkeys": {
                 "LEFT": "Ctrl+Left",
                 "RIGHT": "",
             },
             "theme_dark": False,
         }
-        self.screen_mover = FakeRuntime()
         self.hotkey_manager = FakeHotkeyManager()
-        self.tray_manager = FakeTrayManager()
-        self.screen_mover_enabled_btn = FakeToggle(False)
-        self.screen_move_button_combo = FakeCombo()
         self.screen_mover_hotkey_edits = {
             "LEFT": FakeEdit(),
             "RIGHT": FakeEdit(),
         }
         self.screen_mover_settings_controller = main.ScreenMoverSettingsController(
             state=self.state,
-            screen_mover=self.screen_mover,
             hotkey_manager=self.hotkey_manager,
             save_state=main.save_state,
-            window_handle=lambda: 0,
             settings_page=lambda: None,
-            legacy_toggle=lambda: self.screen_mover_enabled_btn,
-            legacy_activation_combo=lambda: self.screen_move_button_combo,
             legacy_hotkey_edits=lambda: self.screen_mover_hotkey_edits,
             refresh_overview=lambda: None,
-            sync_tray=self.tray_manager.sync_screen_mover_action,
         )
 
 
@@ -212,7 +195,6 @@ def _build_offscreen_window(monkeypatch, state, *, window_height=None):
     monkeypatch.setattr(main, "save_state", lambda _state: None)
     monkeypatch.setattr(main, "import_standalone_data", lambda _state: False)
     monkeypatch.setattr(application_pages, "save_state", lambda _state: None)
-    monkeypatch.setattr(main, "ScreenMover", FakeRuntime)
     monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
     monkeypatch.setattr(
         main, "HoverWindowControlsService", FakeHoverWindowControlsService
@@ -804,7 +786,8 @@ def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkey
 def test_overview_status_and_separate_configurable_quick_actions(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
-    state["title_bar_dock_enabled"] = False
+    state["screen_mover_keyboard_hotkeys"]["LEFT"] = "<ctrl>+<left>"
+    state["screen_mover_keyboard_hotkeys"]["RIGHT"] = "<ctrl>+<right>"
     state["recycle_bin_auto_clean_enabled"] = True
     state["master_backup_output_path"] = r"C:\Backups"
     window = _build_offscreen_window(monkeypatch, state)
@@ -815,7 +798,7 @@ def test_overview_status_and_separate_configurable_quick_actions(monkeypatch):
         qt_app.processEvents()
         window.refresh_overview()
         status_labels = window.pages.overview_page.status_labels
-        assert status_labels["screen_mover"].text() == "Off"
+        assert status_labels["screen_mover"].text() == "2 configured"
         assert status_labels["drives"].text() == "2 connected"
         assert status_labels["backup_path"].text() == r"C:\Backups"
         assert status_labels["recycle"].text() == "On"
@@ -1576,29 +1559,6 @@ def test_external_drive_controls_and_output_share_the_inner_frame_width(monkeypa
         qt_app.processEvents()
 
 
-def test_screen_mover_toggle_synchronizes_state_ui_runtime_and_tray(monkeypatch):
-    saved_states = []
-    monkeypatch.setattr(main, "save_state", lambda state: saved_states.append(dict(state)))
-    window = FakeWindow()
-
-    window.set_screen_mover_enabled(True)
-
-    assert window.state["title_bar_dock_enabled"] is True
-    assert window.screen_mover_enabled_btn.checked is True
-    assert window.screen_mover_enabled_btn.text == "Screen Mover On"
-    assert window.screen_mover.calls[-1] == {
-        "title_bar_dock_enabled": True,
-        "activation_button": "right",
-        "force_running": True,
-    }
-    assert window.hotkey_manager.calls[-1] == (
-        {"LEFT": "<ctrl>+<left>"},
-        True,
-    )
-    assert window.tray_manager.sync_calls == 1
-    assert saved_states[-1]["title_bar_dock_enabled"] is True
-
-
 def test_reset_defaults_changes_only_screen_mover_settings(monkeypatch):
     monkeypatch.setattr(main, "save_state", lambda _state: None)
     window = FakeWindow()
@@ -1606,32 +1566,25 @@ def test_reset_defaults_changes_only_screen_mover_settings(monkeypatch):
     window.reset_screen_mover_settings()
 
     assert window.state["theme_dark"] is False
-    assert window.state["title_bar_dock_enabled"] is True
-    assert window.state["screen_mover_activation_button"] == "middle"
-    assert window.state["mmb_activation_enabled"] is True
     assert all(
         value == ""
         for value in window.state["screen_mover_keyboard_hotkeys"].values()
     )
-    assert window.screen_move_button_combo.value == "middle"
-    assert window.screen_move_button_combo.persist_pressed is True
     assert all(edit.cleared for edit in window.screen_mover_hotkey_edits.values())
-    assert window.screen_mover.calls[-1]["activation_button"] == "middle"
-    assert window.screen_mover.calls[-1]["force_running"] is False
+    assert window.hotkey_manager.calls[-1] == {}
 
 
 def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     state["theme_dark"] = False
-    state["screen_mover_activation_button"] = "right"
     state["screen_mover_keyboard_hotkeys"]["LEFT"] = "<ctrl>+<left>"
 
     window = _build_offscreen_window(monkeypatch, state)
     try:
         settings_page = window.pages.screen_mover_settings_page
-        assert settings_page._enabled_button.isChecked()
-        assert settings_page._activation_combo.currentData() == "right"
+        assert not hasattr(settings_page, "_enabled_button")
+        assert not hasattr(settings_page, "_activation_combo")
         assert set(settings_page._hotkey_edits) == {
             "FAR_LEFT",
             "LEFT",
@@ -1645,12 +1598,12 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
             == QKeySequence("Ctrl+Left").toString()
         )
         assert not settings_page.shortcuts_container.isHidden()
+        assert settings_page.reset_button.text() == "Reset Shortcut Defaults"
 
         window.state["desktop_screenshot_last_dir"] = "unchanged"
         window.reset_screen_mover_settings()
 
         assert window.state["desktop_screenshot_last_dir"] == "unchanged"
-        assert settings_page._activation_combo.currentData() == "middle"
         assert all(
             edit.keySequence().isEmpty()
             for edit in settings_page._hotkey_edits.values()
@@ -1662,10 +1615,9 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
         qt_app.processEvents()
 
 
-def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
+def test_screen_mover_shortcut_controls_align_without_primary_row(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
-    state["screen_mover_activation_button"] = "off"
     window = _build_offscreen_window(monkeypatch, state)
 
     try:
@@ -1674,13 +1626,12 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
         qt_app.processEvents()
 
         settings_page = window.pages.screen_mover_settings_page
-        controls_row = settings_page.controls_row
         shortcuts_header = settings_page.shortcuts_header
         shortcuts_container = settings_page.shortcuts_container
         screen_page = window.navigation_shell.page_by_id["screen_mover"]
 
         def assert_blocks_aligned() -> None:
-            widgets = (controls_row, shortcuts_header, shortcuts_container)
+            widgets = (shortcuts_header, shortcuts_container)
             widths = {widget.width() for widget in widgets}
             left_edges = {
                 widget.mapTo(screen_page, QPoint()).x() for widget in widgets
@@ -1694,15 +1645,7 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
             assert len(right_edges) == 1
 
         assert_blocks_aligned()
-        assert controls_row.width() == (
-            settings_page._enabled_button.width()
-            + 12
-            + settings_page._activation_combo.width()
-        )
-        assert shortcuts_header.y() >= controls_row.y() + controls_row.height()
-        assert shortcuts_container.y() >= (
-            shortcuts_header.y() + shortcuts_header.height()
-        )
+        assert shortcuts_container.y() >= shortcuts_header.y() + shortcuts_header.height()
 
         shortcut_labels = [
             label
@@ -1738,41 +1681,13 @@ def test_screen_mover_shortcut_controls_align_with_primary_row(monkeypatch):
         ).x()
         assert reset_left == (shortcuts_container.width() - 250) // 2
 
-        selection_widths = {}
-        for button_value in ("off", "left", "middle", "right"):
-            combo_index = settings_page._activation_combo.findData(button_value)
-            settings_page._activation_combo.setCurrentIndex(combo_index)
-            qt_app.processEvents()
-            selection_widths[button_value] = controls_row.width()
-            assert_blocks_aligned()
-        narrow_value = min(selection_widths, key=selection_widths.get)
-        wide_value = max(selection_widths, key=selection_widths.get)
-        standard_width = selection_widths[narrow_value]
-        assert selection_widths[wide_value] > standard_width
-        settings_page._activation_combo.setCurrentIndex(
-            settings_page._activation_combo.findData(wide_value)
-        )
-        qt_app.processEvents()
-        assert controls_row.width() == selection_widths[wide_value]
-        assert_blocks_aligned()
-
         for is_dark in (False, True):
             window.apply_theme(is_dark)
             qt_app.processEvents()
             assert_blocks_aligned()
 
-        narrow_index = settings_page._activation_combo.findData(narrow_value)
-        settings_page._activation_combo.setCurrentIndex(narrow_index)
-        qt_app.processEvents()
-        assert controls_row.width() == standard_width
         window.reset_screen_mover_settings()
         qt_app.processEvents()
-        assert settings_page._activation_combo.currentData() == "middle"
-        assert controls_row.width() == (
-            settings_page._enabled_button.width()
-            + 12
-            + settings_page._activation_combo.width()
-        )
         assert_blocks_aligned()
     finally:
         window._quit_requested = True
@@ -1843,12 +1758,8 @@ def test_screen_mover_shortcuts_have_balanced_heading_spacing(monkeypatch):
         qt_app.processEvents()
 
         settings_page = window.pages.screen_mover_settings_page
-        controls_row = settings_page.controls_row
         shortcuts_header = settings_page.shortcuts_header
         shortcuts_container = settings_page.shortcuts_container
-        assert shortcuts_header.y() - (
-            controls_row.y() + controls_row.height()
-        ) == 16
         assert shortcuts_container.y() - (
             shortcuts_header.y() + shortcuts_header.height()
         ) == 16

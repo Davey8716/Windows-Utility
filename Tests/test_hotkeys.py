@@ -60,21 +60,21 @@ def test_global_hotkey_manager_starts_dispatches_reconfigures_and_stops():
         return listener
 
     manager = GlobalHotkeyManager(actions.append, listener_factory=factory)
-    manager.update_hotkeys({"LEFT": "Ctrl+Left"}, enabled=True)
+    manager.update_hotkeys({"LEFT": "Ctrl+Left"})
 
     assert len(listeners) == 1
     assert listeners[0].started
     listeners[0].bindings["<ctrl>+<left>"]()
     assert actions == ["LEFT"]
 
-    manager.update_hotkeys({"LEFT": "Ctrl+Left"}, enabled=True)
+    manager.update_hotkeys({"LEFT": "Ctrl+Left"})
     assert len(listeners) == 1
 
-    manager.update_hotkeys({"RIGHT": "Ctrl+Right"}, enabled=True)
+    manager.update_hotkeys({"RIGHT": "Ctrl+Right"})
     assert listeners[0].stopped
     assert len(listeners) == 2
     assert listeners[1].started
 
-    manager.update_hotkeys({"RIGHT": "Ctrl+Right"}, enabled=False)
+    manager.update_hotkeys({})
     assert listeners[1].stopped
     assert manager.listener is None

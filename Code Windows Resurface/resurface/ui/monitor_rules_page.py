@@ -47,7 +47,8 @@ MONITOR_RULES_HELP_TEXT = (
     "changes also apply to matching open windows already on the target monitor. "
     "Placement pauses while the left mouse button is held. If you drag a window "
     "after it has been placed, short-term recovery ends when Reapply if moved is "
-    "off. When it is on, placement resumes after the drag and continues to return "
+    "off. Screen Mover shortcuts also end recovery when Reapply is off. When it "
+    "is on, placement resumes after a drag or shortcut and continues to return "
     "the window to its target monitor."
 )
 RULES_FRAME_WIDTH = 685

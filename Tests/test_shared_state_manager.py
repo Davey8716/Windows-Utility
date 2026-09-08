@@ -336,3 +336,34 @@ def test_windows_resurface_state_fills_missing_screen_mover_hotkeys(
         "MINIMIZE": "",
         "MAXIMIZE": "",
     }
+
+
+def test_windows_resurface_state_removes_retired_screen_mover_dock_settings(
+    monkeypatch,
+    tmp_path,
+):
+    config_path = tmp_path / "app_state.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "title_bar_dock_enabled": True,
+                "screen_mover_activation_button": "middle",
+                "mmb_activation_enabled": True,
+                "screen_mover_keyboard_hotkeys": {"LEFT": "<ctrl>+<left>"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(state_manager, "get_config_path", lambda: config_path)
+    monkeypatch.setattr(
+        state_manager,
+        "LEGACY_CONFIG_PATH",
+        tmp_path / "missing-legacy.json",
+    )
+
+    loaded = state_manager.load_state()
+
+    assert "title_bar_dock_enabled" not in loaded
+    assert "screen_mover_activation_button" not in loaded
+    assert "mmb_activation_enabled" not in loaded
+    assert loaded["screen_mover_keyboard_hotkeys"]["LEFT"] == "<ctrl>+<left>"

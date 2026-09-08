@@ -19,38 +19,12 @@ SYSTEM_EXECUTABLES = {
 FILE_EXPLORER_CLASSES = {"CabinetWClass", "ExploreWClass"}
 
 
-def is_steam_game_executable(executable_path) -> bool:
-    """Return whether an executable is installed beneath steamapps/common."""
-    if not executable_path:
-        return False
-
-    path_parts = [
-        part.casefold()
-        for part in str(executable_path).replace("/", "\\").split("\\")
-        if part
-    ]
-    return any(
-        path_parts[index : index + 2] == ["steamapps", "common"]
-        and index + 3 < len(path_parts)
-        for index in range(len(path_parts) - 1)
-    )
-
-
 def get_window_executable_name(hwnd):
     try:
         _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
         return psutil.Process(pid).name().lower()
     except Exception:
         return ""
-
-
-def is_steam_game_window(hwnd):
-    try:
-        _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
-        executable_path = psutil.Process(pid).exe()
-    except Exception:
-        return False
-    return is_steam_game_executable(executable_path)
 
 
 def is_file_explorer_window(hwnd):

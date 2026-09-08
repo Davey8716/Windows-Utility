@@ -26,9 +26,6 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "maximize_all_enabled": True,
     "minimize_after_use_enabled": True,
     "power_options_enabled": False,
-    "mmb_activation_enabled": True,
-    "screen_mover_activation_button": "middle",
-    "title_bar_dock_enabled": True,
     "hover_window_controls_enabled": True,
     "hover_taskbar_restore_enabled": True,
     "hover_window_controls_dwell_ms": 750,
@@ -70,7 +67,10 @@ WINDOWS_RESURFACE_STATE_KEYS = frozenset(
 
 WINDOWS_RESURFACE_DEPRECATED_STATE_KEYS = frozenset(
     {
+        "mmb_activation_enabled",
         "retired_features_cleanup_version",
+        "screen_mover_activation_button",
+        "title_bar_dock_enabled",
     }
 )
 

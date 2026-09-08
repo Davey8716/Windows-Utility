@@ -15,7 +15,10 @@ def _app():
 
 def test_split_pages_are_independent_widgets():
     _app()
-    tooltip = lambda _widget, _text: None
+
+    def tooltip(_widget, _text):
+        return None
+
     pages = [
         UserInterfacePage({}, tooltip, lambda _combo: None),
         ScreenMoverSettingsPage({}, tooltip),
@@ -100,8 +103,6 @@ def test_screen_mover_reset_uses_page_settings_signal_and_api():
     _app()
     page = ScreenMoverSettingsPage(
         {
-            "title_bar_dock_enabled": False,
-            "screen_mover_activation_button": "right",
             "screen_mover_keyboard_hotkeys": {"LEFT": "Ctrl+Left"},
         },
         lambda _widget, _text: None,
@@ -112,8 +113,6 @@ def test_screen_mover_reset_uses_page_settings_signal_and_api():
         page.reset_settings()
         settings = page.settings()
         assert changes[-1] == settings
-        assert settings["title_bar_dock_enabled"] is True
-        assert settings["screen_mover_activation_button"] == "middle"
         assert settings["screen_mover_keyboard_hotkeys"] == {
             action: "" for action in VALID_ACTIONS
         }

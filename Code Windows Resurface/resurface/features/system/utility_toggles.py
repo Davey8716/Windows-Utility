@@ -241,8 +241,3 @@ def theme_intent(dark_mode: bool) -> bool:
 def usb_reminder_intent(enabled: bool) -> bool:
     print(f"[INFO] USB Reminder intent -> {enabled}")
     return enabled
-
-
-def mover_options_intent(enabled: bool) -> bool:
-    print(f"[INFO] Screen Mover options intent -> {enabled}")
-    return enabled

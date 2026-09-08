@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.core.state_manager import save_state
+from resurface.features.screen_mover.hotkeys import active_hotkeys
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
 from resurface.ui.controllers.theme_controller import apply_power_action_dropdown_style
@@ -251,8 +252,11 @@ class OverviewPage(QWidget):
         layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def refresh(self, state: dict, connected_drives) -> None:
+        configured_shortcuts = len(
+            active_hotkeys(state.get("screen_mover_keyboard_hotkeys", {}))
+        )
         self.status_labels["screen_mover"].setText(
-            "On" if state.get("title_bar_dock_enabled", True) else "Off"
+            f"{configured_shortcuts} configured"
         )
         drive_count = len(connected_drives)
         self.status_labels["drives"].setText(
@@ -499,8 +503,7 @@ class ApplicationPageComposer:
         )
 
         screen = pages.screen_mover_settings_page
-        button("screen_mover.enabled", "Screen Mover", screen._enabled_button)
-        button("screen_mover.reset", "Reset Screen Mover Defaults", screen.reset_button)
+        button("screen_mover.reset", "Reset Shortcut Defaults", screen.reset_button)
 
         drives = pages.external_drives_page
         button("drives.leave_reminder", "Drive Leave Reminder", drives.leave_reminder_button)

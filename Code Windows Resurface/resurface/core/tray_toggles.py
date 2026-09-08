@@ -22,7 +22,6 @@ class TrayIconManager(QObject):
         self.app = app
         self.tray = None
         self.zen_mode_action = None
-        self.screen_mover_action = None
         self.hover_controls_action = None
         self.monitor_rules_action = None
 
@@ -50,11 +49,6 @@ class TrayIconManager(QObject):
         self.zen_mode_action.setCheckable(True)
         self.zen_mode_action.toggled.connect(self.toggle_zen_mode)
         menu.addAction(self.zen_mode_action)
-
-        self.screen_mover_action = QAction("Screen Mover Enabled", self.app)
-        self.screen_mover_action.setCheckable(True)
-        self.screen_mover_action.toggled.connect(self.toggle_screen_mover)
-        menu.addAction(self.screen_mover_action)
 
         self.hover_controls_action = QAction(
             "Hover Window Controls Enabled", self.app
@@ -95,20 +89,8 @@ class TrayIconManager(QObject):
         self.zen_mode_action.setChecked(enabled)
         self.zen_mode_action.blockSignals(False)
 
-    def sync_screen_mover_action(self):
-        if not self.screen_mover_action:
-            return
-
-        enabled = bool(
-            getattr(self.app, "state", {}).get("title_bar_dock_enabled", True)
-        )
-        self.screen_mover_action.blockSignals(True)
-        self.screen_mover_action.setChecked(enabled)
-        self.screen_mover_action.blockSignals(False)
-
     def sync_actions(self):
         self.sync_zen_mode_action()
-        self.sync_screen_mover_action()
         self.sync_hover_controls_action()
         self.sync_monitor_rules_action()
 
@@ -163,13 +145,6 @@ class TrayIconManager(QObject):
             return
 
         self.sync_zen_mode_action()
-
-    def toggle_screen_mover(self, enabled: bool):
-        setter = getattr(self.app, "set_screen_mover_enabled", None)
-        if callable(setter):
-            setter(enabled)
-        else:
-            self.sync_screen_mover_action()
 
     def toggle_hover_controls(self, enabled: bool):
         setter = getattr(self.app, "set_hover_window_controls_enabled", None)

@@ -1,8 +1,19 @@
-Make 2 extra branches of both + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
+Round corners of popups for "?" Monitor rules page
+Export rules popup
+Export Hover Data
 
-Fix sfc scannow and chkdsk
+Wording inside tooltips needs tidying up re/ formatting /n usage etc
 
-Threading/lag
+Reset Shortcut Defaults on screen mover page should bring up a gui popup, theme specific with 
+rounded corners
+
+Quick actions defaults have stale reference tooltip for Create Desktop Folder button
+
+Overview should list more information from each section e.g. Monitor rules, Hover window controls 
+
+Feature: Clipboard provenance shows clipboarded item, time stamp of usage and link to page
+
+Fix sfc scannow and chkdsk console admin approval is being deliberatly suppressed? Access is denied?
 
 More icon use for buttons ?
 
@@ -10,7 +21,7 @@ Button Sizes in general, colours relative to state
 
 The Black writing overall is horrible non contrasty on the blue buttons, need a different shade of black.
 
-I agree. User-configurable Quick Actions would make the overview much more useful than a fixed selection.
+User-configurable Quick Actions would make the overview much more useful than a fixed selection.
 A strong interaction model would be:
 - Right-click any actionable button anywhere in the app.
 - Choose Pin to Quick Actions.
@@ -21,7 +32,7 @@ A strong interaction model would be:
 - Persist the selection and order between sessions.
 - Optionally include Reset to Defaults.
 
-I’d keep Quick Actions intentionally compact—perhaps 6–8 visible actions—then allow overflow or a “Show More” area. That prevents the Overview page from becoming another crowded utilities page.
+Keep Quick Actions intentionally compact—perhaps 6–8 visible actions—then allow overflow or a “Show More” area. That prevents the Overview page from becoming another crowded utilities page.
 There are a few important details worth planning:
 - Toggles should reflect their live on/off state when pinned.
 - Dropdown-based actions may need individual commands pinned rather than the whole dropdown.

@@ -216,34 +216,6 @@ def test_tray_manager_uses_existing_window_icon_for_tray() -> None:
     assert manager._resolve_tray_icon().cacheKey() == icon.cacheKey()
 
 
-def test_tray_screen_mover_action_syncs_and_dispatches() -> None:
-    _app()
-
-    class FakeWindow(QObject):
-        def __init__(self):
-            super().__init__()
-            self.state = {"title_bar_dock_enabled": False}
-            self.enabled_calls = []
-
-        def set_screen_mover_enabled(self, enabled):
-            self.enabled_calls.append(enabled)
-            self.state["title_bar_dock_enabled"] = enabled
-
-    window = FakeWindow()
-    manager = TrayIconManager(window)
-    manager.screen_mover_action = QAction("Screen Mover Enabled", window)
-    manager.screen_mover_action.setCheckable(True)
-
-    manager.sync_screen_mover_action()
-    assert not manager.screen_mover_action.isChecked()
-
-    manager.toggle_screen_mover(True)
-    manager.sync_screen_mover_action()
-
-    assert window.enabled_calls == [True]
-    assert manager.screen_mover_action.isChecked()
-
-
 def test_tray_zen_mode_uses_composed_user_interface_page() -> None:
     _app()
 

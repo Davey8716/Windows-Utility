@@ -21,7 +21,7 @@ from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
 from resurface.features.drives.windows_session_adapter import WindowsSessionEventAdapter
 from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager
-from resurface.features.screen_mover.service import ScreenMover
+from resurface.features.screen_mover.shortcut_dispatcher import ShortcutActionDispatcher
 from resurface.features.monitor_rules import MonitorRuleWatcher
 from resurface.features.explorer.window_service import ExplorerWindowService
 from resurface.features.recycle_bin.service import RecycleBinService
@@ -54,7 +54,7 @@ class ScreenMoverActionBridge(QObject):
 
     def __init__(self, window):
         super().__init__(window)
-        self.action_requested.connect(window.handle_screen_mover_self_action)
+        self.action_requested.connect(window.handle_screen_mover_action)
 
     def dispatch(self, action: str) -> None:
         self.action_requested.emit(action)
@@ -153,9 +153,12 @@ class UtilityControlApp(
         )
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
-        self.screen_mover = ScreenMover(name="WindowsResurfaceMain")
         self.monitor_rule_watcher = MonitorRuleWatcher(name="WindowsResurfaceMonitorRules")
-        self.hotkey_manager = GlobalHotkeyManager(self.screen_mover.request_action)
+        self.shortcut_dispatcher = ShortcutActionDispatcher(
+            app_hwnd=lambda: int(self.winId()),
+            manual_move_callback=self.monitor_rule_watcher.note_manual_move,
+        )
+        self.hotkey_manager = GlobalHotkeyManager(self._screen_mover_bridge.dispatch)
         self.window_chrome = WindowChrome(self)
         self.external_drive_controller = ExternalDriveController(
             window=self,
@@ -198,18 +201,13 @@ class UtilityControlApp(
         )
         self.screen_mover_settings_controller = ScreenMoverSettingsController(
             state=self.state,
-            screen_mover=self.screen_mover,
             hotkey_manager=self.hotkey_manager,
             save_state=save_state,
-            window_handle=lambda: int(self.winId()),
             settings_page=lambda: getattr(
                 getattr(self, "pages", None), "screen_mover_settings_page", None
             ),
-            legacy_toggle=lambda: getattr(self, "screen_mover_enabled_btn", None),
-            legacy_activation_combo=lambda: getattr(self, "screen_move_button_combo", None),
             legacy_hotkey_edits=lambda: getattr(self, "screen_mover_hotkey_edits", {}),
             refresh_overview=self.refresh_overview,
-            sync_tray=self.tray_manager.sync_screen_mover_action,
         )
         self.monitor_rules_controller = MonitorRulesController(
             state=self.state,
@@ -233,11 +231,6 @@ class UtilityControlApp(
             lambda _enabled, _dwell: self.tray_manager.sync_hover_controls_action()
         )
         self.hover_window_controls.start()
-        self.screen_mover.configure(
-            app_hwnd=int(self.winId()),
-            self_action_dispatch=self._screen_mover_bridge.dispatch,
-            settings=self.state,
-        )
         self.apply_screen_mover_settings()
         self.apply_monitor_rule_settings(apply_existing=True)
         
@@ -374,17 +367,14 @@ class UtilityControlApp(
     def set_monitor_rules_enabled(self, enabled: bool) -> None:
         self.monitor_rules_controller.set_enabled(enabled)
 
-    def set_screen_mover_enabled(self, enabled: bool) -> None:
-        self.screen_mover_settings_controller.set_enabled(enabled)
-
     def set_hover_window_controls_enabled(self, enabled: bool) -> None:
         self.hover_window_controls.set_enabled(enabled)
 
     def reset_screen_mover_settings(self) -> None:
         self.screen_mover_settings_controller.reset_settings()
 
-    def handle_screen_mover_self_action(self, action: str) -> None:
-        self.screen_mover_settings_controller.handle_self_action(action)
+    def handle_screen_mover_action(self, action: str) -> None:
+        self.shortcut_dispatcher.request_action(action)
 
     def prepare_for_shutdown(self):
         if self._shutdown_complete:
@@ -396,11 +386,6 @@ class UtilityControlApp(
 
         try:
             self.hotkey_manager.stop()
-        except Exception:
-            pass
-
-        try:
-            self.screen_mover.stop()
         except Exception:
             pass
 

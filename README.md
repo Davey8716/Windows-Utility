@@ -14,7 +14,7 @@ Feel free to clone the repo, explore the code, adapt it to your own setup, and m
 
 ## Features
 
-- Move, minimize, or maximize windows from a contrast-aware title-bar dock, with configurable mouse activation and global keyboard shortcuts
+- Move, minimize, or maximize the foreground window with configurable global keyboard shortcuts
 - Activate supported minimize, maximize, restore, and close buttons by dwelling over them, with calibration for custom title bars and optional taskbar-preview restoration
 - Keep the app always on top, switch theme, toggle tooltips, and enable Zen Mode to hide desktop icons
 - Warn before lock, log out, restart, or shutdown when external drives are still connected
@@ -68,7 +68,7 @@ python main.py
 The left side is the everyday tools area:
 
 - `User Interface`: theme, always-on-top, tooltips, desktop Zen Mode, power actions, minimize-after-use
-- `Screen Mover`: master enable control, mouse trigger, and configurable keyboard shortcuts for moving, minimizing, or maximizing the foreground window
+- `Screen Mover`: configurable global keyboard shortcuts for moving, minimizing, or maximizing the foreground window
 - `Hover Window Controls`: enable dwell actions, choose the delay, calibrate custom title bars, export hover data, and clear learned buttons
 - `Monitor Rules`: automatically place newly opened application windows on an assigned display, preserving their current size, restoring captured geometry, or maximizing them
 - `External Drive Reminder Options`: connected drive display plus leave and plug/unplug reminders
@@ -95,10 +95,9 @@ independent of the standalone Browser App Mover application and are not imported
 from or written to its settings file.
 
 The Screen Mover supports shortcuts for Far Left, Left, Right, Far Right,
-Minimize, and Maximize. Empty shortcut fields are disabled. The tray menu's
-`Screen Mover Enabled` action mirrors the master control in the main window, and
-`Reset Screen Mover Defaults` restores the middle mouse trigger and clears all
-shortcuts without changing other app settings.
+Minimize, and Maximize. Configured shortcuts are active while Windows Resurface
+is running; empty shortcut fields are disabled. `Reset Shortcut Defaults` clears
+all shortcuts without changing other app settings.
 
 Hover Window Controls settings are stored in the main Windows Resurface state
 file. Learned caption-button profiles and export metadata are stored under
@@ -127,13 +126,11 @@ captured geometry to matching open windows. Cancel leaves windows untouched.
 Automatic moves pause while the left mouse button is held. After recovery ends,
 manual moves are allowed unless the rule's "Reapply if moved" option is enabled.
 During recovery, manually dragging a window also ends recovery for that window when
-"Reapply if moved" is disabled.
+"Reapply if moved" is disabled. Screen Mover monitor shortcuts follow the same
+rule: they immediately end recovery when Reapply is disabled, while an enforced
+rule returns the window to its assigned monitor after the normal settle delay.
 If the assigned display is disconnected, no other display is substituted; retries
 stop after recovery unless Reapply is enabled.
-
-The visible title-bar mover dock is suppressed for executables installed beneath
-a Steam library's `steamapps\common` directory. Configured keyboard shortcuts
-and mouse-trigger mover actions remain available for those game windows.
 
 The master backup path is configurable inside the app and defaults to your home folder. Depending on which tools you use, Windows Resurface can create files such as:
 
@@ -149,12 +146,10 @@ The master backup path is configurable inside the app and defaults to your home 
 - Some actions may prompt for administrator approval depending on the Windows tool being opened or command being run.
 - A few Windows utilities depend on Windows edition or permissions. For example, some management consoles may not be available on all Home installations.
 - The `Folder Creator` button expects the companion tool to remain in the repo at `Code Folder Creator/`.
-- Packaged builds should include the `Icon Pngs/` folder beside the executable or as bundled application data. The Screen Mover falls back to blue text symbols if those images are unavailable.
 
 ## Project Structure
 
 - `Code Windows Resurface/main.py` main app launcher; `resurface/` contains core, UI, and feature packages
-- `Icon Pngs/` black and white Screen Mover dock actions
 - `Code Folder Creator/main.py` companion launcher; `folder_creator/` contains core, UI, and feature packages
 - `Shared/` shared app state defaults and JSON state manager
 - `Tests/` automated tests for shared state handling and screen mover behavior
