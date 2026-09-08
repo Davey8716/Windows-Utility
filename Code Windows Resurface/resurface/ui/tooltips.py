@@ -19,6 +19,7 @@ TOOLTIP_TEXT = {
     "screen_mover_hotkey_clear": "Removes this keyboard shortcut.",
     "screen_mover_reset": "Restores the Screen Mover defaults without changing other Windows Resurface settings.",
     "hover_controls_enabled": "Runs a window action after the pointer rests on a supported minimize, maximize, restore, or close button.",
+    "hover_controls_taskbar_restore": "Restores a minimized window after the pointer rests over its taskbar icon. Requires AutoHotkey v2.",
     "hover_controls_dwell": "Chooses how long the pointer must remain over a supported window control before it activates.",
     "hover_controls_calibrate": "Captures and adjusts learned button positions for applications with custom title bars.",
     "hover_controls_export": "Exports Hover Window Controls settings and learned profiles to the Hover Window Controls folder inside the master backup path.",

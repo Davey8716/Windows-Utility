@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QApplication, QPushButton, QToolTip
 
-from resurface.ui.tooltips import QtTooltipManager
+from resurface.ui.pages.hover_window_controls_page import HoverWindowControlsPage
+from resurface.ui.tooltips import QtTooltipManager, tooltip_text
 
 
 def _app():
@@ -57,3 +58,21 @@ def test_dynamic_nonempty_tooltip_still_displays(monkeypatch):
     assert len(shown) == 1
     assert "This action is unavailable" in shown[0][1]
     widget.deleteLater()
+
+
+def test_taskbar_restoration_button_uses_central_tooltip_wording():
+    _app()
+    registered = {}
+    page = HoverWindowControlsPage(
+        {},
+        lambda widget, text: registered.__setitem__(widget, text),
+    )
+
+    assert registered[page.taskbar_restore_button] == tooltip_text(
+        "hover_controls_taskbar_restore"
+    )
+    assert registered[page.taskbar_restore_button] == (
+        "Restores a minimized window after the pointer rests over its taskbar "
+        "icon. Requires AutoHotkey v2."
+    )
+    page.deleteLater()

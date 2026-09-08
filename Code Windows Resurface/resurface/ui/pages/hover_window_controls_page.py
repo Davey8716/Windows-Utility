@@ -110,6 +110,10 @@ class HoverWindowControlsPage(PageControls):
             self.enabled_button, tooltip_text("hover_controls_enabled")
         )
         self.register_tooltip(
+            self.taskbar_restore_button,
+            tooltip_text("hover_controls_taskbar_restore"),
+        )
+        self.register_tooltip(
             self.dwell_combo, tooltip_text("hover_controls_dwell")
         )
         self.register_tooltip(
