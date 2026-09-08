@@ -72,6 +72,7 @@ class UserInterfacePage(PageControls):
         top_layout.addWidget(compact_slot, 0, 0)
         top_layout.addWidget(power, 0, 1)
         self.register_tooltip(power, tooltip_text("power_options"))
+        self.power_actions_combo = power
 
         always = self.make_toggle_button(
             "Always on Top", bool(settings.get("main_always_on_top_enabled", True))
@@ -98,6 +99,11 @@ class UserInterfacePage(PageControls):
         minimize_after.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.register_tooltip(minimize_after, tooltip_text("minimize_after_use"))
         self.add_two_column_control_row(self.content_layout, maximize, minimize_after)
+
+        self.always_on_top_button = always
+        self.tooltips_button = tips
+        self.maximize_all_button = maximize
+        self.minimize_after_use_button = minimize_after
 
         self._dark_mode_button.toggled.connect(self.theme_changed.emit)
         self._desktop_zen_button.toggled.connect(self.desktop_zen_changed.emit)

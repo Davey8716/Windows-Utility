@@ -66,6 +66,7 @@ class MaintenancePage(QWidget):
         self.run_with_optional_minimize = run_with_optional_minimize
         self.show_modal_message = show_modal_message
         self._output_last_action_label: str | None = None
+        self.quick_action_dropdowns: list[tuple[QComboBox, str, dict[str, Callable]]] = []
 
         self.page_layout = QVBoxLayout(self)
         self.page_layout.setContentsMargins(0, 0, 0, 0)
@@ -185,6 +186,7 @@ class MaintenancePage(QWidget):
 
         combo.currentTextChanged.connect(selected)
         layout.addWidget(combo, row, column)
+        self.quick_action_dropdowns.append((combo, title, action_map))
 
     def set_output_context(self, action_label: str):
         if action_label in self.OUTPUT_CLEAR_MESSAGES:

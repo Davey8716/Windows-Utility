@@ -14,6 +14,12 @@ FOLDER_CREATOR_STATE_KEYS = frozenset(FOLDER_CREATOR_DEFAULTS)
 
 WINDOWS_RESURFACE_DEFAULTS = {
     "last_opened_page": "overview",
+    "quick_action_ids": [
+        "organising.desktop_screenshot",
+        "organising.export_bookmarks",
+        "folder.create_desktop_folder",
+        "recycle.open",
+    ],
     "theme_dark": True,
     "main_always_on_top_enabled": True,
     "tooltips_enabled": True,

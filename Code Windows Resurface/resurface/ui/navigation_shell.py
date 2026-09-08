@@ -37,7 +37,6 @@ class NavigationShell(QWidget):
 
     PAGE_DEFINITIONS = (
         PageDefinition("overview", "Overview", "\ue80f", "Common actions and a quick view of Windows Resurface."),
-        PageDefinition("quick_actions", "Quick Actions", "\ue945", "Frequently used Windows Resurface actions."),
         PageDefinition("user_interface", "User Interface", "\ue790", "Choose how Windows Resurface looks and behaves."),
         PageDefinition("screen_mover", "Screen Mover", "\ue7f4", "Move and manage windows with the title-bar dock and keyboard shortcuts."),
         PageDefinition(

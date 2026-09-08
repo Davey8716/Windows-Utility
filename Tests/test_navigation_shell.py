@@ -57,7 +57,7 @@ def test_content_must_be_constructed_with_its_final_parent():
         wrong_parent = QWidget()
         misplaced = QWidget(wrong_parent)
         try:
-            shell.mount_content("quick_actions", misplaced)
+            shell.mount_content("overview", misplaced)
         except ValueError as exc:
             assert "final parent" in str(exc)
         else:

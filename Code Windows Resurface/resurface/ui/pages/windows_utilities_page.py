@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
+from pathlib import Path
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt
@@ -34,6 +36,7 @@ class WindowsUtilitiesPage(QWidget):
         self.register_tooltip = register_tooltip
         self.run_with_optional_minimize = run_with_optional_minimize
         self.set_output_context = set_output_context
+        self.quick_action_dropdowns: list[tuple[QComboBox, object, dict[str, WindowsToolSpec]]] = []
         self.page_layout = QVBoxLayout(self)
         self.page_layout.setContentsMargins(0, 0, 0, 0)
         self._build()
@@ -101,6 +104,27 @@ class WindowsUtilitiesPage(QWidget):
 
         combo.currentTextChanged.connect(selected)
         layout.addWidget(combo)
+        self.quick_action_dropdowns.append((combo, group, tools_by_label))
+
+    def invoke_tool(self, tool: WindowsToolSpec) -> None:
+        self.set_output_context(tool.label)
+        action = lambda: self.launch(tool)
+        if tool.minimize:
+            self.run_with_optional_minimize(action)
+        else:
+            action()
+
+    @staticmethod
+    def tool_availability(tool: WindowsToolSpec) -> tuple[bool, str]:
+        if tool.launch_kind in {"router", "maintenance", "folder", "shell_open"}:
+            return True, ""
+        target = tool.target.strip()
+        if not target or ":" in target and not Path(target).is_absolute():
+            return True, ""
+        available = Path(target).is_file() if Path(target).is_absolute() else shutil.which(target) is not None
+        if available:
+            return True, ""
+        return False, f"{tool.label} is not available on this system."
 
     def launch(self, tool: WindowsToolSpec):
         if tool.launch_kind == "maintenance":

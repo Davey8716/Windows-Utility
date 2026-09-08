@@ -3,13 +3,15 @@
 from dataclasses import dataclass
 from html import escape
 from pathlib import Path
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QMimeData, QPoint, Qt, QTimer
+from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QFrame,
     QGridLayout,
     QLabel,
+    QMenu,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
@@ -32,10 +34,187 @@ from resurface.ui.pages.recycle_bin_page import RecycleBinPage
 from resurface.ui.pages.screen_mover_settings_page import ScreenMoverSettingsPage
 from resurface.ui.pages.user_interface_page import UserInterfacePage
 from resurface.ui.pages.windows_utilities_page import WindowsUtilitiesPage
+from resurface.ui.quick_actions import QuickActionRegistry, QuickActionSpec
+
+
+QUICK_ACTION_MIME = "application/x-windows-resurface-quick-action"
+
+
+class QuickActionButton(QPushButton):
+    def __init__(self, action_id: str, registry: QuickActionRegistry, parent=None):
+        super().__init__(parent)
+        self.action_id = action_id
+        self.registry = registry
+        self._press_pos: QPoint | None = None
+        self._dragged = False
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._press_pos = event.position().toPoint()
+            self._dragged = False
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (
+            self._press_pos is not None
+            and event.buttons() & Qt.MouseButton.LeftButton
+            and (event.position().toPoint() - self._press_pos).manhattanLength() >= 10
+        ):
+            self._dragged = True
+            self.setDown(False)
+            mime = QMimeData()
+            mime.setData(QUICK_ACTION_MIME, self.action_id.encode("utf-8"))
+            drag = QDrag(self)
+            drag.setMimeData(mime)
+            drag.exec(Qt.DropAction.MoveAction)
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._dragged:
+            self._press_pos = None
+            event.accept()
+            return
+        self._press_pos = None
+        super().mouseReleaseEvent(event)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        styles.apply_popup_menu_style(menu)
+        action = menu.addAction("Unpin from Quick Actions")
+        action.triggered.connect(lambda: self.registry.unpin(self.action_id))
+        menu.exec(event.globalPos())
+
+
+class QuickActionsGrid(QWidget):
+    VISIBLE_LIMIT = 8
+
+    def __init__(self, registry: QuickActionRegistry, register_tooltip, parent=None):
+        super().__init__(parent)
+        self.registry = registry
+        self.register_tooltip = register_tooltip
+        self.expanded = False
+        self.buttons: dict[str, QuickActionButton] = {}
+        self.tooltip_managers = {}
+        self.setAcceptDrops(True)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_area_menu)
+        self.layout = QGridLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
+        self.layout.setVerticalSpacing(12)
+        self.registry.pins_changed.connect(self.rebuild)
+        self.registry.action_changed.connect(self.refresh_action)
+        self.rebuild()
+
+    def rebuild(self) -> None:
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            if item.widget() is not None:
+                item.widget().deleteLater()
+        self.buttons.clear()
+        self.tooltip_managers.clear()
+        specs = self.registry.specs()
+        visible = specs if self.expanded else specs[: self.VISIBLE_LIMIT]
+        for index, spec in enumerate(visible):
+            button = QuickActionButton(spec.action_id, self.registry, self)
+            styles.apply_page_control_size(button)
+            button.setProperty("styleFontSize", 13)
+            button.setStyleSheet(
+                styles.toggle_button_style(13)
+                if spec.is_toggle
+                else styles.organizing_button_style(13)
+            )
+            if spec.is_toggle:
+                button.setCheckable(True)
+                button.setProperty("quickActionToggle", True)
+                button.clicked.connect(
+                    lambda checked, target=spec: target.set_checked(bool(checked))
+                )
+            else:
+                button.clicked.connect(spec.invoke)
+            self.buttons[spec.action_id] = button
+            self.tooltip_managers[spec.action_id] = self.register_tooltip(button, spec.tooltip)
+            self.layout.addWidget(button, index // 2, index % 2)
+            self.refresh_action(spec.action_id)
+
+        row = (len(visible) + 1) // 2
+        if not specs:
+            empty = QLabel(
+                "No Quick Actions pinned. Right-click an action elsewhere in the app to add it.",
+                self,
+            )
+            empty.setObjectName("QuickActionsEmptyState")
+            empty.setWordWrap(True)
+            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.layout.addWidget(empty, 0, 0, 1, 2)
+        elif len(specs) > self.VISIBLE_LIMIT:
+            more = QPushButton("Show Less" if self.expanded else "Show More", self)
+            more.setObjectName("QuickActionsShowMore")
+            more.clicked.connect(self._toggle_expanded)
+            self.layout.addWidget(more, row, 0, 1, 2, Qt.AlignmentFlag.AlignHCenter)
+
+    def refresh_action(self, action_id: str) -> None:
+        button = self.buttons.get(action_id)
+        spec = self.registry.spec(action_id)
+        if button is None or spec is None:
+            return
+        label = spec.source.text() if spec.source is not None and spec.source.text() else spec.label
+        button.setText(label)
+        if spec.is_toggle:
+            button.blockSignals(True)
+            button.setChecked(bool(spec.checked()))
+            button.blockSignals(False)
+        available, reason = self.registry.availability(spec)
+        button.setEnabled(available)
+        button.setToolTip(reason or spec.tooltip)
+        manager = self.tooltip_managers.get(action_id)
+        if manager is not None:
+            manager.text = reason or spec.tooltip
+
+    def _toggle_expanded(self) -> None:
+        self.expanded = not self.expanded
+        self.rebuild()
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat(QUICK_ACTION_MIME):
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasFormat(QUICK_ACTION_MIME):
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        action_id = bytes(event.mimeData().data(QUICK_ACTION_MIME)).decode("utf-8")
+        target = self.childAt(event.position().toPoint())
+        while target is not None and not isinstance(target, QuickActionButton):
+            target = target.parentWidget()
+        ids = self.registry.pinned_ids()
+        target_index = ids.index(target.action_id) if isinstance(target, QuickActionButton) else len(ids) - 1
+        if self.registry.move(action_id, target_index):
+            event.acceptProposedAction()
+
+    def _show_area_menu(self, pos: QPoint) -> None:
+        menu = QMenu(self)
+        styles.apply_popup_menu_style(menu)
+        reset = menu.addAction("Reset Quick Actions to Defaults")
+        chosen = menu.exec(self.mapToGlobal(pos))
+        if chosen is not reset:
+            return
+        answer = QMessageBox.question(
+            self,
+            "Reset Quick Actions",
+            "Replace your pinned Quick Actions and their order with the defaults?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self.expanded = False
+            self.registry.reset()
 
 
 class OverviewPage(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, quick_actions: QuickActionRegistry, register_tooltip, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -71,6 +250,16 @@ class OverviewPage(QWidget):
         summary_layout.setColumnStretch(1, 1)
         layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
+        heading = QLabel("Quick Actions", self)
+        heading.setObjectName("PageSectionHeading")
+        heading.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        heading.setStyleSheet(styles.page_section_heading_style())
+        layout.addWidget(heading)
+        self.quick_actions_grid = QuickActionsGrid(quick_actions, register_tooltip, self)
+        self.quick_actions_grid.setObjectName("QuickActionsGrid")
+        self.quick_actions_grid.setFixedWidth(content_width)
+        layout.addWidget(self.quick_actions_grid, 0, Qt.AlignmentFlag.AlignHCenter)
+
     def refresh(self, state: dict, connected_drives) -> None:
         self.status_labels["screen_mover"].setText(
             "On" if state.get("title_bar_dock_enabled", True) else "Off"
@@ -87,34 +276,9 @@ class OverviewPage(QWidget):
         )
 
 
-class QuickActionsPage(QWidget):
-    def __init__(self, actions, parent=None):
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        content_width = (styles.PAGE_CONTROL_WIDTH * 2) + styles.PAGE_CONTROL_GAP
-        quick_row = QWidget(self)
-        quick_row.setProperty("centeredControlGrid", True)
-        quick_row.setObjectName("QuickActionsGrid")
-        quick_row.setFixedWidth(content_width)
-        quick_layout = QGridLayout(quick_row)
-        quick_layout.setContentsMargins(0, 0, 0, 0)
-        quick_layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
-        quick_layout.setVerticalSpacing(12)
-        for index, (text, callback) in enumerate(actions):
-            button = QPushButton(text, quick_row)
-            styles.apply_page_control_size(button)
-            button.setProperty("styleFontSize", 13)
-            button.setStyleSheet(styles.organizing_button_style(13))
-            button.clicked.connect(callback)
-            quick_layout.addWidget(button, index // 2, index % 2)
-        layout.addWidget(quick_row, 0, Qt.AlignmentFlag.AlignHCenter)
-
-
 @dataclass(frozen=True)
 class ApplicationPages:
     overview_page: OverviewPage
-    quick_actions_page: QuickActionsPage
     user_interface_page: UserInterfacePage
     screen_mover_settings_page: ScreenMoverSettingsPage
     monitor_rules_page: MonitorRulesPage
@@ -140,18 +304,11 @@ class ApplicationPageComposer:
         app = self.app
         shell = self.shell
 
-        overview_page = OverviewPage(shell.content_parent("overview"))
-        shell.mount_content("overview", overview_page)
-        quick_actions_page = QuickActionsPage(
-            (
-                ("Desktop Screenshot", app.organising_actions.take_desktop_screenshot),
-                ("Export Bookmarks", app.organising_actions.export_bookmarks),
-                ("Create Desktop Folder", app._open_folder_utilities),
-                ("Open Recycle Bin", app.recycle_bin_actions.open_recycle_bin),
-            ),
-            shell.content_parent("quick_actions"),
+        self.quick_actions = QuickActionRegistry(self.state, save_state, app)
+        overview_page = OverviewPage(
+            self.quick_actions, app.register_tooltip, shell.content_parent("overview")
         )
-        shell.mount_content("quick_actions", quick_actions_page)
+        shell.mount_content("overview", overview_page)
 
         icons_visible = app.actions.desktop_icons_visible()
         user_interface_page = UserInterfacePage(
@@ -277,7 +434,6 @@ class ApplicationPageComposer:
 
         pages = ApplicationPages(
             overview_page=overview_page,
-            quick_actions_page=quick_actions_page,
             user_interface_page=user_interface_page,
             screen_mover_settings_page=screen_mover_settings_page,
             monitor_rules_page=monitor_rules_page,
@@ -290,8 +446,152 @@ class ApplicationPageComposer:
             maintenance_page=maintenance_page,
             hover_window_controls_page=hover_page,
         )
+        self._register_quick_actions(pages)
+        self.quick_actions.finalize()
+        app.quick_actions = self.quick_actions
         overview_page.refresh(self.state, getattr(app, "_overview_connected_drives", set()))
         return pages
+
+    def _register_quick_actions(self, pages: ApplicationPages) -> None:
+        registry = self.quick_actions
+
+        def button(action_id, label, widget, tooltip=""):
+            registry.register_button(action_id, label, widget, tooltip=tooltip)
+
+        ui = pages.user_interface_page
+        button("ui.theme", "Dark Mode", ui._dark_mode_button, "Switch the app theme.")
+        button("ui.desktop_zen", "Desktop Zen Mode", ui._desktop_zen_button, "Show or hide desktop icons.")
+        button("ui.always_on_top", "Always on Top", ui.always_on_top_button)
+        button("ui.tooltips", "Tooltips", ui.tooltips_button)
+        button("ui.maximize_all", "Maximize All", ui.maximize_all_button)
+        button("ui.minimize_after_use", "Minimize After Use", ui.minimize_after_use_button)
+        power_callbacks = {
+            "Lock PC": self.app.maintenance_actions.run_lock_pc,
+            "Sleep": self.app.maintenance_actions.run_sleep,
+            "Log out": self.app.maintenance_actions.run_logout,
+            "Restart": self.app.maintenance_actions.run_restart,
+            "Shutdown": self.app.maintenance_actions.run_shutdown,
+        }
+        registry.register_dropdown(
+            ui.power_actions_combo,
+            [
+                QuickActionSpec(
+                    f"power.{name.lower().replace(' ', '_')}",
+                    name,
+                    lambda name=name, callback=callback: self.app.external_drive_controller.confirm_power_action(name, callback),
+                    "Uses the normal power-action and external-drive confirmation.",
+                )
+                for name, callback in power_callbacks.items()
+            ],
+        )
+
+        screen = pages.screen_mover_settings_page
+        button("screen_mover.enabled", "Screen Mover", screen._enabled_button)
+        button("screen_mover.reset", "Reset Screen Mover Defaults", screen.reset_button)
+
+        drives = pages.external_drives_page
+        button("drives.leave_reminder", "Drive Leave Reminder", drives.leave_reminder_button)
+        space = pages.drive_space_page
+        button("drives.this_pc", "Open This PC", space.btn_this_pc)
+        button("drives.storage_sense", "Open Storage Sense", space.btn_storage_sense)
+
+        organising = pages.organising_utilities_page
+        button("organising.desktop_screenshot", "Desktop Screenshot", organising.screenshot_button)
+        button("organising.export_bookmarks", "Export Bookmarks", organising.bookmarks_button)
+        button("organising.master_backup_path", "Master Backup Path", organising.master_backup_button)
+        organising_callbacks = {
+            "Capture Layout": self.app.organising_actions.capture_desktop_layout,
+            "Restore Layout": self.app.organising_actions.restore_desktop_layout,
+        }
+        registry.register_dropdown(
+            organising.desktop_actions_combo,
+            [QuickActionSpec(f"organising.{label.lower().replace(' ', '_')}", label, callback) for label, callback in organising_callbacks.items()],
+        )
+        taskbar_callbacks = {
+            "Backup Taskbar": self.app.organising_actions.backup_taskbar_apps,
+            "Open Backup Folder": self.app.organising_actions.open_taskbar_backup_folder,
+        }
+        registry.register_dropdown(
+            organising.taskbar_actions_combo,
+            [QuickActionSpec(f"organising.{label.lower().replace(' ', '_')}", label, callback) for label, callback in taskbar_callbacks.items()],
+        )
+
+        registry.register(
+            QuickActionSpec(
+                "folder.create_desktop_folder",
+                "Create Desktop Folder",
+                self.app._open_folder_utilities,
+                "Open Folder Utilities and focus the folder-name field.",
+            )
+        )
+        button("folder.creator", "Folder Creator", pages.folder_utilities_page.folder_creator_button)
+
+        recycle = pages.recycle_bin_page
+        button("recycle.auto_clean", "Auto-clean", recycle.auto_clean_button)
+        recycle_callbacks = {
+            "Open Recycle Bin": self.app.recycle_bin_actions.open_recycle_bin,
+            "Run Auto-Clean Now": self.app.recycle_bin_actions.run_cleanup_now,
+            "Empty Recycle Bin": self.app.recycle_bin_actions.empty_recycle_bin,
+        }
+        recycle_ids = {
+            "Open Recycle Bin": "recycle.open",
+            "Run Auto-Clean Now": "recycle.run_auto_clean",
+            "Empty Recycle Bin": "recycle.empty",
+        }
+        registry.register_dropdown(
+            recycle.actions_combo,
+            [QuickActionSpec(recycle_ids[label], label, callback) for label, callback in recycle_callbacks.items()],
+        )
+
+        hover = pages.hover_window_controls_page
+        for action_id, label, widget in (
+            ("hover.enabled", "Hover Controls", hover.enabled_button),
+            ("hover.taskbar_restore", "Taskbar Restoration", hover.taskbar_restore_button),
+            ("hover.calibrate", "Calibrate Application…", hover.calibrate_button),
+            ("hover.export", "Export Hover Data…", hover.export_button),
+            ("hover.import", "Import Hover Data…", hover.import_button),
+            ("hover.clear", "Clear Learned Buttons…", hover.clear_button),
+        ):
+            button(action_id, label, widget)
+
+        monitor = pages.monitor_rules_page
+        for action_id, widget in (
+            ("monitor_rules.add", monitor.add_button),
+            ("monitor_rules.sort", monitor.alphabet_sort_button),
+            ("monitor_rules.turn_off_all", monitor.turn_off_all_button),
+            ("monitor_rules.delete_all", monitor.delete_all_button),
+            ("monitor_rules.export", monitor.export_rules_button),
+            ("monitor_rules.import", monitor.import_rules_button),
+        ):
+            button(action_id, widget.text(), widget)
+
+        maintenance = pages.maintenance_page
+        for combo, title, action_map in maintenance.quick_action_dropdowns:
+            registry.register_dropdown(
+                combo,
+                [
+                    QuickActionSpec(
+                        f"maintenance.{label.lower().replace(' ', '_').replace('/', '_')}",
+                        label,
+                        lambda label=label, callback=callback: (maintenance.set_output_context(label), callback()),
+                    )
+                    for label, callback in action_map.items()
+                ],
+            )
+
+        windows = pages.windows_utilities_page
+        for combo, group, tools_by_label in windows.quick_action_dropdowns:
+            registry.register_dropdown(
+                combo,
+                [
+                    QuickActionSpec(
+                        f"windows.{tool.key}", tool.label,
+                        lambda tool=tool: windows.invoke_tool(tool),
+                        available=lambda tool=tool: windows.tool_availability(tool),
+                    )
+                    for tool in tools_by_label.values()
+                ],
+            )
 
     def _calibrate_hover_controls(self) -> None:
         try:

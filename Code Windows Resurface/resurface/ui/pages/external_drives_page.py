@@ -50,6 +50,7 @@ class ExternalDrivesPage(PageControls):
         styles.apply_page_control_size(leave, width=width, role="externalDrive")
         self.bind_toggle_state_text(leave, "Drive Leave Reminder")
         self.register_tooltip(leave, tooltip_text("idle_plugged_reminder"))
+        self.leave_reminder_button = leave
         row_layout.addWidget(self._drives); row_layout.addWidget(self._empty_label); row_layout.addWidget(leave)
         self.content_layout.addWidget(row, 0, Qt.AlignmentFlag.AlignHCenter)
 

@@ -151,7 +151,10 @@ class ApplicationThemeController:
             font_size = styles.coerce_font_size(
                 button.property("styleFontSize"), 14
             ) or 14
-            button.setStyleSheet(styles.organizing_button_style(font_size=font_size))
+            if button.property("quickActionToggle"):
+                button.setStyleSheet(styles.toggle_button_style(font_size=font_size))
+            else:
+                button.setStyleSheet(styles.organizing_button_style(font_size=font_size))
 
         if self.user_interface_page is not None:
             self.user_interface_page.refresh_icons()

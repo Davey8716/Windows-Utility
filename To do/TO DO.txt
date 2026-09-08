@@ -1,8 +1,4 @@
-Add pinning to the quick actions, right clicking certain items should be pinable or have icon next to icons to pin/unpin them ?
-
 Make 2 extra branches of both + Windows Workspaces builder then merge each into the 2nd branch as  module builds so the first branch of each is the stand alone version
-
-Windows exe builder not the dropdown > buttons on building
 
 Fix sfc scannow and chkdsk
 
@@ -24,6 +20,7 @@ A strong interaction model would be:
 - Prevent duplicates automatically.
 - Persist the selection and order between sessions.
 - Optionally include Reset to Defaults.
+
 I’d keep Quick Actions intentionally compact—perhaps 6–8 visible actions—then allow overflow or a “Show More” area. That prevents the Overview page from becoming another crowded utilities page.
 There are a few important details worth planning:
 - Toggles should reflect their live on/off state when pinned.

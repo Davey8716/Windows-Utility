@@ -21,9 +21,11 @@ class RecycleBinPage(PageControls):
             lambda name: self.action_requested.emit({"Open Recycle Bin": "open", "Run Auto-Clean Now": "run", "Empty Recycle Bin": "empty"}[name]),
         )
         layout.addWidget(actions, 0, 0)
+        self.actions_combo = actions
         self.register_tooltip(actions, tooltip_text("cleanup_actions"))
         enabled = bool(settings.get("recycle_bin_auto_clean_enabled", False))
         toggle = self.make_toggle_button("Auto-clean", enabled)
+        self.auto_clean_button = toggle
         self.bind_toggle_state_text(toggle, "Auto-clean")
         toggle.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH); layout.addWidget(toggle, 0, 1)
         self.register_tooltip(toggle, tooltip_text("recycle_bin_auto_clean"))

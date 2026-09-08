@@ -18,6 +18,7 @@ class FolderUtilitiesPage(PageControls):
         self.content_layout.setSpacing(16)
         creator = self.style_action_button(QPushButton("Folder Creator"))
         creator.clicked.connect(self.folder_creator_requested.emit)
+        self.folder_creator_button = creator
         self.register_tooltip(creator, tooltip_text("folder_creator_launcher"))
         create = self.style_action_button(QPushButton("Folder To Desktop"))
         self._create_folder = create
