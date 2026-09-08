@@ -681,6 +681,7 @@ class ApplicationPageComposer:
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
             link_activated=open_destination,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
         if answer != QMessageBox.StandardButton.Save:
             return

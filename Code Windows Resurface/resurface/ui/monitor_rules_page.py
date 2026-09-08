@@ -197,6 +197,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             QMessageBox.StandardButton.Ok,
             minimum_popup_width=520,
             text_minimum_width=450,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
 
     def _available_devices(self) -> set[str]:
@@ -505,6 +506,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
                 QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Save,
                 link_activated=lambda _link: self._open_export_directory(destination),
+                popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
             )
             if answer != QMessageBox.StandardButton.Save:
                 return None

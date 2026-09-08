@@ -181,6 +181,10 @@ def test_hover_export_confirms_then_exports_to_master_subfolder(tmp_path):
     assert len(app.modal_calls) == 1
     assert str(destination) in app.modal_calls[0][0][2]
     assert callable(app.modal_calls[0][1]["link_activated"])
+    assert (
+        app.modal_calls[0][1]["popup_corner_radius"]
+        == styles.BUTTON_CORNER_RADIUS
+    )
     assert app.timed_calls[0][0][1] == "Hover data exported"
     assert str(destination) in app.timed_calls[0][0][2]
 
@@ -438,6 +442,7 @@ def test_modal_message_link_callback_is_wired_to_rich_text_label(monkeypatch):
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
             link_activated=activated.append,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
 
         label = dialogs[0].findChild(QLabel, "qt_msgbox_label")
@@ -447,7 +452,12 @@ def test_modal_message_link_callback_is_wired_to_rich_text_label(monkeypatch):
             & Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
         assert not label.openExternalLinks()
-        assert dialogs[0].styleSheet() == styles.message_box_style()
+        assert dialogs[0]._popup_corner_radius == styles.BUTTON_CORNER_RADIUS
+        assert dialogs[0].styleSheet() == styles.message_box_style(
+            radius=styles.BUTTON_CORNER_RADIUS
+        )
+        qt_app.processEvents()
+        assert not dialogs[0].mask().isEmpty()
         assert label.palette().color(QPalette.ColorRole.Link).name() == "#ffffff"
         assert label.palette().color(QPalette.ColorRole.LinkVisited).name() == "#ffffff"
 

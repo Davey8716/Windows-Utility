@@ -87,7 +87,15 @@ def test_monitor_rules_help_button_opens_reviewed_theme_aware_dialog(
                 QMessageBox.StandardButton.Ok
             )
             assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
-            assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style()
+            assert (
+                dialog._popup_corner_radius
+                == monitor_rules_ui.styles.BUTTON_CORNER_RADIUS
+            )
+            assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style(
+                radius=monitor_rules_ui.styles.BUTTON_CORNER_RADIUS
+            )
+            app.processEvents()
+            assert not dialog.mask().isEmpty()
     finally:
         monitor_rules_ui.styles.set_theme(True)
         page.deleteLater()
@@ -721,9 +729,17 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
             )
             assert confirmation.windowFlags() & Qt.WindowType.FramelessWindowHint
             assert (
-                confirmation.styleSheet()
-                == monitor_rules_ui.styles.message_box_style()
+                confirmation._popup_corner_radius
+                == monitor_rules_ui.styles.BUTTON_CORNER_RADIUS
             )
+            assert (
+                confirmation.styleSheet()
+                == monitor_rules_ui.styles.message_box_style(
+                    radius=monitor_rules_ui.styles.BUTTON_CORNER_RADIUS
+                )
+            )
+            app.processEvents()
+            assert not confirmation.mask().isEmpty()
             link_color = "#ffffff" if is_dark else "#000000"
             assert label.palette().color(QPalette.ColorRole.Link).name() == link_color
             assert label.palette().color(QPalette.ColorRole.LinkVisited).name() == link_color
