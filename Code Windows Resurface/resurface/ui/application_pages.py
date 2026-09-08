@@ -170,7 +170,7 @@ class QuickActionsGrid(QWidget):
         button.setToolTip(reason or spec.tooltip)
         manager = self.tooltip_managers.get(action_id)
         if manager is not None:
-            manager.text = reason or spec.tooltip
+            manager.set_text(reason or spec.tooltip)
 
     def _toggle_expanded(self) -> None:
         self.expanded = not self.expanded

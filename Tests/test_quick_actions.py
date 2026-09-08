@@ -92,6 +92,9 @@ def test_toggle_and_disabled_state_stay_synchronized():
     class Tooltip:
         text = ""
 
+        def set_text(self, text):
+            self.text = text
+
     grid = QuickActionsGrid(registry, lambda widget, text: Tooltip())
     tile = grid.buttons["feature"]
 
@@ -105,6 +108,33 @@ def test_toggle_and_disabled_state_stay_synchronized():
     app.processEvents()
     assert not tile.isEnabled()
     assert tile.toolTip()
+    grid.deleteLater()
+    source.deleteLater()
+
+
+def test_unavailable_action_adds_reason_then_clears_blank_tooltip():
+    app = _app()
+    source = QPushButton("Unavailable Action")
+    source.setEnabled(False)
+    registry = QuickActionRegistry({"quick_action_ids": ["unavailable"]}, lambda _value: None)
+    registry.register_button("unavailable", "Unavailable Action", source)
+    registry.finalize()
+
+    class Tooltip:
+        def __init__(self, text):
+            self.text = text
+
+        def set_text(self, text):
+            self.text = text
+
+    grid = QuickActionsGrid(registry, lambda widget, text: Tooltip(text))
+    manager = grid.tooltip_managers["unavailable"]
+    assert "unavailable" in manager.text.lower()
+
+    source.setEnabled(True)
+    app.processEvents()
+    assert grid.buttons["unavailable"].isEnabled()
+    assert manager.text == ""
     grid.deleteLater()
     source.deleteLater()
 

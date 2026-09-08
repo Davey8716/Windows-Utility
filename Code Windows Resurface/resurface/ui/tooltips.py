@@ -90,7 +90,7 @@ class QtTooltipManager(QObject):
         super().__init__(widget)
 
         self.widget = widget
-        self.text = text
+        self.text = "" if text is None else str(text)
         self.delay = delay
 
         self._timer = QTimer(self)
@@ -113,9 +113,15 @@ class QtTooltipManager(QObject):
         return False
 
     def _schedule(self):
+        if not self.text.strip():
+            self._hide()
+            return
         self._timer.start(self.delay)
 
     def _show_tooltip(self):
+        if not self.text.strip():
+            self._hide()
+            return
         app = self.widget.window()
         if hasattr(app, "tooltips_enabled") and not app.tooltips_enabled:
             return
@@ -123,6 +129,11 @@ class QtTooltipManager(QObject):
         QToolTip.setFont(self._build_tooltip_font())
         pos = self.widget.mapToGlobal(QPoint(20, self.widget.height()))
         QToolTip.showText(pos, format_tooltip_text(self.text), self.widget)
+
+    def set_text(self, text) -> None:
+        self.text = "" if text is None else str(text)
+        if not self.text.strip():
+            self._hide()
 
     def _hide(self):
         self._timer.stop()
