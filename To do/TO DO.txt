@@ -4,9 +4,6 @@ Export Hover Data
 
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
 
-Reset Shortcut Defaults on screen mover page should bring up a gui popup, theme specific with 
-rounded corners
-
 Quick actions defaults have stale reference tooltip for Create Desktop Folder button
 
 Overview should list more information from each section e.g. Monitor rules, Hover window controls 

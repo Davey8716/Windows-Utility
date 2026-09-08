@@ -344,6 +344,9 @@ class ApplicationPageComposer:
             self.state, app.register_tooltip, shell.content_parent("screen_mover")
         )
         screen_mover_settings_page.settings_changed.connect(self._screen_mover_settings_changed)
+        screen_mover_settings_page.reset_confirmation_requested.connect(
+            lambda: self._confirm_screen_mover_reset(screen_mover_settings_page)
+        )
         shell.mount_content("screen_mover", screen_mover_settings_page)
 
         monitor_rules_page = MonitorRulesPage(
@@ -868,6 +871,18 @@ class ApplicationPageComposer:
         save_state(self.state)
         self.app.apply_screen_mover_settings()
         self.app.refresh_overview()
+
+    def _confirm_screen_mover_reset(self, page: ScreenMoverSettingsPage) -> None:
+        answer = self.app._show_modal_message(
+            QMessageBox.Icon.Question,
+            "Reset Shortcut Defaults",
+            "This will clear all Screen Mover keyboard shortcuts. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            page.reset_settings()
 
     def _wire_organising_page(self, page: OrganisingUtilitiesPage) -> None:
         app = self.app

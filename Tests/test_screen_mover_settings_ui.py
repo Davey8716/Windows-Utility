@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QWidget,
@@ -1599,6 +1600,7 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
         )
         assert not settings_page.shortcuts_container.isHidden()
         assert settings_page.reset_button.text() == "Reset Shortcut Defaults"
+        assert settings_page.reset_button.isEnabled()
 
         window.state["desktop_screenshot_last_dir"] = "unchanged"
         window.reset_screen_mover_settings()
@@ -1608,6 +1610,7 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
             edit.keySequence().isEmpty()
             for edit in settings_page._hotkey_edits.values()
         )
+        assert not settings_page.reset_button.isEnabled()
     finally:
         window._quit_requested = True
         window.close()
@@ -1675,6 +1678,7 @@ def test_screen_mover_shortcut_controls_align_without_primary_row(monkeypatch):
 
         assert settings_page.reset_button.size().width() == 250
         assert settings_page.reset_button.size().height() == 34
+        assert not settings_page.reset_button.isEnabled()
         reset_left = settings_page.reset_button.mapTo(
             shortcuts_container,
             QPoint(),
@@ -1685,10 +1689,121 @@ def test_screen_mover_shortcut_controls_align_without_primary_row(monkeypatch):
             window.apply_theme(is_dark)
             qt_app.processEvents()
             assert_blocks_aligned()
+            assert not settings_page.reset_button.isEnabled()
+            reset_stylesheet = settings_page.reset_button.styleSheet()
+            assert (
+                f"background-color: {styles.qcolor_css(styles.themed_button_disabled_bg())};"
+                in reset_stylesheet
+            )
+            assert (
+                f"color: {styles.qcolor_css(styles.themed_button_disabled_text())};"
+                in reset_stylesheet
+            )
 
         window.reset_screen_mover_settings()
         qt_app.processEvents()
         assert_blocks_aligned()
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_screen_mover_reset_button_confirms_before_clearing(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["screen_mover_keyboard_hotkeys"]["LEFT"] = "<ctrl>+<left>"
+    saved_states = []
+    window = _build_offscreen_window(monkeypatch, state)
+    monkeypatch.setattr(
+        application_pages,
+        "save_state",
+        lambda saved_state: saved_states.append(copy.deepcopy(saved_state)),
+    )
+    responses = [QMessageBox.StandardButton.Cancel, QMessageBox.StandardButton.Yes]
+    modal_calls = []
+
+    def show_modal(*args, **kwargs):
+        modal_calls.append((args, kwargs))
+        return responses.pop(0)
+
+    window._show_modal_message = show_modal
+    try:
+        page = window.pages.screen_mover_settings_page
+        edit = page._hotkey_edits["LEFT"]
+        initial_hotkey_calls = len(window.hotkey_manager.calls)
+
+        page.reset_button.click()
+
+        assert edit.keySequence().toString() == QKeySequence("Ctrl+Left").toString()
+        assert page.reset_button.isEnabled()
+        assert window.state["screen_mover_keyboard_hotkeys"]["LEFT"] == "<ctrl>+<left>"
+        assert saved_states == []
+        assert len(window.hotkey_manager.calls) == initial_hotkey_calls
+
+        args, kwargs = modal_calls[-1]
+        assert args == (
+            QMessageBox.Icon.Question,
+            "Reset Shortcut Defaults",
+            "This will clear all Screen Mover keyboard shortcuts. Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        assert kwargs == {"popup_corner_radius": styles.BUTTON_CORNER_RADIUS}
+
+        page.reset_button.click()
+
+        assert edit.keySequence().isEmpty()
+        assert all(
+            value == ""
+            for value in window.state["screen_mover_keyboard_hotkeys"].values()
+        )
+        assert len(saved_states) == 1
+        assert window.hotkey_manager.calls[-1] == {}
+        assert not page.reset_button.isEnabled()
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_screen_mover_reset_popup_is_theme_specific_frameless_and_rounded(
+    monkeypatch,
+):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["screen_mover_keyboard_hotkeys"]["LEFT"] = "<ctrl>+<left>"
+    window = _build_offscreen_window(monkeypatch, state)
+    dialogs = []
+
+    def capture_dialog(dialog):
+        dialogs.append(dialog)
+        return QMessageBox.StandardButton.Cancel
+
+    monkeypatch.setattr(QMessageBox, "exec", capture_dialog)
+    try:
+        page = window.pages.screen_mover_settings_page
+        for is_dark in (False, True):
+            window.apply_theme(is_dark)
+            page.reset_button.click()
+            qt_app.processEvents()
+
+            dialog = dialogs[-1]
+            stylesheet = dialog.styleSheet()
+            assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+            assert dialog._popup_corner_radius == styles.BUTTON_CORNER_RADIUS
+            assert stylesheet == styles.message_box_style(
+                radius=styles.BUTTON_CORNER_RADIUS
+            )
+            assert (
+                f"background-color: {styles.qcolor_css(styles.SURFACE_BG)};"
+                in stylesheet
+            )
+            assert f"color: {styles.qcolor_css(styles.CURRENT_TEXT)};" in stylesheet
+            assert f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;" in stylesheet
+            assert not dialog.mask().isEmpty()
     finally:
         window._quit_requested = True
         window.close()

@@ -120,6 +120,58 @@ def test_screen_mover_reset_uses_page_settings_signal_and_api():
         page.deleteLater()
 
 
+def test_screen_mover_reset_button_requests_confirmation_before_changing_settings():
+    _app()
+    page = ScreenMoverSettingsPage(
+        {
+            "screen_mover_keyboard_hotkeys": {"LEFT": "Ctrl+Left"},
+        },
+        lambda _widget, _text: None,
+    )
+    requests = []
+    changes = []
+    page.reset_confirmation_requested.connect(lambda: requests.append(True))
+    page.settings_changed.connect(changes.append)
+    try:
+        before = page.settings()
+        page.reset_button.click()
+
+        assert requests == [True]
+        assert changes == []
+        assert page.settings() == before
+    finally:
+        page.deleteLater()
+
+
+def test_screen_mover_reset_button_tracks_whether_any_shortcut_exists():
+    app = _app()
+    page = ScreenMoverSettingsPage({}, lambda _widget, _text: None)
+    reset_requests = []
+    page.reset_confirmation_requested.connect(lambda: reset_requests.append(True))
+    try:
+        original_size = page.reset_button.size()
+        assert not page.reset_button.isEnabled()
+        page.reset_button.click()
+        assert reset_requests == []
+
+        page._hotkey_edits["LEFT"].setKeySequence("Ctrl+Left")
+        app.processEvents()
+        assert page.reset_button.isEnabled()
+
+        page._clear_hotkey("LEFT")
+        assert not page.reset_button.isEnabled()
+
+        page._hotkey_edits["RIGHT"].setKeySequence("Ctrl+Right")
+        app.processEvents()
+        assert page.reset_button.isEnabled()
+
+        page.reset_settings()
+        assert not page.reset_button.isEnabled()
+        assert page.reset_button.size() == original_size
+    finally:
+        page.deleteLater()
+
+
 def test_external_drives_page_updates_status_through_its_api():
     _app()
     page = ExternalDrivesPage({}, lambda _widget, _text: None)

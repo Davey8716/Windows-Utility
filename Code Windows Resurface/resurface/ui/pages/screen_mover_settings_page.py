@@ -15,6 +15,7 @@ from resurface.ui.tooltips import tooltip_text
 
 class ScreenMoverSettingsPage(PageControls):
     settings_changed = Signal(dict)
+    reset_confirmation_requested = Signal()
 
     def __init__(self, settings: dict, register_tooltip, parent=None):
         super().__init__("screen_mover", register_tooltip, parent)
@@ -96,9 +97,10 @@ class ScreenMoverSettingsPage(PageControls):
         styles.apply_page_control_size(self.reset_button)
         self.reset_button.setProperty("styleFontSize", 12)
         self.reset_button.setStyleSheet(styles.organizing_button_style(12))
-        self.reset_button.clicked.connect(self.reset_settings)
+        self.reset_button.clicked.connect(self.reset_confirmation_requested.emit)
         shortcuts_layout.addWidget(self.reset_button, 0, Qt.AlignmentFlag.AlignHCenter)
         self.register_tooltip(self.reset_button, tooltip_text("screen_mover_reset"))
+        self._sync_reset_button_enabled()
 
     @staticmethod
     def _normalized_settings(settings: dict) -> dict:
@@ -126,7 +128,12 @@ class ScreenMoverSettingsPage(PageControls):
             edit.blockSignals(True)
             edit.clear()
             edit.blockSignals(False)
+        self._sync_reset_button_enabled()
         self.settings_changed.emit(self.settings())
+
+    def _sync_reset_button_enabled(self) -> None:
+        hotkeys = self._settings["screen_mover_keyboard_hotkeys"]
+        self.reset_button.setEnabled(any(hotkeys.values()))
 
     def refresh_shortcut_styles(self) -> None:
         for edit in self._hotkey_edits.values():
@@ -149,6 +156,7 @@ class ScreenMoverSettingsPage(PageControls):
             edit.blockSignals(True)
             edit.setKeySequence(QKeySequence(display))
             edit.blockSignals(False)
+        self._sync_reset_button_enabled()
         self.settings_changed.emit(self.settings())
         QTimer.singleShot(0, edit.clearFocus)
 
@@ -158,4 +166,5 @@ class ScreenMoverSettingsPage(PageControls):
         edit.blockSignals(True)
         edit.clear()
         edit.blockSignals(False)
+        self._sync_reset_button_enabled()
         self.settings_changed.emit(self.settings())

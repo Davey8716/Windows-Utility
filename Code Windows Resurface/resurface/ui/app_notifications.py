@@ -96,7 +96,10 @@ class WindowMessageMixin:
         message_box.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         message_box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, stays_on_top)
         message_box.setWindowFlag(Qt.WindowType.Tool, tool_window)
-        message_box.setStyleSheet(styles.message_box_style())
+        popup_corner_radius = getattr(message_box, "_popup_corner_radius", None)
+        message_box.setStyleSheet(
+            styles.message_box_style(radius=popup_corner_radius)
+        )
         return message_box
 
     def _prepare_message_box_layout(self, message_box: QMessageBox) -> None:
@@ -306,8 +309,16 @@ class WindowMessageMixin:
         if minimum_width > 0:
             message_box.setMinimumWidth(minimum_width)
 
-    def _apply_rounded_window_mask(self, widget: QWidget, radius: int = 10) -> None:
-        radius = int(getattr(styles, "POPUP_CORNER_RADIUS", radius))
+    def _apply_rounded_window_mask(
+        self,
+        widget: QWidget,
+        radius: int | None = None,
+    ) -> None:
+        configured_radius = getattr(widget, "_popup_corner_radius", None)
+        if configured_radius is not None:
+            radius = int(configured_radius)
+        elif radius is None:
+            radius = int(getattr(styles, "POPUP_CORNER_RADIUS", 0))
         if radius <= 0:
             widget.clearMask()
             return
@@ -351,6 +362,7 @@ class WindowMessageMixin:
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
         link_activated: Callable[[str], None] | None = None,
+        popup_corner_radius: int | None = None,
     ) -> int:
         try:
             message_box = QMessageBox(self)
@@ -369,6 +381,7 @@ class WindowMessageMixin:
             message_box._text_minimum_width = text_minimum_width or 280
         message_box._center_text_block = center_text_block
         message_box._show_close_now_button = False
+        message_box._popup_corner_radius = popup_corner_radius
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(buttons)

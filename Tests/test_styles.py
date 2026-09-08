@@ -87,6 +87,16 @@ def test_tooltips_use_rounded_corners_and_theme_colors(
     assert f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;" in stylesheet
 
 
+def test_message_box_style_supports_a_local_corner_radius_override():
+    default_stylesheet = styles.message_box_style()
+    rounded_stylesheet = styles.message_box_style(
+        radius=styles.BUTTON_CORNER_RADIUS
+    )
+
+    assert f"border-radius: {styles.POPUP_CORNER_RADIUS}px;" in default_stylesheet
+    assert f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;" in rounded_stylesheet
+
+
 @pytest.mark.parametrize(
     ("is_dark", "link_color"),
     [(True, "#ffffff"), (False, "#000000")],
