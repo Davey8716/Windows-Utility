@@ -1,6 +1,9 @@
 from PySide6.QtWidgets import QApplication, QPushButton, QToolTip
 
+from resurface.features.system.command_runner import CommandRunner
+from resurface.features.system.maintenance_actions import MaintenanceActions
 from resurface.ui.pages.hover_window_controls_page import HoverWindowControlsPage
+from resurface.ui.pages.maintenance_page import MaintenancePage
 from resurface.ui.tooltips import QtTooltipManager, tooltip_text
 
 
@@ -74,5 +77,28 @@ def test_taskbar_restoration_button_uses_central_tooltip_wording():
     assert registered[page.taskbar_restore_button] == (
         "Restores a minimized window after the pointer rests over its taskbar "
         "icon. Requires AutoHotkey v2."
+    )
+    page.deleteLater()
+
+
+def test_maintenance_clear_log_button_uses_central_tooltip_wording():
+    _app()
+    registered = {}
+    runner = CommandRunner()
+    actions = MaintenanceActions(runner, explorer_windows=None, windows=None)
+    page = MaintenancePage(
+        actions,
+        runner,
+        lambda widget, text: registered.__setitem__(widget, text),
+        lambda action: action(),
+        lambda *_args, **_kwargs: None,
+    )
+
+    assert registered[page.sidebar_output_clear_btn] == tooltip_text(
+        "maintenance_clear_log"
+    )
+    assert registered[page.sidebar_output_clear_btn] == (
+        "Clears the Maintenance page output log without undoing any completed "
+        "actions."
     )
     page.deleteLater()

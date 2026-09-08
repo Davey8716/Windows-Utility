@@ -57,6 +57,7 @@ TOOLTIP_TEXT = {
     "sidebar_dropdown_cleanup": "Runs cleanup and quick utility actions such as clearing temp files or clearing the clipboard.",
     "sidebar_dropdown_quick_open": "Opens common locations and tools such as Downloads, the Startup folder, and Clipboard History settings.",
     "sidebar_dropdown_integrity": "Runs system integrity and disk health tools such as SFC and CHKDSK.",
+    "maintenance_clear_log": "Clears the Maintenance page output log without undoing any completed actions.",
 }
 
 def tooltip_text(key: str) -> str:

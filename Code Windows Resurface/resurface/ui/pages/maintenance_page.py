@@ -158,6 +158,10 @@ class MaintenancePage(QWidget):
         styles.apply_default_button_size(self.sidebar_output_clear_btn)
         self.sidebar_output_clear_btn.setProperty("styleFontSize", 14)
         self.sidebar_output_clear_btn.setStyleSheet(styles.button_text_style(14))
+        self.register_tooltip(
+            self.sidebar_output_clear_btn,
+            tooltip_text("maintenance_clear_log"),
+        )
         self.sidebar_output_clear_btn.clicked.connect(self.clear_output)
         clear_layout.addWidget(self.sidebar_output_clear_btn, 0, Qt.AlignmentFlag.AlignLeft)
         self.page_layout.addWidget(clear_row, 0, Qt.AlignmentFlag.AlignHCenter)
