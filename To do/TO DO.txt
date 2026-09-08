@@ -1,7 +1,5 @@
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
 
-Overview should list more information from each section e.g. Monitor rules, Hover window controls 
-
 Feature: Clipboard provenance shows clipboarded item, time stamp of usage and link to page that opens to mirror the monitor 
 rules export logic
 

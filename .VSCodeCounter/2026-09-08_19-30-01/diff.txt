@@ -1,0 +1,109 @@
+Date : 2026-09-08 19:30:01
+Directory : c:\Users\davey\Desktop\Projects\Win-11-Resurface
+Total : 65 files,  2129 codes, 25 comments, 172 blanks, all 2326 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |         64 |      2,124 |         25 |        173 |      2,322 |
+| Markdown |          1 |          5 |          0 |         -1 |          4 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++--------------------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                                                 | files      | code       | comment    | blank      | total      |
++--------------------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                                    |         65 |      2,129 |         25 |        172 |      2,326 |
+| . (Files)                                                                                                                            |          1 |          5 |          0 |         -1 |          4 |
+| Code Windows Resurface                                                                                                               |         40 |        503 |         21 |        -69 |        455 |
+| Code Windows Resurface\resurface                                                                                                     |         40 |        503 |         21 |        -69 |        455 |
+| Code Windows Resurface\resurface\core                                                                                                |          3 |         -4 |          0 |         -2 |         -6 |
+| Code Windows Resurface\resurface\features                                                                                            |         16 |       -361 |         19 |       -153 |       -495 |
+| Code Windows Resurface\resurface\features\hover_window_controls                                                                      |          4 |        577 |          5 |         34 |        616 |
+| Code Windows Resurface\resurface\features\hover_window_controls (Files)                                                              |          1 |         53 |          0 |          5 |         58 |
+| Code Windows Resurface\resurface\features\hover_window_controls\app                                                                  |          1 |        416 |          4 |         21 |        441 |
+| Code Windows Resurface\resurface\features\hover_window_controls\platform                                                             |          1 |         45 |          1 |          4 |         50 |
+| Code Windows Resurface\resurface\features\hover_window_controls\vision                                                               |          1 |         63 |          0 |          4 |         67 |
+| Code Windows Resurface\resurface\features\monitor_rules                                                                              |          3 |        100 |         21 |          8 |        129 |
+| Code Windows Resurface\resurface\features\screen_mover                                                                               |          8 |     -1,035 |         -7 |       -193 |     -1,235 |
+| Code Windows Resurface\resurface\features\system                                                                                     |          1 |         -3 |          0 |         -2 |         -5 |
+| Code Windows Resurface\resurface\ui                                                                                                  |         21 |        868 |          2 |         86 |        956 |
+| Code Windows Resurface\resurface\ui (Files)                                                                                          |          9 |        840 |          4 |         84 |        928 |
+| Code Windows Resurface\resurface\ui\controllers                                                                                      |          3 |        -17 |          0 |         -2 |        -19 |
+| Code Windows Resurface\resurface\ui\pages                                                                                            |          9 |         45 |         -2 |          4 |         47 |
+| Shared                                                                                                                               |          1 |          7 |          0 |          0 |          7 |
+| Tests                                                                                                                                |         23 |      1,614 |          4 |        242 |      1,860 |
++--------------------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++--------------------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                                                             | language | code       | comment    | blank      | total      |
++--------------------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\app_paths.py                                  | Python   |          5 |          0 |          0 |          5 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\saved_folder_names.py                         | Python   |         12 |          0 |          2 |         14 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\tray_toggles.py                               | Python   |        -21 |          0 |         -4 |        -25 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\hover_window_controls\app\data_export.py  | Python   |        416 |          4 |         21 |        441 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\hover_window_controls\platform\win32.py   | Python   |         45 |          1 |          4 |         50 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\hover_window_controls\service.py          | Python   |         53 |          0 |          5 |         58 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\hover_window_controls\vision\detection.py | Python   |         63 |          0 |          4 |         67 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\monitor_rules\repository.py               | Python   |         84 |          2 |          7 |         93 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\monitor_rules\watcher.py                  | Python   |          1 |         16 |          2 |         19 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\monitor_rules\win32_windows.py            | Python   |         15 |          3 |         -1 |         17 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\dock_icons.py                | Python   |       -199 |         -1 |        -44 |       -244 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\dock_overlay.py              | Python   |       -280 |         -1 |        -43 |       -324 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\hotkeys.py                   | Python   |         -4 |          0 |          0 |         -4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\screen_mover.py              | Python   |       -106 |         -5 |         -4 |       -115 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\service.py                   | Python   |       -439 |         -1 |        -94 |       -534 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\shortcut_dispatcher.py       | Python   |         61 |          2 |         14 |         77 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\window_actions.py            | Python   |        -48 |          0 |        -17 |        -65 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\screen_mover\window_filter.py             | Python   |        -20 |         -1 |         -5 |        -26 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\features\system\utility_toggles.py                 | Python   |         -3 |          0 |         -2 |         -5 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\app_notifications.py                            | Python   |         13 |          0 |          0 |         13 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\application_pages.py                            | Python   |        415 |          0 |         34 |        449 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\application_window.py                           | Python   |        -10 |          0 |         -3 |        -13 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\control_styles.py                               | Python   |          2 |          2 |          0 |          4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\controllers\folder_actions.py                   | Python   |         40 |          0 |          4 |         44 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\controllers\runtime_settings.py                 | Python   |        -58 |          0 |         -6 |        -64 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\controllers\theme_controller.py                 | Python   |          1 |          0 |          0 |          1 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\monitor_rules_page.py                           | Python   |        153 |         -4 |         11 |        160 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\navigation_shell.py                             | Python   |          3 |          0 |          0 |          3 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\external_drives_page.py                   | Python   |          1 |          0 |          0 |          1 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\folder_utilities_page.py                  | Python   |         35 |         -2 |          5 |         38 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\hover_window_controls_page.py             | Python   |         22 |          0 |          3 |         25 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\maintenance_page.py                       | Python   |          6 |          0 |          0 |          6 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\organising_utilities_page.py              | Python   |          5 |          0 |          0 |          5 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\recycle_bin_page.py                       | Python   |          2 |          0 |          0 |          2 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\screen_mover_settings_page.py             | Python   |        -53 |          0 |         -7 |        -60 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\user_interface_page.py                    | Python   |          5 |          0 |          1 |          6 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\windows_utilities_page.py                 | Python   |         22 |          0 |          2 |         24 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\quick_actions.py                                | Python   |        231 |          1 |         38 |        270 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\shell_styles.py                                 | Python   |         16 |          4 |          0 |         20 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\tooltips.py                                     | Python   |         17 |          1 |          4 |         22 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\README.md                                                                           | Markdown |          5 |          0 |         -1 |          4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Shared\app_state_defaults.py                                                        | Python   |          7 |          0 |          0 |          7 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_hover_app_data_export.py                                                 | Python   |        189 |          0 |         40 |        229 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_hover_export_ui.py                                                       | Python   |        169 |          0 |         53 |        222 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_hover_integration.py                                                     | Python   |         56 |          0 |         13 |         69 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_hover_win32_api.py                                                       | Python   |         70 |          0 |         16 |         86 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_left_panel_pages.py                                                      | Python   |         95 |          0 |         13 |        108 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_monitor_rules.py                                                         | Python   |        313 |          2 |         46 |        361 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_monitor_rules_repository.py                                              | Python   |        155 |          1 |         20 |        176 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_monitor_rules_ui.py                                                      | Python   |        500 |          1 |         45 |        546 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_quick_actions.py                                                         | Python   |        162 |          0 |         44 |        206 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_runtime_settings_controllers.py                                          | Python   |        -27 |          0 |         -3 |        -30 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_saved_folder_names.py                                                    | Python   |         71 |          0 |         20 |         91 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover.py                                                          | Python   |       -284 |          0 |        -78 |       -362 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_compatibility.py                                            | Python   |        -12 |          0 |         -3 |        -15 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_dock_icons.py                                               | Python   |        -13 |          0 |         -7 |        -20 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_dock_overlay.py                                             | Python   |        -50 |          0 |        -19 |        -69 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_settings_ui.py                                              | Python   |         35 |          0 |         10 |         45 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_shortcut_dispatcher.py                                      | Python   |         68 |          0 |         20 |         88 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_window_actions.py                                           | Python   |         -7 |          0 |         -6 |        -13 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_screen_mover_window_filter.py                                            | Python   |        -35 |          0 |         -9 |        -44 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_shared_state_manager.py                                                  | Python   |         27 |          0 |          4 |         31 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_styles.py                                                                | Python   |         69 |          0 |          9 |         78 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_tooltips.py                                                              | Python   |         83 |          0 |         22 |        105 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_tray_toggles.py                                                          | Python   |        -20 |          0 |         -8 |        -28 |
+| Total                                                                                                                                |          |      2,129 |         25 |        172 |      2,326 |
++--------------------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+

@@ -790,7 +790,16 @@ def test_overview_status_and_separate_configurable_quick_actions(monkeypatch):
     state["screen_mover_keyboard_hotkeys"]["LEFT"] = "<ctrl>+<left>"
     state["screen_mover_keyboard_hotkeys"]["RIGHT"] = "<ctrl>+<right>"
     state["recycle_bin_auto_clean_enabled"] = True
+    state["recycle_bin_age_rule_days"] = 14
     state["master_backup_output_path"] = r"C:\Backups"
+    state["monitor_rules"] = [
+        {"enabled": True},
+        {"enabled": False},
+        {"enabled": True},
+    ]
+    state["hover_window_controls_enabled"] = False
+    state["hover_taskbar_restore_enabled"] = True
+    state["hover_window_controls_dwell_ms"] = 1_250
     window = _build_offscreen_window(monkeypatch, state)
     window._overview_connected_drives = {"E:\\", "F:\\"}
 
@@ -799,23 +808,79 @@ def test_overview_status_and_separate_configurable_quick_actions(monkeypatch):
         qt_app.processEvents()
         window.refresh_overview()
         status_labels = window.pages.overview_page.status_labels
-        assert status_labels["screen_mover"].text() == "2 configured"
-        assert status_labels["drives"].text() == "2 connected"
+        assert status_labels["quick_actions"].text() == "4 pinned"
+        assert status_labels["user_interface"].text() == (
+            "Dark mode · Desktop Zen Off · Always on Top On"
+        )
+        assert status_labels["screen_mover"].text() == "2 shortcuts configured"
+        assert status_labels["monitor_rules"].text() == "2 of 3 enabled"
+        assert status_labels["drives"].text() == (
+            "2 connected · Leave reminder On · Notifications On"
+        )
         assert status_labels["backup_path"].text() == r"C:\Backups"
-        assert status_labels["recycle"].text() == "On"
+        assert status_labels["recycle"].text() == (
+            "Auto-clean On · Items older than 14 days"
+        )
+        assert status_labels["hover_controls"].text() == (
+            "Off · 1,250 ms dwell · Taskbar restoration On"
+        )
+
+        assert all(
+            label.textInteractionFlags()
+            & Qt.TextInteractionFlag.TextSelectableByMouse
+            for label in status_labels.values()
+        )
 
         overview = window.navigation_shell.page_by_id["overview"]
         quick_actions_page = window.navigation_shell.page_by_id["quick_actions"]
         summary = overview.findChild(QWidget, "OverviewSummary")
         quick_actions = quick_actions_page.findChild(QWidget, "QuickActionsGrid")
+        overview_scroll = window.navigation_shell.page_scroll_areas["overview"]
         assert summary is not None
         assert quick_actions is not None
         assert overview.findChild(QWidget, "QuickActionsGrid") is None
         assert summary.width() == quick_actions.width() == 512
+        assert overview_scroll.widgetResizable()
+        assert overview_scroll.verticalScrollBarPolicy() == (
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
         assert quick_actions.tooltip_managers
         assert all(
             manager.text.strip()
             for manager in quick_actions.tooltip_managers.values()
+        )
+
+        window.state.update(
+            {
+                "quick_action_ids": [],
+                "theme_dark": False,
+                "desktop_zen_mode_enabled": True,
+                "main_always_on_top_enabled": False,
+                "screen_mover_keyboard_hotkeys": {},
+                "monitor_rules": [],
+                "usb_idle_enabled": False,
+                "usb_plug_notify_mode": "off",
+                "recycle_bin_auto_clean_enabled": False,
+                "hover_window_controls_enabled": True,
+                "hover_taskbar_restore_enabled": False,
+                "hover_window_controls_dwell_ms": 500,
+            }
+        )
+        window._overview_connected_drives = set()
+        window.navigate_to_page("overview")
+        qt_app.processEvents()
+        assert status_labels["quick_actions"].text() == "0 pinned"
+        assert status_labels["user_interface"].text() == (
+            "Light mode · Desktop Zen On · Always on Top Off"
+        )
+        assert status_labels["screen_mover"].text() == "0 shortcuts configured"
+        assert status_labels["monitor_rules"].text() == "No rules"
+        assert status_labels["drives"].text() == (
+            "None connected · Leave reminder Off · Notifications Off"
+        )
+        assert status_labels["recycle"].text() == "Auto-clean Off"
+        assert status_labels["hover_controls"].text() == (
+            "On · 500 ms dwell · Taskbar restoration Off"
         )
 
         folder_action = next(

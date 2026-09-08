@@ -36,7 +36,7 @@ class NavigationShell(QWidget):
     page_changed = Signal(str)
 
     PAGE_DEFINITIONS = (
-        PageDefinition("overview", "Overview", "\ue80f", "Common actions and a quick view of Windows Resurface."),
+        PageDefinition("overview", "Overview", "\ue80f", "Quick view of Windows Resurface."),
         PageDefinition("quick_actions", "Quick Actions", "\ue945", "Your pinned Windows Resurface actions."),
         PageDefinition("user_interface", "User Interface", "\ue790", "Choose how Windows Resurface looks and behaves."),
         PageDefinition("screen_mover", "Screen Mover", "\ue7f4", "Move and manage the foreground window with global keyboard shortcuts."),

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.core.state_manager import save_state
+from resurface.features.hover_window_controls.service import normalized_dwell_ms
 from resurface.features.screen_mover.hotkeys import active_hotkeys
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
@@ -233,10 +234,14 @@ class OverviewPage(QWidget):
         self.status_labels = {}
         for row, (key, label_text) in enumerate(
             (
+                ("quick_actions", "Quick Actions"),
+                ("user_interface", "User Interface"),
                 ("screen_mover", "Screen Mover"),
-                ("drives", "Connected drives"),
+                ("monitor_rules", "Monitor Rules"),
+                ("drives", "External Drives"),
                 ("backup_path", "Master backup path"),
-                ("recycle", "Recycle Bin auto-clean"),
+                ("recycle", "Recycle Bin"),
+                ("hover_controls", "Hover Window Controls"),
             )
         ):
             label = QLabel(label_text, summary)
@@ -253,21 +258,86 @@ class OverviewPage(QWidget):
         layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def refresh(self, state: dict, connected_drives) -> None:
+        quick_action_ids = state.get("quick_action_ids", [])
+        self.status_labels["quick_actions"].setText(
+            f"{len(quick_action_ids) if isinstance(quick_action_ids, list) else 0} pinned"
+        )
+        self.status_labels["user_interface"].setText(
+            " · ".join(
+                (
+                    "Dark mode" if state.get("theme_dark", True) else "Light mode",
+                    "Desktop Zen On"
+                    if state.get("desktop_zen_mode_enabled", False)
+                    else "Desktop Zen Off",
+                    "Always on Top On"
+                    if state.get("main_always_on_top_enabled", True)
+                    else "Always on Top Off",
+                )
+            )
+        )
         configured_shortcuts = len(
             active_hotkeys(state.get("screen_mover_keyboard_hotkeys", {}))
         )
         self.status_labels["screen_mover"].setText(
-            f"{configured_shortcuts} configured"
+            f"{configured_shortcuts} shortcuts configured"
+        )
+        monitor_rules = state.get("monitor_rules", [])
+        if not isinstance(monitor_rules, list):
+            monitor_rules = []
+        enabled_rules = sum(
+            bool(rule.get("enabled", True))
+            for rule in monitor_rules
+            if isinstance(rule, dict)
+        )
+        rule_count = len(monitor_rules)
+        self.status_labels["monitor_rules"].setText(
+            f"{enabled_rules} of {rule_count} enabled" if rule_count else "No rules"
         )
         drive_count = len(connected_drives)
         self.status_labels["drives"].setText(
-            f"{drive_count} connected" if drive_count else "None connected"
+            " · ".join(
+                (
+                    f"{drive_count} connected" if drive_count else "None connected",
+                    "Leave reminder On"
+                    if state.get("usb_idle_enabled", True)
+                    else "Leave reminder Off",
+                    "Notifications On"
+                    if state.get(
+                        "usb_plug_notify_mode",
+                        "on" if state.get("usb_plug_enabled", True) else "off",
+                    )
+                    != "off"
+                    else "Notifications Off",
+                )
+            )
         )
         self.status_labels["backup_path"].setText(
             str(state.get("master_backup_output_path", "Not set"))
         )
+        recycle_enabled = bool(state.get("recycle_bin_auto_clean_enabled", False))
+        recycle_days = state.get("recycle_bin_age_rule_days", 30)
         self.status_labels["recycle"].setText(
-            "On" if state.get("recycle_bin_auto_clean_enabled", False) else "Off"
+            f"Auto-clean On · Items older than {recycle_days} days"
+            if recycle_enabled
+            else "Auto-clean Off"
+        )
+        hover_enabled = bool(state.get("hover_window_controls_enabled", True))
+        taskbar_restore_enabled = bool(
+            state.get("hover_taskbar_restore_enabled", True)
+        )
+        dwell_ms = normalized_dwell_ms(
+            state.get("hover_window_controls_dwell_ms", 750)
+        )
+        self.status_labels["hover_controls"].setText(
+            " · ".join(
+                (
+                    "On" if hover_enabled else "Off",
+                    f"{dwell_ms:,} ms dwell",
+                    "Taskbar restoration On"
+                    if taskbar_restore_enabled
+                    else "Taskbar restoration Off",
+                )
+            )
         )
 
 
