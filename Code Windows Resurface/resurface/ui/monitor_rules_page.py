@@ -290,22 +290,49 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             # sentence, a long executable path could wrap immediately before the
             # placement value, making (for example) "Maximize" look detached from its
             # rule and appear to move between cards when the rules were reordered.
-            details = (
-                f"Application: {match_text}\n"
-                f"Target: {rule['target_label']}\n"
-                f"Placement: {PLACEMENT_LABELS[rule['placement_mode']]}"
-            )
+            details = [
+                f"Application: {match_text}",
+                f"Target: {rule['target_label']}",
+                f"Placement: {PLACEMENT_LABELS[rule['placement_mode']]}",
+            ]
             if filters:
-                details += "\nFilters: " + ", ".join(filters)
-            details += (
-                "\nReapply if moved: "
+                details.append("Filters: " + ", ".join(filters))
+            details.append(
+                "Reapply if moved: "
                 + ("Enabled" if rule["reapply_if_moved"] else "Disabled")
             )
-            detail_label = QLabel(details, card)
+            detail_label = QLabel(card)
             detail_label.setObjectName("MonitorRuleDetails")
             detail_label.setWordWrap(True)
-            detail_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             detail_label.setStyleSheet(styles.page_description_style())
+            executable_path = str(rule["executable_path"])
+            if rule["match_exact_path"] and executable_path:
+                link_color = styles.theme_muted_text_color().name()
+                details[0] = (
+                    'Application: <a href="open-application-directory" '
+                    f'style="color: {link_color}; text-decoration: underline;">'
+                    f"{escape(executable_path)}</a>"
+                )
+                detail_label.setTextFormat(Qt.TextFormat.RichText)
+                detail_label.setText(
+                    details[0]
+                    + "<br>"
+                    + "<br>".join(escape(line) for line in details[1:])
+                )
+                detail_label.setTextInteractionFlags(
+                    Qt.TextInteractionFlag.TextBrowserInteraction
+                )
+                detail_label.setOpenExternalLinks(False)
+                detail_label.linkActivated.connect(
+                    lambda _link, path=executable_path: (
+                        self._open_application_directory(path)
+                    )
+                )
+            else:
+                detail_label.setText("\n".join(details))
+                detail_label.setTextInteractionFlags(
+                    Qt.TextInteractionFlag.TextSelectableByMouse
+                )
             card_layout.addWidget(detail_label)
 
             actions = QHBoxLayout()
@@ -395,9 +422,17 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
     def _backup_directory(self) -> Path | None:
         return self._repository.backup_directory()
 
-    def _open_export_directory(self, destination: Path) -> None:
+    def _open_directory(
+        self,
+        destination: Path,
+        *,
+        create: bool,
+        error_title: str,
+        description: str,
+    ) -> None:
         try:
-            destination.mkdir(parents=True, exist_ok=True)
+            if create:
+                destination.mkdir(parents=True, exist_ok=True)
             if self._open_backup_folder is not None:
                 opened = self._open_backup_folder(str(destination))
             else:
@@ -407,8 +442,8 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         except Exception as exc:
             self._show_modal_message(
                 QMessageBox.Icon.Critical,
-                "Open export folder failed",
-                f"The export folder could not be opened.\n\n{exc}",
+                error_title,
+                f"The {description} could not be opened.\n\n{exc}",
                 QMessageBox.StandardButton.Ok,
                 QMessageBox.StandardButton.Ok,
             )
@@ -416,11 +451,27 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         if not opened:
             self._show_modal_message(
                 QMessageBox.Icon.Critical,
-                "Open export folder failed",
-                f"The export folder could not be opened.\n\n{destination}",
+                error_title,
+                f"The {description} could not be opened.\n\n{destination}",
                 QMessageBox.StandardButton.Ok,
                 QMessageBox.StandardButton.Ok,
             )
+
+    def _open_export_directory(self, destination: Path) -> None:
+        self._open_directory(
+            destination,
+            create=True,
+            error_title="Open export folder failed",
+            description="export folder",
+        )
+
+    def _open_application_directory(self, executable_path: str) -> None:
+        self._open_directory(
+            Path(executable_path).parent,
+            create=False,
+            error_title="Open application folder failed",
+            description="application folder",
+        )
 
     def _export_rules(self, _checked=False, *, safety_backup=False) -> Path | None:
         if not safety_backup:

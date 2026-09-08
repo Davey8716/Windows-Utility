@@ -1,5 +1,6 @@
 import copy
 import json
+from html import escape
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -274,8 +275,8 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             for card in current_cards
         ]
         assert len(details) == 2
-        assert all("\nTarget: Monitor 2\nPlacement: Maximize" in text for text in details)
-        assert all("\nReapply if moved: Disabled" in text for text in details)
+        assert all("<br>Target: Monitor 2<br>Placement: Maximize" in text for text in details)
+        assert all("<br>Reapply if moved: Disabled" in text for text in details)
 
         page.rules[0]["reapply_if_moved"] = True
         page._render_rules()
@@ -285,7 +286,7 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             .findChild(monitor_rules_ui.QLabel, "MonitorRuleDetails")
             .text()
         )
-        assert "\nReapply if moved: Enabled" in enabled_details
+        assert "<br>Reapply if moved: Enabled" in enabled_details
 
         page.rules[0]["target_device"] = r"\\.\MISSING"
         page._render_rules()
@@ -295,6 +296,128 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
                 monitor_rules_ui.QLabel, "MonitorRuleStatus"
             ).text()
             == "Target unavailable"
+        )
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_exact_application_path_is_clickable_escaped_and_uses_existing_color(
+    monkeypatch,
+):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    rule = make_rule()
+    rule["executable_path"] = r"C:\Apps & Tools\Discord.exe"
+    opened = []
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[rule],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        open_backup_folder=lambda path: opened.append(path) or True,
+    )
+    try:
+        detail_label = (
+            page.rule_list_layout.itemAt(0)
+            .widget()
+            .findChild(QLabel, "MonitorRuleDetails")
+        )
+        detail_text = detail_label.text()
+        muted_color = monitor_rules_ui.styles.theme_muted_text_color().name()
+        displayed_path = page.rules[0]["executable_path"]
+
+        assert detail_label.textFormat() == Qt.TextFormat.RichText
+        assert (
+            detail_label.textInteractionFlags()
+            & Qt.TextInteractionFlag.LinksAccessibleByMouse
+        )
+        assert detail_label.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByMouse
+        assert 'href="open-application-directory"' in detail_text
+        assert escape(displayed_path) in detail_text
+        assert f"color: {muted_color}; text-decoration: underline;" in detail_text
+        assert muted_color in detail_label.styleSheet()
+        assert "<br>Target: Monitor 2<br>Placement: Keep current size" in detail_text
+        assert "<br>Reapply if moved: Disabled" in detail_text
+
+        detail_label.linkActivated.emit("open-application-directory")
+
+        assert opened == [str(Path(displayed_path).parent)]
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_name_matched_application_remains_plain_and_non_clickable(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    rule = make_rule()
+    rule["match_exact_path"] = False
+    opened = []
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[rule],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        open_backup_folder=lambda path: opened.append(path) or True,
+    )
+    try:
+        detail_label = (
+            page.rule_list_layout.itemAt(0)
+            .widget()
+            .findChild(QLabel, "MonitorRuleDetails")
+        )
+
+        assert detail_label.text().startswith("Application: discord.exe\n")
+        assert rule["executable_path"] not in detail_label.text()
+        assert "<a " not in detail_label.text()
+        assert not (
+            detail_label.textInteractionFlags()
+            & Qt.TextInteractionFlag.LinksAccessibleByMouse
+        )
+        assert detail_label.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByMouse
+        assert opened == []
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_application_path_open_failure_does_not_create_folder(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    missing_directory = tmp_path / "Missing application"
+    rule = make_rule()
+    rule["executable_path"] = str(missing_directory / "Discord.exe")
+    messages = []
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[rule],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        open_backup_folder=lambda _path: False,
+    )
+    monkeypatch.setattr(
+        page,
+        "_show_modal_message",
+        lambda *args, **kwargs: messages.append((args, kwargs)),
+    )
+    try:
+        detail_label = (
+            page.rule_list_layout.itemAt(0)
+            .widget()
+            .findChild(QLabel, "MonitorRuleDetails")
+        )
+        detail_label.linkActivated.emit("open-application-directory")
+
+        assert not missing_directory.exists()
+        assert len(messages) == 1
+        opened_directory = Path(page.rules[0]["executable_path"]).parent
+        assert messages[0][0] == (
+            QMessageBox.Icon.Critical,
+            "Open application folder failed",
+            f"The application folder could not be opened.\n\n{opened_directory}",
+            QMessageBox.StandardButton.Ok,
+            QMessageBox.StandardButton.Ok,
         )
     finally:
         page.deleteLater()
