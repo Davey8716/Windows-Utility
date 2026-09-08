@@ -214,7 +214,7 @@ class QuickActionsGrid(QWidget):
 
 
 class OverviewPage(QWidget):
-    def __init__(self, quick_actions: QuickActionRegistry, register_tooltip, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -250,16 +250,6 @@ class OverviewPage(QWidget):
         summary_layout.setColumnStretch(1, 1)
         layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        heading = QLabel("Quick Actions", self)
-        heading.setObjectName("PageSectionHeading")
-        heading.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        heading.setStyleSheet(styles.page_section_heading_style())
-        layout.addWidget(heading)
-        self.quick_actions_grid = QuickActionsGrid(quick_actions, register_tooltip, self)
-        self.quick_actions_grid.setObjectName("QuickActionsGrid")
-        self.quick_actions_grid.setFixedWidth(content_width)
-        layout.addWidget(self.quick_actions_grid, 0, Qt.AlignmentFlag.AlignHCenter)
-
     def refresh(self, state: dict, connected_drives) -> None:
         self.status_labels["screen_mover"].setText(
             "On" if state.get("title_bar_dock_enabled", True) else "Off"
@@ -276,9 +266,27 @@ class OverviewPage(QWidget):
         )
 
 
+class QuickActionsPage(QWidget):
+    def __init__(self, quick_actions: QuickActionRegistry, register_tooltip, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.quick_actions_grid = QuickActionsGrid(
+            quick_actions, register_tooltip, self
+        )
+        self.quick_actions_grid.setObjectName("QuickActionsGrid")
+        self.quick_actions_grid.setFixedWidth(
+            (styles.PAGE_CONTROL_WIDTH * 2) + styles.PAGE_CONTROL_GAP
+        )
+        layout.addWidget(
+            self.quick_actions_grid, 0, Qt.AlignmentFlag.AlignHCenter
+        )
+
+
 @dataclass(frozen=True)
 class ApplicationPages:
     overview_page: OverviewPage
+    quick_actions_page: QuickActionsPage
     user_interface_page: UserInterfacePage
     screen_mover_settings_page: ScreenMoverSettingsPage
     monitor_rules_page: MonitorRulesPage
@@ -305,10 +313,14 @@ class ApplicationPageComposer:
         shell = self.shell
 
         self.quick_actions = QuickActionRegistry(self.state, save_state, app)
-        overview_page = OverviewPage(
-            self.quick_actions, app.register_tooltip, shell.content_parent("overview")
-        )
+        overview_page = OverviewPage(shell.content_parent("overview"))
         shell.mount_content("overview", overview_page)
+        quick_actions_page = QuickActionsPage(
+            self.quick_actions,
+            app.register_tooltip,
+            shell.content_parent("quick_actions"),
+        )
+        shell.mount_content("quick_actions", quick_actions_page)
 
         icons_visible = app.actions.desktop_icons_visible()
         user_interface_page = UserInterfacePage(
@@ -434,6 +446,7 @@ class ApplicationPageComposer:
 
         pages = ApplicationPages(
             overview_page=overview_page,
+            quick_actions_page=quick_actions_page,
             user_interface_page=user_interface_page,
             screen_mover_settings_page=screen_mover_settings_page,
             monitor_rules_page=monitor_rules_page,

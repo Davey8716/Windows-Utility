@@ -13,7 +13,6 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
-    QFrame,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -331,10 +330,11 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         assert window.minimumSize() == window.maximumSize()
         shell = window.navigation_shell
         assert shell.navigation_list.width() == 220
-        assert shell.navigation_list.count() == 11
-        assert shell.page_stack.count() == 11
+        assert shell.navigation_list.count() == 12
+        assert shell.page_stack.count() == 12
         assert list(shell.page_by_id) == [
             "overview",
+            "quick_actions",
             "user_interface",
             "screen_mover",
             "monitor_rules",
@@ -346,7 +346,7 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
             "maintenance",
             "hover_window_controls",
         ]
-        assert len(shell.page_scroll_areas) == 11
+        assert len(shell.page_scroll_areas) == 12
         assert all(
             isinstance(scroll, QScrollArea)
             and scroll.verticalScrollBarPolicy()
@@ -379,7 +379,7 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
             shell.page_by_id[page_id].isAncestorOf(content)
             for page_id, content in mounted_content.items()
         )
-        hover_item = shell.navigation_list.item(10)
+        hover_item = shell.navigation_list.item(11)
         assert hover_item.text() == "Hover Window Controls"
         assert hover_item.data(Qt.ItemDataRole.UserRole) == "hover_window_controls"
         window.navigate_to_page("hover_window_controls")
@@ -600,6 +600,7 @@ def test_page_composer_builds_widgets_in_their_final_hosts(monkeypatch):
     )
     page_ids = {
         "overview_page": "overview",
+        "quick_actions_page": "quick_actions",
         "user_interface_page": "user_interface",
         "screen_mover_settings_page": "screen_mover",
         "monitor_rules_page": "monitor_rules",
@@ -665,15 +666,14 @@ def test_navigation_restores_valid_page_and_falls_back_to_overview(monkeypatch):
         qt_app.processEvents()
 
 
-def test_removed_quick_actions_page_migrates_to_overview(monkeypatch):
+def test_quick_actions_page_can_be_restored_between_sessions(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     state["last_opened_page"] = "quick_actions"
     window = _build_offscreen_window(monkeypatch, state)
     try:
-        assert window.state["last_opened_page"] == "overview"
-        assert window.navigation_shell.page_stack.currentWidget() is window.navigation_shell.page_by_id["overview"]
-        assert "quick_actions" not in window.navigation_shell.page_by_id
+        assert window.state["last_opened_page"] == "quick_actions"
+        assert window.navigation_shell.page_stack.currentWidget() is window.navigation_shell.page_by_id["quick_actions"]
     finally:
         window._quit_requested = True
         window.close()
@@ -801,7 +801,7 @@ def test_theme_and_zen_toggles_use_fluent_icons_and_preserve_zen_rollback(monkey
         qt_app.processEvents()
 
 
-def test_overview_status_and_embedded_quick_actions(monkeypatch):
+def test_overview_status_and_separate_configurable_quick_actions(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     state["title_bar_dock_enabled"] = False
@@ -821,10 +821,12 @@ def test_overview_status_and_embedded_quick_actions(monkeypatch):
         assert status_labels["recycle"].text() == "On"
 
         overview = window.navigation_shell.page_by_id["overview"]
+        quick_actions_page = window.navigation_shell.page_by_id["quick_actions"]
         summary = overview.findChild(QWidget, "OverviewSummary")
-        quick_actions = overview.findChild(QWidget, "QuickActionsGrid")
+        quick_actions = quick_actions_page.findChild(QWidget, "QuickActionsGrid")
         assert summary is not None
         assert quick_actions is not None
+        assert overview.findChild(QWidget, "QuickActionsGrid") is None
         assert summary.width() == quick_actions.width() == 512
 
         folder_action = next(
