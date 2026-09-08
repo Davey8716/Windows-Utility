@@ -1,7 +1,3 @@
-Round corners of popups for "?" Monitor rules page
-Export rules popup
-Export Hover Data
-
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
 
 Overview should list more information from each section e.g. Monitor rules, Hover window controls 
