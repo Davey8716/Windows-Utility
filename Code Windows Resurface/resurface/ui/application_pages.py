@@ -36,6 +36,7 @@ from resurface.ui.pages.screen_mover_settings_page import ScreenMoverSettingsPag
 from resurface.ui.pages.user_interface_page import UserInterfacePage
 from resurface.ui.pages.windows_utilities_page import WindowsUtilitiesPage
 from resurface.ui.quick_actions import QuickActionRegistry, QuickActionSpec
+from resurface.ui.tooltips import tooltip_text
 
 
 QUICK_ACTION_MIME = "application/x-windows-resurface-quick-action"
@@ -540,7 +541,7 @@ class ApplicationPageComposer:
                 "folder.create_desktop_folder",
                 "Create Desktop Folder",
                 self.app._open_folder_utilities,
-                "Open Folder Utilities and focus the folder-name field.",
+                tooltip_text("quick_action_create_desktop_folder"),
             )
         )
         button("folder.creator", "Folder Creator", pages.folder_utilities_page.folder_creator_button)

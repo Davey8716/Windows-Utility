@@ -6,6 +6,7 @@ from resurface.ui.quick_actions import (
     QuickActionRegistry,
     QuickActionSpec,
 )
+from resurface.ui.tooltips import QtTooltipManager
 
 
 def _app():
@@ -110,6 +111,35 @@ def test_toggle_and_disabled_state_stay_synchronized():
     assert tile.toolTip()
     grid.deleteLater()
     source.deleteLater()
+
+
+def test_button_quick_action_inherits_its_registered_tooltip():
+    _app()
+    source = QPushButton("Action")
+    manager = QtTooltipManager(source, "Useful action details")
+    registry = QuickActionRegistry({"quick_action_ids": ["action"]}, lambda _value: None)
+
+    registry.register_button("action", "Action", source)
+
+    assert registry.spec("action").tooltip == "Useful action details"
+    manager.deleteLater()
+    source.deleteLater()
+
+
+def test_dropdown_quick_actions_inherit_the_registered_group_tooltip():
+    _app()
+    combo = QComboBox()
+    manager = QtTooltipManager(combo, "Useful group details")
+    registry = QuickActionRegistry({"quick_action_ids": ["action"]}, lambda _value: None)
+
+    registry.register_dropdown(
+        combo,
+        [QuickActionSpec("action", "Action", lambda: None)],
+    )
+
+    assert registry.spec("action").tooltip == "Useful group details"
+    manager.deleteLater()
+    combo.deleteLater()
 
 
 def test_unavailable_action_adds_reason_then_clears_blank_tooltip():

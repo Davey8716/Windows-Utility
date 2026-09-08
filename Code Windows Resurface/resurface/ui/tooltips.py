@@ -5,6 +5,8 @@ from PySide6.QtCore import QObject, QTimer, QPoint, QEvent
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QToolTip
 
+REGISTERED_TOOLTIP_PROPERTY = "resurfaceRegisteredTooltip"
+
 TOOLTIP_TEXT = {
     "dark_mode": "Switches the app between dark and light appearance.",
     "always_on_top": "Keeps the main window above other windows.",
@@ -26,6 +28,7 @@ TOOLTIP_TEXT = {
     "plug_unplug_notify": "Controls notifications for drive plug and unplug events.",
     "desktop_screenshot": "Captures each detected screen into separate images and saves them to the Desktop Screenshots backup folder.",
     "folder_to_desktop": "Creates a desktop folder using the name entered beside it.",
+    "quick_action_create_desktop_folder": "Opens Folder Utilities so you can enter a name and create a desktop folder.",
     "folder_creator_launcher": "Opens the external Folder Creator tool from its main.py launcher.",
     "folder_name_input": "Enter the name of the folder to create on the desktop.",
     "delete_name": "Deletes whichever the chosen drop down save folder name item is. ",
@@ -61,6 +64,12 @@ def tooltip_text(key: str) -> str:
     return TOOLTIP_TEXT[key]
 
 
+def registered_tooltip_text(widget) -> str:
+    """Return the delayed-tooltip text previously registered for a widget."""
+    value = widget.property(REGISTERED_TOOLTIP_PROPERTY)
+    return "" if value is None else str(value)
+
+
 def format_tooltip_text(text: str, wrap_width: int = 62) -> str:
     paragraphs: list[str] = []
     for raw_line in text.splitlines():
@@ -91,6 +100,7 @@ class QtTooltipManager(QObject):
         self.widget = widget
         self.text = "" if text is None else str(text)
         self.delay = delay
+        self.widget.setProperty(REGISTERED_TOOLTIP_PROPERTY, self.text)
 
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
@@ -131,6 +141,7 @@ class QtTooltipManager(QObject):
 
     def set_text(self, text) -> None:
         self.text = "" if text is None else str(text)
+        self.widget.setProperty(REGISTERED_TOOLTIP_PROPERTY, self.text)
         if not self.text.strip():
             self._hide()
 

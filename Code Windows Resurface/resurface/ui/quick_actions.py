@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QObject, QPoint, Signal
 from PySide6.QtWidgets import QComboBox, QMenu, QPushButton, QWidget
 
 from resurface.ui import styles
+from resurface.ui.tooltips import registered_tooltip_text
 
 
 DEFAULT_QUICK_ACTION_IDS = (
@@ -121,6 +122,7 @@ class QuickActionRegistry(QObject):
         tooltip: str = "",
         available: Callable[[], tuple[bool, str]] | None = None,
     ) -> None:
+        tooltip = tooltip or registered_tooltip_text(button)
         checked = (lambda: button.isChecked()) if button.isCheckable() else None
         set_checked = (lambda value: button.setChecked(bool(value))) if checked else None
         self.register(
@@ -142,7 +144,10 @@ class QuickActionRegistry(QObject):
         actions: list[QuickActionSpec],
     ) -> None:
         ids = []
+        fallback_tooltip = registered_tooltip_text(combo)
         for spec in actions:
+            if not spec.tooltip and fallback_tooltip:
+                spec = replace(spec, tooltip=fallback_tooltip)
             self.register(spec)
             ids.append(spec.action_id)
         watcher = _DropdownWatcher(self, tuple(ids), combo)

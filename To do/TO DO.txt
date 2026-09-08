@@ -4,19 +4,17 @@ Export Hover Data
 
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
 
-Quick actions defaults have stale reference tooltip for Create Desktop Folder button
-
 Overview should list more information from each section e.g. Monitor rules, Hover window controls 
 
-Feature: Clipboard provenance shows clipboarded item, time stamp of usage and link to page
+Feature: Clipboard provenance shows clipboarded item, time stamp of usage and link to page that opens to mirror the monitor 
+rules export logic
 
 Fix sfc scannow and chkdsk console admin approval is being deliberatly suppressed? Access is denied?
 
-More icon use for buttons ?
-
 Button Sizes in general, colours relative to state
 
-The Black writing overall is horrible non contrasty on the blue buttons, need a different shade of black.
+The Black writing overall is horrible non contrasty on the blue buttons, need a different shade of black, use a greyer font for all the qpushbuttons 
+whilst light them is enabled
 
 User-configurable Quick Actions would make the overview much more useful than a fixed selection.
 A strong interaction model would be:

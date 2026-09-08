@@ -812,12 +812,18 @@ def test_overview_status_and_separate_configurable_quick_actions(monkeypatch):
         assert quick_actions is not None
         assert overview.findChild(QWidget, "QuickActionsGrid") is None
         assert summary.width() == quick_actions.width() == 512
+        assert quick_actions.tooltip_managers
+        assert all(
+            manager.text.strip()
+            for manager in quick_actions.tooltip_managers.values()
+        )
 
         folder_action = next(
             button
             for button in quick_actions.findChildren(QPushButton)
             if button.text() == "Create Desktop Folder"
         )
+        assert "enter a name" in folder_action.toolTip()
         folder_action.click()
         qt_app.processEvents()
         assert window.state["last_opened_page"] == "folder_utilities"
