@@ -1463,8 +1463,9 @@ def test_loose_labels_use_sidebar_surface_style_across_themes(monkeypatch):
             expected_border = styles.qcolor_css(styles.SURFACE_BORDER)
             for label, original_size in zip(surfaced, original_sizes):
                 assert f"background-color: {expected_background};" in label.styleSheet()
-                assert f"border: 1px solid {expected_border};" in label.styleSheet()
-                assert "border-radius: 8px;" in label.styleSheet()
+                assert "border: none;" in label.styleSheet()
+                assert f"border-bottom: 1px solid {expected_border};" in label.styleSheet()
+                assert "border-radius:" not in label.styleSheet()
                 assert "padding: 0px 10px;" in label.styleSheet()
                 assert (label.width(), label.height()) == original_size
     finally:

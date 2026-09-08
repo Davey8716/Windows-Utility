@@ -216,8 +216,8 @@ def surfaced_label_style(font_size: int = 14) -> str:
                 color=T.theme_text_color(),
             )}
             background-color: {H.qcolor_css(T.SURFACE_BG)};
-            border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
-            border-radius: 8px;
+            border: none;
+            border-bottom: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             padding: 0px 10px;
         }}
     """
