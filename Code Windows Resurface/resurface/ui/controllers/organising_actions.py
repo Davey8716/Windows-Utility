@@ -20,6 +20,10 @@ from resurface.features.desktop.screenshot_service import (
 
 
 class OrganisingActionsController:
+    # These utility actions are deliberately visually distinct from the
+    # application-wide square message boxes.
+    POPUP_CORNER_RADIUS = 12
+
     def __init__(self, app, screenshot_service: ScreenshotService, taskbar_service, explorer_service):
         self.app = app
         self.screenshot_service = screenshot_service
@@ -50,17 +54,31 @@ class OrganisingActionsController:
             params = inspect.signature(show_message).parameters
         except (TypeError, ValueError):
             params = {}
+        options = {
+            "timeout_ms": timeout_ms,
+            "show_close_now_button": show_close_now_button,
+        }
+        if "popup_corner_radius" in params:
+            options["popup_corner_radius"] = self.POPUP_CORNER_RADIUS
         if "merge_group" in params and "merge_title" in params:
-            return show_message(
-                icon, title, text, timeout_ms=timeout_ms,
+            options.update(
                 merge_group="organizing_utilities",
                 merge_title="General Organising Utilities",
-                show_close_now_button=show_close_now_button,
             )
-        return show_message(
-            icon, title, text, timeout_ms=timeout_ms,
-            show_close_now_button=show_close_now_button,
+        return show_message(icon, title, text, **options)
+
+    def show_modal_message(self, icon, title: str, text: str, buttons, default_button):
+        """Show an organising-utility confirmation with its rounded treatment."""
+        show_message = self.app._show_modal_message
+        try:
+            params = inspect.signature(show_message).parameters
+        except (TypeError, ValueError):
+            params = {}
+        options = (
+            {"popup_corner_radius": self.POPUP_CORNER_RADIUS}
+            if "popup_corner_radius" in params else {}
         )
+        return show_message(icon, title, text, buttons, default_button, **options)
 
     def _save_state_safely(self) -> None:
         try:
@@ -71,7 +89,7 @@ class OrganisingActionsController:
     def take_desktop_screenshot(self) -> None:
         plan = self.screenshot_service.build_capture_plan(self.app.get_default_screenshot_path())
         if plan.existing_paths:
-            answer = self.app._show_modal_message(
+            answer = self.show_modal_message(
                 self.app._message_box_icon("Question"),
                 "Overwrite Desktop Screenshots",
                 "Desktop screenshots already exist in the screenshots backup folder."
@@ -178,7 +196,7 @@ class OrganisingActionsController:
         self.run_with_optional_minimize(action)
 
     def _backup_folder_error(self, title: str, verb: str, path: str) -> None:
-        self.app._show_modal_message(
+        self.show_modal_message(
             self.app._message_box_icon("Warning"), title,
             f"Could not {verb} backup folder:\n{path}",
             self.app._message_box_button("Ok"), self.app._message_box_button("Ok"),
@@ -241,7 +259,7 @@ class OrganisingActionsController:
         prompt = "Export bookmarks to:\n" + "\n".join(str(path) for _, path in targets)
         if any(path.exists() for _, path in targets):
             prompt += "\n\nExisting bookmark export files in this list will be overwritten."
-        answer = self.app._show_modal_message(
+        answer = self.show_modal_message(
             QMessageBox.Icon.NoIcon, "Export Bookmarks", prompt,
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
