@@ -20,6 +20,13 @@ from resurface.ui.tooltips import tooltip_text
 class ScreenMoverShortcutEdit(QKeySequenceEdit):
     """Shortcut editor with a theme-aware in-field validation message."""
 
+    _MODIFIER_KEYS = {
+        Qt.Key.Key_Control,
+        Qt.Key.Key_Alt,
+        Qt.Key.Key_Shift,
+        Qt.Key.Key_Meta,
+    }
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setProperty("shortcutConflict", False)
@@ -56,6 +63,13 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._position_duplicate_message()
+
+    def keyPressEvent(self, event) -> None:
+        super().keyPressEvent(event)
+        if event.key() not in self._MODIFIER_KEYS:
+            # Each shortcut is limited to one chord. Finalizing it here avoids
+            # QKeySequenceEdit's built-in one-second completion delay.
+            self.clearFocus()
 
     def _position_duplicate_message(self) -> None:
         self.duplicate_message.setGeometry(

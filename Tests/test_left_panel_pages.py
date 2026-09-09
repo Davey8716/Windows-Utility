@@ -1,3 +1,5 @@
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QWidget
 
 from resurface.features.screen_mover.hotkeys import VALID_ACTIONS
@@ -219,6 +221,65 @@ def test_screen_mover_rejects_duplicate_shortcut_and_restores_previous_value():
         assert left_edit.duplicate_message.isVisibleTo(left_edit)
         page.reset_settings()
         assert not left_edit.duplicate_message.isVisibleTo(left_edit)
+    finally:
+        page.deleteLater()
+
+
+def test_screen_mover_shows_duplicate_warning_on_the_final_key_press():
+    app = _app()
+    page = ScreenMoverSettingsPage(
+        {"screen_mover_keyboard_hotkeys": {"FAR_LEFT": "G"}},
+        lambda _widget, _text: None,
+    )
+    try:
+        page.show()
+        right_edit = page._hotkey_edits["RIGHT"]
+        right_edit.setFocus()
+        app.processEvents()
+
+        QTest.keyPress(right_edit, Qt.Key.Key_G)
+
+        assert right_edit.duplicate_message.text() == (
+            "G is already assigned to Move Far Left."
+        )
+        assert right_edit.duplicate_message.isVisibleTo(right_edit)
+        assert right_edit.keySequence().isEmpty()
+        assert page.settings()["screen_mover_keyboard_hotkeys"]["RIGHT"] == ""
+        QTest.keyRelease(right_edit, Qt.Key.Key_G)
+    finally:
+        page.deleteLater()
+
+
+def test_screen_mover_waits_for_primary_key_after_modifier_press():
+    app = _app()
+    page = ScreenMoverSettingsPage(
+        {"screen_mover_keyboard_hotkeys": {"FAR_LEFT": "Ctrl+G"}},
+        lambda _widget, _text: None,
+    )
+    try:
+        page.show()
+        right_edit = page._hotkey_edits["RIGHT"]
+        right_edit.setFocus()
+        app.processEvents()
+
+        QTest.keyPress(right_edit, Qt.Key.Key_Control)
+
+        assert right_edit.hasFocus()
+        assert not right_edit.duplicate_message.isVisibleTo(right_edit)
+
+        QTest.keyPress(
+            right_edit,
+            Qt.Key.Key_G,
+            Qt.KeyboardModifier.ControlModifier,
+        )
+
+        assert right_edit.duplicate_message.text() == (
+            "Ctrl+G is already assigned to Move Far Left."
+        )
+        assert right_edit.duplicate_message.isVisibleTo(right_edit)
+        assert right_edit.keySequence().isEmpty()
+        QTest.keyRelease(right_edit, Qt.Key.Key_G)
+        QTest.keyRelease(right_edit, Qt.Key.Key_Control)
     finally:
         page.deleteLater()
 
