@@ -1,5 +1,3 @@
-If an app path to a monitor rules dissapears remove it from the app and gui
-
 Wording gets cut off inside the folder to desktop drop down list for the light theme + this section needs a delete entry that removes from the GUI and the JSON that contains the entry.
 
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
@@ -33,5 +31,23 @@ There are a few important details worth planning:
 - Actions unavailable on the current system should appear disabled with a helpful tooltip.
 - The right-click option should say Unpin from Quick Actions when already pinned.
 This would let each user turn Overview into their own small control dashboard, which fits the app very well.
+
+Windows Resurface
+Core Hidden Windows Locations
+
+    • Network Reset / Network Diagnostics
+Windows Update Troubleshooter
+    • Windows Defender / Virus & Threat Protection
+    • System Restore / Restore Points
+Hosts File Editor
+    • Windows Memory Diagnostic
+    • AutoPlay Settings (control /name Microsoft.AutoPlay)
+Network Tools
+    • Network Reset
+    • Network Diagnostics
+Security & Protection
+    • Windows Defender
+    • Hosts File Editor
+
 
 
