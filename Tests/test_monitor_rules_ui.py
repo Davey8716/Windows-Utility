@@ -751,12 +751,12 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
             assert confirmation.windowFlags() & Qt.WindowType.FramelessWindowHint
             assert (
                 confirmation._popup_corner_radius
-                == monitor_rules_ui.styles.BUTTON_CORNER_RADIUS
+                == monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS
             )
             assert (
                 confirmation.styleSheet()
                 == monitor_rules_ui.styles.message_box_style(
-                    radius=monitor_rules_ui.styles.BUTTON_CORNER_RADIUS
+                    radius=monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS
                 )
             )
             app.processEvents()
@@ -775,7 +775,10 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
                 "Monitor Rules Exported",
                 f"Monitor rules were exported to:\n{exported_path}",
             )
-            assert timed_kwargs == {"show_close_now_button": True}
+            assert timed_kwargs == {
+                "show_close_now_button": True,
+                "popup_corner_radius": monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS,
+            }
     finally:
         monitor_rules_ui.styles.set_theme(True)
         page.deleteLater()

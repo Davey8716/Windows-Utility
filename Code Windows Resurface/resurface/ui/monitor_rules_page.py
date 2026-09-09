@@ -54,6 +54,8 @@ MONITOR_RULES_HELP_TEXT = (
     "• When Reapply if moved is on, placement resumes after a drag or shortcut "
     "and continues to return the window to its target monitor."
 )
+
+MONITOR_RULES_POPUP_CORNER_RADIUS = 12
 RULES_FRAME_WIDTH = 685
 RULES_FRAME_LAYOUT_MARGIN = 15
 RULES_FRAME_VISIBLE_INSET = 16
@@ -409,19 +411,15 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
     def _delete_all_rules(self) -> None:
         if not self.rules:
             return
-        message_box = QMessageBox(self)
-        message_box.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        message_box.setStyleSheet(styles.message_box_style())
-        message_box.setIcon(QMessageBox.Icon.Question)
-        message_box.setWindowTitle("Delete All Monitor Rules")
-        message_box.setText(
-            f"Delete all {len(self.rules)} monitor rules? This cannot be undone."
+        answer = self._show_modal_message(
+            QMessageBox.Icon.Question,
+            "Delete All Monitor Rules",
+            f"Delete all {len(self.rules)} monitor rules? This cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+            popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
         )
-        message_box.setStandardButtons(
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        message_box.setDefaultButton(QMessageBox.StandardButton.No)
-        if message_box.exec() == QMessageBox.StandardButton.Yes:
+        if answer == QMessageBox.StandardButton.Yes:
             if self._has_backup_destination and self._export_rules(
                 safety_backup=True
             ) is None:
@@ -514,7 +512,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
                 QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Save,
                 link_activated=lambda _link: self._open_export_directory(destination),
-                popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+                popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
             )
             if answer != QMessageBox.StandardButton.Save:
                 return None
@@ -545,6 +543,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
                 "Monitor Rules Exported",
                 f"Monitor rules were exported to:\n{path}",
                 show_close_now_button=True,
+                popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
             )
         return path
 
