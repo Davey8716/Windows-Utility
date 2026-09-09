@@ -11,6 +11,7 @@ class FolderUtilitiesPage(PageControls):
     create_folder_requested = Signal(str)
     save_name_requested = Signal(str)
     delete_name_requested = Signal(str)
+    delete_all_names_requested = Signal()
     folder_creator_requested = Signal()
 
     def __init__(self, register_tooltip, parent=None):
@@ -38,6 +39,8 @@ class FolderUtilitiesPage(PageControls):
         self._save_name.setProperty("lightModeBlackDisabledText", True)
         self._delete_name = self.style_action_button(QPushButton("Delete Name"))
         self.register_tooltip(self._delete_name, tooltip_text("delete_name"))
+        self._delete_all_names = self.style_action_button(QPushButton("Delete All"))
+        self.register_tooltip(self._delete_all_names, tooltip_text("delete_all_names"))
 
         self.register_tooltip(self._save_name, "Save this folder name for future use.")
         row = QWidget(); row.setProperty("centeredControlGrid", True)
@@ -51,12 +54,14 @@ class FolderUtilitiesPage(PageControls):
         secondary_layout.addWidget(self._save_name, 0, 0)
         secondary_layout.addWidget(creator, 0, 1)
         secondary_layout.addWidget(self._delete_name, 1, 0)
+        secondary_layout.addWidget(self._delete_all_names, 1, 1)
         self.content_layout.addWidget(secondary, 0, Qt.AlignmentFlag.AlignHCenter)
         self.refresh_saved_names()
         self._input.textChanged.connect(self._set_name_action_state)
         create.clicked.connect(self._request_create)
         self._save_name.clicked.connect(self._request_save)
         self._delete_name.clicked.connect(self._request_delete)
+        self._delete_all_names.clicked.connect(self.delete_all_names_requested.emit)
         create.setEnabled(False)
         self._save_name.setEnabled(False)
 
@@ -66,6 +71,7 @@ class FolderUtilitiesPage(PageControls):
         self._names.blockSignals(True); self._names.clear(); self._names.addItems(names)
         self._names.setCurrentIndex(-1); self._names.setEditText(text); self._names.blockSignals(False)
         self._delete_name.setEnabled(bool(names))
+        self._delete_all_names.setEnabled(bool(names))
         self._set_name_action_state(text)
 
     def focus_name_input(self) -> None:

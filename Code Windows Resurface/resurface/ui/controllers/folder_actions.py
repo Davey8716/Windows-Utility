@@ -6,6 +6,7 @@ from PySide6.QtCore import QTimer
 
 from resurface.core.saved_folder_names import (
     add_saved_folder_name,
+    clear_saved_folder_names,
     load_saved_folder_names,
     remove_saved_folder_name,
 )
@@ -103,6 +104,30 @@ class FolderActionsController:
 
         updated_names = remove_saved_folder_name(matching_name)
         if any(value.casefold() == matching_name.casefold() for value in updated_names):
+            return
+        page = getattr(
+            getattr(self.app, "pages", None), "folder_utilities_page", None
+        )
+        if page is not None:
+            page.folder_name_deleted(updated_names)
+
+    def delete_all_saved_folder_names(self) -> None:
+        if not load_saved_folder_names():
+            return
+
+        answer = self.app._show_modal_message(
+            self.app._message_box_icon("Question"),
+            "Delete All Saved Folder Names",
+            "Delete all saved folder names?",
+            self.app._message_box_button("Yes") | self.app._message_box_button("No"),
+            self.app._message_box_button("No"),
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+        )
+        if answer != self.app._message_box_button("Yes"):
+            return
+
+        updated_names = clear_saved_folder_names()
+        if updated_names:
             return
         page = getattr(
             getattr(self.app, "pages", None), "folder_utilities_page", None

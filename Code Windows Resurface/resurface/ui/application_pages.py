@@ -482,6 +482,9 @@ class ApplicationPageComposer:
         folder_utilities_page.delete_name_requested.connect(
             app.folder_actions.delete_saved_folder_name
         )
+        folder_utilities_page.delete_all_names_requested.connect(
+            app.folder_actions.delete_all_saved_folder_names
+        )
         folder_utilities_page.folder_creator_requested.connect(app.folder_actions.open_folder_creator)
         shell.mount_content("folder_utilities", folder_utilities_page)
 

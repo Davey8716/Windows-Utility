@@ -101,3 +101,12 @@ def remove_saved_folder_name(name: str, path: Path | None = None) -> list[str]:
     if save_saved_folder_names(updated, path):
         return updated
     return names
+
+
+def clear_saved_folder_names(path: Path | None = None) -> list[str]:
+    names = load_saved_folder_names(path)
+    if not names:
+        return names
+    if save_saved_folder_names([], path):
+        return []
+    return names

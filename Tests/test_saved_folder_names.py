@@ -4,6 +4,7 @@ from pathlib import Path
 from resurface.core.saved_folder_names import (
     MAX_SAVED_NAMES,
     add_saved_folder_name,
+    clear_saved_folder_names,
     load_saved_folder_names,
     remove_saved_folder_name,
 )
@@ -51,6 +52,15 @@ def test_remove_blank_or_unknown_saved_name_leaves_storage_unchanged(tmp_path):
     assert remove_saved_folder_name("  ", path) == ["Reports"]
     assert remove_saved_folder_name("Invoices", path) == ["Reports"]
     assert load_saved_folder_names(path) == ["Reports"]
+
+
+def test_clear_saved_names_persists_an_empty_list(tmp_path):
+    path = tmp_path / "saved_folder_names.json"
+    path.write_text(json.dumps(["Reports", "Invoices"]), encoding="utf-8")
+
+    assert clear_saved_folder_names(path) == []
+    assert json.loads(path.read_text(encoding="utf-8")) == []
+    assert load_saved_folder_names(path) == []
 
 
 class Input:
@@ -163,6 +173,39 @@ def test_delete_saved_name_no_or_unknown_preserves_entries(monkeypatch):
 
     assert removed == []
     assert app.pages.folder_utilities_page.deleted is None
+
+
+def test_delete_all_saved_names_confirms_and_refreshes(monkeypatch):
+    app = DeleteApp(answer=1)
+    controller = FolderActionsController(app, None, None, OrganisingStub())
+    monkeypatch.setattr(folder_actions, "load_saved_folder_names", lambda: ["Reports", "Invoices"])
+    monkeypatch.setattr(folder_actions, "clear_saved_folder_names", lambda: [])
+
+    controller.delete_all_saved_folder_names()
+
+    assert app.modal_args[1:3] == (
+        "Delete All Saved Folder Names",
+        "Delete all saved folder names?",
+    )
+    assert app.modal_args[3:] == (1 | 2, 2)
+    assert app.modal_kwargs["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
+    assert app.pages.folder_utilities_page.deleted == []
+
+
+def test_delete_all_saved_names_cancelled_or_empty_preserves_entries(monkeypatch):
+    app = DeleteApp(answer=2)
+    controller = FolderActionsController(app, None, None, OrganisingStub())
+    clear_calls = []
+    monkeypatch.setattr(folder_actions, "load_saved_folder_names", lambda: ["Reports"])
+    monkeypatch.setattr(folder_actions, "clear_saved_folder_names", lambda: clear_calls.append(True))
+
+    controller.delete_all_saved_folder_names()
+    assert clear_calls == []
+    assert app.pages.folder_utilities_page.deleted is None
+
+    monkeypatch.setattr(folder_actions, "load_saved_folder_names", lambda: [])
+    controller.delete_all_saved_folder_names()
+    assert clear_calls == []
 
 
 def test_save_folder_name_persists_immediately_and_refreshes_page(monkeypatch):

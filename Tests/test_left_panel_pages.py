@@ -49,9 +49,11 @@ def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
     app = _app()
     page = FolderUtilitiesPage(lambda _widget, _text: None)
     delete_requests = []
+    delete_all_requests = []
     save_requests = []
     create_requests = []
     page.delete_name_requested.connect(delete_requests.append)
+    page.delete_all_names_requested.connect(lambda: delete_all_requests.append(True))
     page.save_name_requested.connect(save_requests.append)
     page.create_folder_requested.connect(create_requests.append)
     try:
@@ -59,11 +61,13 @@ def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
         app.processEvents()
         page.refresh_saved_names([])
         assert not page._delete_name.isEnabled()
+        assert not page._delete_all_names.isEnabled()
         assert page._save_name.property("lightModeBlackDisabledText") is True
         page._names.setEditText("   ")
         assert not page._save_name.isEnabled()
         page.refresh_saved_names(["Reports"])
         assert page._delete_name.isEnabled()
+        assert page._delete_all_names.isEnabled()
         page._names.setEditText("New Folder")
         assert page._save_name.isEnabled()
         page._save_name.click()
@@ -73,14 +77,19 @@ def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
         assert page._create_folder.isEnabled()
         page._request_save()
         page._delete_name.click()
+        page._delete_all_names.click()
         page._request_create()
         save_position = page._save_name.mapTo(page, page._save_name.rect().topLeft())
         delete_position = page._delete_name.mapTo(page, page._delete_name.rect().topLeft())
+        delete_all_position = page._delete_all_names.mapTo(page, page._delete_all_names.rect().topLeft())
         assert save_requests == ["New Folder"]
         assert delete_requests == ["Reports"]
+        assert delete_all_requests == [True]
         assert create_requests == ["Reports"]
         assert delete_position.x() == save_position.x()
         assert delete_position.y() > save_position.y()
+        assert delete_all_position.y() == delete_position.y()
+        assert delete_all_position.x() > delete_position.x()
         assert not page._delete_name.isCheckable()
         assert not page._save_name.isCheckable()
         page.folder_name_saved(["Reports", "Invoices"], "Reports")
@@ -98,6 +107,7 @@ def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
         assert page._input.text() == ""
         page.folder_name_deleted([])
         assert not page._delete_name.isEnabled()
+        assert not page._delete_all_names.isEnabled()
     finally:
         page.deleteLater()
 
