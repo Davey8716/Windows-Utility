@@ -169,6 +169,7 @@ class ScreenMoverSettingsPage(PageControls):
             clear.setCursor(Qt.CursorShape.ArrowCursor)
             styles.apply_page_control_size(clear, width=styles.PAGE_COMPACT_CONTROL_WIDTH, role="compact")
             clear.setProperty("styleFontSize", 11)
+            clear.setProperty("lightModeBlackDisabledText", True)
             clear.setStyleSheet(styles.organizing_button_style(11))
             clear.clicked.connect(
                 lambda _checked=False, action=action: self._clear_hotkey(action)
@@ -190,6 +191,7 @@ class ScreenMoverSettingsPage(PageControls):
         self.reset_button.setCursor(Qt.CursorShape.ArrowCursor)
         styles.apply_page_control_size(self.reset_button)
         self.reset_button.setProperty("styleFontSize", 12)
+        self.reset_button.setProperty("lightModeBlackDisabledText", True)
         self.reset_button.setStyleSheet(styles.organizing_button_style(12))
         self.reset_button.clicked.connect(self.reset_confirmation_requested.emit)
         shortcuts_layout.addWidget(self.reset_button, 0, Qt.AlignmentFlag.AlignHCenter)

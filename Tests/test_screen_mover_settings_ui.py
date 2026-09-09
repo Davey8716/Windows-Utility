@@ -1816,6 +1816,11 @@ def test_screen_mover_shortcut_controls_align_without_primary_row(monkeypatch):
         assert len(shortcut_labels) == len(ACTION_LABELS)
         assert len(shortcut_edits) == len(ACTION_LABELS)
         assert len(clear_buttons) == len(ACTION_LABELS)
+        assert all(
+            button.property("lightModeBlackDisabledText") is True
+            for button in clear_buttons
+        )
+        assert settings_page.reset_button.property("lightModeBlackDisabledText") is True
         assert len({label.width() for label in shortcut_labels}) == 1
         assert all(label.width() >= label.sizeHint().width() for label in shortcut_labels)
         assert len({edit.width() for edit in shortcut_edits}) == 1
