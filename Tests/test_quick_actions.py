@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QApplication, QComboBox, QPushButton
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QComboBox, QMessageBox, QPushButton
 
 from resurface.ui.application_pages import QuickActionsGrid
 from resurface.ui.quick_actions import (
@@ -6,7 +7,7 @@ from resurface.ui.quick_actions import (
     QuickActionRegistry,
     QuickActionSpec,
 )
-from resurface.ui.tooltips import QtTooltipManager
+from resurface.ui.tooltips import QtTooltipManager, registered_tooltip_text, tooltip_text
 
 
 def _app():
@@ -79,6 +80,54 @@ def test_grid_limits_to_eight_and_expands_inline():
     grid._toggle_expanded()
     app.processEvents()
     assert list(grid.buttons) == ids
+    grid.deleteLater()
+
+
+def test_empty_grid_shows_registered_reset_button_only_when_no_actions_are_pinned():
+    app = _app()
+    registry = QuickActionRegistry({"quick_action_ids": []}, lambda _value: None)
+    registry.register(QuickActionSpec("action", "Action", lambda: None))
+    registry.finalize()
+    grid = QuickActionsGrid(registry, lambda widget, text: QtTooltipManager(widget, text))
+
+    assert grid.empty_state_label is not None
+    assert grid.reset_defaults_button is not None
+    assert registered_tooltip_text(grid.reset_defaults_button) == tooltip_text(
+        "quick_actions_reset_defaults"
+    )
+    assert "border-radius" in grid.reset_defaults_button.styleSheet()
+    assert grid.contextMenuPolicy() == Qt.ContextMenuPolicy.DefaultContextMenu
+
+    registry.pin("action")
+    app.processEvents()
+
+    assert grid.empty_state_label is None
+    assert grid.reset_defaults_button is None
+    grid.deleteLater()
+
+
+def test_empty_grid_reset_button_confirms_then_restores_default_actions(monkeypatch):
+    app = _app()
+    state = {"quick_action_ids": []}
+    saves = []
+    registry = QuickActionRegistry(state, lambda value: saves.append(list(value["quick_action_ids"])))
+    for action_id in DEFAULT_QUICK_ACTION_IDS:
+        registry.register(QuickActionSpec(action_id, action_id, lambda: None))
+    registry.finalize()
+    grid = QuickActionsGrid(registry, lambda _widget, _text: None)
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+    )
+
+    grid.reset_defaults_button.click()
+    app.processEvents()
+
+    assert registry.pinned_ids() == list(DEFAULT_QUICK_ACTION_IDS)
+    assert saves[-1] == list(DEFAULT_QUICK_ACTION_IDS)
+    assert list(grid.buttons) == list(DEFAULT_QUICK_ACTION_IDS)
+    assert grid.reset_defaults_button is None
     grid.deleteLater()
 
 

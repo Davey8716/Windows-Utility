@@ -2,10 +2,6 @@ If a app path to a monitor rules dissapears remove it from the app and gui
 
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
 
-Reset Quick action button needs rounding aswell delete name popup should do this for folder utilites
-
-Folder creator should have a delete all function for it also
-
 Feature: Clipboard provenance shows clipboarded item, time stamp of usage and link to page that opens to mirror the monitor 
 rules export logic
 

@@ -103,9 +103,9 @@ class QuickActionsGrid(QWidget):
         self.expanded = False
         self.buttons: dict[str, QuickActionButton] = {}
         self.tooltip_managers = {}
+        self.empty_state_label: QLabel | None = None
+        self.reset_defaults_button: QPushButton | None = None
         self.setAcceptDrops(True)
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._show_area_menu)
         self.layout = QGridLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
@@ -121,6 +121,8 @@ class QuickActionsGrid(QWidget):
                 item.widget().deleteLater()
         self.buttons.clear()
         self.tooltip_managers.clear()
+        self.empty_state_label = None
+        self.reset_defaults_button = None
         specs = self.registry.specs()
         visible = specs if self.expanded else specs[: self.VISIBLE_LIMIT]
         for index, spec in enumerate(visible):
@@ -155,6 +157,17 @@ class QuickActionsGrid(QWidget):
             empty.setWordWrap(True)
             empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.layout.addWidget(empty, 0, 0, 1, 2)
+            self.empty_state_label = empty
+
+            reset = QPushButton("Reset Quick Actions to Defaults", self)
+            reset.setObjectName("QuickActionsResetDefaults")
+            styles.apply_page_control_size(reset)
+            reset.setProperty("styleFontSize", 13)
+            reset.setStyleSheet(styles.organizing_button_style(13))
+            reset.clicked.connect(self._reset_to_defaults)
+            self.register_tooltip(reset, tooltip_text("quick_actions_reset_defaults"))
+            self.layout.addWidget(reset, 1, 0, 1, 2, Qt.AlignmentFlag.AlignHCenter)
+            self.reset_defaults_button = reset
         elif len(specs) > self.VISIBLE_LIMIT:
             more = QPushButton("Show Less" if self.expanded else "Show More", self)
             more.setObjectName("QuickActionsShowMore")
@@ -201,13 +214,7 @@ class QuickActionsGrid(QWidget):
         if self.registry.move(action_id, target_index):
             event.acceptProposedAction()
 
-    def _show_area_menu(self, pos: QPoint) -> None:
-        menu = QMenu(self)
-        styles.apply_popup_menu_style(menu)
-        reset = menu.addAction("Reset Quick Actions to Defaults")
-        chosen = menu.exec(self.mapToGlobal(pos))
-        if chosen is not reset:
-            return
+    def _reset_to_defaults(self) -> None:
         answer = QMessageBox.question(
             self,
             "Reset Quick Actions",
