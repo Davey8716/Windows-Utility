@@ -1,6 +1,7 @@
 """Construction and page-specific signal wiring for the main application UI."""
 
 from dataclasses import dataclass
+from collections.abc import Callable
 from html import escape
 from pathlib import Path
 from PySide6.QtCore import QMimeData, QPoint, Qt, QTimer
@@ -229,8 +230,14 @@ class QuickActionsGrid(QWidget):
 
 
 class OverviewPage(QWidget):
-    def __init__(self, parent=None):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        open_master_backup_path: Callable[[], None] | None = None,
+    ):
         super().__init__(parent)
+        self._open_master_backup_path = open_master_backup_path
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -266,6 +273,17 @@ class OverviewPage(QWidget):
             summary_layout.addWidget(label, row, 0)
             summary_layout.addWidget(value, row, 1)
             self.status_labels[key] = value
+        backup_path_label = self.status_labels["backup_path"]
+        backup_path_label.setTextFormat(Qt.TextFormat.RichText)
+        backup_path_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextBrowserInteraction
+        )
+        backup_path_label.setOpenExternalLinks(False)
+        backup_path_label.linkActivated.connect(
+            lambda _link: self._open_master_backup_path()
+            if self._open_master_backup_path is not None
+            else None
+        )
         summary_layout.setColumnStretch(1, 1)
         layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
@@ -323,9 +341,19 @@ class OverviewPage(QWidget):
                 )
             )
         )
-        self.status_labels["backup_path"].setText(
-            str(state.get("master_backup_output_path", "Not set"))
-        )
+        backup_path = str(state.get("master_backup_output_path", "")).strip()
+        backup_label = self.status_labels["backup_path"]
+        if backup_path:
+            link_color = styles.message_box_link_color().name()
+            backup_label.setText(
+                f'<a href="open-master-backup" '
+                f'style="color: {link_color}; text-decoration: underline;">'
+                f"{escape(backup_path)}</a>"
+            )
+            backup_label.setToolTip("Open the Master Backup Path in Explorer")
+        else:
+            backup_label.setText("Not set")
+            backup_label.setToolTip("")
         recycle_enabled = bool(state.get("recycle_bin_auto_clean_enabled", False))
         recycle_days = state.get("recycle_bin_age_rule_days", 30)
         self.status_labels["recycle"].setText(
@@ -401,7 +429,12 @@ class ApplicationPageComposer:
         shell = self.shell
 
         self.quick_actions = QuickActionRegistry(self.state, save_state, app)
-        overview_page = OverviewPage(shell.content_parent("overview"))
+        overview_page = OverviewPage(
+            shell.content_parent("overview"),
+            open_master_backup_path=lambda: app.explorer_windows.open_or_focus_folder(
+                app._get_master_backup_dir()
+            ),
+        )
         shell.mount_content("overview", overview_page)
         quick_actions_page = QuickActionsPage(
             self.quick_actions,
