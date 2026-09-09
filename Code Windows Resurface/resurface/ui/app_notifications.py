@@ -409,6 +409,7 @@ class WindowMessageMixin:
         accessory_leading_spacer_width: int | None = None,
         show_close_now_button: bool = False,
         replace_grouped_entries: bool = False,
+        popup_corner_radius: int | None = None,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
         grouped_boxes = self._get_grouped_timed_message_boxes()
@@ -456,6 +457,7 @@ class WindowMessageMixin:
             message_box._text_minimum_width = text_minimum_width or 280
         message_box._center_text_block = center_text_block
         message_box._show_close_now_button = show_close_now_button
+        message_box._popup_corner_radius = popup_corner_radius
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(self._message_box_button("NoButton"))

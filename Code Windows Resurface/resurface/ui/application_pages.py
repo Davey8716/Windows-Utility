@@ -773,12 +773,13 @@ class ApplicationPageComposer:
             destination.mkdir(parents=True, exist_ok=True)
             result = self.app.hover_window_controls.export_all_data(destination)
         except Exception as error:
-            self.app._show_modal_message(
+            self.app._show_timed_message(
                 QMessageBox.Icon.Critical,
                 "Export failed",
                 f"Hover Window Controls data could not be exported.\n\n{error}",
-                QMessageBox.StandardButton.Ok,
-                QMessageBox.StandardButton.Ok,
+                timeout_ms=10_000,
+                show_close_now_button=True,
+                popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
             )
             return
         self._refresh_hover_export_button()
@@ -789,6 +790,7 @@ class ApplicationPageComposer:
             "Hover data exported",
             f"The export was created successfully.\n\n{result.directory}",
             show_close_now_button=True,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
 
     def _import_hover_controls(self) -> None:
@@ -839,6 +841,7 @@ class ApplicationPageComposer:
             "button data with this backup?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
@@ -861,6 +864,7 @@ class ApplicationPageComposer:
             "Hover data imported",
             f"The backup was imported successfully.\n\n{result.source_directory}",
             show_close_now_button=True,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
 
     def _clear_hover_controls_cache(self) -> None:

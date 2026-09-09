@@ -187,6 +187,10 @@ def test_hover_export_confirms_then_exports_to_master_subfolder(tmp_path):
     )
     assert app.timed_calls[0][0][1] == "Hover data exported"
     assert str(destination) in app.timed_calls[0][0][2]
+    assert (
+        app.timed_calls[0][1]["popup_corner_radius"]
+        == styles.BUTTON_CORNER_RADIUS
+    )
 
 
 def test_hover_export_path_link_creates_and_opens_destination(tmp_path):
@@ -282,7 +286,7 @@ def test_hover_export_cancel_does_not_create_folder_or_export(tmp_path):
     assert app.timed_calls == []
 
 
-def test_hover_export_failure_uses_styled_pyside_modal(tmp_path):
+def test_hover_export_failure_uses_styled_timed_message(tmp_path):
     destination = tmp_path / "Master Backup" / "Hover Window Controls"
     app = FakeApp(
         destination,
@@ -292,12 +296,18 @@ def test_hover_export_failure_uses_styled_pyside_modal(tmp_path):
 
     composer_for(app)._export_hover_controls()
 
-    assert len(app.modal_calls) == 2
-    error_args = app.modal_calls[1][0]
+    assert len(app.modal_calls) == 1
+    assert len(app.timed_calls) == 1
+    error_args = app.timed_calls[0][0]
     assert error_args[0] == QMessageBox.Icon.Critical
     assert error_args[1] == "Export failed"
     assert "disk unavailable" in error_args[2]
-    assert app.timed_calls == []
+    assert (
+        app.timed_calls[0][1]["popup_corner_radius"]
+        == styles.BUTTON_CORNER_RADIUS
+    )
+    assert app.timed_calls[0][1]["timeout_ms"] == 10_000
+    assert app.timed_calls[0][1]["show_close_now_button"] is True
 
 
 def test_unchanged_hover_data_does_not_show_exported_message(tmp_path):
@@ -372,8 +382,16 @@ def test_hover_import_selects_validates_confirms_and_imports(
     assert validated == [destination]
     assert imported == [destination]
     assert app.modal_calls[0][0][1] == "Import Hover Data"
+    assert (
+        app.modal_calls[0][1]["popup_corner_radius"]
+        == styles.BUTTON_CORNER_RADIUS
+    )
     assert app.timed_calls[0][0][1] == "Hover data imported"
     assert str(destination) in app.timed_calls[0][0][2]
+    assert (
+        app.timed_calls[0][1]["popup_corner_radius"]
+        == styles.BUTTON_CORNER_RADIUS
+    )
 
 
 def test_hover_import_cancel_does_not_replace_data(monkeypatch, tmp_path):
