@@ -172,7 +172,7 @@ def message_box_link_color() -> QColor:
     return T.TEXT_LIGHT if T.THEME_IS_DARK else QColor(0, 0, 0)
 
 def message_popup_menu_style(radius: int = 10) -> str:
-    radius = T.POPUP_CORNER_RADIUS
+    radius = max(0, int(radius))
     border = H.qcolor_css(T.SURFACE_BORDER)
     background = H.qcolor_css(T.SURFACE_BG)
     hover = H.qcolor_css(T.SURFACE_HOVER)
@@ -182,14 +182,14 @@ def message_popup_menu_style(radius: int = 10) -> str:
             background-color: {background};
             color: {text};
             border: {T.POPUP_BORDER_WIDTH}px solid {border};
-            border-radius: 0px;
+            border-radius: {radius}px;
             padding: 6px;
         }}
         QMenu::item {{
             background-color: transparent;
             color: {text};
             padding: 7px 12px;
-            border-radius: 0px;
+            border-radius: {radius}px;
             margin: 1px 0px;
             font-weight: bold;
         }}
@@ -204,9 +204,11 @@ def message_popup_menu_style(radius: int = 10) -> str:
         }}
     """
 
-def apply_popup_menu_style(menu) -> None:
+def apply_popup_menu_style(menu, *, radius: int | None = None) -> None:
     if hasattr(menu, "setStyleSheet"):
-        menu.setStyleSheet(message_popup_menu_style())
+        menu.setStyleSheet(message_popup_menu_style(
+            T.POPUP_CORNER_RADIUS if radius is None else radius
+        ))
 
 def window_style() -> str:
     return f"""

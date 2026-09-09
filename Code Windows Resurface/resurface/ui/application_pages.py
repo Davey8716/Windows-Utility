@@ -87,7 +87,7 @@ class QuickActionButton(QPushButton):
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
-        styles.apply_popup_menu_style(menu)
+        styles.apply_popup_menu_style(menu, radius=styles.BUTTON_CORNER_RADIUS)
         action = menu.addAction("Unpin from Quick Actions")
         action.triggered.connect(lambda: self.registry.unpin(self.action_id))
         menu.exec(event.globalPos())

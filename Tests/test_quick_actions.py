@@ -223,9 +223,13 @@ def test_source_context_menu_switches_between_pin_and_unpin():
     source = QPushButton("Action")
     registry = QuickActionRegistry({"quick_action_ids": []}, lambda _value: None)
     registry.register_button("action", "Action", source)
-    seen = [registry.source_menu(source).actions()[0].text()]
+    menu = registry.source_menu(source)
+    seen = [menu.actions()[0].text()]
+    assert "border-radius: 6px;" in menu.styleSheet()
     registry.pin("action")
-    seen.append(registry.source_menu(source).actions()[0].text())
+    menu = registry.source_menu(source)
+    seen.append(menu.actions()[0].text())
+    assert "border-radius: 6px;" in menu.styleSheet()
 
     assert seen == ["Pin to Quick Actions", "Unpin from Quick Actions"]
     source.deleteLater()
@@ -244,6 +248,11 @@ def test_dropdown_context_menu_groups_individual_commands():
     )
     menu = registry.dropdown_menu(combo, ("first", "second"))
     seen = [action.text() for action in menu.actions()]
+    assert "border-radius: 6px;" in menu.styleSheet()
+    assert all(
+        "border-radius: 6px;" in action.menu().styleSheet()
+        for action in menu.actions()
+    )
 
     assert seen == ["Pin to Quick Actions", "Unpin from Quick Actions"]
     menu.actions()[0].menu().actions()[0].trigger()

@@ -226,7 +226,7 @@ class QuickActionRegistry(QObject):
         if spec is None:
             return None
         menu = QMenu(source)
-        styles.apply_popup_menu_style(menu)
+        styles.apply_popup_menu_style(menu, radius=styles.BUTTON_CORNER_RADIUS)
         if self.is_pinned(spec.action_id):
             action = menu.addAction("Unpin from Quick Actions")
             action.triggered.connect(lambda: self.unpin(spec.action_id))
@@ -242,11 +242,14 @@ class QuickActionRegistry(QObject):
 
     def dropdown_menu(self, source: QWidget, action_ids: tuple[str, ...]) -> QMenu:
         menu = QMenu(source)
-        styles.apply_popup_menu_style(menu)
+        styles.apply_popup_menu_style(menu, radius=styles.BUTTON_CORNER_RADIUS)
         unpinned = [self._specs[action_id] for action_id in action_ids if not self.is_pinned(action_id)]
         pinned = [self._specs[action_id] for action_id in action_ids if self.is_pinned(action_id)]
         if unpinned:
             pin_menu = QMenu("Pin to Quick Actions", menu)
+            styles.apply_popup_menu_style(
+                pin_menu, radius=styles.BUTTON_CORNER_RADIUS
+            )
             menu.addMenu(pin_menu)
             for spec in unpinned:
                 pin_menu.addAction(
@@ -255,6 +258,9 @@ class QuickActionRegistry(QObject):
                 )
         if pinned:
             unpin_menu = QMenu("Unpin from Quick Actions", menu)
+            styles.apply_popup_menu_style(
+                unpin_menu, radius=styles.BUTTON_CORNER_RADIUS
+            )
             menu.addMenu(unpin_menu)
             for spec in pinned:
                 unpin_menu.addAction(
