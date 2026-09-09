@@ -426,6 +426,9 @@ class ApplicationPageComposer:
             self.state, app.register_tooltip, shell.content_parent("screen_mover")
         )
         screen_mover_settings_page.settings_changed.connect(self._screen_mover_settings_changed)
+        screen_mover_settings_page.shortcut_capture_changed.connect(
+            app.hotkey_manager.set_capture_active
+        )
         screen_mover_settings_page.reset_confirmation_requested.connect(
             lambda: self._confirm_screen_mover_reset(screen_mover_settings_page)
         )

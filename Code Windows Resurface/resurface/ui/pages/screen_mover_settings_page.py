@@ -20,6 +20,8 @@ from resurface.ui.tooltips import tooltip_text
 class ScreenMoverShortcutEdit(QKeySequenceEdit):
     """Shortcut editor with a theme-aware in-field validation message."""
 
+    capture_state_changed = Signal(bool)
+
     _MODIFIER_KEYS = {
         Qt.Key.Key_Control,
         Qt.Key.Key_Alt,
@@ -29,6 +31,7 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._capture_active = False
         self.setProperty("shortcutConflict", False)
         self.duplicate_message = QLabel(self)
         self.duplicate_message.setObjectName("ScreenMoverDuplicateMessage")
@@ -64,12 +67,27 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
         super().resizeEvent(event)
         self._position_duplicate_message()
 
+    def focusInEvent(self, event) -> None:
+        super().focusInEvent(event)
+        self._set_capture_active(True)
+
+    def focusOutEvent(self, event) -> None:
+        super().focusOutEvent(event)
+        self._set_capture_active(False)
+
     def keyPressEvent(self, event) -> None:
         super().keyPressEvent(event)
         if event.key() not in self._MODIFIER_KEYS:
             # Each shortcut is limited to one chord. Finalizing it here avoids
             # QKeySequenceEdit's built-in one-second completion delay.
             self.clearFocus()
+
+    def _set_capture_active(self, active: bool) -> None:
+        active = bool(active)
+        if active == self._capture_active:
+            return
+        self._capture_active = active
+        self.capture_state_changed.emit(active)
 
     def _position_duplicate_message(self) -> None:
         self.duplicate_message.setGeometry(
@@ -88,6 +106,7 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
 class ScreenMoverSettingsPage(PageControls):
     settings_changed = Signal(dict)
     reset_confirmation_requested = Signal()
+    shortcut_capture_changed = Signal(bool)
 
     def __init__(self, settings: dict, register_tooltip, parent=None):
         super().__init__("screen_mover", register_tooltip, parent)
@@ -143,6 +162,7 @@ class ScreenMoverSettingsPage(PageControls):
             edit.keySequenceChanged.connect(
                 lambda _sequence, action=action, edit=edit: self._save_hotkey(action, edit)
             )
+            edit.capture_state_changed.connect(self.shortcut_capture_changed.emit)
             self._hotkey_edits[action] = edit
             clear = QPushButton("Clear", self.shortcuts_container)
             clear.setCursor(Qt.CursorShape.ArrowCursor)

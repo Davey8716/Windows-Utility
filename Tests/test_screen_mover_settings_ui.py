@@ -45,9 +45,13 @@ class FakeRuntime:
 class FakeHotkeyManager:
     def __init__(self, _callback=None):
         self.calls = []
+        self.capture_calls = []
 
     def update_hotkeys(self, hotkeys):
         self.calls.append(hotkeys)
+
+    def set_capture_active(self, active):
+        self.capture_calls.append(bool(active))
 
     def stop(self):
         pass
@@ -1692,6 +1696,29 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
             for edit in settings_page._hotkey_edits.values()
         )
         assert not settings_page.reset_button.isEnabled()
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_screen_mover_shortcut_capture_updates_the_global_hotkey_manager(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+    try:
+        window.show()
+        window.navigate_to_page("screen_mover")
+        edit = window.pages.screen_mover_settings_page._hotkey_edits["LEFT"]
+
+        edit.setFocus()
+        qt_app.processEvents()
+        assert window.hotkey_manager.capture_calls[-1] is True
+
+        edit.clearFocus()
+        qt_app.processEvents()
+        assert window.hotkey_manager.capture_calls[-2:] == [True, False]
     finally:
         window._quit_requested = True
         window.close()

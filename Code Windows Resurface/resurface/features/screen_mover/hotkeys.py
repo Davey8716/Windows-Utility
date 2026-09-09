@@ -191,6 +191,8 @@ class GlobalHotkeyManager:
         self.listener_factory = listener_factory
         self.listener = None
         self.hotkeys: dict[str, str] = {}
+        self.capture_active = False
+        self._shutdown = False
 
     def update_hotkeys(
         self,
@@ -200,9 +202,27 @@ class GlobalHotkeyManager:
         if normalized == self.hotkeys:
             return
 
-        self.stop()
+        self._stop_listener()
         self.hotkeys = normalized
-        if not self.hotkeys:
+        self._start_listener()
+
+    def set_capture_active(self, active: bool) -> None:
+        active = bool(active)
+        if active == self.capture_active:
+            return
+        self.capture_active = active
+        if active:
+            self._stop_listener()
+            return
+        self._start_listener()
+
+    def _start_listener(self) -> None:
+        if (
+            self._shutdown
+            or self.capture_active
+            or not self.hotkeys
+            or self.listener is not None
+        ):
             return
 
         bindings = {
@@ -224,6 +244,10 @@ class GlobalHotkeyManager:
             print(f"[HOTKEYS] Failed to start global hotkeys: {exc}")
 
     def stop(self) -> None:
+        self._shutdown = True
+        self._stop_listener()
+
+    def _stop_listener(self) -> None:
         listener = self.listener
         self.listener = None
         if listener is None:
@@ -236,6 +260,8 @@ class GlobalHotkeyManager:
 
     def _make_callback(self, action: str) -> Callable[[], None]:
         def callback() -> None:
+            if self.capture_active:
+                return
             self.action_callback(action)
 
         return callback

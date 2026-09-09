@@ -101,3 +101,39 @@ def test_global_hotkey_manager_starts_dispatches_reconfigures_and_stops():
     manager.update_hotkeys({})
     assert listeners[1].stopped
     assert manager.listener is None
+
+
+def test_global_hotkey_manager_suspends_actions_during_shortcut_capture():
+    listeners = []
+    actions = []
+
+    def factory(bindings):
+        listener = FakeHotkeyListener(bindings)
+        listeners.append(listener)
+        return listener
+
+    manager = GlobalHotkeyManager(actions.append, listener_factory=factory)
+    manager.update_hotkeys({"FAR_LEFT": "G"})
+    original_listener = listeners[0]
+
+    manager.set_capture_active(True)
+
+    assert manager.capture_active
+    assert original_listener.stopped
+    assert manager.listener is None
+    assert manager.hotkeys == {"FAR_LEFT": "g"}
+    original_listener.bindings["g"]()
+    assert actions == []
+
+    manager.set_capture_active(False)
+
+    assert not manager.capture_active
+    assert len(listeners) == 2
+    assert listeners[1].started
+    listeners[1].bindings["g"]()
+    assert actions == ["FAR_LEFT"]
+
+    manager.stop()
+    manager.set_capture_active(True)
+    manager.set_capture_active(False)
+    assert len(listeners) == 2

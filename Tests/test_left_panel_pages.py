@@ -256,15 +256,20 @@ def test_screen_mover_waits_for_primary_key_after_modifier_press():
         {"screen_mover_keyboard_hotkeys": {"FAR_LEFT": "Ctrl+G"}},
         lambda _widget, _text: None,
     )
+    capture_states = []
+    page.shortcut_capture_changed.connect(capture_states.append)
     try:
         page.show()
         right_edit = page._hotkey_edits["RIGHT"]
         right_edit.setFocus()
         app.processEvents()
 
+        assert capture_states == [True]
+
         QTest.keyPress(right_edit, Qt.Key.Key_Control)
 
         assert right_edit.hasFocus()
+        assert capture_states == [True]
         assert not right_edit.duplicate_message.isVisibleTo(right_edit)
 
         QTest.keyPress(
@@ -278,6 +283,7 @@ def test_screen_mover_waits_for_primary_key_after_modifier_press():
         )
         assert right_edit.duplicate_message.isVisibleTo(right_edit)
         assert right_edit.keySequence().isEmpty()
+        assert capture_states == [True, False]
         QTest.keyRelease(right_edit, Qt.Key.Key_G)
         QTest.keyRelease(right_edit, Qt.Key.Key_Control)
     finally:
