@@ -66,6 +66,7 @@ class MaintenancePage(QWidget):
         self.run_with_optional_minimize = run_with_optional_minimize
         self.show_modal_message = show_modal_message
         self._output_last_action_label: str | None = None
+        self._has_output_to_clear = False
         self.quick_action_dropdowns: list[tuple[QComboBox, str, dict[str, Callable]]] = []
 
         self.page_layout = QVBoxLayout(self)
@@ -73,7 +74,7 @@ class MaintenancePage(QWidget):
         self._build_selectors()
         self.page_layout.setSpacing(16)
         self._build_output()
-        runner.output_reset.connect(self.sidebar_output.clear)
+        runner.output_reset.connect(self._reset_output)
         runner.output_appended.connect(self._append_output)
         actions.temp_cleanup_admin_required.connect(self._confirm_temp_elevation)
 
@@ -158,6 +159,7 @@ class MaintenancePage(QWidget):
         styles.apply_default_button_size(self.sidebar_output_clear_btn)
         self.sidebar_output_clear_btn.setProperty("styleFontSize", 14)
         self.sidebar_output_clear_btn.setStyleSheet(styles.button_text_style(14))
+        self.sidebar_output_clear_btn.setEnabled(False)
         self.register_tooltip(
             self.sidebar_output_clear_btn,
             tooltip_text("maintenance_clear_log"),
@@ -197,9 +199,16 @@ class MaintenancePage(QWidget):
             self._output_last_action_label = action_label
 
     def clear_output(self):
+        if not self._has_output_to_clear:
+            return
         self.sidebar_output.setPlainText(
             self.OUTPUT_CLEAR_MESSAGES.get(self._output_last_action_label, "Output log cleared.")
         )
+        self._set_output_clearable(False)
+
+    def _reset_output(self):
+        self.sidebar_output.clear()
+        self._set_output_clearable(False)
 
     def _append_output(self, text: str):
         if not text:
@@ -209,6 +218,11 @@ class MaintenancePage(QWidget):
         cursor.insertText(text)
         self.sidebar_output.setTextCursor(cursor)
         self.sidebar_output.ensureCursorVisible()
+        self._set_output_clearable(True)
+
+    def _set_output_clearable(self, clearable: bool):
+        self._has_output_to_clear = bool(clearable)
+        self.sidebar_output_clear_btn.setEnabled(self._has_output_to_clear)
 
     def apply_theme(self):
         self.sidebar_output.setStyleSheet(

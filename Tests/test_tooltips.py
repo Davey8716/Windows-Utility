@@ -101,4 +101,33 @@ def test_maintenance_clear_log_button_uses_central_tooltip_wording():
         "Clears the Maintenance page output log without undoing any completed "
         "actions."
     )
+    assert not page.sidebar_output_clear_btn.isEnabled()
+    page.deleteLater()
+
+
+def test_maintenance_clear_log_tracks_actionable_output():
+    _app()
+    runner = CommandRunner()
+    actions = MaintenanceActions(runner, explorer_windows=None, windows=None)
+    page = MaintenancePage(
+        actions,
+        runner,
+        lambda *_args: None,
+        lambda action: action(),
+        lambda *_args, **_kwargs: None,
+    )
+
+    runner.output_appended.emit("Command output")
+    assert page.sidebar_output_clear_btn.isEnabled()
+
+    page.set_output_context("Flush DNS")
+    page.sidebar_output_clear_btn.click()
+    assert page.sidebar_output.toPlainText() == "Dns output log cleared."
+    assert not page.sidebar_output_clear_btn.isEnabled()
+
+    runner.output_appended.emit("More command output")
+    assert page.sidebar_output_clear_btn.isEnabled()
+    runner.output_reset.emit()
+    assert page.sidebar_output.toPlainText() == ""
+    assert not page.sidebar_output_clear_btn.isEnabled()
     page.deleteLater()

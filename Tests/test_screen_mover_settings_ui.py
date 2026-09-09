@@ -1595,9 +1595,11 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         assert clear_button_pos.y() - output_bottom == 16
 
         panel.set_output_context("Flush DNS")
-        panel.sidebar_output.setPlainText("Output to clear")
+        panel._append_output("Output to clear")
+        assert panel.sidebar_output_clear_btn.isEnabled()
         panel.sidebar_output_clear_btn.click()
         assert panel.sidebar_output.toPlainText() == "Dns output log cleared."
+        assert not panel.sidebar_output_clear_btn.isEnabled()
 
         for is_dark in (False, True):
             window.apply_theme(is_dark)
