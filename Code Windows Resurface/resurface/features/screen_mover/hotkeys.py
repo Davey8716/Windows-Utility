@@ -138,10 +138,27 @@ def normalize_hotkeys(values: Mapping[str, object] | None) -> dict[str, str]:
     }
 
 
+def normalize_unique_hotkeys(
+    values: Mapping[str, object] | None,
+) -> dict[str, str]:
+    """Normalize shortcuts and keep only their first action assignment."""
+    normalized = normalize_hotkeys(values)
+    assigned = set()
+    for action in VALID_ACTIONS:
+        hotkey = normalized[action]
+        if not hotkey:
+            continue
+        if hotkey in assigned:
+            normalized[action] = ""
+            continue
+        assigned.add(hotkey)
+    return normalized
+
+
 def active_hotkeys(values: Mapping[str, object] | None) -> dict[str, str]:
     return {
         action: hotkey
-        for action, hotkey in normalize_hotkeys(values).items()
+        for action, hotkey in normalize_unique_hotkeys(values).items()
         if hotkey
     }
 

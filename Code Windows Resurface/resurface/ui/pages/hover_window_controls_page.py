@@ -83,17 +83,17 @@ class HoverWindowControlsPage(PageControls):
             self.taskbar_restore_button.setEnabled(False)
 
         self.calibrate_button = self.style_action_button(
-            QPushButton("Calibrate Application…", self)
+            QPushButton("Calibrate Application", self)
         )
         self.export_button = self.style_action_button(
-            QPushButton("Export Hover Data…", self)
+            QPushButton("Export Hover Data", self)
         )
         self.export_button.setProperty("lightModeBlackDisabledText", True)
         self.import_button = self.style_action_button(
-            QPushButton("Import Hover Data…", self)
+            QPushButton("Import Hover Data", self)
         )
         self.clear_button = self.style_action_button(
-            QPushButton("Clear Learned Buttons…", self)
+            QPushButton("Clear Learned Buttons", self)
         )
         self.add_two_column_control_row(
             self.content_layout,

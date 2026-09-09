@@ -190,12 +190,22 @@ class FakeWindow:
         )
 
 
-def _build_offscreen_window(monkeypatch, state, *, window_height=None):
+def _build_offscreen_window(
+    monkeypatch,
+    state,
+    *,
+    window_height=None,
+    application_save_state=None,
+):
     state = copy.deepcopy(state)
     monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
     monkeypatch.setattr(main, "save_state", lambda _state: None)
     monkeypatch.setattr(main, "import_standalone_data", lambda _state: False)
-    monkeypatch.setattr(application_pages, "save_state", lambda _state: None)
+    monkeypatch.setattr(
+        application_pages,
+        "save_state",
+        application_save_state or (lambda _state: None),
+    )
     monkeypatch.setattr(main, "GlobalHotkeyManager", FakeHotkeyManager)
     monkeypatch.setattr(
         main, "HoverWindowControlsService", FakeHoverWindowControlsService
@@ -1682,6 +1692,48 @@ def test_real_screen_mover_section_builds_and_resets_offscreen(monkeypatch):
             for edit in settings_page._hotkey_edits.values()
         )
         assert not settings_page.reset_button.isEnabled()
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_duplicate_screen_mover_state_is_sanitized_saved_and_activated(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state["screen_mover_keyboard_hotkeys"].update(
+        {
+            "FAR_LEFT": "Shift+Ctrl+A",
+            "LEFT": "Ctrl+Shift+A",
+            "RIGHT": "Ctrl+Right",
+        }
+    )
+    saved_states = []
+    window = _build_offscreen_window(
+        monkeypatch,
+        state,
+        application_save_state=lambda value: saved_states.append(copy.deepcopy(value)),
+    )
+
+    try:
+        expected = {
+            "FAR_LEFT": "<ctrl>+<shift>+a",
+            "LEFT": "",
+            "RIGHT": "<ctrl>+<right>",
+            "FAR_RIGHT": "",
+            "MINIMIZE": "",
+            "MAXIMIZE": "",
+        }
+        assert window.state["screen_mover_keyboard_hotkeys"] == expected
+        assert any(
+            saved["screen_mover_keyboard_hotkeys"] == expected
+            for saved in saved_states
+        )
+        assert window.hotkey_manager.calls[-1] == {
+            "FAR_LEFT": "<ctrl>+<shift>+a",
+            "RIGHT": "<ctrl>+<right>",
+        }
     finally:
         window._quit_requested = True
         window.close()

@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QApplication, QWidget
 
 from resurface.features.screen_mover.hotkeys import VALID_ACTIONS
+from resurface.ui import styles
 from resurface.ui.pages.external_drives_page import ExternalDrivesPage
 from resurface.ui.pages.folder_utilities_page import FolderUtilitiesPage
 from resurface.ui.pages.organising_utilities_page import OrganisingUtilitiesPage
@@ -168,6 +169,107 @@ def test_screen_mover_reset_button_tracks_whether_any_shortcut_exists():
         page.reset_settings()
         assert not page.reset_button.isEnabled()
         assert page.reset_button.size() == original_size
+    finally:
+        page.deleteLater()
+
+
+def test_screen_mover_rejects_duplicate_shortcut_and_restores_previous_value():
+    app = _app()
+    page = ScreenMoverSettingsPage(
+        {
+            "screen_mover_keyboard_hotkeys": {
+                "LEFT": "Ctrl+Left",
+                "RIGHT": "Ctrl+Right",
+            },
+        },
+        lambda _widget, _text: None,
+    )
+    changes = []
+    page.settings_changed.connect(changes.append)
+    try:
+        right_edit = page._hotkey_edits["RIGHT"]
+        right_edit.setKeySequence("Ctrl+Left")
+        app.processEvents()
+
+        assert right_edit.keySequence().toString() == "Ctrl+Right"
+        assert page.settings()["screen_mover_keyboard_hotkeys"] == {
+            **{action: "" for action in VALID_ACTIONS},
+            "LEFT": "<ctrl>+<left>",
+            "RIGHT": "<ctrl>+<right>",
+        }
+        assert changes == []
+        assert right_edit.duplicate_message.text() == (
+            "Ctrl+Left is already assigned to Move Left."
+        )
+        assert right_edit.duplicate_message.isVisibleTo(right_edit)
+        assert right_edit.duplicate_message.parentWidget() is right_edit
+        assert right_edit.rect().contains(right_edit.duplicate_message.geometry())
+
+        page._clear_hotkey("LEFT")
+        right_edit.setKeySequence("Ctrl+Left")
+        app.processEvents()
+        assert page.settings()["screen_mover_keyboard_hotkeys"]["RIGHT"] == (
+            "<ctrl>+<left>"
+        )
+        assert not right_edit.duplicate_message.isVisibleTo(right_edit)
+
+        page._hotkey_edits["LEFT"].setKeySequence("Ctrl+Left")
+        app.processEvents()
+        left_edit = page._hotkey_edits["LEFT"]
+        assert left_edit.duplicate_message.isVisibleTo(left_edit)
+        page.reset_settings()
+        assert not left_edit.duplicate_message.isVisibleTo(left_edit)
+    finally:
+        page.deleteLater()
+
+
+def test_screen_mover_duplicate_message_uses_the_active_theme():
+    app = _app()
+    original_theme = styles.THEME_IS_DARK
+    page = ScreenMoverSettingsPage(
+        {"screen_mover_keyboard_hotkeys": {"LEFT": "Ctrl+Left"}},
+        lambda _widget, _text: None,
+    )
+    try:
+        right_edit = page._hotkey_edits["RIGHT"]
+        right_edit.setKeySequence("Ctrl+Left")
+        app.processEvents()
+
+        styles.set_theme(True)
+        page.refresh_shortcut_styles()
+        dark_style = right_edit.duplicate_message.styleSheet()
+        styles.set_theme(False)
+        page.refresh_shortcut_styles()
+        light_style = right_edit.duplicate_message.styleSheet()
+
+        assert dark_style != light_style
+        assert right_edit.duplicate_message.isVisibleTo(right_edit)
+        assert right_edit.duplicate_message.text().endswith(
+            "is already assigned to Move Left."
+        )
+    finally:
+        styles.set_theme(original_theme)
+        page.deleteLater()
+
+
+def test_screen_mover_normalizes_existing_duplicate_shortcuts_first_wins():
+    _app()
+    page = ScreenMoverSettingsPage(
+        {
+            "screen_mover_keyboard_hotkeys": {
+                "FAR_LEFT": "Shift+Ctrl+A",
+                "LEFT": "Ctrl+Shift+A",
+                "RIGHT": "Ctrl+Right",
+            },
+        },
+        lambda _widget, _text: None,
+    )
+    try:
+        hotkeys = page.settings()["screen_mover_keyboard_hotkeys"]
+        assert hotkeys["FAR_LEFT"] == "<ctrl>+<shift>+a"
+        assert hotkeys["LEFT"] == ""
+        assert hotkeys["RIGHT"] == "<ctrl>+<right>"
+        assert page._hotkey_edits["LEFT"].keySequence().isEmpty()
     finally:
         page.deleteLater()
 

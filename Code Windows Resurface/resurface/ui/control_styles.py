@@ -59,6 +59,7 @@ def toggle_button_style(font_size: int | None = None) -> str:
 def hotkey_edit_style(font_size: int = 13) -> str:
     """Style the Screen Mover shortcut editor as a persistent surface field."""
     font_size = H.coerce_font_size(font_size, 13) or 13
+    conflict_border = QColor(218, 92, 92) if T.THEME_IS_DARK else QColor(176, 45, 45)
     return f"""
         QKeySequenceEdit#ScreenMoverShortcutEdit {{
             {H.label_style(
@@ -93,6 +94,22 @@ def hotkey_edit_style(font_size: int = 13) -> str:
         QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit:hover,
         QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit:focus {{
             border-color: {H.qcolor_css(T.themed_surface_field_border())};
+            background-color: {H.qcolor_css(T.themed_surface_field_bg())};
+        }}
+        QKeySequenceEdit#ScreenMoverShortcutEdit[shortcutConflict="true"] {{
+            border-color: {H.qcolor_css(conflict_border)};
+        }}
+    """
+
+def hotkey_conflict_message_style(font_size: int = 9) -> str:
+    """Theme-aware style for a duplicate warning inside a shortcut editor."""
+    font_size = H.coerce_font_size(font_size, 9) or 9
+    text = QColor(255, 173, 173) if T.THEME_IS_DARK else QColor(126, 25, 25)
+    return f"""
+        QLabel#ScreenMoverDuplicateMessage {{
+            {H.label_style(font_size=font_size, bold=True, color=text)}
+            padding: 0px 4px;
+            border: none;
             background-color: {H.qcolor_css(T.themed_surface_field_bg())};
         }}
     """

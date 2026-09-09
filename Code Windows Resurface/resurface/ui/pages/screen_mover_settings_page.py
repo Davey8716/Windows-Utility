@@ -6,11 +6,69 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.features.screen_mover.hotkeys import (
-    ACTION_LABELS, VALID_ACTIONS, hotkey_to_display, normalize_hotkey,
+    ACTION_LABELS,
+    VALID_ACTIONS,
+    hotkey_to_display,
+    normalize_hotkey,
+    normalize_unique_hotkeys,
 )
 from resurface.ui import styles
 from resurface.ui.pages.page_controls import PageControls
 from resurface.ui.tooltips import tooltip_text
+
+
+class ScreenMoverShortcutEdit(QKeySequenceEdit):
+    """Shortcut editor with a theme-aware in-field validation message."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setProperty("shortcutConflict", False)
+        self.duplicate_message = QLabel(self)
+        self.duplicate_message.setObjectName("ScreenMoverDuplicateMessage")
+        self.duplicate_message.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.duplicate_message.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self.duplicate_message.hide()
+        self.refresh_conflict_style()
+
+    def show_duplicate_message(self, text: str) -> None:
+        self.setProperty("shortcutConflict", True)
+        self.duplicate_message.setText(text)
+        self.duplicate_message.setToolTip(text)
+        self.duplicate_message.show()
+        self.duplicate_message.raise_()
+        self._position_duplicate_message()
+        self._refresh_style()
+
+    def clear_duplicate_message(self) -> None:
+        self.setProperty("shortcutConflict", False)
+        self.duplicate_message.clear()
+        self.duplicate_message.setToolTip("")
+        self.duplicate_message.hide()
+        self._refresh_style()
+
+    def refresh_conflict_style(self) -> None:
+        self.duplicate_message.setStyleSheet(
+            styles.hotkey_conflict_message_style(9)
+        )
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._position_duplicate_message()
+
+    def _position_duplicate_message(self) -> None:
+        self.duplicate_message.setGeometry(
+            3,
+            3,
+            max(0, self.width() - 6),
+            max(0, self.height() - 6),
+        )
+
+    def _refresh_style(self) -> None:
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
 
 
 class ScreenMoverSettingsPage(PageControls):
@@ -52,7 +110,7 @@ class ScreenMoverSettingsPage(PageControls):
         grid.setColumnStretch(1, 1)
         shortcuts_layout.addLayout(grid)
 
-        self._hotkey_edits: dict[str, QKeySequenceEdit] = {}
+        self._hotkey_edits: dict[str, ScreenMoverShortcutEdit] = {}
         labels = []
         hotkeys = self._settings["screen_mover_keyboard_hotkeys"]
         for row, (action, label_text) in enumerate(ACTION_LABELS.items()):
@@ -60,7 +118,7 @@ class ScreenMoverSettingsPage(PageControls):
             label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             label.setStyleSheet(styles.label_style(font_size=12))
             labels.append(label)
-            edit = QKeySequenceEdit(self.shortcuts_container)
+            edit = ScreenMoverShortcutEdit(self.shortcuts_container)
             edit.setObjectName("ScreenMoverShortcutEdit")
             if hasattr(edit, "setMaximumSequenceLength"):
                 edit.setMaximumSequenceLength(1)
@@ -108,9 +166,7 @@ class ScreenMoverSettingsPage(PageControls):
         if not isinstance(values, dict):
             values = {}
         return {
-            "screen_mover_keyboard_hotkeys": {
-                action: normalize_hotkey(values.get(action, "")) for action in VALID_ACTIONS
-            },
+            "screen_mover_keyboard_hotkeys": normalize_unique_hotkeys(values),
         }
 
     def settings(self) -> dict:
@@ -128,6 +184,7 @@ class ScreenMoverSettingsPage(PageControls):
             edit.blockSignals(True)
             edit.clear()
             edit.blockSignals(False)
+            edit.clear_duplicate_message()
         self._sync_reset_button_enabled()
         self.settings_changed.emit(self.settings())
 
@@ -141,6 +198,7 @@ class ScreenMoverSettingsPage(PageControls):
             for internal in internal_edits:
                 internal.setStyleSheet("")
             edit.setStyleSheet(styles.hotkey_edit_style(13))
+            edit.refresh_conflict_style()
             for widget in (edit, *internal_edits):
                 widget.style().unpolish(widget)
                 widget.style().polish(widget)
@@ -150,7 +208,29 @@ class ScreenMoverSettingsPage(PageControls):
     def _save_hotkey(self, action: str, edit: QKeySequenceEdit) -> None:
         portable = edit.keySequence().toString(QKeySequence.SequenceFormat.PortableText)
         normalized = normalize_hotkey(portable)
-        self._settings["screen_mover_keyboard_hotkeys"][action] = normalized
+        hotkeys = self._settings["screen_mover_keyboard_hotkeys"]
+        conflict = next(
+            (
+                other_action
+                for other_action in VALID_ACTIONS
+                if other_action != action and normalized and hotkeys[other_action] == normalized
+            ),
+            None,
+        )
+        if conflict is not None:
+            previous_display = hotkey_to_display(hotkeys[action])
+            edit.blockSignals(True)
+            edit.setKeySequence(QKeySequence(previous_display))
+            edit.blockSignals(False)
+            edit.show_duplicate_message(
+                f"{hotkey_to_display(normalized)} is already assigned to "
+                f"{ACTION_LABELS[conflict]}."
+            )
+            QTimer.singleShot(0, edit.clearFocus)
+            return
+
+        edit.clear_duplicate_message()
+        hotkeys[action] = normalized
         display = hotkey_to_display(normalized)
         if portable != display:
             edit.blockSignals(True)
@@ -166,5 +246,6 @@ class ScreenMoverSettingsPage(PageControls):
         edit.blockSignals(True)
         edit.clear()
         edit.blockSignals(False)
+        edit.clear_duplicate_message()
         self._sync_reset_button_enabled()
         self.settings_changed.emit(self.settings())

@@ -20,7 +20,11 @@ from PySide6.QtWidgets import (
 
 from resurface.core.state_manager import save_state
 from resurface.features.hover_window_controls.service import normalized_dwell_ms
-from resurface.features.screen_mover.hotkeys import active_hotkeys
+from resurface.features.screen_mover.hotkeys import (
+    active_hotkeys,
+    normalize_hotkeys,
+    normalize_unique_hotkeys,
+)
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
 from resurface.ui.controllers.theme_controller import apply_power_action_dropdown_style
@@ -411,6 +415,13 @@ class ApplicationPageComposer:
         self._wire_user_interface_page(user_interface_page)
         shell.mount_content("user_interface", user_interface_page)
 
+        stored_hotkeys = self.state.get("screen_mover_keyboard_hotkeys", {})
+        normalized_hotkeys = normalize_hotkeys(stored_hotkeys)
+        unique_hotkeys = normalize_unique_hotkeys(stored_hotkeys)
+        if normalized_hotkeys != unique_hotkeys:
+            self.state["screen_mover_keyboard_hotkeys"] = unique_hotkeys
+            save_state(self.state)
+
         screen_mover_settings_page = ScreenMoverSettingsPage(
             self.state, app.register_tooltip, shell.content_parent("screen_mover")
         )
@@ -637,10 +648,10 @@ class ApplicationPageComposer:
         for action_id, label, widget in (
             ("hover.enabled", "Hover Controls", hover.enabled_button),
             ("hover.taskbar_restore", "Taskbar Restoration", hover.taskbar_restore_button),
-            ("hover.calibrate", "Calibrate Application…", hover.calibrate_button),
-            ("hover.export", "Export Hover Data…", hover.export_button),
-            ("hover.import", "Import Hover Data…", hover.import_button),
-            ("hover.clear", "Clear Learned Buttons…", hover.clear_button),
+            ("hover.calibrate", "Calibrate Application", hover.calibrate_button),
+            ("hover.export", "Export Hover Data", hover.export_button),
+            ("hover.import", "Import Hover Data", hover.import_button),
+            ("hover.clear", "Clear Learned Buttons", hover.clear_button),
         ):
             button(action_id, label, widget)
 

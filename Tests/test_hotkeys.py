@@ -3,6 +3,7 @@ from resurface.features.screen_mover.hotkeys import (
     active_hotkeys,
     hotkey_to_display,
     normalize_hotkey,
+    normalize_unique_hotkeys,
 )
 
 
@@ -47,6 +48,28 @@ def test_hotkey_display_and_active_filtering():
     ) == {
         "LEFT": "<ctrl>+<left>",
         "MINIMIZE": "<cmd>+m",
+    }
+
+
+def test_duplicate_hotkeys_keep_the_first_action_in_screen_order():
+    values = {
+        "FAR_LEFT": "Shift+Ctrl+A",
+        "LEFT": "Ctrl+Shift+A",
+        "RIGHT": "control + shift + a",
+        "MAXIMIZE": "Win+Up",
+    }
+
+    assert normalize_unique_hotkeys(values) == {
+        "FAR_LEFT": "<ctrl>+<shift>+a",
+        "LEFT": "",
+        "RIGHT": "",
+        "FAR_RIGHT": "",
+        "MINIMIZE": "",
+        "MAXIMIZE": "<cmd>+<up>",
+    }
+    assert active_hotkeys(values) == {
+        "FAR_LEFT": "<ctrl>+<shift>+a",
+        "MAXIMIZE": "<cmd>+<up>",
     }
 
 
