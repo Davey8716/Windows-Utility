@@ -14,6 +14,7 @@ from resurface.features.folder_creator.launcher import (
     DEFAULT_WINDOW_TITLES,
     FolderCreatorLaunchStatus,
 )
+from resurface.ui import styles
 
 
 class FolderActionsController:
@@ -95,6 +96,7 @@ class FolderActionsController:
             f'Delete the saved folder name "{matching_name}"?',
             self.app._message_box_button("Yes") | self.app._message_box_button("No"),
             self.app._message_box_button("No"),
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
         if answer != self.app._message_box_button("Yes"):
             return

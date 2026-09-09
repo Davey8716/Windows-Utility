@@ -10,6 +10,7 @@ from resurface.core.saved_folder_names import (
 from resurface.features.desktop.folder_service import DesktopFolderService
 from resurface.ui.controllers import folder_actions
 from resurface.ui.controllers.folder_actions import FolderActionsController
+from resurface.ui import styles
 
 
 def test_missing_and_malformed_saved_name_files_are_empty(tmp_path):
@@ -91,13 +92,15 @@ class DeleteApp:
     def __init__(self, answer):
         self.answer = answer
         self.modal_args = None
+        self.modal_kwargs = None
         self.pages = type("Pages", (), {"folder_utilities_page": DeletePage()})()
     @staticmethod
     def _message_box_icon(name): return name
     @staticmethod
     def _message_box_button(name): return {"Yes": 1, "No": 2}[name]
-    def _show_modal_message(self, *args):
+    def _show_modal_message(self, *args, **kwargs):
         self.modal_args = args
+        self.modal_kwargs = kwargs
         return self.answer
 
 
@@ -144,6 +147,7 @@ def test_delete_saved_name_confirms_with_yes_no_and_refreshes(monkeypatch):
         'Delete the saved folder name "Reports"?',
     )
     assert app.modal_args[3:] == (1 | 2, 2)
+    assert app.modal_kwargs["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
     assert app.pages.folder_utilities_page.deleted == ["Invoices"]
 
 
