@@ -39,17 +39,20 @@ from resurface.ui.monitor_rule_editor_dialog import (
 
 
 MONITOR_RULES_HELP_TEXT = (
-    "Rules are checked from top to bottom, and the first complete match wins. "
-    "Enabled rules place matching windows when Windows Resurface starts and when "
-    "applications open. For 15 seconds after a window is detected or a rule is "
-    "applied, placement can be retried if the application moves itself. Changes "
-    "made in Add Rule or Edit Rule take effect only after Save; saved placement "
-    "changes also apply to matching open windows already on the target monitor. "
-    "Placement pauses while the left mouse button is held. If you drag a window "
-    "after it has been placed, short-term recovery ends when Reapply if moved is "
-    "off. Screen Mover shortcuts also end recovery when Reapply is off. When it "
-    "is on, placement resumes after a drag or shortcut and continues to return "
-    "the window to its target monitor."
+    "• Rules are checked from top to bottom; the first complete match wins.\n\n"
+    "• Enabled rules place matching windows when Windows Resurface starts and "
+    "when applications open.\n\n"
+    "• For 15 seconds after a window is detected or a rule is applied, placement "
+    "can be retried if the application moves itself.\n\n"
+    "• Changes made in Add Rule or Edit Rule take effect only after Save. Saved "
+    "placement changes also apply to matching open windows already on the target "
+    "monitor.\n\n"
+    "• Placement pauses while the left mouse button is held.\n\n"
+    "• If you drag a window after it has been placed, short-term recovery ends "
+    "when Reapply if moved is off. Screen Mover monitor-move shortcuts also end recovery when "
+    "Reapply is off.\n\n"
+    "• When Reapply if moved is on, placement resumes after a drag or shortcut "
+    "and continues to return the window to its target monitor."
 )
 RULES_FRAME_WIDTH = 685
 RULES_FRAME_LAYOUT_MARGIN = 15
