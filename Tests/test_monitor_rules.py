@@ -66,6 +66,27 @@ def test_duplicate_rule_ids_are_ignored_but_duplicate_executables_are_allowed():
     assert [rule["id"] for rule in rules] == ["rule-1", "rule-2"]
 
 
+def test_prune_missing_exact_path_rules_keeps_name_rules_and_existing_files(monkeypatch):
+    existing = make_rule(id="existing")
+    missing = make_rule(id="missing", executable_path=r"C:\\Removed\\Discord.exe")
+    name_only = make_rule(
+        id="name-only",
+        executable_path=r"C:\\Removed\\Discord.exe",
+        match_exact_path=False,
+    )
+    monkeypatch.setattr(
+        rule_schema.os.path,
+        "isfile",
+        lambda path: path == rule_schema._normalize_path(existing["executable_path"]),
+    )
+
+    retained = rule_schema.prune_missing_exact_path_rules(
+        [existing, missing, name_only]
+    )
+
+    assert [rule["id"] for rule in retained] == ["existing", "name-only"]
+
+
 def test_ordered_matching_honors_path_title_and_class_filters():
     details = {
         "executable_name": "discord.exe",

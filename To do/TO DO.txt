@@ -1,4 +1,6 @@
-If a app path to a monitor rules dissapears remove it from the app and gui
+If an app path to a monitor rules dissapears remove it from the app and gui
+
+Wording gets cut off inside the folder to desktop drop down list for the light theme + this section needs a delete entry that removes from the GUI and the JSON that contains the entry.
 
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
 

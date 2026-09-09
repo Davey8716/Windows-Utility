@@ -188,6 +188,11 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self.rules_frame.setStyleSheet(styles.summary_frame_style())
         self.help_button.setStyleSheet(styles.monitor_rules_help_button_style())
 
+    def set_rules(self, rules) -> None:
+        """Replace displayed rules after an external state update."""
+        self.rules = normalize_monitor_rules(copy.deepcopy(rules))
+        self._render_rules()
+
     def _show_rules_help(self, _checked=False) -> None:
         self._show_modal_message(
             QMessageBox.Icon.NoIcon,

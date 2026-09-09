@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
 from resurface.core.app_paths import MasterBackupPathsMixin
-from resurface.features.monitor_rules import MonitorRulesRepository
+from resurface.features.monitor_rules import MonitorRulesRepository, rule_schema
 from resurface.ui import application_window as main
 from resurface.ui import monitor_rule_editor_dialog
 from resurface.ui import monitor_rules_page as monitor_rules_ui
@@ -304,6 +304,27 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
                 monitor_rules_ui.QLabel, "MonitorRuleStatus"
             ).text()
             == "Target unavailable"
+        )
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_monitor_rules_page_set_rules_rerenders_empty_state(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=0,
+        on_rules_changed=lambda _rules: None,
+    )
+    try:
+        page.set_rules([])
+        assert page.rules == []
+        assert page.rule_list_layout.count() == 1
+        assert page.rule_list_layout.itemAt(0).widget().text() == (
+            "No application monitor rules have been created or imported."
         )
     finally:
         page.deleteLater()
@@ -1150,6 +1171,7 @@ def test_editor_save_forwards_rule_id_through_application(monkeypatch, save, ren
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(main, "MonitorRuleWatcher", FakeMonitorRuleWatcher)
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    monkeypatch.setattr(rule_schema.os.path, "isfile", lambda _path: True)
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     state["monitor_rules"] = [make_rule()]
     window = _build_offscreen_window(monkeypatch, state)

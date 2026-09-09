@@ -3,6 +3,7 @@
 from .rule_schema import (
     normalize_monitor_rule,
     normalize_monitor_rules,
+    prune_missing_exact_path_rules,
     rule_matches_window,
 )
 from .repository import BackupDirectoryNotConfiguredError, MonitorRulesRepository
@@ -24,5 +25,6 @@ __all__ = [
     "enumerate_monitors",
     "normalize_monitor_rule",
     "normalize_monitor_rules",
+    "prune_missing_exact_path_rules",
     "rule_matches_window",
 ]

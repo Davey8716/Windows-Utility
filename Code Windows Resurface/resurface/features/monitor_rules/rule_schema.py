@@ -87,6 +87,16 @@ def normalize_monitor_rules(rules) -> list[dict]:
     return normalized
 
 
+def prune_missing_exact_path_rules(rules) -> list[dict]:
+    """Return valid rules whose required executable files still exist."""
+    normalized = normalize_monitor_rules(rules)
+    return [
+        rule
+        for rule in normalized
+        if not rule["match_exact_path"] or os.path.isfile(rule["executable_path"])
+    ]
+
+
 def rule_matches_window(rule: dict, details: dict) -> bool:
     if not rule.get("enabled", True):
         return False
@@ -107,4 +117,3 @@ def rule_matches_window(rule: dict, details: dict) -> bool:
 
 def first_matching_rule(rules: list[dict], details: dict) -> dict | None:
     return next((rule for rule in rules if rule_matches_window(rule, details)), None)
-

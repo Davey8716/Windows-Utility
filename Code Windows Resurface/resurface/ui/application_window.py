@@ -220,6 +220,7 @@ class UtilityControlApp(
             sync_tray=lambda: getattr(
                 self.tray_manager, "sync_monitor_rules_action", lambda: None
             )(),
+            refresh_overview=self.refresh_overview,
         )
         self.theme_controller.refresh_screen_mover_shortcut_styles()
         QTimer.singleShot(
@@ -232,6 +233,7 @@ class UtilityControlApp(
         )
         self.hover_window_controls.start()
         self.apply_screen_mover_settings()
+        self.monitor_rules_controller.prune_missing_exact_path_rules()
         self.apply_monitor_rule_settings(apply_existing=True)
         
         self._set_main_window_topmost_state(True)

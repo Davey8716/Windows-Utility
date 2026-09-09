@@ -77,3 +77,59 @@ def test_monitor_rules_controller_normalizes_persists_and_toggles_rules():
     assert watcher.calls[-1][0][0]["enabled"] is False
     assert len(saved) == 2
     assert tray_syncs == [True, True]
+
+
+def test_monitor_rules_controller_prunes_missing_exact_path_rules_and_refreshes_ui(
+    monkeypatch,
+):
+    from resurface.features.monitor_rules import rule_schema
+
+    missing = {
+        "id": "missing",
+        "name": "Missing app",
+        "enabled": True,
+        "reapply_if_moved": False,
+        "executable_name": "missing.exe",
+        "executable_path": r"C:\\Apps\\missing.exe",
+        "match_exact_path": True,
+        "title_contains": "",
+        "class_name": "",
+        "target_device": r"\\.\\DISPLAY2",
+        "target_label": "Monitor 2",
+        "placement_mode": "keep_size",
+        "saved_geometry": None,
+    }
+    name_only = {**missing, "id": "name-only", "match_exact_path": False}
+    state = {"monitor_rules": [missing, name_only]}
+    watcher = FakeWatcher()
+    saved = []
+    tray_syncs = []
+    overview_refreshes = []
+
+    class Page:
+        def __init__(self):
+            self.rules = None
+
+        def set_rules(self, rules):
+            self.rules = rules
+
+    page = Page()
+    monkeypatch.setattr(rule_schema.os.path, "isfile", lambda _path: False)
+    controller = MonitorRulesController(
+        state=state,
+        watcher=watcher,
+        save_state=lambda current: saved.append(current["monitor_rules"]),
+        window_handle=lambda: 99,
+        rules_page=lambda: page,
+        sync_tray=lambda: tray_syncs.append(True),
+        refresh_overview=lambda: overview_refreshes.append(True),
+    )
+
+    assert controller.prune_missing_exact_path_rules() is True
+    assert [rule["id"] for rule in state["monitor_rules"]] == ["name-only"]
+    assert page.rules == state["monitor_rules"]
+    assert len(saved) == 1
+    assert tray_syncs == [True]
+    assert overview_refreshes == [True]
+    assert controller.prune_missing_exact_path_rules() is False
+    assert len(saved) == 1

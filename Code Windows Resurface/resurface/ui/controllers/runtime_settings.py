@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from resurface.features.monitor_rules import normalize_monitor_rules
+from resurface.features.monitor_rules import (
+    normalize_monitor_rules,
+    prune_missing_exact_path_rules,
+)
 from resurface.features.screen_mover.hotkeys import VALID_ACTIONS, active_hotkeys
 
 
@@ -62,6 +65,7 @@ class MonitorRulesController:
         window_handle: Callable[[], int],
         rules_page: Callable[[], object | None],
         sync_tray: Callable[[], None],
+        refresh_overview: Callable[[], None] = lambda: None,
     ) -> None:
         self.state = state
         self.watcher = watcher
@@ -69,6 +73,23 @@ class MonitorRulesController:
         self._window_handle = window_handle
         self._rules_page = rules_page
         self._sync_tray = sync_tray
+        self._refresh_overview = refresh_overview
+
+    def prune_missing_exact_path_rules(self) -> bool:
+        """Persistently remove startup rules whose required executable vanished."""
+        current = normalize_monitor_rules(self.state.get("monitor_rules", []))
+        retained = prune_missing_exact_path_rules(current)
+        if retained == current:
+            return False
+
+        self.state["monitor_rules"] = retained
+        self._save_state(self.state)
+        page = self._rules_page()
+        if page is not None:
+            page.set_rules(retained)
+        self._sync_tray()
+        self._refresh_overview()
+        return True
 
     def apply_settings(self, *, apply_existing: bool = False, apply_rule_ids=None) -> None:
         options = {} if apply_rule_ids is None else {"apply_rule_ids": apply_rule_ids}
