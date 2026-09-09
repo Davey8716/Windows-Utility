@@ -175,6 +175,35 @@ def test_screen_mover_reset_button_tracks_whether_any_shortcut_exists():
         page.deleteLater()
 
 
+def test_screen_mover_clear_buttons_track_assigned_shortcuts():
+    app = _app()
+    page = ScreenMoverSettingsPage(
+        {"screen_mover_keyboard_hotkeys": {"LEFT": "Ctrl+Left"}},
+        lambda _widget, _text: None,
+    )
+    try:
+        clear_buttons = page._clear_hotkey_buttons
+        assert clear_buttons["LEFT"].isEnabled()
+        assert all(
+            not button.isEnabled()
+            for action, button in clear_buttons.items()
+            if action != "LEFT"
+        )
+
+        page._hotkey_edits["RIGHT"].setKeySequence("Ctrl+Right")
+        app.processEvents()
+        assert clear_buttons["RIGHT"].isEnabled()
+
+        page._clear_hotkey("LEFT")
+        assert not clear_buttons["LEFT"].isEnabled()
+        assert clear_buttons["RIGHT"].isEnabled()
+
+        page.reset_settings()
+        assert all(not button.isEnabled() for button in clear_buttons.values())
+    finally:
+        page.deleteLater()
+
+
 def test_screen_mover_rejects_duplicate_shortcut_and_restores_previous_value():
     app = _app()
     page = ScreenMoverSettingsPage(

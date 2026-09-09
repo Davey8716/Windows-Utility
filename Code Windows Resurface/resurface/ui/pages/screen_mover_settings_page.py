@@ -144,6 +144,7 @@ class ScreenMoverSettingsPage(PageControls):
         shortcuts_layout.addLayout(grid)
 
         self._hotkey_edits: dict[str, ScreenMoverShortcutEdit] = {}
+        self._clear_hotkey_buttons: dict[str, QPushButton] = {}
         labels = []
         hotkeys = self._settings["screen_mover_keyboard_hotkeys"]
         for row, (action, label_text) in enumerate(ACTION_LABELS.items()):
@@ -172,6 +173,7 @@ class ScreenMoverSettingsPage(PageControls):
             clear.clicked.connect(
                 lambda _checked=False, action=action: self._clear_hotkey(action)
             )
+            self._clear_hotkey_buttons[action] = clear
             grid.addWidget(label, row, 0)
             grid.addWidget(edit, row, 1)
             grid.addWidget(clear, row, 2)
@@ -192,7 +194,7 @@ class ScreenMoverSettingsPage(PageControls):
         self.reset_button.clicked.connect(self.reset_confirmation_requested.emit)
         shortcuts_layout.addWidget(self.reset_button, 0, Qt.AlignmentFlag.AlignHCenter)
         self.register_tooltip(self.reset_button, tooltip_text("screen_mover_reset"))
-        self._sync_reset_button_enabled()
+        self._sync_shortcut_controls()
 
     @staticmethod
     def _normalized_settings(settings: dict) -> dict:
@@ -219,12 +221,14 @@ class ScreenMoverSettingsPage(PageControls):
             edit.clear()
             edit.blockSignals(False)
             edit.clear_duplicate_message()
-        self._sync_reset_button_enabled()
+        self._sync_shortcut_controls()
         self.settings_changed.emit(self.settings())
 
-    def _sync_reset_button_enabled(self) -> None:
+    def _sync_shortcut_controls(self) -> None:
         hotkeys = self._settings["screen_mover_keyboard_hotkeys"]
         self.reset_button.setEnabled(any(hotkeys.values()))
+        for action, clear_button in self._clear_hotkey_buttons.items():
+            clear_button.setEnabled(bool(hotkeys[action]))
 
     def refresh_shortcut_styles(self) -> None:
         for edit in self._hotkey_edits.values():
@@ -270,7 +274,7 @@ class ScreenMoverSettingsPage(PageControls):
             edit.blockSignals(True)
             edit.setKeySequence(QKeySequence(display))
             edit.blockSignals(False)
-        self._sync_reset_button_enabled()
+        self._sync_shortcut_controls()
         self.settings_changed.emit(self.settings())
         QTimer.singleShot(0, edit.clearFocus)
 
@@ -281,5 +285,5 @@ class ScreenMoverSettingsPage(PageControls):
         edit.clear()
         edit.blockSignals(False)
         edit.clear_duplicate_message()
-        self._sync_reset_button_enabled()
+        self._sync_shortcut_controls()
         self.settings_changed.emit(self.settings())
