@@ -75,6 +75,26 @@ class MonitorRulesController:
         self._sync_tray = sync_tray
         self._refresh_overview = refresh_overview
 
+    def migrate_retired_filters(self) -> bool:
+        """Remove retired title/class filters from persisted monitor rules."""
+        raw_rules = self.state.get("monitor_rules", [])
+        if not isinstance(raw_rules, list) or not any(
+            isinstance(rule, dict)
+            and ("title_contains" in rule or "class_name" in rule)
+            for rule in raw_rules
+        ):
+            return False
+
+        rules = normalize_monitor_rules(raw_rules)
+        self.state["monitor_rules"] = rules
+        self._save_state(self.state)
+        page = self._rules_page()
+        if page is not None:
+            page.set_rules(rules)
+        self._sync_tray()
+        self._refresh_overview()
+        return True
+
     def prune_missing_exact_path_rules(self) -> bool:
         """Persistently remove startup rules whose required executable vanished."""
         current = normalize_monitor_rules(self.state.get("monitor_rules", []))

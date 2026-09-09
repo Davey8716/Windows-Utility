@@ -60,8 +60,6 @@ def test_monitor_rules_controller_normalizes_persists_and_toggles_rules():
         "executable_name": "Discord.exe",
         "executable_path": r"C:\Apps\Discord.exe",
         "match_exact_path": True,
-        "title_contains": "",
-        "class_name": "",
         "target_device": r"\\.\DISPLAY2",
         "target_label": "Monitor 2",
         "placement_mode": "keep_size",
@@ -92,8 +90,6 @@ def test_monitor_rules_controller_prunes_missing_exact_path_rules_and_refreshes_
         "executable_name": "missing.exe",
         "executable_path": r"C:\\Apps\\missing.exe",
         "match_exact_path": True,
-        "title_contains": "",
-        "class_name": "",
         "target_device": r"\\.\\DISPLAY2",
         "target_label": "Monitor 2",
         "placement_mode": "keep_size",
@@ -132,4 +128,41 @@ def test_monitor_rules_controller_prunes_missing_exact_path_rules_and_refreshes_
     assert tray_syncs == [True]
     assert overview_refreshes == [True]
     assert controller.prune_missing_exact_path_rules() is False
+    assert len(saved) == 1
+
+
+def test_monitor_rules_controller_migrates_retired_filters_once():
+    legacy_rule = {
+        "id": "one",
+        "name": "Discord",
+        "enabled": True,
+        "reapply_if_moved": False,
+        "executable_name": "Discord.exe",
+        "executable_path": r"C:\Apps\Discord.exe",
+        "match_exact_path": True,
+        "title_contains": "Friends",
+        "class_name": "LegacyClass",
+        "target_device": r"\\.\DISPLAY2",
+        "target_label": "Monitor 2",
+        "placement_mode": "keep_size",
+        "saved_geometry": None,
+    }
+    state = {"monitor_rules": [legacy_rule]}
+    watcher = FakeWatcher()
+    saved = []
+    tray_syncs = []
+    controller = MonitorRulesController(
+        state=state,
+        watcher=watcher,
+        save_state=lambda current: saved.append(current["monitor_rules"]),
+        window_handle=lambda: 99,
+        rules_page=lambda: None,
+        sync_tray=lambda: tray_syncs.append(True),
+    )
+
+    assert controller.migrate_retired_filters() is True
+    assert "title_contains" not in state["monitor_rules"][0]
+    assert "class_name" not in state["monitor_rules"][0]
+    assert len(saved) == 1 and tray_syncs == [True]
+    assert controller.migrate_retired_filters() is False
     assert len(saved) == 1

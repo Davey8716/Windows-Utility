@@ -64,8 +64,6 @@ def normalize_monitor_rule(raw: dict, *, create_id: bool = False) -> dict | None
         "executable_name": executable_name,
         "executable_path": executable_path,
         "match_exact_path": match_exact_path,
-        "title_contains": _clean_text(raw.get("title_contains")),
-        "class_name": _clean_text(raw.get("class_name")),
         "target_device": target_device,
         "target_label": _clean_text(raw.get("target_label")) or target_device,
         "placement_mode": placement_mode,
@@ -106,12 +104,6 @@ def rule_matches_window(rule: dict, details: dict) -> bool:
         actual_path = _normalize_path(details.get("executable_path"))
         if not actual_path or actual_path != rule.get("executable_path", ""):
             return False
-    title_filter = _clean_text(rule.get("title_contains")).casefold()
-    if title_filter and title_filter not in _clean_text(details.get("title")).casefold():
-        return False
-    class_filter = _clean_text(rule.get("class_name")).casefold()
-    if class_filter and class_filter != _clean_text(details.get("class_name")).casefold():
-        return False
     return True
 
 

@@ -293,11 +293,6 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             card_layout.addLayout(header)
 
             match_text = rule["executable_path"] if rule["match_exact_path"] else rule["executable_name"]
-            filters = []
-            if rule["title_contains"]:
-                filters.append(f"title contains ‘{rule['title_contains']}’")
-            if rule["class_name"]:
-                filters.append(f"class {rule['class_name']}")
             # Keep each rule property on a stable line.  In the previous arrow-separated
             # sentence, a long executable path could wrap immediately before the
             # placement value, making (for example) "Maximize" look detached from its
@@ -307,8 +302,6 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
                 f"Target: {rule['target_label']}",
                 f"Placement: {PLACEMENT_LABELS[rule['placement_mode']]}",
             ]
-            if filters:
-                details.append("Filters: " + ", ".join(filters))
             details.append(
                 "Reapply if moved: "
                 + ("Enabled" if rule["reapply_if_moved"] else "Disabled")

@@ -29,8 +29,6 @@ def make_rule(**overrides):
         "executable_name": "Discord.exe",
         "executable_path": r"C:\Apps\Discord.exe",
         "match_exact_path": True,
-        "title_contains": "",
-        "class_name": "",
         "target_device": r"\\.\DISPLAY2",
         "target_label": "Monitor 2",
         "placement_mode": "keep_size",
@@ -60,7 +58,7 @@ def test_rule_normalization_rejects_invalid_records_and_normalizes_matching():
 
 def test_duplicate_rule_ids_are_ignored_but_duplicate_executables_are_allowed():
     first = make_rule()
-    second = make_rule(id="rule-2", title_contains="Work")
+    second = make_rule(id="rule-2", name="Discord Work")
     duplicate_id = make_rule(name="Duplicate")
     rules = rule_schema.normalize_monitor_rules([first, second, duplicate_id])
     assert [rule["id"] for rule in rules] == ["rule-1", "rule-2"]
@@ -87,25 +85,24 @@ def test_prune_missing_exact_path_rules_keeps_name_rules_and_existing_files(monk
     assert [rule["id"] for rule in retained] == ["existing", "name-only"]
 
 
-def test_ordered_matching_honors_path_title_and_class_filters():
+def test_matching_ignores_retired_title_and_class_filters():
     details = {
         "executable_name": "discord.exe",
         "executable_path": r"C:\Apps\Discord.exe",
         "title": "Discord - Friends",
         "class_name": "Chrome_WidgetWin_1",
     }
-    wrong_title = rule_schema.normalize_monitor_rule(
-        make_rule(id="first", title_contains="Calls")
-    )
-    matching = rule_schema.normalize_monitor_rule(
+    legacy_rule = rule_schema.normalize_monitor_rule(
         make_rule(id="second", title_contains="friends", class_name="chrome_widgetwin_1")
     )
-    assert rule_schema.first_matching_rule([wrong_title, matching], details)["id"] == "second"
+    assert "title_contains" not in legacy_rule
+    assert "class_name" not in legacy_rule
+    assert rule_schema.first_matching_rule([legacy_rule], details)["id"] == "second"
 
     wrong_path = copy.deepcopy(details)
     wrong_path["executable_path"] = r"D:\Portable\Discord.exe"
-    assert not rule_schema.rule_matches_window(matching, wrong_path)
-    name_only = copy.deepcopy(matching)
+    assert not rule_schema.rule_matches_window(legacy_rule, wrong_path)
+    name_only = copy.deepcopy(legacy_rule)
     name_only["match_exact_path"] = False
     assert rule_schema.rule_matches_window(name_only, wrong_path)
 
@@ -667,24 +664,20 @@ def simulation(monkeypatch):
 
 
 @pytest.mark.parametrize("existing", [True, False])
-def test_late_matching_and_failed_placement_recover(simulation, existing):
+def test_failed_placement_recovers(simulation, existing):
     d = simulation
-    rule = make_rule(match_exact_path=False, title_contains="Ready")
+    rule = make_rule(match_exact_path=False)
     window = d.windows[0]
     d.windows = [window] if existing else []
+    d.succeeds = False
     d.configure([rule], apply_existing=True)
     d.scan()
     if not existing:
         d.windows = [window]
         d.scan()
-    d.scan(6)
-    window["title"] = "Ready"
-    d.succeeds = False
-    d.scan()
     assert len(d.moves) == 1
     assert 1 in d.watcher._pending
     d.succeeds = True
-    d.scan()
     d.scan()
     assert len(d.moves) == 2
     assert d.devices[1] == rule["target_device"]
@@ -896,7 +889,7 @@ def test_rule_changes_place_affected_open_windows(simulation, change):
 
 def test_cosmetic_and_unrelated_edits_preserve_pending_deadline(simulation):
     d = simulation
-    rule = make_rule(match_exact_path=False, title_contains="Ready")
+    rule = make_rule(match_exact_path=False)
     d.configure([rule], apply_existing=True)
     d.scan()
     recovery = d.watcher._pending[1]
@@ -904,7 +897,6 @@ def test_cosmetic_and_unrelated_edits_preserve_pending_deadline(simulation):
                  make_rule(id="other", executable_name="other.exe", match_exact_path=False)])
     d.scan()
     assert d.watcher._pending[1] is recovery
-    d.windows[0]["title"] = "Ready"
     d.scan()
     assert len(d.moves) == 1
     assert d.watcher._pending[1].deadline == recovery.deadline
@@ -1128,15 +1120,13 @@ def test_explicit_save_forces_full_placement_and_wakes_watcher(simulation, monke
     assert d.watcher._apply_rule_ids == set()
 
 
-@pytest.mark.parametrize("blocked", ["disabled", "earlier_match", "filter", "missing_id"])
+@pytest.mark.parametrize("blocked", ["disabled", "earlier_match", "missing_id"])
 def test_explicit_save_honors_matching_and_rule_priority(simulation, blocked):
     d = simulation
     first = make_rule(id="first", match_exact_path=False)
     second = make_rule(id="second", match_exact_path=False)
     if blocked == "disabled":
         first["enabled"] = False
-    elif blocked == "filter":
-        first["title_contains"] = "Another window"
     rules = [second, first] if blocked == "earlier_match" else [first, second]
     d.configure(rules, apply_existing=True)
     d.scan()

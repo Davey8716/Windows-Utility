@@ -158,12 +158,6 @@ class MonitorRuleEditorDialog(QDialog):
         self.exact_path_check = StateIndicatorCheckBox(
             "Match this exact executable path", self
         )
-        self.title_edit = QLineEdit(self)
-        self.title_edit.setPlaceholderText(
-            "Optional, case-insensitive text contained in the title"
-        )
-        self.class_edit = QLineEdit(self)
-        self.class_edit.setPlaceholderText("Optional, exact window class")
         self.monitor_combo = QComboBox(self)
         self.placement_combo = QComboBox(self)
         for mode, label in PLACEMENT_LABELS.items():
@@ -177,8 +171,6 @@ class MonitorRuleEditorDialog(QDialog):
         form.addRow("Rule name", self.name_edit)
         form.addRow("Executable", self.executable_edit)
         form.addRow("Matching", self.exact_path_check)
-        form.addRow("Title contains", self.title_edit)
-        form.addRow("Window class", self.class_edit)
         form.addRow("Target monitor", self.monitor_combo)
         form.addRow("Placement", self.placement_combo)
         form.addRow("Status", self.enabled_check)
@@ -220,8 +212,6 @@ class MonitorRuleEditorDialog(QDialog):
             bool(rule.get("match_exact_path", executable_path))
         )
         self.exact_path_check.setEnabled(bool(executable_path))
-        self.title_edit.setText(str(rule.get("title_contains", "")))
-        self.class_edit.setText(str(rule.get("class_name", "")))
         self.enabled_check.setChecked(bool(rule.get("enabled", True)))
         self.reapply_check.setChecked(bool(rule.get("reapply_if_moved", False)))
 
@@ -263,11 +253,6 @@ class MonitorRuleEditorDialog(QDialog):
         for details in self._running_windows:
             label = f"{details['title']} — {details['executable_name']}"
             self.window_combo.addItem(label, details["hwnd"])
-            self.window_combo.setItemData(
-                self.window_combo.count() - 1,
-                details["class_name"],
-                Qt.ItemDataRole.ToolTipRole,
-            )
         index = self.window_combo.findData(current_hwnd)
         self.window_combo.setCurrentIndex(max(0, index))
         self.window_combo.blockSignals(False)
@@ -343,8 +328,6 @@ class MonitorRuleEditorDialog(QDialog):
             "executable_name": executable_name,
             "executable_path": executable_path,
             "match_exact_path": self.exact_path_check.isChecked(),
-            "title_contains": self.title_edit.text().strip(),
-            "class_name": self.class_edit.text().strip(),
             "target_device": self.monitor_combo.currentData(),
             "target_label": self.monitor_combo.currentText().replace(
                 " (Unavailable)", ""

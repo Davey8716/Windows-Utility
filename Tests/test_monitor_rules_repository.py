@@ -15,7 +15,9 @@ def test_repository_exports_versioned_normalized_backup(tmp_path):
         now=lambda: datetime(2026, 8, 31, 12, 30, 45, 123456),
     )
 
-    path = repository.export_rules([make_rule()])
+    legacy_rule = make_rule()
+    legacy_rule.update(title_contains="Friends", class_name="LegacyClass")
+    path = repository.export_rules([legacy_rule])
 
     assert path == (
         tmp_path / "Monitor Rules" / "monitor_rules_20260831_123045_123456.json"
@@ -24,6 +26,8 @@ def test_repository_exports_versioned_normalized_backup(tmp_path):
     assert payload["format"] == "windows-resurface-monitor-rules"
     assert payload["version"] == 1
     assert payload["rules"][0]["name"] == "Discord"
+    assert "title_contains" not in payload["rules"][0]
+    assert "class_name" not in payload["rules"][0]
 
 
 def test_repository_imports_rules_and_rejects_an_invalid_backup(tmp_path):
@@ -37,6 +41,19 @@ def test_repository_imports_rules_and_rejects_an_invalid_backup(tmp_path):
     invalid_path.write_text(json.dumps({"items": []}), encoding="utf-8")
     with pytest.raises(ValueError, match="not a monitor rules backup"):
         repository.import_rules(invalid_path)
+
+
+def test_repository_imports_legacy_filters_without_preserving_them(tmp_path):
+    repository = MonitorRulesRepository()
+    legacy_rule = make_rule()
+    legacy_rule.update(title_contains="Friends", class_name="LegacyClass")
+    path = tmp_path / "legacy.json"
+    path.write_text(json.dumps({"rules": [legacy_rule]}), encoding="utf-8")
+
+    imported = repository.import_rules(path)
+
+    assert "title_contains" not in imported[0]
+    assert "class_name" not in imported[0]
 
 
 def test_repository_requires_a_master_backup_path():
@@ -68,7 +85,7 @@ def test_rule_changes_create_a_new_export(tmp_path, change):
     if change == "add":
         changed.append(make_rule("three", "Third"))
     elif change == "edit":
-        changed[0]["title_contains"] = "New title"
+        changed[0]["name"] = "New name"
     elif change == "toggle":
         changed[0]["enabled"] = False
     elif change == "delete":

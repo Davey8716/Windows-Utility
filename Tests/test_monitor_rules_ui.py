@@ -43,8 +43,6 @@ def make_rule(
         "executable_name": "discord.exe",
         "executable_path": r"C:\Apps\Discord.exe",
         "match_exact_path": True,
-        "title_contains": "",
-        "class_name": "",
         "target_device": r"\\.\DISPLAY2",
         "target_label": "Monitor 2",
         "placement_mode": placement_mode,
@@ -485,6 +483,10 @@ def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypa
         assert rule["executable_name"] == "discord.exe"
         assert rule["target_device"] == r"\\.\DISPLAY2"
         assert rule["saved_geometry"]["width"] == 900
+        assert not hasattr(dialog, "title_edit")
+        assert not hasattr(dialog, "class_edit")
+        assert "title_contains" not in rule
+        assert "class_name" not in rule
         assert dialog._validation_message() == ""
     finally:
         dialog.close()
