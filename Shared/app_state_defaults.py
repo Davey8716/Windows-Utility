@@ -40,6 +40,8 @@ WINDOWS_RESURFACE_DEFAULTS = {
     },
     "monitor_rules": [],
     "monitor_rules_import_baseline": None,
+    "clipboard_provenance_enabled": False,
+    "clipboard_provenance_history": [],
     "usb_idle_enabled": True,
     "usb_plug_enabled": True,
     "usb_plug_notify_mode": "on",

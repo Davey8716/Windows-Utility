@@ -47,6 +47,12 @@ class NavigationShell(QWidget):
             "Automatically place chosen applications on chosen monitors.\n"
             "Rules are checked from top to bottom. The first complete match wins.",
         ),
+        PageDefinition(
+            "clipboard_provenance",
+            "Clipboard Provenance",
+            "\ue8a5",
+            "Record copied text and files, with the source window captured at copy time.",
+        ),
         PageDefinition("external_drives", "External Drives", "\ue88e", "Manage drive reminders, storage usage, and removable drives."),
         PageDefinition("organising_utilities", "Organising Utilities", "\ue74c", "Back up desktop items, bookmarks, layouts, and screenshots."),
         PageDefinition("folder_utilities", "Folder Utilities", "\ue8b7", "Create desktop folders or open the Folder Creator companion."),

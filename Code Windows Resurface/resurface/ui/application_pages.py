@@ -29,6 +29,7 @@ from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
 from resurface.ui.controllers.theme_controller import apply_power_action_dropdown_style
 from resurface.ui.monitor_rules_page import MonitorRulesPage
+from resurface.ui.clipboard_provenance_page import ClipboardProvenancePage
 from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.pages.drive_space_page import DriveSpacePage
 from resurface.ui.pages.external_drives_page import ExternalDrivesPage
@@ -376,6 +377,7 @@ class ApplicationPages:
     user_interface_page: UserInterfacePage
     screen_mover_settings_page: ScreenMoverSettingsPage
     monitor_rules_page: MonitorRulesPage
+    clipboard_provenance_page: ClipboardProvenancePage
     external_drives_page: ExternalDrivesPage
     drive_space_page: DriveSpacePage
     organising_utilities_page: OrganisingUtilitiesPage
@@ -452,6 +454,14 @@ class ApplicationPageComposer:
             set_import_baseline=app.set_monitor_rules_import_baseline,
         )
         shell.mount_content("monitor_rules", monitor_rules_page)
+
+        clipboard_provenance_page = ClipboardProvenancePage(
+            shell.content_parent("clipboard_provenance"),
+            service=app.clipboard_provenance,
+            get_master_backup_dir=app._get_master_backup_dir,
+            open_backup_folder=app.explorer_windows.open_or_focus_folder,
+        )
+        shell.mount_content("clipboard_provenance", clipboard_provenance_page)
 
         external_drives_page = ExternalDrivesPage(
             self.state, app.register_tooltip, shell.content_parent("external_drives")
@@ -552,6 +562,7 @@ class ApplicationPageComposer:
             user_interface_page=user_interface_page,
             screen_mover_settings_page=screen_mover_settings_page,
             monitor_rules_page=monitor_rules_page,
+            clipboard_provenance_page=clipboard_provenance_page,
             external_drives_page=external_drives_page,
             drive_space_page=drive_space_page,
             organising_utilities_page=organising_utilities_page,

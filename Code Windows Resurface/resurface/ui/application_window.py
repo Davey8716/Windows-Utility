@@ -23,6 +23,7 @@ from resurface.features.drives.windows_session_adapter import WindowsSessionEven
 from resurface.features.screen_mover.hotkeys import GlobalHotkeyManager
 from resurface.features.screen_mover.shortcut_dispatcher import ShortcutActionDispatcher
 from resurface.features.monitor_rules import MonitorRuleWatcher
+from resurface.features.clipboard_provenance import ClipboardProvenanceService
 from resurface.features.explorer.window_service import ExplorerWindowService
 from resurface.features.recycle_bin.service import RecycleBinService
 from resurface.features.system.utility_toggles import UtilityActionsManager
@@ -154,6 +155,9 @@ class UtilityControlApp(
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
         self.monitor_rule_watcher = MonitorRuleWatcher(name="WindowsResurfaceMonitorRules")
+        self.clipboard_provenance = ClipboardProvenanceService(
+            self.state, save_state, parent=self
+        )
         self.shortcut_dispatcher = ShortcutActionDispatcher(
             app_hwnd=lambda: int(self.winId()),
             manual_move_callback=self.monitor_rule_watcher.note_manual_move,
@@ -197,6 +201,7 @@ class UtilityControlApp(
             user_interface_page=self.pages.user_interface_page,
             maintenance_page=self.pages.maintenance_page,
             drive_space_page=self.pages.drive_space_page,
+            clipboard_provenance_page=self.pages.clipboard_provenance_page,
             overview_status_labels=self.pages.overview_page.status_labels,
         )
         self.screen_mover_settings_controller = ScreenMoverSettingsController(
@@ -232,6 +237,7 @@ class UtilityControlApp(
             lambda _enabled, _dwell: self.tray_manager.sync_hover_controls_action()
         )
         self.hover_window_controls.start()
+        self.clipboard_provenance.start()
         self.apply_screen_mover_settings()
         self.monitor_rules_controller.prune_missing_exact_path_rules()
         self.apply_monitor_rule_settings(apply_existing=True)
@@ -398,6 +404,11 @@ class UtilityControlApp(
 
         try:
             self.hover_window_controls.stop()
+        except Exception:
+            pass
+
+        try:
+            self.clipboard_provenance.stop()
         except Exception:
             pass
 
