@@ -102,6 +102,7 @@ def test_maintenance_clear_log_button_uses_central_tooltip_wording():
         "actions."
     )
     assert not page.sidebar_output_clear_btn.isEnabled()
+    assert page.sidebar_output_clear_btn.property("lightModeBlackDisabledText") is True
     page.deleteLater()
 
 

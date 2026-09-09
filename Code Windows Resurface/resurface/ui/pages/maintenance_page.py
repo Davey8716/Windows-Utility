@@ -158,6 +158,7 @@ class MaintenancePage(QWidget):
         self.sidebar_output_clear_btn = QPushButton("Clear Log")
         styles.apply_default_button_size(self.sidebar_output_clear_btn)
         self.sidebar_output_clear_btn.setProperty("styleFontSize", 14)
+        self.sidebar_output_clear_btn.setProperty("lightModeBlackDisabledText", True)
         self.sidebar_output_clear_btn.setStyleSheet(styles.button_text_style(14))
         self.sidebar_output_clear_btn.setEnabled(False)
         self.register_tooltip(
