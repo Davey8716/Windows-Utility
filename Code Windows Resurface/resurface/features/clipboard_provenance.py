@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path, PureWindowsPath
 import re
@@ -208,6 +209,47 @@ class ClipboardProvenanceRepository:
     def backup_directory(self) -> Path | None:
         raw = str(self._get_master_backup_dir() or "").strip() if callable(self._get_master_backup_dir) else ""
         return Path(raw) if raw else None
+
+    @staticmethod
+    def _fingerprint(history: list[dict]) -> str:
+        normalized = normalize_history(copy.deepcopy(history))
+        encoded = json.dumps(normalized, sort_keys=True, ensure_ascii=True).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def has_export_changes(self, history: list[dict]) -> bool:
+        """Compare history with the latest compatible backup in the master path."""
+        backup_dir = self.backup_directory()
+        if backup_dir is None:
+            return True
+        candidates = sorted(
+            (
+                path for path in (backup_dir / "Clipboard Provenance").glob(
+                    "clipboard_provenance_*.json"
+                )
+                if re.fullmatch(
+                    r"clipboard_provenance_\d{8}_\d{6}_\d{6}\.json", path.name
+                )
+            ),
+            reverse=True,
+        )
+        for path in candidates:
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                raw_records = payload.get("records") if isinstance(payload, dict) else None
+                if (
+                    not isinstance(payload, dict)
+                    or payload.get("format") != BACKUP_FORMAT
+                    or payload.get("version") != BACKUP_VERSION
+                    or not isinstance(raw_records, list)
+                ):
+                    continue
+                previous = normalize_history(raw_records)
+                if len(previous) != len(raw_records):
+                    continue
+            except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                continue
+            return self._fingerprint(history) != self._fingerprint(previous)
+        return True
 
     def export_history(self, history: list[dict]) -> Path:
         backup_dir = self.backup_directory()

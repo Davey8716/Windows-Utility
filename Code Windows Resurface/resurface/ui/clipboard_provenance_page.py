@@ -83,7 +83,11 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
 
     def _render_history(self, history: list[dict]) -> None:
         self._clear_layout()
-        self.export_button.setEnabled(bool(history))
+        try:
+            has_export_changes = self._repository.has_export_changes(history)
+        except (OSError, TypeError, ValueError):
+            has_export_changes = True
+        self.export_button.setEnabled(bool(history) and has_export_changes)
         self.clear_button.setEnabled(bool(history))
         self.status_label.setText(
             f"{len(history)} of 100 saved records. Recording is {'on' if self._service.enabled else 'off'}."
@@ -201,9 +205,11 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         except (OSError, ValueError, TypeError) as exc:
             QMessageBox.warning(self, "Clipboard Provenance", f"Could not export clipboard provenance:\n{exc}")
             return
+        self._render_history(self._service.history)
         self._show_timed_message(
             QMessageBox.Icon.Information,
             "Clipboard Provenance Exported",
             f"Clipboard provenance was exported to:\n{path}",
             show_close_now_button=True,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )

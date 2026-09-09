@@ -121,6 +121,22 @@ def test_repository_exports_versioned_json(tmp_path):
     assert payload["version"] == provenance.BACKUP_VERSION
     assert payload["records"][0]["text"] == "hello https://example.com"
     assert payload["records"][0]["urls"] == ["https://example.com"]
+    assert not repository.has_export_changes(payload["records"])
+    assert repository.has_export_changes([
+        *payload["records"],
+        {"id": "two", "timestamp": "later", "content_type": "text", "text": "new", "source": {}},
+    ])
+
+
+def test_repository_ignores_invalid_newer_backup(tmp_path):
+    history = [{"id": "one", "timestamp": "now", "content_type": "text", "text": "same", "source": {}}]
+    repository = provenance.ClipboardProvenanceRepository(
+        lambda: str(tmp_path), now=lambda: datetime(2025, 1, 2, 3, 4, 5, 6)
+    )
+    repository.export_history(history)
+    invalid = tmp_path / "Clipboard Provenance" / "clipboard_provenance_20250103_030405_000006.json"
+    invalid.write_text("not json", encoding="utf-8")
+    assert not repository.has_export_changes(history)
 
 
 def test_page_exports_history_renders_inline_links_and_top_right_delete(monkeypatch, tmp_path):
@@ -134,7 +150,8 @@ def test_page_exports_history_renders_inline_links_and_top_right_delete(monkeypa
         open_backup_folder=lambda _path: True,
     )
     exported = []
-    page._show_modal_message = lambda *_args, **_kwargs: QMessageBox.StandardButton.Save
+    modal_calls = []
+    page._show_modal_message = lambda *_args, **kwargs: modal_calls.append(kwargs) or QMessageBox.StandardButton.Save
     page._show_timed_message = lambda *_args, **kwargs: exported.append(kwargs)
     try:
         assert page.export_button.isEnabled()
@@ -161,6 +178,9 @@ def test_page_exports_history_renders_inline_links_and_top_right_delete(monkeypa
         files = list((tmp_path / "Clipboard Provenance").glob("*.json"))
         assert len(files) == 1
         assert exported
+        assert modal_calls[0]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
+        assert exported[0]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
+        assert not page.export_button.isEnabled()
     finally:
         page.deleteLater()
         app.processEvents()
