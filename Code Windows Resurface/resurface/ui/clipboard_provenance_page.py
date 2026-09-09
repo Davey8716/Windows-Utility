@@ -168,7 +168,10 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
 
     def _clear_history(self) -> None:
         answer = QMessageBox.question(
-            self, "Clear Clipboard Provenance", "Delete all saved clipboard provenance records?",
+            self,
+            "Clear Clipboard Provenance",
+            "Clear the local Clipboard Provenance history?\n\n"
+            "Exported backup files will not be removed.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
         )
