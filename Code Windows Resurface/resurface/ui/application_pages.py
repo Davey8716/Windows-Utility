@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from resurface.core.state_manager import save_state
+from resurface.core.state_manager import get_config_path, save_state
 from resurface.features.hover_window_controls.service import normalized_dwell_ms
 from resurface.features.screen_mover.hotkeys import (
     active_hotkeys,
@@ -235,9 +235,15 @@ class OverviewPage(QWidget):
         parent=None,
         *,
         open_master_backup_path: Callable[[], None] | None = None,
+        open_app_data_path: Callable[[], None] | None = None,
+        get_app_data_path: Callable[[], str | Path] | None = None,
     ):
         super().__init__(parent)
         self._open_master_backup_path = open_master_backup_path
+        self._open_app_data_path = open_app_data_path
+        self._get_app_data_path = get_app_data_path or (
+            lambda: get_config_path().parent
+        )
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -259,6 +265,7 @@ class OverviewPage(QWidget):
                 ("monitor_rules", "Monitor Rules"),
                 ("drives", "External Drives"),
                 ("backup_path", "Master backup path"),
+                ("app_data_path", "App data path"),
                 ("recycle", "Recycle Bin"),
                 ("hover_controls", "Hover Window Controls"),
             )
@@ -273,17 +280,14 @@ class OverviewPage(QWidget):
             summary_layout.addWidget(label, row, 0)
             summary_layout.addWidget(value, row, 1)
             self.status_labels[key] = value
-        backup_path_label = self.status_labels["backup_path"]
-        backup_path_label.setTextFormat(Qt.TextFormat.RichText)
-        backup_path_label.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextBrowserInteraction
-        )
-        backup_path_label.setOpenExternalLinks(False)
-        backup_path_label.linkActivated.connect(
-            lambda _link: self._open_master_backup_path()
-            if self._open_master_backup_path is not None
-            else None
-        )
+        for key in ("backup_path", "app_data_path"):
+            path_label = self.status_labels[key]
+            path_label.setTextFormat(Qt.TextFormat.RichText)
+            path_label.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextBrowserInteraction
+            )
+            path_label.setOpenExternalLinks(False)
+            path_label.linkActivated.connect(self._open_overview_path)
         summary_layout.setColumnStretch(1, 1)
         layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
@@ -354,6 +358,19 @@ class OverviewPage(QWidget):
         else:
             backup_label.setText("Not set")
             backup_label.setToolTip("")
+        app_data_path = str(self._get_app_data_path()).strip()
+        app_data_label = self.status_labels["app_data_path"]
+        if app_data_path:
+            link_color = styles.message_box_link_color().name()
+            app_data_label.setText(
+                f'<a href="open-app-data" '
+                f'style="color: {link_color}; text-decoration: underline;">'
+                f"{escape(app_data_path)}</a>"
+            )
+            app_data_label.setToolTip("Open the live App data path in Explorer")
+        else:
+            app_data_label.setText("Not available")
+            app_data_label.setToolTip("")
         recycle_enabled = bool(state.get("recycle_bin_auto_clean_enabled", False))
         recycle_days = state.get("recycle_bin_age_rule_days", 30)
         self.status_labels["recycle"].setText(
@@ -379,6 +396,12 @@ class OverviewPage(QWidget):
                 )
             )
         )
+
+    def _open_overview_path(self, link: str) -> None:
+        if link == "open-master-backup" and self._open_master_backup_path is not None:
+            self._open_master_backup_path()
+        elif link == "open-app-data" and self._open_app_data_path is not None:
+            self._open_app_data_path()
 
 
 class QuickActionsPage(QWidget):
@@ -433,6 +456,9 @@ class ApplicationPageComposer:
             shell.content_parent("overview"),
             open_master_backup_path=lambda: app.explorer_windows.open_or_focus_folder(
                 app._get_master_backup_dir()
+            ),
+            open_app_data_path=lambda: app.explorer_windows.open_or_focus_folder(
+                str(get_config_path().parent)
             ),
         )
         shell.mount_content("overview", overview_page)
