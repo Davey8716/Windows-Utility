@@ -38,8 +38,10 @@ class FolderUtilitiesPage(PageControls):
         self._save_name = self.style_action_button(QPushButton("Save Name"))
         self._save_name.setProperty("lightModeBlackDisabledText", True)
         self._delete_name = self.style_action_button(QPushButton("Delete Name"))
+        self._delete_name.setProperty("lightModeBlackDisabledText", True)
         self.register_tooltip(self._delete_name, tooltip_text("delete_name"))
         self._delete_all_names = self.style_action_button(QPushButton("Delete All"))
+        self._delete_all_names.setProperty("lightModeBlackDisabledText", True)
         self.register_tooltip(self._delete_all_names, tooltip_text("delete_all_names"))
 
         self.register_tooltip(self._save_name, "Save this folder name for future use.")
