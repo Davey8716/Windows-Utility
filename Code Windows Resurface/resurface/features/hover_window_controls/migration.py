@@ -66,6 +66,18 @@ def import_standalone_data(
     standalone_root = standalone_root or local_app_data_directory(DISPLAY_NAME)
     legacy_root = legacy_root or local_app_data_directory(LEGACY_DATA_DIRECTORY)
     integrated_root = integrated_root or windows_resurface_data_directory()
+    previous_integrated_root = windows_resurface_data_directory()
+
+    # The integrated app's settings use the same portable schema. Preserve
+    # them when the master location has not already established authority.
+    previous_settings = previous_integrated_root / "settings.json"
+    destination_settings = integrated_root / "settings.json"
+    if previous_settings.is_file() and not destination_settings.exists():
+        integrated_root.mkdir(parents=True, exist_ok=True)
+        try:
+            shutil.copy2(previous_settings, destination_settings)
+        except OSError:
+            return False
 
     try:
         data = json.loads(
@@ -89,6 +101,11 @@ def import_standalone_data(
     standalone_copied = _copy_profiles(
         standalone_root / "vision-cache", destination
     )
-    if legacy_copied and standalone_copied:
+    integrated_copied = _copy_profiles(
+        previous_integrated_root / "vision-cache", destination
+    )
+    if legacy_copied and standalone_copied and integrated_copied:
         state["hover_window_controls_migration_completed"] = True
+        if previous_integrated_root != integrated_root and previous_integrated_root.exists():
+            shutil.rmtree(previous_integrated_root)
     return True

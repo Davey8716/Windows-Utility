@@ -204,10 +204,9 @@ def _current_export_entries(
         if _is_atomic_temporary(entry) or entry.name == "settings.json":
             continue
         if entry.name == EXPORT_MANIFEST_NAME:
-            raise DataExportError(
-                "Application data contains the reserved file "
-                f"{EXPORT_MANIFEST_NAME}."
-            )
+            # A live master-path directory is also a direct-layout backup.
+            # Its manifest describes, rather than forms part of, its data.
+            continue
         entries[entry.name] = entry
     entries["settings.json"] = _settings_bytes(settings)
     if legacy_root is not None and legacy_root.exists():
@@ -307,10 +306,7 @@ def _copy_current_contents(
         if settings is not None and entry.name == "settings.json":
             continue
         if entry.name == EXPORT_MANIFEST_NAME:
-            raise DataExportError(
-                "Application data contains the reserved file "
-                f"{EXPORT_MANIFEST_NAME}."
-            )
+            continue
         target = staging / entry.name
         if entry.is_symlink():
             raise DataExportError(f"Cannot export symbolic link: {entry.name}")
@@ -367,6 +363,25 @@ def validate_application_data_export(source_directory: Path) -> dict:
     ):
         raise DataExportError("The hover-data backup settings are invalid.")
     return settings
+
+
+def refresh_application_data_manifest(current_root: Path, settings: dict) -> None:
+    """Mark the live master-path directory as a valid direct-layout backup."""
+    if current_root.is_symlink():
+        raise DataExportError("The active Hover Window Controls data folder cannot be a symbolic link.")
+    current_root.mkdir(parents=True, exist_ok=True)
+    entries = _current_export_entries(current_root, None, settings)
+    manifest = {
+        "schema_version": EXPORT_SCHEMA_VERSION,
+        "application": DISPLAY_NAME,
+        "layout": "direct",
+        "exported_at_utc": datetime.now(timezone.utc).isoformat(),
+        "included_roots": [current_root.name],
+        "managed_entries": sorted(entries),
+    }
+    temporary = current_root / f".{EXPORT_MANIFEST_NAME}.tmp-{uuid.uuid4().hex}"
+    temporary.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    temporary.replace(current_root / EXPORT_MANIFEST_NAME)
 
 
 def import_application_data(

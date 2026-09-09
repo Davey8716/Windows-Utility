@@ -6,6 +6,11 @@ from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QFileDialog
 
 from resurface.core.state_manager import save_state
+from resurface.core.saved_folder_names import (
+    get_saved_folder_names_path,
+    load_saved_folder_names,
+    save_saved_folder_names,
+)
 from resurface.ui.tooltips import format_tooltip_text
 
 
@@ -49,6 +54,43 @@ class MasterBackupPathsMixin:
         clean_path = path.strip()
         if not clean_path:
             return
+
+        old_root = Path(self._get_master_backup_dir())
+        new_root = Path(clean_path)
+        if old_root != new_root:
+            try:
+                old_names = load_saved_folder_names(get_saved_folder_names_path(old_root))
+                new_names_path = get_saved_folder_names_path(new_root)
+                new_names = load_saved_folder_names(new_names_path)
+                merged = [*new_names]
+                seen = {name.casefold() for name in merged}
+                for name in old_names:
+                    if name.casefold() not in seen:
+                        merged.append(name)
+                        seen.add(name.casefold())
+                if old_names and not save_saved_folder_names(merged[:20], new_names_path):
+                    raise OSError("Could not move saved folder names to the new Master Backup Path.")
+                hover_service = getattr(self, "hover_window_controls", None)
+                if hover_service is not None:
+                    hover_service.relocate_data_root(
+                        new_root / ".hover-window-controls-staging"
+                    )
+                old_names_path = get_saved_folder_names_path(old_root)
+                if old_names_path.exists():
+                    old_names_path.unlink()
+                    try:
+                        old_names_path.parent.rmdir()
+                    except OSError:
+                        pass
+            except OSError as error:
+                self._show_modal_message(
+                    self._message_box_icon("Critical"),
+                    "Master Backup Path",
+                    f"The master backup path was not changed because existing data could not be moved.\n\n{error}",
+                    self._message_box_button("Ok"),
+                    self._message_box_button("Ok"),
+                )
+                return
 
         self.backup_path = clean_path
         self.state["master_backup_output_path"] = clean_path

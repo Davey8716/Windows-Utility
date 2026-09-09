@@ -7,6 +7,7 @@ from PySide6.QtCore import QTimer
 from resurface.core.saved_folder_names import (
     add_saved_folder_name,
     clear_saved_folder_names,
+    get_saved_folder_names_path,
     load_saved_folder_names,
     remove_saved_folder_name,
 )
@@ -24,6 +25,26 @@ class FolderActionsController:
         self.folder_service = folder_service
         self.launcher = launcher
         self.organising_actions = organising_actions
+
+    def _saved_names_path(self) -> Path | None:
+        resolver = getattr(self.app, "_get_master_backup_dir", None)
+        return get_saved_folder_names_path(resolver()) if callable(resolver) else None
+
+    def _load_saved_names(self) -> list[str]:
+        path = self._saved_names_path()
+        return load_saved_folder_names(path) if path is not None else load_saved_folder_names()
+
+    def _add_saved_name(self, name: str) -> list[str]:
+        path = self._saved_names_path()
+        return add_saved_folder_name(name, path) if path is not None else add_saved_folder_name(name)
+
+    def _remove_saved_name(self, name: str) -> list[str]:
+        path = self._saved_names_path()
+        return remove_saved_folder_name(name, path) if path is not None else remove_saved_folder_name(name)
+
+    def _clear_saved_names(self) -> list[str]:
+        path = self._saved_names_path()
+        return clear_saved_folder_names(path) if path is not None else clear_saved_folder_names()
 
     def create_desktop_folder(self, folder_input, *, save_name: bool | None = None) -> None:
         name = folder_input.strip() if isinstance(folder_input, str) else folder_input.text().strip()
@@ -53,7 +74,10 @@ class FolderActionsController:
             should_save = bool(save_name)
             if save_name is None and toggle is not None:
                 should_save = toggle.isChecked()
-            saved_names = add_saved_folder_name(name) if should_save else None
+            saved_names = (
+                self._add_saved_name(name)
+                if should_save else None
+            )
             if page is not None:
                 page.folder_created(saved_names)
             else:
@@ -74,7 +98,7 @@ class FolderActionsController:
         clean_name = name.strip()
         if not clean_name:
             return
-        saved_names = add_saved_folder_name(clean_name)
+        saved_names = self._add_saved_name(clean_name)
         page = getattr(
             getattr(self.app, "pages", None), "folder_utilities_page", None
         )
@@ -83,7 +107,7 @@ class FolderActionsController:
 
     def delete_saved_folder_name(self, name: str) -> None:
         clean_name = name.strip()
-        saved_names = load_saved_folder_names()
+        saved_names = self._load_saved_names()
         matching_name = next(
             (value for value in saved_names if value.casefold() == clean_name.casefold()),
             None,
@@ -102,7 +126,7 @@ class FolderActionsController:
         if answer != self.app._message_box_button("Yes"):
             return
 
-        updated_names = remove_saved_folder_name(matching_name)
+        updated_names = self._remove_saved_name(matching_name)
         if any(value.casefold() == matching_name.casefold() for value in updated_names):
             return
         page = getattr(
@@ -112,7 +136,7 @@ class FolderActionsController:
             page.folder_name_deleted(updated_names)
 
     def delete_all_saved_folder_names(self) -> None:
-        if not load_saved_folder_names():
+        if not self._load_saved_names():
             return
 
         answer = self.app._show_modal_message(
@@ -126,7 +150,7 @@ class FolderActionsController:
         if answer != self.app._message_box_button("Yes"):
             return
 
-        updated_names = clear_saved_folder_names()
+        updated_names = self._clear_saved_names()
         if updated_names:
             return
         page = getattr(

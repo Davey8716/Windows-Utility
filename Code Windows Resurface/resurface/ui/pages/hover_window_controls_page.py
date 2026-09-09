@@ -1,7 +1,5 @@
 """Settings page for dwell-based window caption controls."""
 
-from typing import Callable
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QComboBox, QPushButton, QWidget
 
@@ -31,20 +29,18 @@ class HoverWindowControlsPage(PageControls):
         register_tooltip,
         *,
         taskbar_restore_available: bool = True,
-        has_export_changes: Callable[[], bool] | None = None,
+        enabled: bool = True,
+        taskbar_restore_enabled: bool = True,
+        dwell_ms: int = 750,
+        has_export_changes=None,
         parent=None,
     ) -> None:
         super().__init__("hover_window_controls", register_tooltip, parent)
-        self.content_layout.setSpacing(8)
         self._has_export_changes = has_export_changes
-
-        enabled = bool(settings.get("hover_window_controls_enabled", True))
-        taskbar_restore_enabled = bool(
-            settings.get("hover_taskbar_restore_enabled", True)
-        )
-        dwell_ms = normalized_dwell_ms(
-            settings.get("hover_window_controls_dwell_ms", 750)
-        )
+        self.content_layout.setSpacing(8)
+        enabled = bool(enabled)
+        taskbar_restore_enabled = bool(taskbar_restore_enabled)
+        dwell_ms = normalized_dwell_ms(dwell_ms)
         self.enabled_button = self.make_toggle_button("Hover Controls", enabled)
         self.bind_toggle_state_text(self.enabled_button, "Hover Controls")
         self.dwell_combo = QComboBox(self)
@@ -120,10 +116,10 @@ class HoverWindowControlsPage(PageControls):
             self.calibrate_button, tooltip_text("hover_controls_calibrate")
         )
         self.register_tooltip(
-            self.export_button, tooltip_text("hover_controls_export")
+            self.import_button, tooltip_text("hover_controls_import")
         )
         self.register_tooltip(
-            self.import_button, tooltip_text("hover_controls_import")
+            self.export_button, tooltip_text("hover_controls_export")
         )
         self.register_tooltip(
             self.clear_button, tooltip_text("hover_controls_clear")
@@ -141,13 +137,10 @@ class HoverWindowControlsPage(PageControls):
         self.refresh_export_button()
 
     def refresh_export_button(self) -> None:
-        has_changes = True
-        if self._has_export_changes is not None:
-            try:
-                has_changes = bool(self._has_export_changes())
-            except Exception:
-                has_changes = True
-        self.export_button.setEnabled(has_changes)
+        try:
+            self.export_button.setEnabled(bool(self._has_export_changes()))
+        except Exception:
+            self.export_button.setEnabled(True)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)

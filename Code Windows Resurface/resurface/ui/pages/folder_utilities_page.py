@@ -14,8 +14,9 @@ class FolderUtilitiesPage(PageControls):
     delete_all_names_requested = Signal()
     folder_creator_requested = Signal()
 
-    def __init__(self, register_tooltip, parent=None):
+    def __init__(self, register_tooltip, parent=None, *, saved_names_path=None):
         super().__init__("folder_utilities", register_tooltip, parent)
+        self._saved_names_path = saved_names_path
         self.content_layout.setSpacing(16)
         creator = self.style_action_button(QPushButton("Folder Creator"))
         creator.clicked.connect(self.folder_creator_requested.emit)
@@ -68,7 +69,10 @@ class FolderUtilitiesPage(PageControls):
         self._save_name.setEnabled(False)
 
     def refresh_saved_names(self, names: list[str] | None = None) -> None:
-        names = load_saved_folder_names() if names is None else names
+        names = (
+            load_saved_folder_names(self._saved_names_path())
+            if names is None else names
+        )
         text = self._input.text()
         self._names.blockSignals(True); self._names.clear(); self._names.addItems(names)
         self._names.setCurrentIndex(-1); self._names.setEditText(text); self._names.blockSignals(False)

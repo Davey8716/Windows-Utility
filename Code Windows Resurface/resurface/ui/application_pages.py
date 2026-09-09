@@ -521,7 +521,10 @@ class ApplicationPageComposer:
         shell.mount_content("organising_utilities", organising_utilities_page)
 
         folder_utilities_page = FolderUtilitiesPage(
-            app.register_tooltip, shell.content_parent("folder_utilities")
+            app.register_tooltip,
+            shell.content_parent("folder_utilities"),
+            saved_names_path=lambda: Path(app._get_master_backup_dir())
+            / "Saved Folder Names" / "saved_folder_names.json",
         )
         folder_utilities_page.create_folder_requested.connect(
             app.folder_actions.create_desktop_folder
@@ -571,9 +574,10 @@ class ApplicationPageComposer:
             self.state,
             app.register_tooltip,
             taskbar_restore_available=hover_service.taskbar_restore_available,
-            has_export_changes=lambda: hover_service.has_export_changes(
-                Path(app.get_default_hover_controls_export_dir())
-            ),
+            enabled=hover_service.enabled,
+            taskbar_restore_enabled=hover_service.taskbar_restore_enabled,
+            dwell_ms=hover_service.dwell_ms,
+            has_export_changes=hover_service.has_export_changes,
             parent=shell.content_parent("hover_window_controls"),
         )
         hover_page.enabled_changed.connect(hover_service.set_enabled)
@@ -764,68 +768,16 @@ class ApplicationPageComposer:
             self._refresh_hover_export_button()
 
     def _refresh_hover_export_button(self) -> None:
-        page = getattr(
-            getattr(self.app, "pages", None),
-            "hover_window_controls_page",
-            None,
-        )
+        page = getattr(getattr(self.app, "pages", None), "hover_window_controls_page", None)
         if page is not None:
             page.refresh_export_button()
 
     def _export_hover_controls(self) -> None:
-        destination = Path(self.app.get_default_hover_controls_export_dir())
+        service = self.app.hover_window_controls
         try:
-            if not self.app.hover_window_controls.has_export_changes(
-                destination
-            ):
+            if not service.has_export_changes():
                 self._refresh_hover_export_button()
                 return
-        except (OSError, RuntimeError, TypeError, ValueError):
-            pass
-
-        def open_destination(_link: str) -> None:
-            try:
-                destination.mkdir(parents=True, exist_ok=True)
-                opened = self.app.explorer_windows.open_or_focus_folder(
-                    str(destination)
-                )
-            except Exception as error:
-                self.app._show_modal_message(
-                    QMessageBox.Icon.Critical,
-                    "Open export folder failed",
-                    f"The export folder could not be opened.\n\n{error}",
-                    QMessageBox.StandardButton.Ok,
-                    QMessageBox.StandardButton.Ok,
-                )
-                return
-            if not opened:
-                self.app._show_modal_message(
-                    QMessageBox.Icon.Critical,
-                    "Open export folder failed",
-                    f"The export folder could not be opened.\n\n{destination}",
-                    QMessageBox.StandardButton.Ok,
-                    QMessageBox.StandardButton.Ok,
-                )
-
-        destination_text = escape(str(destination))
-        link_color = styles.message_box_link_color().name()
-        answer = self.app._show_modal_message(
-            QMessageBox.Icon.NoIcon,
-            "Export Hover Data",
-            "Export Hover Window Controls data to:<br>"
-            f'<a href="open-export-destination" '
-            f'style="color: {link_color}; text-decoration: underline;">'
-            f"{destination_text}</a>",
-            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Save,
-            link_activated=open_destination,
-            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
-        )
-        if answer != QMessageBox.StandardButton.Save:
-            return
-        try:
-            destination.mkdir(parents=True, exist_ok=True)
-            result = self.app.hover_window_controls.export_all_data(destination)
         except Exception as error:
             self.app._show_timed_message(
                 QMessageBox.Icon.Critical,
@@ -836,16 +788,57 @@ class ApplicationPageComposer:
                 popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
             )
             return
-        self._refresh_hover_export_button()
-        if result is None:
-            return
-        self.app._show_timed_message(
-            QMessageBox.Icon.Information,
-            "Hover data exported",
-            f"The export was created successfully.\n\n{result.directory}",
-            show_close_now_button=True,
+        destination = Path(self.app.get_default_hover_controls_export_dir())
+
+        def open_destination(_link: str) -> None:
+            try:
+                destination.mkdir(parents=True, exist_ok=True)
+                opened = self.app.explorer_windows.open_or_focus_folder(str(destination))
+            except Exception as error:
+                self.app._show_modal_message(
+                    QMessageBox.Icon.Critical, "Open export folder failed",
+                    f"The export folder could not be opened.\n\n{error}",
+                    QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok,
+                )
+                return
+            if not opened:
+                self.app._show_modal_message(
+                    QMessageBox.Icon.Critical, "Open export folder failed",
+                    f"The export folder could not be opened.\n\n{destination}",
+                    QMessageBox.StandardButton.Ok, QMessageBox.StandardButton.Ok,
+                )
+
+        answer = self.app._show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            "Export Hover Data",
+            "Export Hover Window Controls data to:<br>"
+            f'<a href="open-export-destination" style="color: {styles.message_box_link_color().name()}; text-decoration: underline;">'
+            f"{escape(str(destination))}</a>",
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+            link_activated=open_destination,
             popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
+        if answer != QMessageBox.StandardButton.Save:
+            return
+        try:
+            result = service.export_all_data()
+        except Exception as error:
+            self.app._show_timed_message(
+                QMessageBox.Icon.Critical, "Export failed",
+                f"Hover Window Controls data could not be exported.\n\n{error}",
+                timeout_ms=10_000, show_close_now_button=True,
+                popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+            )
+            return
+        self._refresh_hover_export_button()
+        if result is not None:
+            self.app._show_timed_message(
+                QMessageBox.Icon.Information, "Hover data exported",
+                f"The export was created successfully.\n\n{result.directory}",
+                show_close_now_button=True,
+                popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+            )
 
     def _import_hover_controls(self) -> None:
         start_dir = self.app.get_default_hover_controls_export_dir()
@@ -912,7 +905,6 @@ class ApplicationPageComposer:
                 QMessageBox.StandardButton.Ok,
             )
             return
-        self._refresh_hover_export_button()
         self.app._show_timed_message(
             QMessageBox.Icon.Information,
             "Hover data imported",
@@ -920,6 +912,7 @@ class ApplicationPageComposer:
             show_close_now_button=True,
             popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
+        self._refresh_hover_export_button()
 
     def _clear_hover_controls_cache(self) -> None:
         answer = QMessageBox.warning(

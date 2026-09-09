@@ -1,6 +1,8 @@
 
 import ctypes
 from ctypes import wintypes
+from pathlib import Path
+import shutil
 from resurface.ui import styles
 import win32gui
 import win32con
@@ -16,6 +18,10 @@ from resurface.features.desktop.zen_mode import ZenModeService
 from resurface.features.folder_creator.launcher import FolderCreatorLauncher
 from resurface.features.hover_window_controls.migration import import_standalone_data
 from resurface.features.hover_window_controls.service import HoverWindowControlsService
+from resurface.core.saved_folder_names import (
+    get_saved_folder_names_path,
+    migrate_legacy_saved_folder_names,
+)
 from resurface.features.drives.drive_monitor import DriveMonitor
 from resurface.features.drives.drive_service import DriveService
 from resurface.features.drives.drive_reminder_logic import DriveReminderPolicy
@@ -80,8 +86,16 @@ class UtilityControlApp(
         super().__init__()
 
         self.state = load_state()
-        if import_standalone_data(self.state):
-            save_state(self.state)
+        master_backup = Path(self.state.get("master_backup_output_path") or Path.home())
+        hover_export_root = master_backup / "Hover Window Controls"
+        hover_root = master_backup / ".hover-window-controls-staging"
+        if not hover_root.exists() and hover_export_root.exists():
+            shutil.copytree(hover_export_root, hover_root)
+        migrated = import_standalone_data(self.state, integrated_root=hover_root)
+        migrated = migrate_legacy_saved_folder_names(
+            get_saved_folder_names_path(master_backup)
+        ) or migrated
+        self._hover_storage_migrated = migrated
         self.saved_state = self.state
         styles.set_theme(bool(self.state.get("theme_dark", True)))
         self.setWindowTitle("Windows Resurface")
@@ -151,7 +165,17 @@ class UtilityControlApp(
             self.state,
             save_state,
             self,
+            data_root=hover_root,
         )
+        for key in (
+            "hover_window_controls_enabled",
+            "hover_taskbar_restore_enabled",
+            "hover_window_controls_dwell_ms",
+            "hover_window_controls_migration_completed",
+        ):
+            self.state.pop(key, None)
+        if self._hover_storage_migrated:
+            save_state(self.state)
         self.tray_manager = TrayIconManager(self)
         self._screen_mover_bridge = ScreenMoverActionBridge(self)
         self.monitor_rule_watcher = MonitorRuleWatcher(name="WindowsResurfaceMonitorRules")

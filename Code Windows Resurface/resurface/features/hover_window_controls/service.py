@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Callable
 
@@ -17,6 +18,7 @@ from resurface.features.hover_window_controls.app.identity import (
     windows_resurface_data_directory,
 )
 from resurface.features.hover_window_controls.app.data_export import (
+    refresh_application_data_manifest,
     validate_application_data_export,
 )
 from resurface.features.hover_window_controls.core.hover_controller import HoverController
@@ -57,13 +59,11 @@ class HoverWindowControlsService(QObject):
         self.state = state
         self._save_state = save_state
         self.data_root = data_root or windows_resurface_data_directory()
-        self.enabled = bool(state.get("hover_window_controls_enabled", True))
-        self.taskbar_restore_enabled = bool(
-            state.get("hover_taskbar_restore_enabled", True)
-        )
-        self.dwell_ms = normalized_dwell_ms(
-            state.get("hover_window_controls_dwell_ms", DEFAULT_DWELL_MS)
-        )
+        settings = self._load_data_settings()
+        hover = settings.get("hover", {})
+        self.enabled = bool(hover.get("enabled", state.get("hover_window_controls_enabled", True)))
+        self.taskbar_restore_enabled = bool(hover.get("taskbar_restore_enabled", state.get("hover_taskbar_restore_enabled", True)))
+        self.dwell_ms = normalized_dwell_ms(hover.get("dwell_ms", state.get("hover_window_controls_dwell_ms", DEFAULT_DWELL_MS)))
 
         cache = VisionCache(
             base_dir=self.data_root / "vision-cache",
@@ -84,6 +84,7 @@ class HoverWindowControlsService(QObject):
         self.taskbar_restore_available = InstalledAutoHotkeyRunner().available()
         self._started = False
         self._busy = False
+        self._write_data_settings()
 
     def _allowed_self_window_handle(self) -> int | None:
         if current_instance_scope()[0] != "exe":
@@ -116,7 +117,6 @@ class HoverWindowControlsService(QObject):
             self._emit_settings()
             return
         self.enabled = enabled
-        self.state["hover_window_controls_enabled"] = enabled
         if self._started and not self._busy:
             self.controller.set_caption_controls_enabled(enabled)
         self._persist()
@@ -127,7 +127,6 @@ class HoverWindowControlsService(QObject):
             self._emit_settings()
             return
         self.taskbar_restore_enabled = enabled
-        self.state["hover_taskbar_restore_enabled"] = enabled
         if self._started and not self._busy:
             self._set_taskbar_monitor_enabled(enabled)
         self._persist()
@@ -135,7 +134,6 @@ class HoverWindowControlsService(QObject):
     def set_dwell_ms(self, dwell_ms: object) -> None:
         normalized = normalized_dwell_ms(dwell_ms)
         self.dwell_ms = normalized
-        self.state["hover_window_controls_dwell_ms"] = normalized
         self.controller.set_dwell_ms(normalized)
         self._persist()
 
@@ -156,11 +154,54 @@ class HoverWindowControlsService(QObject):
                 parent=parent,
             )
             dialog.exec()
+            self._write_data_settings()
         finally:
             self._finish_operation()
 
     def clear_learned_buttons(self) -> None:
         self.window_api.clear_vision_cache()
+        self._write_data_settings()
+
+    def relocate_data_root(self, destination: Path) -> None:
+        """Move the active cache to a new master backup folder safely."""
+        destination = Path(destination)
+        if destination == self.data_root:
+            return
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        old_export_root = self.export_root
+        new_export_root = destination.parent / "Hover Window Controls"
+        if old_export_root.exists():
+            if new_export_root.exists():
+                shutil.copytree(old_export_root, new_export_root, dirs_exist_ok=True)
+            else:
+                shutil.copytree(old_export_root, new_export_root)
+        if self.data_root.exists():
+            if destination.exists():
+                shutil.copytree(self.data_root, destination, dirs_exist_ok=True)
+            else:
+                shutil.copytree(self.data_root, destination)
+        destination.mkdir(parents=True, exist_ok=True)
+        old_root = self.data_root
+        self.data_root = destination
+        self.window_api._vision.cache.base_dir = destination / "vision-cache"
+        self._write_data_settings()
+        if old_root.exists():
+            shutil.rmtree(old_root)
+        if old_export_root.exists() and old_export_root != new_export_root:
+            shutil.rmtree(old_export_root)
+
+    @property
+    def export_root(self) -> Path:
+        return self.data_root.parent / "Hover Window Controls"
+
+    def _load_data_settings(self) -> dict:
+        try:
+            payload = json.loads((self.data_root / "settings.json").read_text(encoding="utf-8"))
+            if payload.get("schema_version") == 1 and isinstance(payload.get("hover"), dict):
+                return payload
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+        return {"schema_version": 1, "hover": {}}
 
     def _data_settings(self) -> dict:
         return {
@@ -172,27 +213,29 @@ class HoverWindowControlsService(QObject):
             },
         }
 
-    def has_export_changes(self, destination_directory: Path) -> bool:
+    def _write_data_settings(self) -> None:
+        self.data_root.mkdir(parents=True, exist_ok=True)
+        temporary = self.data_root / ".settings.json.tmp"
+        temporary.write_text(json.dumps(self._data_settings(), indent=2, sort_keys=True), encoding="utf-8")
+        temporary.replace(self.data_root / "settings.json")
+        refresh_application_data_manifest(self.data_root, self._data_settings())
+
+    def has_export_changes(self) -> bool:
         return self.window_api.has_export_changes(
-            destination_directory,
-            self._data_settings(),
+            self.export_root, self._data_settings()
         )
 
-    def export_all_data(self, destination_parent: Path):
+    def export_all_data(self, destination_parent: Path | None = None):
         if self._busy:
             raise RuntimeError("Hover Window Controls is already busy")
         self._busy = True
         self._suspend_for_operation()
         try:
-            self.data_root.mkdir(parents=True, exist_ok=True)
-            settings = self._data_settings()
-            (self.data_root / "settings.json").write_text(
-                json.dumps(settings, indent=2, sort_keys=True),
-                encoding="utf-8",
-            )
+            self._write_data_settings()
+            destination = destination_parent or self.export_root
+            destination.mkdir(parents=True, exist_ok=True)
             return self.window_api.export_all_data(
-                destination_parent,
-                settings=settings,
+                destination, settings=self._data_settings()
             )
         finally:
             self._finish_operation()
@@ -213,11 +256,6 @@ class HoverWindowControlsService(QObject):
                 hover["taskbar_restore_enabled"]
             )
             self.dwell_ms = normalized_dwell_ms(hover["dwell_ms"])
-            self.state["hover_window_controls_enabled"] = self.enabled
-            self.state["hover_taskbar_restore_enabled"] = (
-                self.taskbar_restore_enabled
-            )
-            self.state["hover_window_controls_dwell_ms"] = self.dwell_ms
             self.controller.set_dwell_ms(self.dwell_ms)
             self._persist()
             return result
@@ -245,7 +283,7 @@ class HoverWindowControlsService(QObject):
             self.taskbar_monitor.suspend()
 
     def _persist(self) -> None:
-        self._save_state(self.state)
+        self._write_data_settings()
         self._emit_settings()
 
     def _emit_settings(self) -> None:
