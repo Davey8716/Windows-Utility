@@ -242,6 +242,7 @@ class OrganisingActionsController:
             self.show_timed_message(
                 self.app._message_box_icon("Information"), "Export Bookmarks",
                 "Bookmarks exported to:\n" + "\n".join(result),
+                show_close_now_button=True,
             )
         elif result is False:
             self.show_timed_message(
