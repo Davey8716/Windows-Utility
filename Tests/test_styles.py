@@ -275,6 +275,8 @@ def test_light_mode_opt_in_keeps_disabled_dropdown_text_black():
 
     assert 'QComboBox[lightModeBlackDisabledText="true"]:disabled' in light_style
     assert 'QComboBox[lightModeBlackDisabledText="true"] QAbstractItemView::item:disabled' in light_style
+    assert 'QComboBox[lightModeKeepEnabledBackground="true"]:enabled' in light_style
+    assert 'QComboBox[lightModeKeepEnabledBackground="true"]:enabled::drop-down' in light_style
     assert 'QComboBox[lightModeBlackDisabledText="true"][unavailableCurrentValue="true"]' in light_style
     assert 'QComboBox[lightModeBlackDisabledText="true"][unavailableCurrentValue="true"]::drop-down' in light_style
     assert "color: #111820;" in light_style

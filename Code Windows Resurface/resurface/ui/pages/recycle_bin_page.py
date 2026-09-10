@@ -25,6 +25,7 @@ class RecycleBinPage(PageControls):
         layout.addWidget(actions, 0, 0)
         self.actions_combo = actions
         actions.setProperty("lightModeBlackDisabledText", True)
+        actions.setProperty("lightModeKeepEnabledBackground", True)
         actions.setStyleSheet(styles.organizing_combo_style(14))
         self._has_items_checker: Callable[[], bool] | None = None
         self._cleanup_age_availability_checker: Callable[[], dict[int, bool]] | None = None

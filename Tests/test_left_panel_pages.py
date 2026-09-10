@@ -50,6 +50,7 @@ def test_recycle_bin_empty_action_is_disabled_when_no_items_exist():
     page = RecycleBinPage({}, lambda _widget, _text: None)
     try:
         assert page.actions_combo.property("lightModeBlackDisabledText") is True
+        assert page.actions_combo.property("lightModeKeepEnabledBackground") is True
         page.set_empty_action_availability_checker(lambda: False)
         index = page.actions_combo.findText("Empty Recycle Bin")
         assert not page.actions_combo.model().item(index).isEnabled()
