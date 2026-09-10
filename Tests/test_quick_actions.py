@@ -76,6 +76,31 @@ def test_missing_or_malformed_selection_uses_registered_defaults():
         assert registry.pinned_ids() == list(DEFAULT_QUICK_ACTION_IDS)
 
 
+def test_registry_migrates_legacy_create_desktop_folder_action():
+    _app()
+    state = {"quick_action_ids": ["folder.create_desktop_folder"]}
+    saves = []
+    registry = QuickActionRegistry(state, lambda value: saves.append(dict(value)))
+    registry.register(QuickActionSpec("organising.capture_layout", "Capture Layout", lambda: None))
+    registry.finalize()
+
+    assert registry.pinned_ids() == ["organising.capture_layout"]
+    assert saves[-1]["quick_action_ids"] == ["organising.capture_layout"]
+
+
+def test_registry_migrates_legacy_open_recycle_bin_action_and_deduplicates():
+    _app()
+    state = {"quick_action_ids": ["one", "recycle.open", "recycle.empty", "two"]}
+    saves = []
+    registry = QuickActionRegistry(state, lambda value: saves.append(dict(value)))
+    for action_id in ("one", "recycle.empty", "two"):
+        registry.register(QuickActionSpec(action_id, action_id, lambda: None))
+    registry.finalize()
+
+    assert registry.pinned_ids() == ["one", "recycle.empty", "two"]
+    assert saves[-1]["quick_action_ids"] == ["one", "recycle.empty", "two"]
+
+
 def test_pin_unpin_move_and_reset_persist_immediately():
     _app()
     state = {"quick_action_ids": []}

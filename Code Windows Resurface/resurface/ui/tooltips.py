@@ -28,7 +28,6 @@ TOOLTIP_TEXT = {
     "plug_unplug_notify": "Controls notifications for drive plug and unplug events.",
     "desktop_screenshot": "Captures each detected screen into separate images and saves them to the Desktop Screenshots backup folder.",
     "folder_to_desktop": "Creates a desktop folder using the name entered beside it.",
-    "quick_action_create_desktop_folder": "Opens Folder Utilities so you can enter a name and create a desktop folder.",
     "quick_actions_reset_defaults": "Restores the default Quick Actions and their original order.",
     "folder_creator_launcher": "Opens the external Folder Creator tool from its main.py launcher.",
     "folder_name_input": "Enter the name of the folder to create on the desktop.",

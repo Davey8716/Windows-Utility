@@ -24,6 +24,7 @@ class RecycleBinActionsController:
             "Permanently delete all items currently in Recycle Bin?",
             self.app._message_box_button("Yes") | self.app._message_box_button("Cancel"),
             self.app._message_box_button("Cancel"),
+            popup_corner_radius=6,
         )
         if answer != self.app._message_box_button("Yes"):
             return
@@ -36,6 +37,7 @@ class RecycleBinActionsController:
                     "Recycle Bin",
                     "Recycle Bin emptied." if succeeded else "Could not empty Recycle Bin.",
                     show_close_now_button=True,
+                    popup_corner_radius=6,
                 )
             finally:
                 self.service.close()

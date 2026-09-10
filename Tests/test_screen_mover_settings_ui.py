@@ -905,20 +905,16 @@ def test_overview_status_and_separate_configurable_quick_actions(monkeypatch):
             "On · 500 ms dwell · Taskbar restoration Off"
         )
 
-        folder_action = next(
+        capture_layout_action = next(
             button
             for button in quick_actions.findChildren(QPushButton)
-            if button.text() == "Create Desktop Folder"
+            if button.text() == "Capture Layout"
         )
-        assert "enter a name" in folder_action.toolTip()
-        folder_action.click()
-        qt_app.processEvents()
-        assert window.state["last_opened_page"] == "folder_utilities"
-        assert (
-            window.navigation_shell.page_stack.currentWidget()
-            is window.navigation_shell.page_by_id["folder_utilities"]
+        assert "desktop icon layout" in capture_layout_action.toolTip()
+        assert not any(
+            button.text() == "Create Desktop Folder"
+            for button in quick_actions.findChildren(QPushButton)
         )
-        assert window.pages.folder_utilities_page._input.hasFocus()
     finally:
         window._quit_requested = True
         window.close()

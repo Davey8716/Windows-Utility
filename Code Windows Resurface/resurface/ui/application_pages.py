@@ -822,14 +822,6 @@ class ApplicationPageComposer:
             [QuickActionSpec(f"organising.{label.lower().replace(' ', '_')}", label, callback) for label, callback in taskbar_callbacks.items()],
         )
 
-        registry.register(
-            QuickActionSpec(
-                "folder.create_desktop_folder",
-                "Create Desktop Folder",
-                self.app._open_folder_utilities,
-                tooltip_text("quick_action_create_desktop_folder"),
-            )
-        )
         button("folder.creator", "Folder Creator", pages.folder_utilities_page.folder_creator_button)
 
         recycle = pages.recycle_bin_page

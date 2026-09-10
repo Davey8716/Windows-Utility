@@ -10,14 +10,16 @@ class App:
         self.answer = answer
         self.messages = []
         self.modals = []
+        self.modal_options = []
 
     @staticmethod
     def _message_box_icon(name): return name
     @staticmethod
     def _message_box_button(name): return getattr(QMessageBox.StandardButton, name)
 
-    def _show_modal_message(self, *args):
+    def _show_modal_message(self, *args, **kwargs):
         self.modals.append(args)
+        self.modal_options.append(kwargs)
         return self.answer
 
     def _show_timed_message(self, *args, **kwargs):
@@ -45,6 +47,7 @@ def test_empty_cancel_does_not_mutate_service():
     app, service = App(answer=QMessageBox.StandardButton.Cancel), Service()
     RecycleBinActionsController(app, service, immediate).empty_recycle_bin()
     assert service.closed == 0 and app.messages == []
+    assert app.modal_options == [{"popup_corner_radius": 6}]
 
 
 def test_empty_always_closes_after_attempt():
@@ -52,6 +55,7 @@ def test_empty_always_closes_after_attempt():
     RecycleBinActionsController(app, service, immediate).empty_recycle_bin()
     assert service.closed == 1
     assert app.messages[0][0][2] == "Could not empty Recycle Bin."
+    assert app.messages[0][1]["popup_corner_radius"] == 6
 
 
 def test_manual_cleanup_closes_and_reports_no_matches():

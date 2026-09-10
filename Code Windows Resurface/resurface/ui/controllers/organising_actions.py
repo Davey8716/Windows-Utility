@@ -203,6 +203,16 @@ class OrganisingActionsController:
         )
 
     def capture_desktop_layout(self) -> None:
+        answer = self.show_modal_message(
+            self.app._message_box_icon("Question"),
+            "Capture Desktop Layout",
+            "Save the current desktop icon layout?",
+            self.app._message_box_button("Yes") | self.app._message_box_button("Cancel"),
+            self.app._message_box_button("Cancel"),
+        )
+        if answer != self.app._message_box_button("Yes"):
+            return
+
         def action():
             path = self.app.get_default_desktop_layout_path()
             try:

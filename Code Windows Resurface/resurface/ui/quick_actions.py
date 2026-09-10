@@ -15,9 +15,16 @@ from resurface.ui.tooltips import registered_tooltip_text
 DEFAULT_QUICK_ACTION_IDS = (
     "organising.desktop_screenshot",
     "organising.export_bookmarks",
-    "folder.create_desktop_folder",
-    "recycle.open",
+    "organising.capture_layout",
+    "recycle.empty",
 )
+
+# Keep existing users' pinned selection useful after replacing the page-navigation
+# shortcut with a direct desktop-layout action.
+QUICK_ACTION_ID_ALIASES = {
+    "folder.create_desktop_folder": "organising.capture_layout",
+    "recycle.open": "recycle.empty",
+}
 
 
 @dataclass(frozen=True)
@@ -96,7 +103,10 @@ class QuickActionRegistry(QObject):
         result: list[str] = []
         seen: set[str] = set()
         for value_id in value:
-            if not isinstance(value_id, str) or value_id in seen:
+            if not isinstance(value_id, str):
+                continue
+            value_id = QUICK_ACTION_ID_ALIASES.get(value_id, value_id)
+            if value_id in seen:
                 continue
             seen.add(value_id)
             result.append(value_id)

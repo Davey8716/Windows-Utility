@@ -17,8 +17,8 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "quick_action_ids": [
         "organising.desktop_screenshot",
         "organising.export_bookmarks",
-        "folder.create_desktop_folder",
-        "recycle.open",
+        "organising.capture_layout",
+        "recycle.empty",
     ],
     "theme_dark": True,
     "main_always_on_top_enabled": True,
