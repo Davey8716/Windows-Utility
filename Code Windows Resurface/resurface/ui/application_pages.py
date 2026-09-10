@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from collections.abc import Callable
 from html import escape
 from pathlib import Path
-from PySide6.QtCore import QMimeData, QPoint, QRectF, Qt, QTimer
-from PySide6.QtGui import QDrag, QPainter, QPen
+from PySide6.QtCore import QMimeData, QPoint, Qt, QTimer
+from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -28,7 +28,7 @@ from resurface.features.screen_mover.hotkeys import (
 )
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
-from resurface.ui import style_tokens
+from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 from resurface.ui.controllers.theme_controller import apply_power_action_dropdown_style
 from resurface.ui.monitor_rules_page import MonitorRulesPage
 from resurface.ui.clipboard_provenance_page import ClipboardProvenancePage
@@ -72,18 +72,11 @@ class HoverDataImportDialog(QFileDialog):
 
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
-        inset = self.FRAME_WIDTH / 2
-        frame = QRectF(self.rect()).adjusted(inset, inset, -inset, -inset)
-        if frame.isEmpty():
-            return
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pen = QPen(style_tokens.SURFACE_BORDER)
-        pen.setWidthF(self.FRAME_WIDTH)
-        painter.setPen(pen)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        radius = max(0, styles.BUTTON_CORNER_RADIUS - inset)
-        painter.drawRoundedRect(frame, radius, radius)
+        paint_opaque_rounded_frame(
+            self,
+            radius=styles.BUTTON_CORNER_RADIUS,
+            frame_width=self.FRAME_WIDTH,
+        )
 
 
 class QuickActionButton(QPushButton):

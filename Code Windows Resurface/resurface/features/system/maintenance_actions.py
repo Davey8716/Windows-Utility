@@ -134,6 +134,10 @@ class MaintenanceActions(QObject):
         self.shell_open("ms-settings:clipboard")
         self.runner.set_output("Opened Clipboard History.")
 
+    def open_task_manager(self):
+        self.shell_execute("taskmgr")
+        self.runner.set_output("Opened Task Manager.")
+
     def run_dism_restorehealth(self):
         self._run_admin_command(
             "DISM Repair", ["DISM", "/Online", "/Cleanup-Image", "/RestoreHealth"]

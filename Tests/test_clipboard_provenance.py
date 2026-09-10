@@ -1,12 +1,15 @@
 from datetime import datetime
 import json
 
-from PySide6.QtCore import QMimeData, QObject, QUrl, Signal
+from PySide6.QtCore import QMimeData, QObject, Qt, QUrl, Signal
 from PySide6.QtWidgets import QApplication, QLabel, QMessageBox, QToolButton
 
 from resurface.features import clipboard_provenance as provenance
 from resurface.ui import styles
-from resurface.ui.clipboard_provenance_page import ClipboardProvenancePage
+from resurface.ui.clipboard_provenance_page import (
+    ClipboardClearConfirmationDialog,
+    ClipboardProvenancePage,
+)
 
 
 class FakeClipboard(QObject):
@@ -181,6 +184,51 @@ def test_page_exports_history_renders_inline_links_and_top_right_delete(monkeypa
         assert modal_calls[0]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
         assert exported[0]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
         assert not page.export_button.isEnabled()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_clear_confirmation_matches_the_frameless_hover_import_dialog():
+    app = QApplication.instance() or QApplication([])
+    dialog = ClipboardClearConfirmationDialog()
+
+    assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+    assert not dialog.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+    assert dialog.mask().isEmpty()
+    assert not dialog.isSizeGripEnabled()
+    assert dialog.minimumSize() == dialog.maximumSize()
+    assert (
+        dialog.standardButton(dialog.defaultButton())
+        == QMessageBox.StandardButton.Cancel
+    )
+    dialog.deleteLater()
+    app.processEvents()
+
+
+def test_clear_confirmation_only_clears_history_after_yes(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    service._append({"content_type": "text", "text": "record"})
+    page = ClipboardProvenancePage(
+        None, service=service, get_master_backup_dir=lambda: ""
+    )
+    try:
+        monkeypatch.setattr(
+            ClipboardClearConfirmationDialog,
+            "exec",
+            lambda _dialog: QMessageBox.StandardButton.Cancel,
+        )
+        page._clear_history()
+        assert service.history
+
+        monkeypatch.setattr(
+            ClipboardClearConfirmationDialog,
+            "exec",
+            lambda _dialog: QMessageBox.StandardButton.Yes,
+        )
+        page._clear_history()
+        assert service.history == []
     finally:
         page.deleteLater()
         app.processEvents()

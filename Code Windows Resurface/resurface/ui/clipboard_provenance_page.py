@@ -14,9 +14,48 @@ from resurface.features.clipboard_provenance import ClipboardProvenanceRepositor
 from resurface.ui import styles
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.monitor_rule_editor_dialog import style_button
+from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 
 
 PANEL_WIDTH = 685
+
+
+class ClipboardClearConfirmationDialog(QMessageBox):
+    """Fixed-size, frameless clear-history confirmation matching Hover import."""
+
+    FRAME_WIDTH = 2
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setWindowFlag(Qt.WindowType.CustomizeWindowHint, True)
+        self.setWindowFlag(Qt.WindowType.WindowTitleHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowSystemMenuHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowMinimizeButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
+        self.setStyleSheet(styles.message_box_style(outer_frame=False))
+        self.setIcon(QMessageBox.Icon.Question)
+        self.setWindowTitle("Clear Clipboard Provenance")
+        self.setText(
+            "Clear the local Clipboard Provenance history?\n\n"
+            "Exported backup files will not be removed."
+        )
+        self.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
+        )
+        self.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        self.setSizeGripEnabled(False)
+        self.setFixedSize(self.sizeHint())
+
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        paint_opaque_rounded_frame(
+            self,
+            radius=styles.BUTTON_CORNER_RADIUS,
+            frame_width=self.FRAME_WIDTH,
+        )
 
 
 class ClipboardProvenancePage(WindowMessageMixin, QWidget):
@@ -167,14 +206,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         self._render_history(self._service.history)
 
     def _clear_history(self) -> None:
-        answer = QMessageBox.question(
-            self,
-            "Clear Clipboard Provenance",
-            "Clear the local Clipboard Provenance history?\n\n"
-            "Exported backup files will not be removed.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
+        answer = ClipboardClearConfirmationDialog(self).exec()
         if answer == QMessageBox.StandardButton.Yes:
             self._service.clear()
 

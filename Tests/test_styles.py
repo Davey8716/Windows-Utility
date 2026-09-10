@@ -97,6 +97,13 @@ def test_message_box_style_supports_a_local_corner_radius_override():
     assert f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;" in rounded_stylesheet
 
 
+def test_message_box_style_can_omit_its_outer_frame_for_custom_painting():
+    stylesheet = styles.message_box_style(outer_frame=False)
+
+    assert "QMessageBox {" in stylesheet
+    assert "border: none;" in stylesheet
+
+
 @pytest.mark.parametrize(
     ("is_dark", "link_color"),
     [(True, "#ffffff"), (False, "#000000")],

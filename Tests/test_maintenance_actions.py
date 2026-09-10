@@ -167,3 +167,15 @@ def test_power_actions_use_expected_windows_commands(monkeypatch):
         ["shutdown", "/l"],
         ["shutdown", "/s", "/t", "0"],
     ]
+
+
+def test_open_task_manager_uses_windows_task_manager_command(monkeypatch):
+    runner = FakeRunner()
+    actions = MaintenanceActions(runner, FakeWindowActions(), FakeWindowActions())
+    launched = []
+    monkeypatch.setattr(actions, "shell_execute", lambda target: launched.append(target))
+
+    actions.open_task_manager()
+
+    assert launched == ["taskmgr"]
+    assert runner.calls == [("output", "Opened Task Manager.", {})]

@@ -131,18 +131,27 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
         }}
     """
 
-def message_box_style(radius: int | None = None) -> str:
+def message_box_style(
+    radius: int | None = None,
+    *,
+    outer_frame: bool = True,
+) -> str:
     radius = T.POPUP_CORNER_RADIUS if radius is None else max(0, int(radius))
     border = H.qcolor_css(T.SURFACE_BORDER)
     background = H.qcolor_css(T.SURFACE_BG)
     hover = H.qcolor_css(T.SURFACE_HOVER)
     text = H.qcolor_css(T.CURRENT_TEXT)
+    outer_border = (
+        f"border: {T.POPUP_BORDER_WIDTH}px solid {border};\n"
+        f"            border-radius: {radius}px;"
+        if outer_frame
+        else "border: none;"
+    )
     return f"""
         QMessageBox {{
             background-color: {background};
             color: {text};
-            border: {T.POPUP_BORDER_WIDTH}px solid {border};
-            border-radius: {radius}px;
+            {outer_border}
         }}
         QMessageBox QLabel {{
             background: transparent;
