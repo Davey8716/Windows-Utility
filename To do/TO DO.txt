@@ -2,49 +2,8 @@ Wording gets cut off inside the folder to desktop drop down list for the light t
 
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
 
-Fix sfc scannow and chkdsk console admin approval is being deliberatly suppressed? Access is denied?
-
 Button Sizes in general, colours relative to state
 
 The Black writing overall is horrible non contrasty on the blue buttons, need a different shade of black, use a greyer font for all the qpushbuttons 
 whilst light them is enabled
-
-User-configurable Quick Actions would make the overview much more useful than a fixed selection.
-A strong interaction model would be:
-- Right-click any actionable button anywhere in the app.
-- Choose Pin to Quick Actions.
-- Pinned actions appear on the Overview page.
-- Right-click a pinned action to Unpin it.
-- Drag pinned actions to reorder them.
-- Prevent duplicates automatically.
-- Persist the selection and order between sessions.
-- Optionally include Reset to Defaults.
-
-Keep Quick Actions intentionally compact—perhaps 6–8 visible actions—then allow overflow or a “Show More” area. That prevents the Overview page from becoming another crowded utilities page.
-There are a few important details worth planning:
-- Toggles should reflect their live on/off state when pinned.
-- Dropdown-based actions may need individual commands pinned rather than the whole dropdown.
-- Destructive actions such as shutdown, emptying the Recycle Bin, or deleting files should retain their normal confirmation.
-- Actions unavailable on the current system should appear disabled with a helpful tooltip.
-- The right-click option should say Unpin from Quick Actions when already pinned.
-This would let each user turn Overview into their own small control dashboard, which fits the app very well.
-
-Windows Resurface
-Core Hidden Windows Locations
-
-    • Network Reset / Network Diagnostics
-Windows Update Troubleshooter
-    • Windows Defender / Virus & Threat Protection
-    • System Restore / Restore Points
-Hosts File Editor
-    • Windows Memory Diagnostic
-    • AutoPlay Settings (control /name Microsoft.AutoPlay)
-Network Tools
-    • Network Reset
-    • Network Diagnostics
-Security & Protection
-    • Windows Defender
-    • Hosts File Editor
-
-
 

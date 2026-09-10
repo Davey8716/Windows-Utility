@@ -770,7 +770,7 @@ class CalibrationDialog(QDialog):
                 self.refresh_live_targets
             )
             live_row.addWidget(refresh_live_button)
-            capture_button = QPushButton("Capture and calibrate…")
+            capture_button = QPushButton("Capture and calibrate")
             capture_button.setObjectName("captureLiveApplicationButton")
             capture_button.clicked.connect(self._capture_live_target)
             live_row.addWidget(capture_button)
@@ -843,7 +843,7 @@ class CalibrationDialog(QDialog):
         footer = QHBoxLayout()
         self.clear_button: Optional[QPushButton] = None
         if self._clear_provider is not None:
-            self.clear_button = QPushButton("Clear Learned Buttons…")
+            self.clear_button = QPushButton("Clear Learned Buttons")
             self.clear_button.setObjectName("clearLearnedButtonsButton")
             self.clear_button.clicked.connect(self._clear_learned_buttons)
             footer.addWidget(self.clear_button)
