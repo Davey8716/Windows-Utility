@@ -1644,6 +1644,18 @@ def test_external_drive_controls_and_output_share_the_inner_frame_width(monkeypa
         assert button_row_left + button_row.width() == (
             output_left + panel.drive_space_list.width()
         )
+
+        storage_heading = next(
+            label
+            for label in drive_page.findChildren(QLabel, "PageSectionHeading")
+            if label.text() == "Storage"
+        )
+        storage_heading_y = storage_heading.mapTo(drive_page, QPoint()).y()
+        button_row_y = button_row.mapTo(drive_page, QPoint()).y()
+        output_y = panel.drive_space_list.mapTo(drive_page, QPoint()).y()
+        assert button_row_y - (storage_heading_y + storage_heading.height()) == (
+            output_y - (button_row_y + button_row.height())
+        )
     finally:
         window._quit_requested = True
         window.close()

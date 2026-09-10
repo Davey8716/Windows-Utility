@@ -48,6 +48,7 @@ class DriveSpacePage(QWidget):
 
         self.page_layout = QVBoxLayout(self)
         self.page_layout.setContentsMargins(0, 0, 0, 0)
+        self.page_layout.setSpacing(16)
         self._build()
 
     @staticmethod
