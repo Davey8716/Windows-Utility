@@ -57,6 +57,7 @@ class ApplicationThemeController:
         maintenance_page=None,
         drive_space_page=None,
         clipboard_provenance_page=None,
+        monitor_rules_page=None,
         overview_status_labels: dict | None = None,
     ) -> None:
         self.root = root
@@ -71,6 +72,7 @@ class ApplicationThemeController:
         self.maintenance_page = maintenance_page
         self.drive_space_page = drive_space_page
         self.clipboard_provenance_page = clipboard_provenance_page
+        self.monitor_rules_page = monitor_rules_page
         self.overview_status_labels = overview_status_labels or {}
 
     @staticmethod
@@ -166,6 +168,8 @@ class ApplicationThemeController:
             self.drive_space_page.apply_theme()
         if self.clipboard_provenance_page is not None:
             self.clipboard_provenance_page.refresh_theme()
+        if self.monitor_rules_page is not None:
+            self.monitor_rules_page.apply_theme()
 
         for label in self.root.findChildren(QLabel, "PageTitle"):
             label.setStyleSheet(styles.page_title_style())

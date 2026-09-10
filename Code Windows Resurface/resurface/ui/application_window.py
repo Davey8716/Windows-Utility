@@ -227,6 +227,7 @@ class UtilityControlApp(
             maintenance_page=self.pages.maintenance_page,
             drive_space_page=self.pages.drive_space_page,
             clipboard_provenance_page=self.pages.clipboard_provenance_page,
+            monitor_rules_page=self.pages.monitor_rules_page,
             overview_status_labels=self.pages.overview_page.status_labels,
         )
         self.screen_mover_settings_controller = ScreenMoverSettingsController(

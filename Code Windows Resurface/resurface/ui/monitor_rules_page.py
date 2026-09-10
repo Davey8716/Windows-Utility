@@ -196,6 +196,10 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self.help_button.setStyleSheet(styles.monitor_rules_help_button_style())
         for card in self.rule_list.findChildren(QFrame, "MonitorRuleCard"):
             card.setStyleSheet(styles.monitor_rule_card_style())
+        for title in self.rule_list.findChildren(
+            StateIndicatorCheckBox, "MonitorRuleTitle"
+        ):
+            title.setStyleSheet(styles.monitor_rule_title_style())
 
     def set_rules(self, rules) -> None:
         """Replace displayed rules after an external state update."""
@@ -276,8 +280,9 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
 
             header = QHBoxLayout()
             enabled = StateIndicatorCheckBox(rule["name"], card)
+            enabled.setObjectName("MonitorRuleTitle")
             enabled.setChecked(rule["enabled"])
-            enabled.setStyleSheet(styles.label_style(font_size=13, bold=True))
+            enabled.setStyleSheet(styles.monitor_rule_title_style())
             enabled.toggled.connect(
                 lambda checked, idx=index: self._set_enabled(idx, checked)
             )

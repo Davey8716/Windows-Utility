@@ -317,6 +317,44 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         app.processEvents()
 
 
+def test_monitor_rule_cards_and_titles_refresh_for_each_theme(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+    )
+    try:
+        for is_dark in (True, False):
+            monitor_rules_ui.styles.set_theme(is_dark)
+            page.apply_theme()
+            card = page.rule_list.findChild(QFrame, "MonitorRuleCard")
+            title = page.rule_list.findChild(
+                monitor_rules_ui.StateIndicatorCheckBox, "MonitorRuleTitle"
+            )
+            assert card is not None
+            assert title is not None
+            assert (
+                f"background-color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.SURFACE_BG)}"
+                in page.rule_list.styleSheet()
+            )
+            assert (
+                f"background-color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.WINDOW_BG)}"
+                in card.styleSheet()
+            )
+            assert "background: transparent" in title.styleSheet()
+            assert (
+                f"color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.theme_text_color())}"
+                in title.styleSheet()
+            )
+    finally:
+        monitor_rules_ui.styles.set_theme(True)
+        page.deleteLater()
+        app.processEvents()
+
+
 def test_monitor_rules_page_set_rules_rerenders_empty_state(monkeypatch):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)

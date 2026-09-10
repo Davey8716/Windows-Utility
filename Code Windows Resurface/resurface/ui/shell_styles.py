@@ -105,6 +105,16 @@ def monitor_rule_list_style() -> str:
         }}
     """
 
+def monitor_rule_title_style() -> str:
+    return f"""
+        QCheckBox#MonitorRuleTitle {{
+            background: transparent;
+            color: {H.qcolor_css(T.theme_text_color())};
+            font-size: 13px;
+            font-weight: bold;
+        }}
+    """
+
 def navigation_list_style() -> str:
     selected = QColor(43, 68, 98) if T.THEME_IS_DARK else QColor(202, 222, 244)
     hover = QColor(38, 48, 63) if T.THEME_IS_DARK else QColor(226, 234, 243)

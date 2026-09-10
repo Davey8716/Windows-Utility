@@ -236,8 +236,13 @@ def test_live_theme_refresh_preserves_power_quick_action_severity():
     standard.setProperty("styleFontSize", 13)
 
     class ThemeTarget:
+        def __init__(self):
+            self.apply_calls = 0
+
         def apply_theme(self):
-            pass
+            self.apply_calls += 1
+
+    monitor_rules_page = ThemeTarget()
 
     controller = ApplicationThemeController(
         root=root,
@@ -245,6 +250,7 @@ def test_live_theme_refresh_preserves_power_quick_action_severity():
         navigation_shell=ThemeTarget(),
         refresh_master_backup_path=lambda: None,
         refresh_connected_drives_style=lambda: None,
+        monitor_rules_page=monitor_rules_page,
     )
     try:
         controller.apply_theme(False)
@@ -254,6 +260,7 @@ def test_live_theme_refresh_preserves_power_quick_action_severity():
         controller.apply_theme(True)
         assert f"background-color: {styles.power_action_color('red').name()};" in power.styleSheet()
         assert f"background-color: {styles.themed_button_bg().name()};" in standard.styleSheet()
+        assert monitor_rules_page.apply_calls == 2
     finally:
         styles.set_theme(True)
         root.deleteLater()
