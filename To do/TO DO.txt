@@ -4,6 +4,12 @@ Make the Delete button inside each monitor rules entry be an X to mirror the log
 
 Round the scroll bar slide corners and widen it slightly
 
+Make the add executable popup framless to match the others
+
+Round the corners of the import rules pyside gui and frame it to match the rest
+
+Make the master backup path gui not be the windows 11 native one and be the pyside one instead and theme specific
+
 Wording gets cut off inside the folder to desktop drop down list for the light theme + this section needs a delete entry that removes from the GUI and the JSON that contains the entry.
 
 Button Sizes in general, colours relative to state
