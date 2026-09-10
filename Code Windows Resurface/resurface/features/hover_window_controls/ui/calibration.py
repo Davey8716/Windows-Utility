@@ -40,6 +40,7 @@ from resurface.features.hover_window_controls.vision.detection import (
     rects_overlap,
 )
 from resurface.ui import styles
+from resurface.ui.app_notifications import WindowMessageMixin
 
 _ACTION_LABELS = {
     CaptionAction.MINIMIZE: "Minimize",
@@ -59,6 +60,7 @@ _CLOSE_ONLY_DIALOG_FLAGS = (
     | Qt.WindowType.WindowTitleHint
     | Qt.WindowType.WindowCloseButtonHint
 )
+HOVER_CONTROLS_PROMPT_CORNER_RADIUS = 12
 
 
 def _color(value: QColor) -> str:
@@ -687,7 +689,7 @@ class LiveCalibrationDialog(QDialog):
         self.accept()
 
 
-class CalibrationDialog(QDialog):
+class CalibrationDialog(WindowMessageMixin, QDialog):
     def __init__(
         self,
         application_provider: Callable[[], list[TrackedApplication]],
@@ -886,13 +888,14 @@ class CalibrationDialog(QDialog):
     def _clear_learned_buttons(self) -> None:
         if self._clear_provider is None:
             return
-        answer = QMessageBox.warning(
-            self,
+        answer = self._show_modal_message(
+            QMessageBox.Icon.NoIcon,
             "Clear all learned buttons?",
             "This permanently removes every learned caption-button image and "
             "all manual calibration data. Hover preferences are kept.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
+            popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
         )
         if answer != QMessageBox.StandardButton.Yes:
             return

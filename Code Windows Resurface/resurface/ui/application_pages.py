@@ -48,6 +48,7 @@ from resurface.ui.tooltips import tooltip_text
 
 
 QUICK_ACTION_MIME = "application/x-windows-resurface-quick-action"
+HOVER_CONTROLS_PROMPT_CORNER_RADIUS = 12
 
 
 class HoverDataImportDialog(QFileDialog):
@@ -873,7 +874,7 @@ class ApplicationPageComposer:
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
             link_activated=open_destination,
-            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+            popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
         )
         if answer != QMessageBox.StandardButton.Save:
             return
@@ -961,13 +962,14 @@ class ApplicationPageComposer:
         self._refresh_hover_export_button()
 
     def _clear_hover_controls_cache(self) -> None:
-        answer = QMessageBox.warning(
-            self.app,
+        answer = self.app._show_modal_message(
+            QMessageBox.Icon.NoIcon,
             "Clear all learned buttons?",
             "This permanently removes every learned caption-button image and "
             "all manual calibration data. Hover preferences are kept.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
+            popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
         )
         if answer != QMessageBox.StandardButton.Yes:
             return

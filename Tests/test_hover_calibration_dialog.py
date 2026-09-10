@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from resurface.features.hover_window_controls.ui.calibration import (
     CALIBRATION_DIALOG_SIZE,
     CalibrationDialog,
+    HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
     LiveCalibrationDialog,
     _apply_frameless_window_style,
     action_glyph_geometry,
@@ -398,15 +399,26 @@ class CalibrationDialogTests(unittest.TestCase):
         )
         self.addCleanup(dialog.close)
 
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.warning",
+        with patch.object(
+            dialog,
+            "_show_modal_message",
             return_value=QMessageBox.StandardButton.Cancel,
-        ):
+        ) as show_modal:
             dialog.clear_button.click()
         clear.assert_not_called()
+        show_modal.assert_called_once_with(
+            QMessageBox.Icon.NoIcon,
+            "Clear all learned buttons?",
+            "This permanently removes every learned caption-button image and "
+            "all manual calibration data. Hover preferences are kept.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+            popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
+        )
 
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.warning",
+        with patch.object(
+            dialog,
+            "_show_modal_message",
             return_value=QMessageBox.StandardButton.Yes,
         ):
             dialog.clear_button.click()

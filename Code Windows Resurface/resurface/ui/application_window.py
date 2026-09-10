@@ -485,10 +485,12 @@ class UtilityControlApp(
             page_id, emit_signal=persist
         )
         if not persist:
-            self._on_page_changed(resolved_id)
+            self._on_page_changed(resolved_id, persist=False)
 
-    def _on_page_changed(self, page_id: str) -> None:
+    def _on_page_changed(self, page_id: str, *, persist: bool = True) -> None:
         self.state["last_opened_page"] = page_id
+        if persist:
+            save_state(self.state)
         if page_id == "overview":
             self.refresh_overview()
 

@@ -1,6 +1,5 @@
 import copy
 import ctypes
-import time
 
 from resurface.ui import application_window as main
 from resurface.ui import application_pages, styles
@@ -60,7 +59,7 @@ class FakeHotkeyManager:
 class FakeHoverWindowControlsService(QObject):
     settings_changed = Signal(bool, bool, int)
 
-    def __init__(self, state, _save_state, parent=None):
+    def __init__(self, state, _save_state, parent=None, **_kwargs):
         super().__init__(parent)
         self.enabled = bool(state.get("hover_window_controls_enabled", True))
         self.taskbar_restore_enabled = bool(
@@ -75,6 +74,9 @@ class FakeHoverWindowControlsService(QObject):
 
     def stop(self):
         self.started = False
+
+    def has_export_changes(self):
+        return False
 
     def set_enabled(self, enabled):
         self.enabled = bool(enabled)
@@ -204,7 +206,9 @@ def _build_offscreen_window(
     state = copy.deepcopy(state)
     monkeypatch.setattr(main, "load_state", lambda: copy.deepcopy(state))
     monkeypatch.setattr(main, "save_state", lambda _state: None)
-    monkeypatch.setattr(main, "import_standalone_data", lambda _state: False)
+    monkeypatch.setattr(
+        main, "import_standalone_data", lambda _state, **_kwargs: False
+    )
     monkeypatch.setattr(
         application_pages,
         "save_state",
@@ -678,17 +682,16 @@ def test_quick_actions_page_can_be_restored_between_sessions(monkeypatch):
         qt_app.processEvents()
 
 
-def test_navigation_stays_in_memory_until_settings_are_saved(monkeypatch):
+def test_navigation_saves_each_visited_page_immediately(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
     saved_states = []
 
-    def slow_save(saved_state):
-        time.sleep(0.02)
+    def capture_save(saved_state):
         saved_states.append(copy.deepcopy(saved_state))
 
     window = _build_offscreen_window(monkeypatch, state)
-    monkeypatch.setattr(main, "save_state", slow_save)
+    monkeypatch.setattr(main, "save_state", capture_save)
     try:
         for page_id in (
             "screen_mover",
@@ -698,7 +701,12 @@ def test_navigation_stays_in_memory_until_settings_are_saved(monkeypatch):
         ):
             window.navigate_to_page(page_id)
 
-        assert saved_states == []
+        assert [saved["last_opened_page"] for saved in saved_states] == [
+            "screen_mover",
+            "maintenance",
+            "folder_utilities",
+            "overview",
+        ]
         assert window.state["last_opened_page"] == "overview"
         assert (
             window.navigation_shell.page_stack.currentWidget()
@@ -706,10 +714,10 @@ def test_navigation_stays_in_memory_until_settings_are_saved(monkeypatch):
         )
 
         window.navigate_to_page("maintenance")
-        window.save_all_settings()
+        assert saved_states[-1]["last_opened_page"] == "maintenance"
 
-        assert len(saved_states) == 1
-        assert saved_states[0]["last_opened_page"] == "maintenance"
+        window.navigate_to_page("not-a-page")
+        assert saved_states[-1]["last_opened_page"] == "overview"
     finally:
         window._quit_requested = True
         window.close()
