@@ -194,12 +194,61 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self.rules_frame.setStyleSheet(styles.summary_frame_style())
         self.rule_list.setStyleSheet(styles.monitor_rule_list_style())
         self.help_button.setStyleSheet(styles.monitor_rules_help_button_style())
-        for card in self.rule_list.findChildren(QFrame, "MonitorRuleCard"):
+        for index, card in enumerate(
+            self.rule_list.findChildren(QFrame, "MonitorRuleCard")
+        ):
             card.setStyleSheet(styles.monitor_rule_card_style())
+            detail_label = card.findChild(QLabel, "MonitorRuleDetails")
+            if detail_label is not None and index < len(self.rules):
+                self._set_rule_detail_text(detail_label, self.rules[index])
         for title in self.rule_list.findChildren(
             StateIndicatorCheckBox, "MonitorRuleTitle"
         ):
             title.setStyleSheet(styles.monitor_rule_title_style())
+
+    @staticmethod
+    def _rule_detail_lines(rule: dict) -> list[str]:
+        match_text = (
+            rule["executable_path"]
+            if rule["match_exact_path"]
+            else rule["executable_name"]
+        )
+        return [
+            f"Application: {match_text}",
+            f"Target: {rule['target_label']}",
+            f"Placement: {PLACEMENT_LABELS[rule['placement_mode']]}",
+            "Reapply if moved: "
+            + ("Enabled" if rule["reapply_if_moved"] else "Disabled"),
+        ]
+
+    @staticmethod
+    def _set_rule_detail_text(detail_label: QLabel, rule: dict) -> None:
+        details = MonitorRulesPage._rule_detail_lines(rule)
+        detail_label.setStyleSheet(styles.page_description_style())
+        executable_path = str(rule["executable_path"])
+        if rule["match_exact_path"] and executable_path:
+            link_color = styles.theme_muted_text_color().name()
+            details[0] = (
+                'Application: <a href="open-application-directory" '
+                f'style="color: {link_color}; text-decoration: underline;">'
+                f"{escape(executable_path)}</a>"
+            )
+            detail_label.setTextFormat(Qt.TextFormat.RichText)
+            detail_label.setText(
+                details[0]
+                + "<br>"
+                + "<br>".join(escape(line) for line in details[1:])
+            )
+            detail_label.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextBrowserInteraction
+            )
+            detail_label.setOpenExternalLinks(False)
+        else:
+            detail_label.setTextFormat(Qt.TextFormat.PlainText)
+            detail_label.setText("\n".join(details))
+            detail_label.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse
+            )
 
     def set_rules(self, rules) -> None:
         """Replace displayed rules after an external state update."""
@@ -302,51 +351,20 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
                 header.addWidget(status)
             card_layout.addLayout(header)
 
-            match_text = rule["executable_path"] if rule["match_exact_path"] else rule["executable_name"]
             # Keep each rule property on a stable line.  In the previous arrow-separated
             # sentence, a long executable path could wrap immediately before the
             # placement value, making (for example) "Maximize" look detached from its
             # rule and appear to move between cards when the rules were reordered.
-            details = [
-                f"Application: {match_text}",
-                f"Target: {rule['target_label']}",
-                f"Placement: {PLACEMENT_LABELS[rule['placement_mode']]}",
-            ]
-            details.append(
-                "Reapply if moved: "
-                + ("Enabled" if rule["reapply_if_moved"] else "Disabled")
-            )
             detail_label = QLabel(card)
             detail_label.setObjectName("MonitorRuleDetails")
             detail_label.setWordWrap(True)
-            detail_label.setStyleSheet(styles.page_description_style())
             executable_path = str(rule["executable_path"])
+            self._set_rule_detail_text(detail_label, rule)
             if rule["match_exact_path"] and executable_path:
-                link_color = styles.theme_muted_text_color().name()
-                details[0] = (
-                    'Application: <a href="open-application-directory" '
-                    f'style="color: {link_color}; text-decoration: underline;">'
-                    f"{escape(executable_path)}</a>"
-                )
-                detail_label.setTextFormat(Qt.TextFormat.RichText)
-                detail_label.setText(
-                    details[0]
-                    + "<br>"
-                    + "<br>".join(escape(line) for line in details[1:])
-                )
-                detail_label.setTextInteractionFlags(
-                    Qt.TextInteractionFlag.TextBrowserInteraction
-                )
-                detail_label.setOpenExternalLinks(False)
                 detail_label.linkActivated.connect(
                     lambda _link, path=executable_path: (
                         self._open_application_directory(path)
                     )
-                )
-            else:
-                detail_label.setText("\n".join(details))
-                detail_label.setTextInteractionFlags(
-                    Qt.TextInteractionFlag.TextSelectableByMouse
                 )
             card_layout.addWidget(detail_label)
 

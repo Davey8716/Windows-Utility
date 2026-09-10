@@ -317,7 +317,7 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         app.processEvents()
 
 
-def test_monitor_rule_cards_and_titles_refresh_for_each_theme(monkeypatch):
+def test_monitor_rule_cards_titles_and_details_refresh_for_each_theme(monkeypatch):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
     page = monitor_rules_ui.MonitorRulesPage(
@@ -327,15 +327,19 @@ def test_monitor_rule_cards_and_titles_refresh_for_each_theme(monkeypatch):
         on_rules_changed=lambda _rules: None,
     )
     try:
-        for is_dark in (True, False):
+        # Exercise the reported light-to-dark transition as well as the initial
+        # dark-to-light change.
+        for is_dark in (False, True):
             monitor_rules_ui.styles.set_theme(is_dark)
             page.apply_theme()
             card = page.rule_list.findChild(QFrame, "MonitorRuleCard")
             title = page.rule_list.findChild(
                 monitor_rules_ui.StateIndicatorCheckBox, "MonitorRuleTitle"
             )
+            details = page.rule_list.findChild(QLabel, "MonitorRuleDetails")
             assert card is not None
             assert title is not None
+            assert details is not None
             assert (
                 f"background-color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.SURFACE_BG)}"
                 in page.rule_list.styleSheet()
@@ -348,6 +352,12 @@ def test_monitor_rule_cards_and_titles_refresh_for_each_theme(monkeypatch):
             assert (
                 f"color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.theme_text_color())}"
                 in title.styleSheet()
+            )
+            muted_color = monitor_rules_ui.styles.theme_muted_text_color().name()
+            assert muted_color in details.styleSheet()
+            assert (
+                f"color: {muted_color}; text-decoration: underline;"
+                in details.text()
             )
     finally:
         monitor_rules_ui.styles.set_theme(True)
