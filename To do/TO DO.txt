@@ -1,7 +1,5 @@
 Wording inside tooltips needs tidying up re/ formatting /n usage etc + padding needs improving
 
-Make the add executable popup framless to match the others
-
 Round the corners of the import rules pyside gui and frame it to match the rest
 
 Make the master backup path gui not be the windows 11 native one and be the pyside one instead and theme specific

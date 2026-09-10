@@ -566,6 +566,67 @@ def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypa
         app.processEvents()
 
 
+@pytest.mark.parametrize("is_dark", (True, False))
+def test_rule_editor_is_frameless_fixed_size_and_uses_active_theme(is_dark, monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    original_theme = monitor_rule_editor_dialog.styles.THEME_IS_DARK
+    monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
+    monkeypatch.setattr(
+        monitor_rule_editor_dialog,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [],
+    )
+    monitor_rule_editor_dialog.styles.set_theme(is_dark)
+    dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(None)
+    try:
+        assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert dialog.minimumSize() == dialog.maximumSize()
+        assert dialog.heading_label.text() == "Add Monitor Rule"
+        assert (
+            monitor_rule_editor_dialog.styles.qcolor_css(
+                monitor_rule_editor_dialog.styles.WINDOW_BG
+            )
+            in dialog.styleSheet()
+        )
+        assert (
+            monitor_rule_editor_dialog.styles.qcolor_css(
+                monitor_rule_editor_dialog.styles.theme_text_color()
+            )
+            in dialog.styleSheet()
+        )
+        assert (
+            monitor_rule_editor_dialog.styles.qcolor_css(
+                monitor_rule_editor_dialog.styles.themed_surface_field_border()
+            )
+            in dialog.styleSheet()
+        )
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        monitor_rule_editor_dialog.styles.set_theme(original_theme)
+        app.processEvents()
+
+
+def test_rule_editor_uses_edit_heading_for_existing_rule(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
+    monkeypatch.setattr(
+        monitor_rule_editor_dialog,
+        "enumerate_eligible_windows",
+        lambda **_kwargs: [],
+    )
+    dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(
+        None,
+        rule=make_rule(),
+    )
+    try:
+        assert dialog.heading_label.text() == "Edit Monitor Rule"
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        app.processEvents()
+
+
 def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)

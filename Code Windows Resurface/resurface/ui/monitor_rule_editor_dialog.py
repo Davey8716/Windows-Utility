@@ -33,6 +33,7 @@ from resurface.features.monitor_rules import (
     normalize_monitor_rule,
 )
 from resurface.ui import styles
+from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 
 
 PLACEMENT_LABELS = {
@@ -106,7 +107,50 @@ def style_button(button: QPushButton) -> None:
     button.setStyleSheet(styles.organizing_button_style(12))
 
 
+def monitor_rule_editor_dialog_style() -> str:
+    """Return the active-theme surface styling for the frameless rule editor."""
+    background = styles.qcolor_css(styles.WINDOW_BG)
+    surface = styles.qcolor_css(styles.themed_surface_field_bg())
+    border = styles.qcolor_css(styles.themed_surface_field_border())
+    text = styles.qcolor_css(styles.theme_text_color())
+    field_text = styles.qcolor_css(styles.themed_surface_field_text())
+    hover = styles.qcolor_css(styles.SURFACE_HOVER)
+    selected = styles.qcolor_css(styles.PANEL_HOVER)
+    return f"""
+        QDialog#MonitorRuleEditorDialog {{
+            background-color: {background};
+            color: {text};
+        }}
+        QDialog#MonitorRuleEditorDialog QLabel,
+        QDialog#MonitorRuleEditorDialog QCheckBox {{
+            background: transparent;
+            color: {text};
+        }}
+        QDialog#MonitorRuleEditorDialog QLineEdit,
+        QDialog#MonitorRuleEditorDialog QComboBox {{
+            background-color: {surface};
+            color: {field_text};
+            border: 1px solid {border};
+            border-radius: 6px;
+            min-height: 26px;
+            padding: 2px 7px;
+        }}
+        QDialog#MonitorRuleEditorDialog QComboBox QAbstractItemView {{
+            background-color: {surface};
+            color: {field_text};
+            border: 1px solid {border};
+            selection-background-color: {selected};
+            selection-color: {field_text};
+        }}
+        QDialog#MonitorRuleEditorDialog QComboBox QAbstractItemView::item:hover {{
+            background-color: {hover};
+        }}
+    """
+
+
 class MonitorRuleEditorDialog(QDialog):
+    FRAME_WIDTH = 2
+
     def __init__(
         self,
         parent,
@@ -118,8 +162,14 @@ class MonitorRuleEditorDialog(QDialog):
         geometry_capturer=None,
     ):
         super().__init__(parent)
-        self.setWindowTitle("Edit Monitor Rule" if rule else "Add Monitor Rule")
+        dialog_title = "Edit Monitor Rule" if rule else "Add Monitor Rule"
+        self.setObjectName("MonitorRuleEditorDialog")
+        self.setWindowTitle(dialog_title)
         self.setModal(True)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
+        self.setSizeGripEnabled(False)
+        self.setStyleSheet(monitor_rule_editor_dialog_style())
         self.setMinimumWidth(640)
         self._original_rule = copy.deepcopy(rule) if rule else None
         self._app_hwnd = app_hwnd
@@ -133,6 +183,11 @@ class MonitorRuleEditorDialog(QDialog):
         root = QVBoxLayout(self)
         root.setContentsMargins(22, 20, 22, 20)
         root.setSpacing(14)
+
+        self.heading_label = QLabel(dialog_title, self)
+        self.heading_label.setObjectName("MonitorRuleEditorHeading")
+        self.heading_label.setStyleSheet(styles.page_title_style())
+        root.addWidget(self.heading_label)
 
         selection_row = QHBoxLayout()
         self.window_combo = QComboBox(self)
@@ -202,6 +257,15 @@ class MonitorRuleEditorDialog(QDialog):
         self.refresh_running_windows()
         self._load_rule(rule or {})
         self._sync_capture_state()
+        self.setFixedSize(self.sizeHint())
+
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        paint_opaque_rounded_frame(
+            self,
+            radius=styles.BUTTON_CORNER_RADIUS,
+            frame_width=self.FRAME_WIDTH,
+        )
 
     def _load_rule(self, rule: dict) -> None:
         self.name_edit.setText(str(rule.get("name", "")))
