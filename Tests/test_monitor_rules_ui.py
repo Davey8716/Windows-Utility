@@ -222,11 +222,26 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             assert f"background-color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.WINDOW_BG)}" in card.styleSheet()
             assert "border: 1px solid" in card.styleSheet()
             assert "border-radius: 8px" in card.styleSheet()
-        expected_actions = {"Edit", "Delete", "Move Up", "Move Down"}
+        expected_actions = {"Edit", "Move Up", "Move Down"}
         assert all(
             {button.text() for button in card.findChildren(QPushButton)}
             == expected_actions
             for card in initial_cards
+        )
+        delete_buttons = [
+            next(
+                button
+                for button in card.findChildren(QToolButton)
+                if button.accessibleName() == "Delete monitor rule"
+            )
+            for card in initial_cards
+        ]
+        assert all(button.text() == "×" for button in delete_buttons)
+        assert all(
+            button.accessibleName() == "Delete monitor rule"
+            and button.toolTip() == "Delete this monitor rule"
+            and button.size().width() == button.size().height() == 24
+            for button in delete_buttons
         )
         assert all(
             card.findChild(monitor_rules_ui.QLabel, "MonitorRuleStatus") is None
@@ -592,7 +607,7 @@ def test_delete_rule_uses_borderless_confirmation_and_only_commits_yes(monkeypat
     commits = []
     dialogs = []
     responses = [
-        monitor_rules_ui.QMessageBox.StandardButton.No,
+        monitor_rules_ui.QMessageBox.StandardButton.Cancel,
         monitor_rules_ui.QMessageBox.StandardButton.Yes,
     ]
 
@@ -611,16 +626,19 @@ def test_delete_rule_uses_borderless_confirmation_and_only_commits_yes(monkeypat
         page._delete_rule(0)
         dialog = dialogs[-1]
         assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
-        assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style()
-        assert dialog.icon() == monitor_rules_ui.QMessageBox.Icon.Question
+        assert dialog._popup_corner_radius == monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS
+        assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style(
+            radius=monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS
+        )
+        assert dialog.icon() == monitor_rules_ui.QMessageBox.Icon.NoIcon
         assert dialog.windowTitle() == "Delete Monitor Rule"
         assert dialog.text() == "Delete the rule ‘Discord’?"
         assert dialog.standardButtons() == (
             monitor_rules_ui.QMessageBox.StandardButton.Yes
-            | monitor_rules_ui.QMessageBox.StandardButton.No
+            | monitor_rules_ui.QMessageBox.StandardButton.Cancel
         )
         assert dialog.standardButton(dialog.defaultButton()) == (
-            monitor_rules_ui.QMessageBox.StandardButton.No
+            monitor_rules_ui.QMessageBox.StandardButton.Cancel
         )
         assert len(page.rules) == 1
         assert commits == []

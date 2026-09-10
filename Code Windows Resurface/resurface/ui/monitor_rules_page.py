@@ -349,6 +349,18 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             header.addWidget(enabled, 1)
             if unavailable:
                 header.addWidget(status)
+            delete_button = QToolButton(card)
+            delete_button.setText("×")
+            delete_button.setAccessibleName("Delete monitor rule")
+            delete_button.setToolTip("Delete this monitor rule")
+            delete_button.setFixedSize(24, 24)
+            delete_button.setStyleSheet(
+                "QToolButton { border: none; background: transparent; font-size: 20px; }"
+            )
+            delete_button.clicked.connect(
+                lambda _checked=False, idx=index: self._delete_rule(idx)
+            )
+            header.addWidget(delete_button, 0, Qt.AlignmentFlag.AlignTop)
             card_layout.addLayout(header)
 
             # Keep each rule property on a stable line.  In the previous arrow-separated
@@ -371,7 +383,6 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             actions = QHBoxLayout()
             for text, callback in (
                 ("Edit", lambda _checked=False, idx=index: self._edit_rule(idx)),
-                ("Delete", lambda _checked=False, idx=index: self._delete_rule(idx)),
                 ("Move Up", lambda _checked=False, idx=index: self._move_rule(idx, -1)),
                 ("Move Down", lambda _checked=False, idx=index: self._move_rule(idx, 1)),
             ):
@@ -414,17 +425,14 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             self._commit(apply_rule_ids={self.rules[index]["id"]})
 
     def _delete_rule(self, index: int) -> None:
-        message_box = QMessageBox(self)
-        message_box.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        message_box.setStyleSheet(styles.message_box_style())
-        message_box.setIcon(QMessageBox.Icon.Question)
-        message_box.setWindowTitle("Delete Monitor Rule")
-        message_box.setText(f"Delete the rule ‘{self.rules[index]['name']}’?")
-        message_box.setStandardButtons(
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        result = self._show_modal_message(
+            QMessageBox.Icon.Question,
+            "Delete Monitor Rule",
+            f"Delete the rule ‘{self.rules[index]['name']}’?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+            popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
         )
-        message_box.setDefaultButton(QMessageBox.StandardButton.No)
-        result = message_box.exec()
         if result == QMessageBox.StandardButton.Yes:
             self.rules.pop(index)
             self._commit()
