@@ -39,7 +39,6 @@ class MaintenancePage(QWidget):
         "Open Downloads Folder": "Downloads folder output log cleared.",
         "Open Startup Folder": "Startup folder output log cleared.",
         "Sound Devices": "Sound devices output log cleared.",
-        "Task Manager": "Task Manager output log cleared.",
         "Run DISM Repair": "Dism repair output log cleared.",
         "Run System File Checker (SFC)": "System file checker output log cleared.",
         "Run Check Disk (CHKDSK)": "Check disk output log cleared.",
@@ -102,7 +101,6 @@ class MaintenancePage(QWidget):
             "Open Downloads Folder": lambda: self.run_with_optional_minimize(self.actions.open_downloads),
             "Open Prefetch Folder": lambda: self.run_with_optional_minimize(self.actions.open_prefetch_folder),
             "Open Startup Folder": lambda: self.run_with_optional_minimize(self.actions.open_startup_folder),
-            "Task Manager": lambda: self.run_with_optional_minimize(self.actions.open_task_manager),
             "Open Temp Folder": lambda: self.run_with_optional_minimize(self.actions.open_temp_folder),
         }
         quick_open = {

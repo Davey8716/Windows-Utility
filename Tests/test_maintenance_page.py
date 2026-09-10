@@ -62,20 +62,16 @@ def test_accepting_integrity_elevation_runs_the_requested_command():
     runner.deleteLater()
 
 
-def test_cleanup_quick_actions_includes_task_manager():
-    page, actions, runner = _make_page(lambda *_args, **_kwargs: None)
-    launched = []
-    actions.open_task_manager = lambda: launched.append(True)
+def test_cleanup_quick_actions_excludes_task_manager():
+    page, _actions, _runner = _make_page(lambda *_args, **_kwargs: None)
 
     combo, _title, action_map = next(
         entry for entry in page.quick_action_dropdowns if entry[1] == "Cleanup / Quick Actions"
     )
-    assert "Task Manager" in action_map
-    combo.setCurrentText("Task Manager")
-
-    assert launched == [True]
+    assert "Task Manager" not in action_map
+    assert combo.findText("Task Manager") == -1
     page.deleteLater()
-    runner.deleteLater()
+    _runner.deleteLater()
 
 
 def test_chkdsk_blocker_warnings_are_rounded_and_keep_diagnostics_distinct():
