@@ -141,7 +141,8 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
 
     def _record_card(self, record: dict) -> QFrame:
         card = QFrame(self.panel)
-        card.setObjectName("MonitorRuleCard")
+        card.setObjectName("ClipboardProvenanceRecordCard")
+        card.setStyleSheet(styles.clipboard_provenance_record_card_style())
         layout = QVBoxLayout(card)
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(6)

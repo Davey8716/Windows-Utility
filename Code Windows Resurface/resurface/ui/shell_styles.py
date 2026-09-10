@@ -71,6 +71,19 @@ def summary_frame_style() -> str:
         }}
     """
 
+def clipboard_provenance_record_card_style() -> str:
+    return f"""
+        QFrame#ClipboardProvenanceRecordCard {{
+            background-color: {H.qcolor_css(T.SURFACE_BG)};
+            border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
+            border-radius: 8px;
+        }}
+        QFrame#ClipboardProvenanceRecordCard QLabel {{
+            border: none;
+            background: transparent;
+        }}
+    """
+
 def navigation_list_style() -> str:
     selected = QColor(43, 68, 98) if T.THEME_IS_DARK else QColor(202, 222, 244)
     hover = QColor(38, 48, 63) if T.THEME_IS_DARK else QColor(226, 234, 243)

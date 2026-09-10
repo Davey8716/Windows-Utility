@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 
 from PySide6.QtCore import QMimeData, QObject, Qt, QUrl, Signal
-from PySide6.QtWidgets import QApplication, QLabel, QMessageBox, QToolButton
+from PySide6.QtWidgets import QApplication, QFrame, QLabel, QMessageBox, QToolButton
 
 from resurface.features import clipboard_provenance as provenance
 from resurface.ui import styles
@@ -248,6 +248,26 @@ def test_page_renders_url_only_copy_as_a_single_underlined_link():
         ]
         assert len(links) == 1
         assert "<a href=" in links[0].text()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_page_renders_text_and_file_records_as_rounded_cards():
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    service._append({"content_type": "text", "text": "record"})
+    service._append({"content_type": "files", "files": [r"C:\\Reports\\one.txt"]})
+    page = ClipboardProvenancePage(
+        None, service=service, get_master_backup_dir=lambda: ""
+    )
+    try:
+        cards = page.findChildren(QFrame, "ClipboardProvenanceRecordCard")
+        assert len(cards) == 2
+        for card in cards:
+            assert "background-color:" in card.styleSheet()
+            assert "border: 1px solid" in card.styleSheet()
+            assert "border-radius: 8px" in card.styleSheet()
     finally:
         page.deleteLater()
         app.processEvents()
