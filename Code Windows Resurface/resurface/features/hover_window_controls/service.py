@@ -64,6 +64,7 @@ class HoverWindowControlsService(QObject):
         self.enabled = bool(hover.get("enabled", state.get("hover_window_controls_enabled", True)))
         self.taskbar_restore_enabled = bool(hover.get("taskbar_restore_enabled", state.get("hover_taskbar_restore_enabled", True)))
         self.dwell_ms = normalized_dwell_ms(hover.get("dwell_ms", state.get("hover_window_controls_dwell_ms", DEFAULT_DWELL_MS)))
+        self._pending_export = bool(hover.get("pending_export", False))
 
         cache = VisionCache(
             base_dir=self.data_root / "vision-cache",
@@ -119,7 +120,7 @@ class HoverWindowControlsService(QObject):
         self.enabled = enabled
         if self._started and not self._busy:
             self.controller.set_caption_controls_enabled(enabled)
-        self._persist()
+        self._persist(mark_export_pending=True)
 
     def set_taskbar_restore_enabled(self, enabled: bool) -> None:
         enabled = bool(enabled)
@@ -129,13 +130,16 @@ class HoverWindowControlsService(QObject):
         self.taskbar_restore_enabled = enabled
         if self._started and not self._busy:
             self._set_taskbar_monitor_enabled(enabled)
-        self._persist()
+        self._persist(mark_export_pending=True)
 
     def set_dwell_ms(self, dwell_ms: object) -> None:
         normalized = normalized_dwell_ms(dwell_ms)
+        if normalized == self.dwell_ms:
+            self._emit_settings()
+            return
         self.dwell_ms = normalized
         self.controller.set_dwell_ms(normalized)
-        self._persist()
+        self._persist(mark_export_pending=True)
 
     def calibrate(self, parent=None) -> None:
         if self._busy:
@@ -146,10 +150,10 @@ class HoverWindowControlsService(QObject):
             dialog = CalibrationDialog(
                 self.window_api.list_tracked_calibration_apps,
                 self.window_api.list_tracked_calibration_assets,
-                self.window_api.update_tracked_calibration,
+                self._save_tracked_calibration,
                 target_provider=self.window_api.list_calibration_targets,
                 capture_provider=self.window_api.capture_vision_calibration,
-                save_provider=self.window_api.save_vision_calibration,
+                save_provider=self._save_vision_calibration,
                 clear_provider=self.clear_learned_buttons,
                 parent=parent,
             )
@@ -160,7 +164,17 @@ class HoverWindowControlsService(QObject):
 
     def clear_learned_buttons(self) -> None:
         self.window_api.clear_vision_cache()
-        self._write_data_settings()
+        self._mark_export_pending()
+
+    def _save_tracked_calibration(self, asset, rect):
+        updated = self.window_api.update_tracked_calibration(asset, rect)
+        self._mark_export_pending()
+        return updated
+
+    def _save_vision_calibration(self, snapshot, assignments):
+        profile = self.window_api.save_vision_calibration(snapshot, assignments)
+        self._mark_export_pending()
+        return profile
 
     def relocate_data_root(self, destination: Path) -> None:
         """Move the active cache to a new master backup folder safely."""
@@ -210,6 +224,7 @@ class HoverWindowControlsService(QObject):
                 "enabled": self.enabled,
                 "taskbar_restore_enabled": self.taskbar_restore_enabled,
                 "dwell_ms": self.dwell_ms,
+                "pending_export": self._pending_export,
             },
         }
 
@@ -221,9 +236,7 @@ class HoverWindowControlsService(QObject):
         refresh_application_data_manifest(self.data_root, self._data_settings())
 
     def has_export_changes(self) -> bool:
-        return self.window_api.has_export_changes(
-            self.export_root, self._data_settings()
-        )
+        return self._pending_export
 
     def export_all_data(self, destination_parent: Path | None = None):
         if self._busy:
@@ -231,12 +244,19 @@ class HoverWindowControlsService(QObject):
         self._busy = True
         self._suspend_for_operation()
         try:
-            self._write_data_settings()
-            destination = destination_parent or self.export_root
-            destination.mkdir(parents=True, exist_ok=True)
-            return self.window_api.export_all_data(
-                destination, settings=self._data_settings()
-            )
+            pending_export = self._pending_export
+            self._pending_export = False
+            try:
+                self._write_data_settings()
+                destination = destination_parent or self.export_root
+                destination.mkdir(parents=True, exist_ok=True)
+                return self.window_api.export_all_data(
+                    destination, settings=self._data_settings()
+                )
+            except Exception:
+                self._pending_export = pending_export
+                self._write_data_settings()
+                raise
         finally:
             self._finish_operation()
 
@@ -257,7 +277,7 @@ class HoverWindowControlsService(QObject):
             )
             self.dwell_ms = normalized_dwell_ms(hover["dwell_ms"])
             self.controller.set_dwell_ms(self.dwell_ms)
-            self._persist()
+            self._persist(mark_export_pending=True)
             return result
         finally:
             self._finish_operation()
@@ -282,7 +302,17 @@ class HoverWindowControlsService(QObject):
         else:
             self.taskbar_monitor.suspend()
 
-    def _persist(self) -> None:
+    def _mark_export_pending(self) -> None:
+        self._pending_export = True
+        self._write_data_settings()
+
+    def _persist(self, *, mark_export_pending: bool = False) -> None:
+        if mark_export_pending:
+            self._pending_export = True
+        self.state["hover_window_controls_enabled"] = self.enabled
+        self.state["hover_taskbar_restore_enabled"] = self.taskbar_restore_enabled
+        self.state["hover_window_controls_dwell_ms"] = self.dwell_ms
+        self._save_state(self.state)
         self._write_data_settings()
         self._emit_settings()
 

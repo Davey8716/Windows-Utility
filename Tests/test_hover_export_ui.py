@@ -37,6 +37,22 @@ def test_hover_page_uses_master_loaded_settings_values():
     assert page.dwell_combo.currentData() == 1_000
 
 
+def test_hover_page_export_button_follows_explicit_pending_state():
+    pending = False
+    page = HoverWindowControlsPage(
+        {},
+        lambda *_args: None,
+        has_export_changes=lambda: pending,
+    )
+
+    assert page.export_button.isEnabled() is False
+
+    pending = True
+    page.refresh_export_button()
+
+    assert page.export_button.isEnabled() is True
+
+
 def test_hover_import_dialog_is_opaque_frameless_and_unmasked():
     app = QApplication.instance() or QApplication([])
     dialog = HoverDataImportDialog(None, "")

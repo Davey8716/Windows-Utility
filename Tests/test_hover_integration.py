@@ -220,6 +220,7 @@ def test_export_writes_integrated_settings_and_resumes(monkeypatch, tmp_path):
             "enabled": True,
             "taskbar_restore_enabled": True,
             "dwell_ms": 1000,
+            "pending_export": False,
         },
     }
 
@@ -241,6 +242,7 @@ def test_import_applies_settings_persists_and_resumes(monkeypatch, tmp_path):
     assert state["hover_window_controls_enabled"] is False
     assert state["hover_taskbar_restore_enabled"] is False
     assert state["hover_window_controls_dwell_ms"] == 1250
+    assert service.has_export_changes() is True
     assert saves[-1] == state
     assert service.controller.calls[-4:] == [
         "suspend",
@@ -281,6 +283,84 @@ def test_clear_learned_buttons_is_forwarded(monkeypatch, tmp_path):
 
     assert service.window_api.cleared is True
     assert service.taskbar_restore_available is False
+    assert service.has_export_changes() is True
+
+
+def test_export_pending_state_ignores_automatic_learning(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+    service.window_api.has_export_changes = lambda *_args: True
+
+    assert service.has_export_changes() is False
+
+
+def test_explicit_hover_setting_change_marks_export_pending(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+
+    service.set_dwell_ms(1000)
+
+    assert service.has_export_changes() is True
+    assert json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))["hover"]["pending_export"] is True
+
+
+def test_noop_hover_setting_change_does_not_mark_export_pending(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+
+    service.set_dwell_ms(service.dwell_ms)
+    service.set_enabled(service.enabled)
+    service.set_taskbar_restore_enabled(service.taskbar_restore_enabled)
+
+    assert service.has_export_changes() is False
+
+
+def test_calibration_saves_mark_export_pending(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+    service.window_api.update_tracked_calibration = lambda asset, rect: (asset, rect)
+    service.window_api.save_vision_calibration = lambda snapshot, assignments: (
+        snapshot,
+        assignments,
+    )
+
+    assert service._save_tracked_calibration("asset", (1, 2, 3, 4)) == (
+        "asset",
+        (1, 2, 3, 4),
+    )
+    assert service.has_export_changes() is True
+
+    service._pending_export = False
+    service._save_vision_calibration("snapshot", {})
+
+    assert service.has_export_changes() is True
+
+
+def test_successful_export_clears_pending_state_and_failure_keeps_it(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+    service.set_enabled(False)
+
+    service.export_all_data(tmp_path / "export")
+
+    assert service.has_export_changes() is False
+    assert service.window_api.exported_settings["hover"]["pending_export"] is False
+
+    service.set_enabled(True)
+    service.window_api.export_all_data = lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("failed"))
+
+    try:
+        service.export_all_data(tmp_path / "export")
+    except OSError:
+        pass
+    else:
+        raise AssertionError("Expected export failure")
+
+    assert service.has_export_changes() is True
+
+
+def test_pending_export_state_survives_service_recreation(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+    service.set_enabled(False)
+
+    recreated, _saves = _service(monkeypatch, tmp_path, {})
+
+    assert recreated.has_export_changes() is True
 
 
 def test_migration_imports_preferences_and_copies_valid_profiles(tmp_path):
