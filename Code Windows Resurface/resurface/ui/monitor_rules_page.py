@@ -182,6 +182,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         root.addWidget(self.rules_frame, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.rule_list = QWidget(self.rules_frame)
+        self.rule_list.setObjectName("MonitorRuleList")
         self.rule_list_layout = QVBoxLayout(self.rule_list)
         self.rule_list_layout.setContentsMargins(0, 0, 0, 0)
         self.rule_list_layout.setSpacing(10)
@@ -191,7 +192,10 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
 
     def apply_theme(self) -> None:
         self.rules_frame.setStyleSheet(styles.summary_frame_style())
+        self.rule_list.setStyleSheet(styles.monitor_rule_list_style())
         self.help_button.setStyleSheet(styles.monitor_rules_help_button_style())
+        for card in self.rule_list.findChildren(QFrame, "MonitorRuleCard"):
+            card.setStyleSheet(styles.monitor_rule_card_style())
 
     def set_rules(self, rules) -> None:
         """Replace displayed rules after an external state update."""
@@ -265,6 +269,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             card = QFrame(self.rule_list)
             card.setObjectName("MonitorRuleCard")
             card.setFrameShape(QFrame.Shape.StyledPanel)
+            card.setStyleSheet(styles.monitor_rule_card_style())
             card_layout = QVBoxLayout(card)
             card_layout.setContentsMargins(14, 12, 14, 12)
             card_layout.setSpacing(8)

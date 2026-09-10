@@ -213,6 +213,15 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             page.rule_list_layout.itemAt(index).widget()
             for index in range(page.rule_list_layout.count())
         ]
+        assert page.rule_list.objectName() == "MonitorRuleList"
+        assert (
+            f"background-color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.SURFACE_BG)}"
+            in page.rule_list.styleSheet()
+        )
+        for card in initial_cards:
+            assert f"background-color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.WINDOW_BG)}" in card.styleSheet()
+            assert "border: 1px solid" in card.styleSheet()
+            assert "border-radius: 8px" in card.styleSheet()
         expected_actions = {"Edit", "Delete", "Move Up", "Move Down"}
         assert all(
             {button.text() for button in card.findChildren(QPushButton)}

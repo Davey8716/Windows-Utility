@@ -84,6 +84,27 @@ def clipboard_provenance_record_card_style() -> str:
         }}
     """
 
+def monitor_rule_card_style() -> str:
+    return f"""
+        QFrame#MonitorRuleCard {{
+            background-color: {H.qcolor_css(T.WINDOW_BG)};
+            border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
+            border-radius: 8px;
+        }}
+        QFrame#MonitorRuleCard QLabel {{
+            border: none;
+            background: transparent;
+        }}
+    """
+
+def monitor_rule_list_style() -> str:
+    return f"""
+        QWidget#MonitorRuleList {{
+            background-color: {H.qcolor_css(T.SURFACE_BG)};
+            border: none;
+        }}
+    """
+
 def navigation_list_style() -> str:
     selected = QColor(43, 68, 98) if T.THEME_IS_DARK else QColor(202, 222, 244)
     hover = QColor(38, 48, 63) if T.THEME_IS_DARK else QColor(226, 234, 243)
