@@ -182,6 +182,23 @@ def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
         }}
     """
 
+def frame_text_edit_style(font_family: str, font_size: int) -> str:
+    """Style read-only output as a standard theme surface frame."""
+    return f"""
+        QTextEdit {{
+            {H.label_style(
+                font_size=font_size,
+                bold=True,
+                color=T.theme_text_color(),
+                font_family=font_family,
+            )}
+            background-color: {H.qcolor_css(T.SURFACE_BG)};
+            border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
+            border-radius: 6px;
+            selection-background-color: {H.qcolor_css(T.PANEL_HOVER)};
+        }}
+    """
+
 def button_text_style(font_size: int) -> str:
     return organizing_button_style(font_size=font_size)
 
@@ -407,12 +424,12 @@ def surfaced_combo_style(font_size: int) -> str:
 def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") -> str:
     return _modern_combo_style(
         font_size,
-        background=T.themed_button_bg(),
-        hover=T.themed_button_hover(),
-        pressed=T.themed_button_pressed(),
-        pressed_hover=T.themed_button_pressed_hover(),
-        border=T.themed_button_border(),
-        text=T.dropdown_text_color(),
+        background=T.SURFACE_BG,
+        hover=T.SURFACE_HOVER,
+        pressed=T.STATUS_ACCENT,
+        pressed_hover=T.STATUS_ACCENT,
+        border=T.SURFACE_BORDER,
+        text=T.theme_text_color(),
         font_family=font_family,
     )
 
@@ -527,6 +544,65 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
             H.qcolor_css(T.themed_surface_field_text()),
             H.qcolor_css(T.PANEL_HOVER),
             H.qcolor_css(T.themed_surface_field_text()),
+        )
+    )
+
+def frame_list_widget_style(font_family: str, font_size: int) -> str:
+    """Style an interactive list as a standard theme surface frame."""
+    return (
+        """
+        QListWidget {
+            %s
+            background-color: %s;
+            color: %s;
+            border: 1px solid %s;
+            border-radius: 6px;
+            padding: 6px;
+        }
+        QListWidget::item {
+            padding: 1px 6px;
+            margin: 0px;
+            border: none;
+            outline: 0;
+        }
+        QListWidget::item:selected {
+            background-color: %s;
+            color: %s;
+            border: none;
+            outline: 0;
+        }
+        QListWidget::item:selected:active,
+        QListWidget::item:selected:focus {
+            border: none;
+            outline: 0;
+        }
+        QListView::item {
+            border: none;
+            outline: 0;
+        }
+        QListView::item:selected,
+        QListView::item:selected:active,
+        QListView::item:selected:focus {
+            background-color: %s;
+            color: %s;
+            border: none;
+            outline: 0;
+        }
+        """
+        % (
+            H.label_style(
+                font_size=font_size,
+                bold=True,
+                color=T.theme_text_color(),
+                font_family=font_family,
+            ),
+            H.qcolor_css(T.SURFACE_BG),
+            H.qcolor_css(T.theme_text_color()),
+            H.qcolor_css(T.SURFACE_BORDER),
+            H.qcolor_css(T.SURFACE_HOVER),
+            H.qcolor_css(T.theme_text_color()),
+            H.qcolor_css(T.SURFACE_HOVER),
+            H.qcolor_css(T.theme_text_color()),
         )
     )
 

@@ -123,7 +123,6 @@ def test_message_box_links_are_white_in_dark_mode_and_black_in_light_mode(
     [
         styles.organizing_combo_style,
         styles.surfaced_combo_style,
-        styles.connected_drives_combo_style,
         styles.combo_style,
     ],
 )
@@ -295,6 +294,31 @@ def test_surfaced_output_boxes_use_thin_rounded_borders(is_dark):
     ):
         assert f"border: 1px solid {border};" in stylesheet
         assert "border-radius: 6px;" in stylesheet
+
+
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_maintenance_output_and_connected_drives_use_theme_surface_frames(is_dark):
+    styles.set_theme(is_dark)
+    background = styles.qcolor_css(styles.SURFACE_BG)
+    border = styles.qcolor_css(styles.SURFACE_BORDER)
+    text = styles.qcolor_css(styles.theme_text_color())
+
+    for stylesheet in (
+        styles.frame_text_edit_style("Consolas", 15),
+        styles.frame_list_widget_style("Consolas", 15),
+        styles.connected_drives_combo_style(14),
+    ):
+        assert f"background-color: {background};" in stylesheet
+        assert f"border: 1px solid {border};" in stylesheet
+        assert f"color: {text};" in stylesheet
+        assert "border-radius: 6px;" in stylesheet
+
+    drive_list_stylesheet = styles.frame_list_widget_style("Consolas", 15)
+    assert f"background-color: {styles.qcolor_css(styles.SURFACE_HOVER)};" in drive_list_stylesheet
+
+    drive_stylesheet = styles.connected_drives_combo_style(14)
+    assert f"selection-background-color: {styles.qcolor_css(styles.SURFACE_HOVER)};" in drive_stylesheet
+    assert f"border-left: 3px solid {styles.qcolor_css(styles.STATUS_ACCENT)};" in drive_stylesheet
 
 
 def test_dropdown_chevron_asset_is_available():
