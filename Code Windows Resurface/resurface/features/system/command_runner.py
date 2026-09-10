@@ -4,6 +4,8 @@ import os
 import subprocess
 import tempfile
 import uuid
+import ctypes
+from ctypes import wintypes
 from pathlib import Path
 from typing import Callable
 
@@ -13,7 +15,33 @@ from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 FinishedHandler = Callable[[int, str], None]
 
 
+class _ShellExecuteInfo(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.DWORD),
+        ("fMask", wintypes.ULONG),
+        ("hwnd", wintypes.HWND),
+        ("lpVerb", wintypes.LPCWSTR),
+        ("lpFile", wintypes.LPCWSTR),
+        ("lpParameters", wintypes.LPCWSTR),
+        ("lpDirectory", wintypes.LPCWSTR),
+        ("nShow", ctypes.c_int),
+        ("hInstApp", ctypes.c_void_p),
+        ("lpIDList", ctypes.c_void_p),
+        ("lpClass", wintypes.LPCWSTR),
+        ("hkeyClass", ctypes.c_void_p),
+        ("dwHotKey", wintypes.DWORD),
+        ("hIcon", ctypes.c_void_p),
+        ("hProcess", ctypes.c_void_p),
+    ]
+
+
 class CommandRunner(QObject):
+    ELEVATION_FAILURE_MARKER = "__WINDOWS_RESURFACE_ELEVATION_FAILED__"
+    _SEE_MASK_NOCLOSEPROCESS = 0x00000040
+    _SEE_MASK_NOASYNC = 0x00000100
+    _SW_HIDE = 0
+    _WAIT_OBJECT_0 = 0
+    _WAIT_TIMEOUT = 258
     output_reset = Signal()
     output_appended = Signal(str)
     finished = Signal(int, str)
@@ -27,6 +55,7 @@ class CommandRunner(QObject):
         self._output_path: Path | None = None
         self._output_offset = 0
         self._output_parts: list[str] = []
+        self._elevated_process_handle: int | None = None
 
     @staticmethod
     def command_display_text(command) -> str:
@@ -71,30 +100,71 @@ class CommandRunner(QObject):
         log_text = subprocess.list2cmdline([str(output_path)])
         cmd_wrapper = f"{cmd_text} > {log_text} 2>&1"
 
-        def quote_ps(value: str) -> str:
-            return "'" + value.replace("'", "''") + "'"
-
-        quoted_args = ", ".join(quote_ps(arg) for arg in ["/c", cmd_wrapper])
-        ps_command = (
-            "$p = Start-Process -FilePath 'cmd.exe' "
-            f"-ArgumentList @({quoted_args}) -Verb RunAs -WindowStyle Hidden "
-            "-PassThru -Wait; exit $p.ExitCode"
-        )
-
-        process = self._new_process()
-        timer = QTimer(self)
-        timer.timeout.connect(self._poll_elevated_output)
-        timer.start(250)
-        self._output_timer = timer
-        process.start("powershell.exe", ["-NoProfile", "-Command", ps_command])
-
-        if not process.waitForStarted(3000):
-            self._fail_start(process, "Could not start elevated process.")
-            return
-
         self._emit_output(
             f"Running: {self.command_display_text(command)}\n"
             "Waiting for administrator approval if prompted...\n\n"
+        )
+        execute_info = _ShellExecuteInfo()
+        execute_info.cbSize = ctypes.sizeof(_ShellExecuteInfo)
+        execute_info.fMask = self._SEE_MASK_NOCLOSEPROCESS | self._SEE_MASK_NOASYNC
+        execute_info.lpVerb = "runas"
+        execute_info.lpFile = "cmd.exe"
+        execute_info.lpParameters = f"/d /c {cmd_wrapper}"
+        execute_info.nShow = self._SW_HIDE
+
+        try:
+            launched = ctypes.windll.shell32.ShellExecuteExW(ctypes.byref(execute_info))
+        except (AttributeError, OSError):
+            launched = False
+        if not launched or not execute_info.hProcess:
+            self._replace_elevation_failure_output()
+            self._complete_process(1223)
+            return
+
+        self._elevated_process_handle = int(execute_info.hProcess)
+        timer = QTimer(self)
+        timer.timeout.connect(self._poll_elevated_process)
+        timer.start(250)
+        self._output_timer = timer
+
+    def run_elevated_visible(self, command: list[str]):
+        """Run a command in an elevated console and leave its result visible."""
+        self.reset()
+        self.output_reset.emit()
+        command_text = self.command_display_text(command)
+        command_prompt = os.environ.get(
+            "COMSPEC", os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "cmd.exe")
+        )
+        try:
+            shell_execute = ctypes.windll.shell32.ShellExecuteW
+            shell_execute.argtypes = [
+                wintypes.HWND,
+                wintypes.LPCWSTR,
+                wintypes.LPCWSTR,
+                wintypes.LPCWSTR,
+                wintypes.LPCWSTR,
+                ctypes.c_int,
+            ]
+            shell_execute.restype = ctypes.c_void_p
+            result = shell_execute(
+                None,
+                "runas",
+                command_prompt,
+                f"/k {command_text}",
+                None,
+                1,
+            )
+        except (AttributeError, OSError):
+            result = 0
+        if not result or int(result) <= 32:
+            self._emit_output(
+                "Administrator approval was cancelled or could not be obtained. "
+                "The command was not run."
+            )
+            return
+        self._emit_output(
+            f"Opened an elevated Command Prompt for: {command_text}\n"
+            "Follow the command's progress and result in that window."
         )
 
     def reset(self):
@@ -115,6 +185,7 @@ class CommandRunner(QObject):
             self._output_timer.deleteLater()
             self._output_timer = None
         self._delete_output_file()
+        self._close_elevated_process_handle()
         self._output_offset = 0
         self._output_parts = []
 
@@ -153,9 +224,44 @@ class CommandRunner(QObject):
             self._output_offset += len(chunk)
             self._emit_output(chunk.decode("utf-8", errors="replace"))
 
+    def _poll_elevated_process(self):
+        handle = self._elevated_process_handle
+        if handle is None:
+            return
+        try:
+            wait_result = ctypes.windll.kernel32.WaitForSingleObject(handle, 0)
+        except (AttributeError, OSError):
+            self._replace_elevation_failure_output()
+            self._complete_process(1)
+            return
+        if wait_result == self._WAIT_TIMEOUT:
+            self._poll_elevated_output()
+            return
+        if wait_result != self._WAIT_OBJECT_0:
+            self._replace_elevation_failure_output()
+            self._complete_process(1)
+            return
+        exit_code = wintypes.DWORD()
+        ctypes.windll.kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code))
+        self._poll_elevated_output()
+        self._complete_process(int(exit_code.value))
+
     def _on_process_finished(self, exit_code: int, _exit_status):
         self._read_process_output()
         self._poll_elevated_output()
+        self._complete_process(exit_code)
+
+    def _replace_elevation_failure_output(self):
+        self._output_parts = []
+        self.output_reset.emit()
+        self._emit_output(
+            "Administrator approval was cancelled or could not be obtained. "
+            "The command was not run."
+        )
+
+    def _complete_process(self, exit_code: int):
+        if self.ELEVATION_FAILURE_MARKER in "".join(self._output_parts):
+            self._replace_elevation_failure_output()
         if "".join(self._output_parts).strip():
             self._emit_output(f"\n\n[Process finished with exit code {exit_code}]")
         else:
@@ -191,7 +297,17 @@ class CommandRunner(QObject):
             self._output_timer.deleteLater()
             self._output_timer = None
         self._delete_output_file()
+        self._close_elevated_process_handle()
         self._output_offset = 0
+
+    def _close_elevated_process_handle(self):
+        handle = self._elevated_process_handle
+        self._elevated_process_handle = None
+        if handle is not None:
+            try:
+                ctypes.windll.kernel32.CloseHandle(handle)
+            except (AttributeError, OSError):
+                pass
 
     def _delete_output_file(self):
         path = self._output_path

@@ -12,6 +12,9 @@ class FakeRunner:
     def run_elevated(self, command):
         self.calls.append(("elevated", command, {}))
 
+    def run_elevated_visible(self, command):
+        self.calls.append(("elevated_visible", command, {}))
+
     def set_output(self, text):
         self.calls.append(("output", text, {}))
 
@@ -26,6 +29,8 @@ def test_network_and_integrity_actions_delegate_to_runner(monkeypatch):
     actions.flush_dns()
     actions.restart_explorer()
     monkeypatch.setattr(actions, "is_admin", lambda: False)
+    requests = []
+    actions.admin_access_required.connect(lambda title, command: requests.append((title, command)))
     actions.run_sfc_scannow()
 
     assert runner.calls[0] == ("run", "ipconfig /flushdns", {})
@@ -34,7 +39,36 @@ def test_network_and_integrity_actions_delegate_to_runner(monkeypatch):
         "taskkill /f /im explorer.exe && start explorer",
         {"shell": True},
     )
-    assert runner.calls[2] == ("elevated", ["sfc", "/scannow"], {})
+    assert requests == [("System File Checker (SFC)", ["sfc", "/scannow"])]
+
+
+def test_integrity_actions_request_admin_access_when_not_elevated(monkeypatch):
+    runner = FakeRunner()
+    actions = MaintenanceActions(runner, FakeWindowActions(), FakeWindowActions())
+    monkeypatch.setattr(actions, "is_admin", lambda: False)
+    requests = []
+    actions.admin_access_required.connect(lambda title, command: requests.append((title, command)))
+
+    actions.run_dism_restorehealth()
+    actions.run_sfc_scannow()
+    actions.run_chkdsk()
+
+    assert requests == [
+        ("DISM Repair", ["DISM", "/Online", "/Cleanup-Image", "/RestoreHealth"]),
+        ("System File Checker (SFC)", ["sfc", "/scannow"]),
+        ("Check Disk (CHKDSK)", ["chkdsk", "C:", "/scan"]),
+    ]
+    assert runner.calls == []
+
+
+def test_integrity_actions_run_directly_when_already_elevated(monkeypatch):
+    runner = FakeRunner()
+    actions = MaintenanceActions(runner, FakeWindowActions(), FakeWindowActions())
+    monkeypatch.setattr(actions, "is_admin", lambda: True)
+
+    actions.run_chkdsk()
+
+    assert runner.calls == [("run", ["chkdsk", "C:", "/scan"], {})]
 
 
 def test_temp_cleanup_requests_elevation_only_for_access_denied(monkeypatch):

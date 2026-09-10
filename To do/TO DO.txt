@@ -2,9 +2,6 @@ Wording gets cut off inside the folder to desktop drop down list for the light t
 
 Wording inside tooltips needs tidying up re/ formatting /n usage etc
 
-Feature: Clipboard provenance shows clipboarded item, time stamp of usage and link to page that opens to mirror the monitor 
-rules export logic
-
 Fix sfc scannow and chkdsk console admin approval is being deliberatly suppressed? Access is denied?
 
 Button Sizes in general, colours relative to state

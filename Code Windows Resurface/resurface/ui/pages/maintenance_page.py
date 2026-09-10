@@ -77,6 +77,7 @@ class MaintenancePage(QWidget):
         runner.output_reset.connect(self._reset_output)
         runner.output_appended.connect(self._append_output)
         actions.temp_cleanup_admin_required.connect(self._confirm_temp_elevation)
+        actions.admin_access_required.connect(self._confirm_integrity_elevation)
 
     def _build_selectors(self):
         grid = QWidget()
@@ -244,3 +245,23 @@ class MaintenancePage(QWidget):
         )
         if result == QMessageBox.StandardButton.Yes:
             self.actions.retry_temp_cleanup_elevated()
+
+    def _confirm_integrity_elevation(self, action_name: str, command: list[str]):
+        result = self.show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            f"{action_name} Needs Admin Access",
+            (
+                f"{action_name} requires administrator access.\n\n"
+                "Run it as administrator?\n\n"
+                "Windows will ask you to approve this action."
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+        )
+        if result == QMessageBox.StandardButton.Yes:
+            self.actions.run_admin_command_elevated(command)
+            return
+        self.runner.set_output(
+            f"{action_name} was cancelled. Administrator access is required to run it."
+        )

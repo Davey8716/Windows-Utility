@@ -12,6 +12,7 @@ from resurface.features.system.command_runner import CommandRunner
 
 class MaintenanceActions(QObject):
     temp_cleanup_admin_required = Signal()
+    admin_access_required = Signal(str, object)
 
     def __init__(self, runner: CommandRunner, explorer_windows, windows, parent: QObject | None = None):
         super().__init__(parent)
@@ -131,19 +132,27 @@ class MaintenanceActions(QObject):
         self.runner.set_output("Opened Clipboard History.")
 
     def run_dism_restorehealth(self):
-        self._run_admin_command(["DISM", "/Online", "/Cleanup-Image", "/RestoreHealth"])
+        self._run_admin_command(
+            "DISM Repair", ["DISM", "/Online", "/Cleanup-Image", "/RestoreHealth"]
+        )
 
     def run_sfc_scannow(self):
-        self._run_admin_command(["sfc", "/scannow"])
+        self._run_admin_command("System File Checker (SFC)", ["sfc", "/scannow"])
 
     def run_chkdsk(self):
-        self._run_admin_command(["chkdsk", os.environ.get("SystemDrive", "C:")])
+        self._run_admin_command(
+            "Check Disk (CHKDSK)",
+            ["chkdsk", os.environ.get("SystemDrive", "C:"), "/scan"],
+        )
 
-    def _run_admin_command(self, command: list[str]):
+    def _run_admin_command(self, action_name: str, command: list[str]):
         if self.is_admin():
             self.runner.run(command)
         else:
-            self.runner.run_elevated(command)
+            self.admin_access_required.emit(action_name, command)
+
+    def run_admin_command_elevated(self, command: list[str]):
+        self.runner.run_elevated_visible(command)
 
     @staticmethod
     def run_sleep():
