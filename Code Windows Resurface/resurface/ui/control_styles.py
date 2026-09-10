@@ -316,6 +316,32 @@ def _modern_combo_style(
     disabled_text = disabled_text or T.themed_button_disabled_text()
     disabled_border = disabled_border or T.themed_button_disabled_border()
     chevron_path = H.dropdown_chevron_path().as_posix()
+    light_mode_disabled_content_override = ""
+    if not T.THEME_IS_DARK:
+        light_mode_disabled_content_override = f"""
+        QComboBox[lightModeBlackDisabledText="true"]:disabled {{
+            color: {H.qcolor_css(T.theme_text_color())};
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+            border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+        }}
+        QComboBox[lightModeBlackDisabledText="true"]:disabled::drop-down {{
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+            border-left: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+        }}
+        QComboBox[lightModeBlackDisabledText="true"][unavailableCurrentValue="true"] {{
+            color: {H.qcolor_css(T.theme_text_color())};
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+            border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+        }}
+        QComboBox[lightModeBlackDisabledText="true"][unavailableCurrentValue="true"]::drop-down {{
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+            border-left: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+        }}
+        QComboBox[lightModeBlackDisabledText="true"] QAbstractItemView::item:disabled {{
+            color: {H.qcolor_css(T.theme_text_color())};
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+        }}
+        """
     return f"""
         QComboBox {{
             {H.label_style(
@@ -408,6 +434,7 @@ def _modern_combo_style(
             background-color: {H.qcolor_css(hover)};
             color: {H.qcolor_css(popup_text)};
         }}
+        {light_mode_disabled_content_override}
     """
 
 def surfaced_combo_style(font_size: int) -> str:

@@ -184,6 +184,8 @@ class QuickActionsGrid(WindowMessageMixin, QWidget):
             else:
                 styles.apply_page_control_size(button)
             button.setProperty("styleFontSize", 13)
+            if spec.action_id == "recycle.empty":
+                button.setProperty("lightModeBlackDisabledText", True)
             if spec.severity:
                 button.setProperty("quickActionSeverity", spec.severity)
                 button.setStyleSheet(

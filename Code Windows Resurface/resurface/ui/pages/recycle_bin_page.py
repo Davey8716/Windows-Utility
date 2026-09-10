@@ -24,6 +24,8 @@ class RecycleBinPage(PageControls):
         )
         layout.addWidget(actions, 0, 0)
         self.actions_combo = actions
+        actions.setProperty("lightModeBlackDisabledText", True)
+        actions.setStyleSheet(styles.organizing_combo_style(14))
         self._has_items_checker: Callable[[], bool] | None = None
         self._cleanup_age_availability_checker: Callable[[], dict[int, bool]] | None = None
         self._empty_action_timer = QTimer(self)
@@ -39,6 +41,8 @@ class RecycleBinPage(PageControls):
         days = int(settings.get("recycle_bin_age_rule_days", 30))
         age = self.make_value_dropdown(["7 days", "14 days", "30 days"], f"{days} days")
         self.age_combo = age
+        age.setProperty("lightModeBlackDisabledText", True)
+        age.setStyleSheet(styles.organizing_combo_style(14))
         age.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
         self.register_tooltip(age, tooltip_text("recycle_bin_age_rule"))
         label = QLabel("Delete items older than:"); label.setFixedWidth(self.LEFT_CONTROL_COLUMN_WIDTH)
@@ -101,9 +105,13 @@ class RecycleBinPage(PageControls):
             if item is not None:
                 item.setEnabled(is_available)
 
-        # Keep the native disabled palette so both light and dark themes remain
-        # consistent with the other dropdowns.
+        selected_days = self._settings["recycle_bin_age_rule_days"]
+        self.age_combo.setProperty(
+            "unavailableCurrentValue", not bool(available.get(selected_days, False))
+        )
         self.age_combo.setEnabled(has_eligible_items)
+        self.age_combo.style().unpolish(self.age_combo)
+        self.age_combo.style().polish(self.age_combo)
         run_index = self.actions_combo.findText("Run Auto-Clean Now")
         run_item = self.actions_combo.model().item(run_index)
         if run_item is not None:
