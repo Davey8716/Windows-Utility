@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontMetrics
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QDialog, QFileDialog
 
 from resurface.core.state_manager import save_state
 from resurface.core.saved_folder_names import (
@@ -12,6 +12,33 @@ from resurface.core.saved_folder_names import (
     save_saved_folder_names,
 )
 from resurface.ui.tooltips import format_tooltip_text
+from resurface.ui import styles
+from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
+
+
+class MasterBackupDirectoryDialog(QFileDialog):
+    """Themed, frameless PySide folder picker for the master backup path."""
+
+    FRAME_WIDTH = 2
+
+    def __init__(self, parent, directory: str) -> None:
+        super().__init__(parent, "Choose Master Backup Folder", directory)
+        self.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+        self.setOption(QFileDialog.Option.ShowDirsOnly, True)
+        self.setFileMode(QFileDialog.FileMode.Directory)
+        self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setStyleSheet(styles.file_dialog_style())
+        self.setSizeGripEnabled(False)
+        self.setFixedSize(self.sizeHint())
+
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        paint_opaque_rounded_frame(
+            self,
+            radius=styles.BUTTON_CORNER_RADIUS,
+            frame_width=self.FRAME_WIDTH,
+        )
 
 
 class MasterBackupPathsMixin:
@@ -33,11 +60,11 @@ class MasterBackupPathsMixin:
     def _choose_master_backup_dir(self):
         path_type = self._get_app_module_attr("Path", Path)
         start_dir = self._get_master_backup_dir().strip() or str(path_type.home())
-        selected_dir = QFileDialog.getExistingDirectory(
-            self,
-            "Choose Master Backup Folder",
-            start_dir,
-        )
+        dialog = MasterBackupDirectoryDialog(self, start_dir)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        selected_files = dialog.selectedFiles()
+        selected_dir = selected_files[0] if selected_files else ""
 
         if selected_dir:
             def action():

@@ -21,7 +21,10 @@ from PySide6.QtWidgets import (
 )
 
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
-from resurface.core.app_paths import MasterBackupPathsMixin
+from resurface.core.app_paths import (
+    MasterBackupDirectoryDialog,
+    MasterBackupPathsMixin,
+)
 from resurface.features.monitor_rules import MonitorRulesRepository, rule_schema
 from resurface.ui import application_window as main
 from resurface.ui import monitor_rule_editor_dialog
@@ -1222,6 +1225,32 @@ def test_import_rules_dialog_is_non_native_and_tracks_current_theme(monkeypatch,
     finally:
         monitor_rules_ui.styles.set_theme(True)
         page.deleteLater()
+        app.processEvents()
+
+
+@pytest.mark.parametrize("is_dark", (True, False))
+def test_master_backup_directory_dialog_is_themed_and_non_native(is_dark):
+    app = QApplication.instance() or QApplication([])
+    original_theme = monitor_rules_ui.styles.THEME_IS_DARK
+    monitor_rules_ui.styles.set_theme(is_dark)
+    dialog = MasterBackupDirectoryDialog(None, "")
+    try:
+        assert dialog.testOption(QFileDialog.Option.DontUseNativeDialog)
+        assert dialog.testOption(QFileDialog.Option.ShowDirsOnly)
+        assert dialog.fileMode() == QFileDialog.FileMode.Directory
+        assert dialog.acceptMode() == QFileDialog.AcceptMode.AcceptOpen
+        assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert dialog.minimumSize() == dialog.maximumSize()
+        assert monitor_rules_ui.styles.qcolor_css(
+            monitor_rules_ui.styles.WINDOW_BG
+        ) in dialog.styleSheet()
+        assert monitor_rules_ui.styles.qcolor_css(
+            monitor_rules_ui.styles.theme_text_color()
+        ) in dialog.styleSheet()
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        monitor_rules_ui.styles.set_theme(original_theme)
         app.processEvents()
 
 
