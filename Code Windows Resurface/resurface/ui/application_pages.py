@@ -28,6 +28,7 @@ from resurface.features.screen_mover.hotkeys import (
 )
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
+from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 from resurface.ui.controllers.theme_controller import apply_power_action_dropdown_style
 from resurface.ui.monitor_rules_page import MonitorRulesPage
@@ -126,7 +127,7 @@ class QuickActionButton(QPushButton):
         menu.exec(event.globalPos())
 
 
-class QuickActionsGrid(QWidget):
+class QuickActionsGrid(WindowMessageMixin, QWidget):
     VISIBLE_LIMIT = 8
     COMPACT_COLUMNS = 4
 
@@ -304,12 +305,13 @@ class QuickActionsGrid(QWidget):
             event.acceptProposedAction()
 
     def _reset_to_defaults(self) -> None:
-        answer = QMessageBox.question(
-            self,
+        answer = self._show_modal_message(
+            QMessageBox.Icon.Question,
             "Reset Quick Actions",
             "Replace your pinned Quick Actions and their order with the defaults?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
+            popup_corner_radius=6,
         )
         if answer == QMessageBox.StandardButton.Yes:
             self.expanded = False

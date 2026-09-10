@@ -269,8 +269,8 @@ def test_empty_grid_reset_button_confirms_then_restores_default_actions(monkeypa
     grid = QuickActionsGrid(registry, lambda _widget, _text: None)
     monkeypatch.setattr(
         QMessageBox,
-        "question",
-        lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+        "exec",
+        lambda _dialog: QMessageBox.StandardButton.Yes,
     )
 
     grid.reset_defaults_button.click()
@@ -280,6 +280,32 @@ def test_empty_grid_reset_button_confirms_then_restores_default_actions(monkeypa
     assert saves[-1] == list(DEFAULT_QUICK_ACTION_IDS)
     assert list(grid.buttons) == list(DEFAULT_QUICK_ACTION_IDS)
     assert grid.reset_defaults_button is None
+    grid.deleteLater()
+
+
+def test_empty_grid_reset_confirmation_matches_frameless_popups(monkeypatch):
+    app = _app()
+    registry = QuickActionRegistry({"quick_action_ids": []}, lambda _value: None)
+    registry.register(QuickActionSpec("action", "Action", lambda: None))
+    registry.finalize()
+    grid = QuickActionsGrid(registry, lambda _widget, _text: None)
+    dialogs = []
+
+    def capture_dialog(dialog):
+        dialogs.append(dialog)
+        return QMessageBox.StandardButton.No
+
+    monkeypatch.setattr(QMessageBox, "exec", capture_dialog)
+
+    grid.reset_defaults_button.click()
+    app.processEvents()
+
+    assert len(dialogs) == 1
+    dialog = dialogs[0]
+    assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+    assert not dialog.windowFlags() & Qt.WindowType.WindowTitleHint
+    assert dialog._popup_corner_radius == 6
+    assert dialog.styleSheet() == styles.message_box_style(radius=6)
     grid.deleteLater()
 
 
