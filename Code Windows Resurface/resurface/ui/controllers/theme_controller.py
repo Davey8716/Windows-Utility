@@ -53,6 +53,7 @@ class ApplicationThemeController:
         screen_mover_settings_page=None,
         hover_window_controls_page=None,
         user_interface_page=None,
+        quick_actions_grid=None,
         maintenance_page=None,
         drive_space_page=None,
         clipboard_provenance_page=None,
@@ -66,6 +67,7 @@ class ApplicationThemeController:
         self.screen_mover_settings_page = screen_mover_settings_page
         self.hover_window_controls_page = hover_window_controls_page
         self.user_interface_page = user_interface_page
+        self.quick_actions_grid = quick_actions_grid
         self.maintenance_page = maintenance_page
         self.drive_space_page = drive_space_page
         self.clipboard_provenance_page = clipboard_provenance_page
@@ -142,6 +144,8 @@ class ApplicationThemeController:
 
         if self.user_interface_page is not None:
             self.user_interface_page.refresh_icons()
+        if self.quick_actions_grid is not None:
+            self.quick_actions_grid.refresh_source_icons()
 
         for combo in self.root.findChildren(QComboBox):
             font_size = styles.coerce_font_size(

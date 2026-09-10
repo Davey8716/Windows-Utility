@@ -223,6 +223,7 @@ class UtilityControlApp(
             screen_mover_settings_page=self.pages.screen_mover_settings_page,
             hover_window_controls_page=self.pages.hover_window_controls_page,
             user_interface_page=self.pages.user_interface_page,
+            quick_actions_grid=self.pages.quick_actions_page.quick_actions_grid,
             maintenance_page=self.pages.maintenance_page,
             drive_space_page=self.pages.drive_space_page,
             clipboard_provenance_page=self.pages.clipboard_provenance_page,

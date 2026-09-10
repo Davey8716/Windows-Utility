@@ -128,6 +128,7 @@ class QuickActionButton(QPushButton):
 
 class QuickActionsGrid(QWidget):
     VISIBLE_LIMIT = 8
+    COMPACT_COLUMNS = 4
 
     def __init__(self, registry: QuickActionRegistry, register_tooltip, parent=None):
         super().__init__(parent)
@@ -143,6 +144,11 @@ class QuickActionsGrid(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
         self.layout.setVerticalSpacing(12)
+        compact_width = (
+            styles.PAGE_CONTROL_WIDTH - styles.PAGE_CONTROL_GAP
+        ) // 2
+        for column in range(self.COMPACT_COLUMNS):
+            self.layout.setColumnMinimumWidth(column, compact_width)
         self.registry.pins_changed.connect(self.rebuild)
         self.registry.action_changed.connect(self.refresh_action)
         self.rebuild()
@@ -158,9 +164,20 @@ class QuickActionsGrid(QWidget):
         self.reset_defaults_button = None
         specs = self.registry.specs()
         visible = specs if self.expanded else specs[: self.VISIBLE_LIMIT]
-        for index, spec in enumerate(visible):
+        next_slot = 0
+        for spec in visible:
             button = QuickActionButton(spec.action_id, self.registry, self)
-            styles.apply_page_control_size(button)
+            compact = bool(spec.compact)
+            if compact:
+                source = spec.source
+                width = source.width() if source is not None else styles.PAGE_COMPACT_CONTROL_WIDTH
+                height = source.height() if source is not None else styles.PAGE_CONTROL_HEIGHT
+                styles.apply_page_control_size(
+                    button, width=width, height=height, role="compact"
+                )
+                button.setProperty("quickActionCompact", True)
+            else:
+                styles.apply_page_control_size(button)
             button.setProperty("styleFontSize", 13)
             if spec.severity:
                 button.setProperty("quickActionSeverity", spec.severity)
@@ -183,10 +200,22 @@ class QuickActionsGrid(QWidget):
                 button.clicked.connect(spec.invoke)
             self.buttons[spec.action_id] = button
             self.tooltip_managers[spec.action_id] = self.register_tooltip(button, spec.tooltip)
-            self.layout.addWidget(button, index // 2, index % 2)
+            column_span = 1 if compact else 2
+            column = next_slot % self.COMPACT_COLUMNS
+            if column + column_span > self.COMPACT_COLUMNS:
+                next_slot += self.COMPACT_COLUMNS - column
+                column = 0
+            self.layout.addWidget(
+                button,
+                next_slot // self.COMPACT_COLUMNS,
+                column,
+                1,
+                column_span,
+            )
+            next_slot += column_span
             self.refresh_action(spec.action_id)
 
-        row = (len(visible) + 1) // 2
+        row = (next_slot + self.COMPACT_COLUMNS - 1) // self.COMPACT_COLUMNS
         if not specs:
             empty = QLabel(
                 "No Quick Actions pinned. Right-click an action elsewhere in the app to add it.",
@@ -195,7 +224,7 @@ class QuickActionsGrid(QWidget):
             empty.setObjectName("QuickActionsEmptyState")
             empty.setWordWrap(True)
             empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.layout.addWidget(empty, 0, 0, 1, 2)
+            self.layout.addWidget(empty, 0, 0, 1, self.COMPACT_COLUMNS)
             self.empty_state_label = empty
 
             reset = QPushButton("Reset Quick Actions to Defaults", self)
@@ -205,21 +234,37 @@ class QuickActionsGrid(QWidget):
             reset.setStyleSheet(styles.organizing_button_style(13))
             reset.clicked.connect(self._reset_to_defaults)
             self.register_tooltip(reset, tooltip_text("quick_actions_reset_defaults"))
-            self.layout.addWidget(reset, 1, 0, 1, 2, Qt.AlignmentFlag.AlignHCenter)
+            self.layout.addWidget(
+                reset, 1, 0, 1, self.COMPACT_COLUMNS, Qt.AlignmentFlag.AlignHCenter
+            )
             self.reset_defaults_button = reset
         elif len(specs) > self.VISIBLE_LIMIT:
             more = QPushButton("Show Less" if self.expanded else "Show More", self)
             more.setObjectName("QuickActionsShowMore")
             more.clicked.connect(self._toggle_expanded)
-            self.layout.addWidget(more, row, 0, 1, 2, Qt.AlignmentFlag.AlignHCenter)
+            self.layout.addWidget(
+                more,
+                row,
+                0,
+                1,
+                self.COMPACT_COLUMNS,
+                Qt.AlignmentFlag.AlignHCenter,
+            )
 
     def refresh_action(self, action_id: str) -> None:
         button = self.buttons.get(action_id)
         spec = self.registry.spec(action_id)
         if button is None or spec is None:
             return
-        label = spec.source.text() if spec.source is not None and spec.source.text() else spec.label
-        button.setText(label)
+        source = spec.source
+        if spec.icon_only and source is not None:
+            button.setProperty("quickActionIconOnly", True)
+            button.setText("")
+            button.setIcon(source.icon())
+            button.setIconSize(source.iconSize())
+        else:
+            label = source.text() if source is not None and source.text() else spec.label
+            button.setText(label)
         if spec.is_toggle:
             button.blockSignals(True)
             button.setChecked(bool(spec.checked()))
@@ -230,6 +275,11 @@ class QuickActionsGrid(QWidget):
         manager = self.tooltip_managers.get(action_id)
         if manager is not None:
             manager.set_text(reason or spec.tooltip)
+
+    def refresh_source_icons(self) -> None:
+        """Copy refreshed source icons into icon-only Quick Actions."""
+        for action_id in self.buttons:
+            self.refresh_action(action_id)
 
     def _toggle_expanded(self) -> None:
         self.expanded = not self.expanded
@@ -681,12 +731,33 @@ class ApplicationPageComposer:
     def _register_quick_actions(self, pages: ApplicationPages) -> None:
         registry = self.quick_actions
 
-        def button(action_id, label, widget, tooltip=""):
-            registry.register_button(action_id, label, widget, tooltip=tooltip)
+        def button(action_id, label, widget, tooltip="", *, compact=False, icon_only=False):
+            registry.register_button(
+                action_id,
+                label,
+                widget,
+                tooltip=tooltip,
+                compact=compact,
+                icon_only=icon_only,
+            )
 
         ui = pages.user_interface_page
-        button("ui.theme", "Dark Mode", ui._dark_mode_button, "Switch the app theme.")
-        button("ui.desktop_zen", "Desktop Zen Mode", ui._desktop_zen_button, "Show or hide desktop icons.")
+        button(
+            "ui.theme",
+            "Dark Mode",
+            ui._dark_mode_button,
+            "Switch the app theme.",
+            compact=True,
+            icon_only=True,
+        )
+        button(
+            "ui.desktop_zen",
+            "Desktop Zen Mode",
+            ui._desktop_zen_button,
+            "Show or hide desktop icons.",
+            compact=True,
+            icon_only=True,
+        )
         button("ui.always_on_top", "Always on Top", ui.always_on_top_button)
         button("ui.tooltips", "Tooltips", ui.tooltips_button)
         button("ui.maximize_all", "Maximize All", ui.maximize_all_button)

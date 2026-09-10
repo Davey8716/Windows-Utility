@@ -31,6 +31,8 @@ class QuickActionSpec:
     set_checked: Callable[[bool], None] | None = None
     available: Callable[[], tuple[bool, str]] | None = None
     severity: str | None = None
+    compact: bool = False
+    icon_only: bool = False
 
     @property
     def is_toggle(self) -> bool:
@@ -122,6 +124,8 @@ class QuickActionRegistry(QObject):
         *,
         tooltip: str = "",
         available: Callable[[], tuple[bool, str]] | None = None,
+        compact: bool = False,
+        icon_only: bool = False,
     ) -> None:
         tooltip = tooltip or registered_tooltip_text(button)
         checked = (lambda: button.isChecked()) if button.isCheckable() else None
@@ -136,6 +140,8 @@ class QuickActionRegistry(QObject):
                 checked,
                 set_checked,
                 available,
+                compact=compact,
+                icon_only=icon_only,
             )
         )
 

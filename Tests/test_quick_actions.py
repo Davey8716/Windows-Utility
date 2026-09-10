@@ -1,6 +1,6 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 import pytest
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QIcon, QPixmap
 from PySide6.QtWidgets import QApplication, QComboBox, QMessageBox, QPushButton, QWidget
 
 from resurface.ui.application_pages import QuickActionsGrid
@@ -110,6 +110,65 @@ def test_grid_limits_to_eight_and_expands_inline():
     app.processEvents()
     assert list(grid.buttons) == ids
     grid.deleteLater()
+
+
+def test_compact_icon_actions_keep_source_icons_and_share_a_row_with_a_standard_tile():
+    app = _app()
+    first_icon = QPixmap(16, 16)
+    first_icon.fill(QColor("red"))
+    second_icon = QPixmap(16, 16)
+    second_icon.fill(QColor("blue"))
+    dark_mode = QPushButton()
+    dark_mode.setCheckable(True)
+    dark_mode.setFixedSize(119, 34)
+    dark_mode.setIcon(QIcon(first_icon))
+    dark_mode.setIconSize(QSize(16, 16))
+    zen_mode = QPushButton()
+    zen_mode.setCheckable(True)
+    zen_mode.setFixedSize(119, 34)
+    zen_mode.setIcon(QIcon(second_icon))
+    zen_mode.setIconSize(QSize(16, 16))
+    registry = QuickActionRegistry(
+        {"quick_action_ids": ["dark", "zen", "standard"]}, lambda _value: None
+    )
+    registry.register_button(
+        "dark", "Dark Mode", dark_mode, compact=True, icon_only=True
+    )
+    registry.register_button(
+        "zen", "Desktop Zen Mode", zen_mode, compact=True, icon_only=True
+    )
+    registry.register(QuickActionSpec("standard", "Standard", lambda: None))
+    registry.finalize()
+    grid = QuickActionsGrid(registry, lambda _widget, _text: None)
+
+    dark_tile = grid.buttons["dark"]
+    zen_tile = grid.buttons["zen"]
+    assert dark_tile.text() == zen_tile.text() == ""
+    assert dark_tile.size() == dark_mode.size()
+    assert zen_tile.size() == zen_mode.size()
+    assert dark_tile.icon().cacheKey() == dark_mode.icon().cacheKey()
+    assert zen_tile.icon().cacheKey() == zen_mode.icon().cacheKey()
+
+    refreshed_icon = QPixmap(16, 16)
+    refreshed_icon.fill(QColor("green"))
+    zen_mode.setIcon(QIcon(refreshed_icon))
+    grid.refresh_source_icons()
+    assert zen_tile.icon().cacheKey() == zen_mode.icon().cacheKey()
+
+    positions = {
+        action_id: grid.layout.getItemPosition(grid.layout.indexOf(button))
+        for action_id, button in grid.buttons.items()
+    }
+    assert positions == {
+        "dark": (0, 0, 1, 1),
+        "zen": (0, 1, 1, 1),
+        "standard": (0, 2, 1, 2),
+    }
+
+    grid.deleteLater()
+    dark_mode.deleteLater()
+    zen_mode.deleteLater()
+    app.processEvents()
 
 
 def test_power_quick_actions_keep_their_semantic_tile_style():
