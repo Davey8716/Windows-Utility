@@ -36,7 +36,6 @@ class _ShellExecuteInfo(ctypes.Structure):
 
 
 class CommandRunner(QObject):
-    ELEVATION_FAILURE_MARKER = "__WINDOWS_RESURFACE_ELEVATION_FAILED__"
     _SEE_MASK_NOCLOSEPROCESS = 0x00000040
     _SEE_MASK_NOASYNC = 0x00000100
     _SW_HIDE = 0
@@ -88,9 +87,15 @@ class CommandRunner(QObject):
 
         self._emit_output(f"Running: {self.command_display_text(command)}\n")
 
-    def run_elevated(self, command: list[str]):
+    def run_elevated(
+        self,
+        command: list[str],
+        *,
+        finished: FinishedHandler | None = None,
+    ):
         self.reset()
         self.output_reset.emit()
+        self._finished_handler = finished
 
         output_path = Path(tempfile.gettempdir()) / f"windows_resurface_{uuid.uuid4().hex}.log"
         output_path.write_text("", encoding="utf-8")
@@ -99,6 +104,14 @@ class CommandRunner(QObject):
         cmd_text = subprocess.list2cmdline([str(part) for part in command])
         log_text = subprocess.list2cmdline([str(output_path)])
         cmd_wrapper = f"{cmd_text} > {log_text} 2>&1"
+        command_prompt = os.environ.get(
+            "COMSPEC",
+            os.path.join(
+                os.environ.get("SystemRoot", r"C:\Windows"),
+                "System32",
+                "cmd.exe",
+            ),
+        )
 
         self._emit_output(
             f"Running: {self.command_display_text(command)}\n"
@@ -108,7 +121,7 @@ class CommandRunner(QObject):
         execute_info.cbSize = ctypes.sizeof(_ShellExecuteInfo)
         execute_info.fMask = self._SEE_MASK_NOCLOSEPROCESS | self._SEE_MASK_NOASYNC
         execute_info.lpVerb = "runas"
-        execute_info.lpFile = "cmd.exe"
+        execute_info.lpFile = command_prompt
         execute_info.lpParameters = f"/d /c {cmd_wrapper}"
         execute_info.nShow = self._SW_HIDE
 
@@ -126,46 +139,6 @@ class CommandRunner(QObject):
         timer.timeout.connect(self._poll_elevated_process)
         timer.start(250)
         self._output_timer = timer
-
-    def run_elevated_visible(self, command: list[str]):
-        """Run a command in an elevated console and leave its result visible."""
-        self.reset()
-        self.output_reset.emit()
-        command_text = self.command_display_text(command)
-        command_prompt = os.environ.get(
-            "COMSPEC", os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "cmd.exe")
-        )
-        try:
-            shell_execute = ctypes.windll.shell32.ShellExecuteW
-            shell_execute.argtypes = [
-                wintypes.HWND,
-                wintypes.LPCWSTR,
-                wintypes.LPCWSTR,
-                wintypes.LPCWSTR,
-                wintypes.LPCWSTR,
-                ctypes.c_int,
-            ]
-            shell_execute.restype = ctypes.c_void_p
-            result = shell_execute(
-                None,
-                "runas",
-                command_prompt,
-                f"/k {command_text}",
-                None,
-                1,
-            )
-        except (AttributeError, OSError):
-            result = 0
-        if not result or int(result) <= 32:
-            self._emit_output(
-                "Administrator approval was cancelled or could not be obtained. "
-                "The command was not run."
-            )
-            return
-        self._emit_output(
-            f"Opened an elevated Command Prompt for: {command_text}\n"
-            "Follow the command's progress and result in that window."
-        )
 
     def reset(self):
         process = self._process
@@ -260,8 +233,6 @@ class CommandRunner(QObject):
         )
 
     def _complete_process(self, exit_code: int):
-        if self.ELEVATION_FAILURE_MARKER in "".join(self._output_parts):
-            self._replace_elevation_failure_output()
         if "".join(self._output_parts).strip():
             self._emit_output(f"\n\n[Process finished with exit code {exit_code}]")
         else:

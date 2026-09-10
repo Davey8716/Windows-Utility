@@ -5,6 +5,7 @@ import os
 import subprocess
 import tempfile
 
+import psutil
 from PySide6.QtCore import QObject, Signal
 
 from resurface.features.system.command_runner import CommandRunner
@@ -12,7 +13,9 @@ from resurface.features.system.command_runner import CommandRunner
 
 class MaintenanceActions(QObject):
     temp_cleanup_admin_required = Signal()
-    admin_access_required = Signal(str, object)
+    admin_access_required = Signal(str, object, object)
+    chkdsk_blocked_by_vanguard = Signal()
+    chkdsk_access_denied = Signal()
 
     def __init__(self, runner: CommandRunner, explorer_windows, windows, parent: QObject | None = None):
         super().__init__(parent)
@@ -140,19 +143,40 @@ class MaintenanceActions(QObject):
         self._run_admin_command("System File Checker (SFC)", ["sfc", "/scannow"])
 
     def run_chkdsk(self):
+        if self.is_service_running("vgk"):
+            self.chkdsk_blocked_by_vanguard.emit()
+            return
         self._run_admin_command(
             "Check Disk (CHKDSK)",
             ["chkdsk", os.environ.get("SystemDrive", "C:"), "/scan"],
+            finished=self._handle_chkdsk_finished,
         )
 
-    def _run_admin_command(self, action_name: str, command: list[str]):
-        if self.is_admin():
-            self.runner.run(command)
-        else:
-            self.admin_access_required.emit(action_name, command)
+    @staticmethod
+    def is_service_running(service_name: str) -> bool:
+        try:
+            return psutil.win_service_get(service_name).status().casefold() == "running"
+        except (AttributeError, OSError, psutil.Error):
+            return False
 
-    def run_admin_command_elevated(self, command: list[str]):
-        self.runner.run_elevated_visible(command)
+    def _handle_chkdsk_finished(self, exit_code: int, output_text: str):
+        if exit_code != 0 and "access is denied" in output_text.casefold():
+            self.chkdsk_access_denied.emit()
+
+    def _run_admin_command(
+        self,
+        action_name: str,
+        command: list[str],
+        *,
+        finished=None,
+    ):
+        if self.is_admin():
+            self.runner.run(command, finished=finished)
+        else:
+            self.admin_access_required.emit(action_name, command, finished)
+
+    def run_admin_command_elevated(self, command: list[str], *, finished=None):
+        self.runner.run_elevated(command, finished=finished)
 
     @staticmethod
     def run_sleep():

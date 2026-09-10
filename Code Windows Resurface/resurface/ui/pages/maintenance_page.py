@@ -78,6 +78,8 @@ class MaintenancePage(QWidget):
         runner.output_appended.connect(self._append_output)
         actions.temp_cleanup_admin_required.connect(self._confirm_temp_elevation)
         actions.admin_access_required.connect(self._confirm_integrity_elevation)
+        actions.chkdsk_blocked_by_vanguard.connect(self._show_vanguard_chkdsk_warning)
+        actions.chkdsk_access_denied.connect(self._show_generic_chkdsk_warning)
 
     def _build_selectors(self):
         grid = QWidget()
@@ -246,7 +248,12 @@ class MaintenancePage(QWidget):
         if result == QMessageBox.StandardButton.Yes:
             self.actions.retry_temp_cleanup_elevated()
 
-    def _confirm_integrity_elevation(self, action_name: str, command: list[str]):
+    def _confirm_integrity_elevation(
+        self,
+        action_name: str,
+        command: list[str],
+        finished=None,
+    ):
         result = self.show_modal_message(
             QMessageBox.Icon.NoIcon,
             f"{action_name} Needs Admin Access",
@@ -260,8 +267,40 @@ class MaintenancePage(QWidget):
             popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
         if result == QMessageBox.StandardButton.Yes:
-            self.actions.run_admin_command_elevated(command)
+            self.actions.run_admin_command_elevated(command, finished=finished)
             return
         self.runner.set_output(
             f"{action_name} was cancelled. Administrator access is required to run it."
+        )
+
+    def _show_vanguard_chkdsk_warning(self):
+        self.show_modal_message(
+            QMessageBox.Icon.Warning,
+            "Vanguard Is Blocking Check Disk",
+            (
+                "Riot Vanguard's vgk kernel driver is running and can block "
+                "CHKDSK from accessing the Windows volume.\n\n"
+                "The Vanguard tray app may be closed even while this driver remains loaded.\n\n"
+                "Open Command Prompt as administrator, run 'sc stop vgk', then retry "
+                "Check Disk. Vanguard normally reloads after Windows restarts."
+            ),
+            QMessageBox.StandardButton.Ok,
+            QMessageBox.StandardButton.Ok,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+        )
+
+    def _show_generic_chkdsk_warning(self):
+        self.show_modal_message(
+            QMessageBox.Icon.Warning,
+            "Check Disk Access Was Blocked",
+            (
+                "CHKDSK was elevated, but Windows denied access to the volume. "
+                "The command output has been preserved in the Maintenance log.\n\n"
+                "An antivirus, anti-cheat, encryption, backup, or storage filter "
+                "driver may be blocking access. Close or stop the relevant software "
+                "and retry, or run CHKDSK from Windows Recovery."
+            ),
+            QMessageBox.StandardButton.Ok,
+            QMessageBox.StandardButton.Ok,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )

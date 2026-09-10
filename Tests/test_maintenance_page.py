@@ -46,10 +46,39 @@ def test_accepting_integrity_elevation_runs_the_requested_command():
         lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes
     )
     launched = []
-    actions.run_admin_command_elevated = lambda command: launched.append(command)
+    actions.run_admin_command_elevated = (
+        lambda command, **kwargs: launched.append((command, kwargs.get("finished")))
+    )
+    finished = lambda *_args: None
 
-    page._confirm_integrity_elevation("System File Checker (SFC)", ["sfc", "/scannow"])
+    page._confirm_integrity_elevation(
+        "System File Checker (SFC)",
+        ["sfc", "/scannow"],
+        finished,
+    )
 
-    assert launched == [["sfc", "/scannow"]]
+    assert launched == [(["sfc", "/scannow"], finished)]
+    page.deleteLater()
+    runner.deleteLater()
+
+
+def test_chkdsk_blocker_warnings_are_rounded_and_keep_diagnostics_distinct():
+    calls = []
+    page, _actions, runner = _make_page(
+        lambda *args, **kwargs: calls.append((args, kwargs))
+        or QMessageBox.StandardButton.Ok
+    )
+
+    page._show_vanguard_chkdsk_warning()
+    page._show_generic_chkdsk_warning()
+
+    vanguard_args, vanguard_kwargs = calls[0]
+    generic_args, generic_kwargs = calls[1]
+    assert vanguard_args[1] == "Vanguard Is Blocking Check Disk"
+    assert "sc stop vgk" in vanguard_args[2]
+    assert vanguard_kwargs["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
+    assert generic_args[1] == "Check Disk Access Was Blocked"
+    assert "filter driver may be blocking access" in generic_args[2]
+    assert generic_kwargs["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
     page.deleteLater()
     runner.deleteLater()

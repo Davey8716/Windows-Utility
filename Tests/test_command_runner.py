@@ -38,32 +38,9 @@ def test_command_runner_emits_failure_for_missing_executable():
     assert failures == ["Could not start process."]
 
 
-def test_elevation_request_failure_replaces_raw_output_with_clear_message():
+def test_elevation_request_failure_replaces_raw_output_and_calls_handler(monkeypatch):
     _application()
-    runner = CommandRunner()
-    chunks = []
-    finished = []
-    runner.output_appended.connect(chunks.append)
-    runner.finished.connect(lambda code, output: finished.append((code, output)))
-    runner._output_parts = [
-        "Running: chkdsk C:\\n",
-        CommandRunner.ELEVATION_FAILURE_MARKER,
-    ]
-
-    runner._on_process_finished(1223, None)
-
-    assert "Administrator approval was cancelled" in "".join(chunks)
-    assert CommandRunner.ELEVATION_FAILURE_MARKER not in "".join(chunks)
-    assert finished[0][0] == 1223
-    assert "The command was not run." in finished[0][1]
-
-
-def test_visible_elevation_opens_an_administrator_console(monkeypatch):
-    _application()
-    calls = []
-    shell32 = SimpleNamespace(
-        ShellExecuteW=lambda *args: calls.append(args) or 33,
-    )
+    shell32 = SimpleNamespace(ShellExecuteExW=lambda *_args: False)
     monkeypatch.setattr(
         command_runner.ctypes,
         "windll",
@@ -71,11 +48,14 @@ def test_visible_elevation_opens_an_administrator_console(monkeypatch):
     )
     runner = CommandRunner()
     chunks = []
+    finished = []
     runner.output_appended.connect(chunks.append)
 
-    runner.run_elevated_visible(["chkdsk", "C:", "/scan"])
+    runner.run_elevated(
+        ["chkdsk", "C:", "/scan"],
+        finished=lambda code, output: finished.append((code, output)),
+    )
 
-    assert calls == [
-        (None, "runas", command_runner.os.environ.get("COMSPEC", r"C:\Windows\System32\cmd.exe"), "/k chkdsk C: /scan", None, 1)
-    ]
-    assert "Opened an elevated Command Prompt" in "".join(chunks)
+    assert "Administrator approval was cancelled" in "".join(chunks)
+    assert finished[0][0] == 1223
+    assert "The command was not run." in finished[0][1]
