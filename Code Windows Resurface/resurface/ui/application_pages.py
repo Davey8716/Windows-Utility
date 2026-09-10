@@ -141,6 +141,10 @@ class QuickActionsGrid(WindowMessageMixin, QWidget):
         self.empty_state_label: QLabel | None = None
         self.reset_defaults_button: QPushButton | None = None
         self.setAcceptDrops(True)
+        self._availability_timer = QTimer(self)
+        self._availability_timer.setInterval(2_000)
+        self._availability_timer.timeout.connect(self._refresh_dynamic_availability)
+        self._availability_timer.start()
         self.layout = QGridLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
@@ -281,6 +285,13 @@ class QuickActionsGrid(WindowMessageMixin, QWidget):
         """Copy refreshed source icons into icon-only Quick Actions."""
         for action_id in self.buttons:
             self.refresh_action(action_id)
+
+    def _refresh_dynamic_availability(self) -> None:
+        """Keep actions backed by changing Windows state accurate while visible."""
+        for action_id in self.buttons:
+            spec = self.registry.spec(action_id)
+            if spec is not None and spec.available is not None:
+                self.refresh_action(action_id)
 
     def _toggle_expanded(self) -> None:
         self.expanded = not self.expanded
@@ -838,7 +849,22 @@ class ApplicationPageComposer:
         }
         registry.register_dropdown(
             recycle.actions_combo,
-            [QuickActionSpec(recycle_ids[label], label, callback) for label, callback in recycle_callbacks.items()],
+            [
+                QuickActionSpec(
+                    recycle_ids[label],
+                    label,
+                    callback,
+                    available=(
+                        (lambda: (
+                            self.app.recycle_bin_service.has_items(),
+                            "Recycle Bin is empty.",
+                        ))
+                        if label == "Empty Recycle Bin"
+                        else None
+                    ),
+                )
+                for label, callback in recycle_callbacks.items()
+            ],
         )
 
         hover = pages.hover_window_controls_page

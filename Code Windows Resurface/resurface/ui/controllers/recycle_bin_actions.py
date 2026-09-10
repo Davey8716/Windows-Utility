@@ -19,6 +19,9 @@ class RecycleBinActionsController:
         self.run_with_optional_minimize(action)
 
     def empty_recycle_bin(self) -> None:
+        if not self.service.has_items():
+            self._refresh_empty_action()
+            return
         answer = self.app._show_modal_message(
             self.app._message_box_icon("NoIcon"), "Empty Recycle Bin",
             "Permanently delete all items currently in Recycle Bin?",
@@ -32,16 +35,21 @@ class RecycleBinActionsController:
         def action():
             try:
                 succeeded = self.service.empty()
-                self.app._show_timed_message(
-                    self.app._message_box_icon("Information" if succeeded else "NoIcon"),
-                    "Recycle Bin",
-                    "Recycle Bin emptied." if succeeded else "Could not empty Recycle Bin.",
-                    show_close_now_button=True,
-                    popup_corner_radius=6,
-                )
+                if succeeded:
+                    self.app._show_timed_message(
+                        self.app._message_box_icon("Information"), "Recycle Bin",
+                        "Recycle Bin emptied.", show_close_now_button=True,
+                        popup_corner_radius=6,
+                    )
             finally:
                 self.service.close()
+                self._refresh_empty_action()
         self.run_with_optional_minimize(action)
+
+    def _refresh_empty_action(self) -> None:
+        quick_actions = getattr(self.app, "quick_actions", None)
+        if quick_actions is not None:
+            quick_actions.action_changed.emit("recycle.empty")
 
     def run_auto_cleanup(self) -> None:
         if self.app.state.get("recycle_bin_auto_clean_enabled", False):

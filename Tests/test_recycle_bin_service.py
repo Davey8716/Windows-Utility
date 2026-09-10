@@ -37,3 +37,17 @@ def test_invalid_metadata_and_recycle_window_close(tmp_path, monkeypatch):
     monkeypatch.setattr(recycle_module, "find_recycle_bin_explorer_windows", lambda: [{"hwnd": 4, "pid": 9}])
     assert RecycleBinService(windows).close() is True
     assert windows.closed == [4]
+
+
+def test_has_items_uses_the_windows_recycle_bin_count(monkeypatch):
+    class Shell32:
+        @staticmethod
+        def SHQueryRecycleBinW(_root, info):
+            info._obj.i64NumItems = 2
+            return 0
+
+    class Windll:
+        shell32 = Shell32()
+
+    monkeypatch.setattr(recycle_module.ctypes, "windll", Windll(), raising=False)
+    assert RecycleBinService(FakeWindows()).has_items() is True

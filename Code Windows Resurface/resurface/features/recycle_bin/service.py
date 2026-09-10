@@ -16,6 +16,16 @@ from resurface.features.windows.window_management import WindowManagementService
 RECYCLE_BIN_CLSID = "{645FF040-5081-101B-9F08-00AA002F954E}"
 
 
+class SHQUERYRBINFO(ctypes.Structure):
+    """The item-count information returned by ``SHQueryRecycleBinW``."""
+
+    _fields_ = [
+        ("cbSize", ctypes.c_ulong),
+        ("i64Size", ctypes.c_longlong),
+        ("i64NumItems", ctypes.c_longlong),
+    ]
+
+
 def iter_windows_drive_roots():
     try:
         drive_mask = ctypes.windll.kernel32.GetLogicalDrives()
@@ -135,6 +145,20 @@ class RecycleBinService:
             return True
         except Exception as exc:
             print("[RECYCLE BIN] Failed to empty:", exc)
+            return False
+
+    def has_items(self) -> bool:
+        """Return whether Windows reports anything in the current Recycle Bin."""
+        info = SHQUERYRBINFO()
+        info.cbSize = ctypes.sizeof(info)
+        try:
+            result = ctypes.windll.shell32.SHQueryRecycleBinW(None, ctypes.byref(info))
+            if result != 0:
+                print(f"[RECYCLE BIN] SHQueryRecycleBinW returned {result}")
+                return False
+            return info.i64NumItems > 0
+        except Exception as exc:
+            print("[RECYCLE BIN] Failed to query:", exc)
             return False
 
     def cleanup_items_older_than(self, days: int) -> int:

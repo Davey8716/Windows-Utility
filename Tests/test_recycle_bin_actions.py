@@ -27,12 +27,14 @@ class App:
 
 
 class Service:
-    def __init__(self, *, emptied=True, deleted=0):
+    def __init__(self, *, has_items=True, emptied=True, deleted=0):
+        self.has_items_result = has_items
         self.emptied = emptied
         self.deleted = deleted
         self.closed = 0
 
     def open(self): return True
+    def has_items(self): return self.has_items_result
     def empty(self): return self.emptied
     def cleanup_items_older_than(self, _days): return self.deleted
     def close(self):
@@ -50,12 +52,18 @@ def test_empty_cancel_does_not_mutate_service():
     assert app.modal_options == [{"popup_corner_radius": 6}]
 
 
-def test_empty_always_closes_after_attempt():
+def test_empty_always_closes_after_attempt_without_a_failure_popup():
     app, service = App(), Service(emptied=False)
     RecycleBinActionsController(app, service, immediate).empty_recycle_bin()
     assert service.closed == 1
-    assert app.messages[0][0][2] == "Could not empty Recycle Bin."
-    assert app.messages[0][1]["popup_corner_radius"] == 6
+    assert app.messages == []
+
+
+def test_empty_skips_confirmation_when_the_recycle_bin_is_empty():
+    app, service = App(), Service(has_items=False)
+    RecycleBinActionsController(app, service, immediate).empty_recycle_bin()
+    assert app.modals == []
+    assert service.closed == 0
 
 
 def test_manual_cleanup_closes_and_reports_no_matches():
