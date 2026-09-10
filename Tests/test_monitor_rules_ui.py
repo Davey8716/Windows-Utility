@@ -1207,12 +1207,17 @@ def test_import_rules_dialog_is_non_native_and_tracks_current_theme(monkeypatch,
             assert dialog.fileMode() == QFileDialog.FileMode.ExistingFile
             assert dialog.acceptMode() == QFileDialog.AcceptMode.AcceptOpen
             assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+            assert isinstance(dialog, monitor_rules_ui.ImportRulesDialog)
+            assert dialog.minimumSize() == dialog.maximumSize()
             stylesheet = dialog.styleSheet()
             assert monitor_rules_ui.styles.qcolor_css(
                 monitor_rules_ui.styles.WINDOW_BG
             ) in stylesheet
             assert monitor_rules_ui.styles.qcolor_css(
                 monitor_rules_ui.styles.theme_text_color()
+            ) in stylesheet
+            assert monitor_rules_ui.styles.qcolor_css(
+                monitor_rules_ui.styles.SURFACE_BORDER
             ) in stylesheet
     finally:
         monitor_rules_ui.styles.set_theme(True)

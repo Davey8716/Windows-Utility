@@ -36,6 +36,7 @@ from resurface.ui.monitor_rule_editor_dialog import (
     StateIndicatorCheckBox,
     style_button as _style_button,
 )
+from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 
 
 MONITOR_RULES_HELP_TEXT = (
@@ -59,6 +60,35 @@ MONITOR_RULES_POPUP_CORNER_RADIUS = 12
 RULES_FRAME_WIDTH = 685
 RULES_FRAME_LAYOUT_MARGIN = 15
 RULES_FRAME_VISIBLE_INSET = 16
+
+
+class ImportRulesDialog(QFileDialog):
+    """Opaque, themed file picker with the shared rounded popup frame."""
+
+    FRAME_WIDTH = 2
+
+    def __init__(self, parent, directory: str) -> None:
+        super().__init__(
+            parent,
+            "Import Monitor Rules",
+            directory,
+            "Monitor rule backups (*.json);;All files (*)",
+        )
+        self.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+        self.setFileMode(QFileDialog.FileMode.ExistingFile)
+        self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setStyleSheet(styles.file_dialog_style())
+        self.setSizeGripEnabled(False)
+        self.setFixedSize(self.sizeHint())
+
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        paint_opaque_rounded_frame(
+            self,
+            radius=styles.BUTTON_CORNER_RADIUS,
+            frame_width=self.FRAME_WIDTH,
+        )
 
 
 class MonitorRulesPage(WindowMessageMixin, QWidget):
@@ -579,17 +609,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
     def _import_rules(self) -> None:
         backup_dir = self._backup_directory()
         start_dir = str(backup_dir / "Monitor Rules") if backup_dir else ""
-        dialog = QFileDialog(
-            self,
-            "Import Monitor Rules",
-            start_dir,
-            "Monitor rule backups (*.json);;All files (*)",
-        )
-        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
-        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
-        dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        dialog.setStyleSheet(styles.file_dialog_style())
+        dialog = ImportRulesDialog(self, start_dir)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         selected_files = dialog.selectedFiles()
