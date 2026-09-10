@@ -74,7 +74,7 @@ def summary_frame_style() -> str:
 def clipboard_provenance_record_card_style() -> str:
     return f"""
         QFrame#ClipboardProvenanceRecordCard {{
-            background-color: {H.qcolor_css(T.SURFACE_BG)};
+            background-color: {H.qcolor_css(T.WINDOW_BG)};
             border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             border-radius: 8px;
         }}

@@ -265,7 +265,7 @@ def test_page_renders_text_and_file_records_as_rounded_cards():
         cards = page.findChildren(QFrame, "ClipboardProvenanceRecordCard")
         assert len(cards) == 2
         for card in cards:
-            assert "background-color:" in card.styleSheet()
+            assert f"background-color: {styles.qcolor_css(styles.WINDOW_BG)}" in card.styleSheet()
             assert "border: 1px solid" in card.styleSheet()
             assert "border-radius: 8px" in card.styleSheet()
     finally:
