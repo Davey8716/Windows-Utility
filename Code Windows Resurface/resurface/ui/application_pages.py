@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from collections.abc import Callable
 from html import escape
 from pathlib import Path
-from PySide6.QtCore import QMimeData, QPoint, Qt, QTimer
-from PySide6.QtGui import QDrag
+from PySide6.QtCore import QMimeData, QPoint, QRectF, Qt, QTimer
+from PySide6.QtGui import QDrag, QPainter, QPen
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
@@ -28,6 +28,7 @@ from resurface.features.screen_mover.hotkeys import (
 )
 from resurface.features.system.windows_tool_catalog import WindowsToolCatalog
 from resurface.ui import styles
+from resurface.ui import style_tokens
 from resurface.ui.controllers.theme_controller import apply_power_action_dropdown_style
 from resurface.ui.monitor_rules_page import MonitorRulesPage
 from resurface.ui.clipboard_provenance_page import ClipboardProvenancePage
@@ -47,6 +48,42 @@ from resurface.ui.tooltips import tooltip_text
 
 
 QUICK_ACTION_MIME = "application/x-windows-resurface-quick-action"
+
+
+class HoverDataImportDialog(QFileDialog):
+    """Opaque, frameless file picker with a single continuous outer frame."""
+
+    FRAME_WIDTH = 2
+
+    def __init__(self, parent, directory: str) -> None:
+        super().__init__(
+            parent,
+            "Import Hover Data",
+            directory,
+            "Hover data manifest (export_manifest.json);;JSON files (*.json)",
+        )
+        self.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+        self.setFileMode(QFileDialog.FileMode.ExistingFile)
+        self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setStyleSheet(styles.file_dialog_style())
+        self.setSizeGripEnabled(False)
+        self.setFixedSize(self.sizeHint())
+
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        inset = self.FRAME_WIDTH / 2
+        frame = QRectF(self.rect()).adjusted(inset, inset, -inset, -inset)
+        if frame.isEmpty():
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(style_tokens.SURFACE_BORDER)
+        pen.setWidthF(self.FRAME_WIDTH)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        radius = max(0, styles.BUTTON_CORNER_RADIUS - inset)
+        painter.drawRoundedRect(frame, radius, radius)
 
 
 class QuickActionButton(QPushButton):
@@ -868,17 +905,7 @@ class ApplicationPageComposer:
 
     def _import_hover_controls(self) -> None:
         start_dir = self.app.get_default_hover_controls_export_dir()
-        dialog = QFileDialog(
-            self.app,
-            "Import Hover Data",
-            start_dir,
-            "Hover data manifest (export_manifest.json);;JSON files (*.json)",
-        )
-        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
-        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
-        dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        dialog.setStyleSheet(styles.file_dialog_style())
+        dialog = HoverDataImportDialog(self.app, start_dir)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         selected_files = dialog.selectedFiles()

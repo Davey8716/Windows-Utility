@@ -1,9 +1,13 @@
 import os
+import re
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from resurface.ui import styles
+from resurface.ui.application_pages import HoverDataImportDialog
 from resurface.ui.pages.hover_window_controls_page import HoverWindowControlsPage
 
 
@@ -31,3 +35,24 @@ def test_hover_page_uses_master_loaded_settings_values():
     assert not page.enabled_button.isChecked()
     assert not page.taskbar_restore_button.isChecked()
     assert page.dwell_combo.currentData() == 1_000
+
+
+def test_hover_import_dialog_is_opaque_frameless_and_unmasked():
+    app = QApplication.instance() or QApplication([])
+    dialog = HoverDataImportDialog(None, "")
+
+    assert dialog.testOption(dialog.Option.DontUseNativeDialog)
+    assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+    assert not dialog.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+    assert dialog.mask().isEmpty()
+    assert not dialog.isSizeGripEnabled()
+    assert dialog.minimumSize() == dialog.maximumSize()
+    dialog.deleteLater()
+    app.processEvents()
+
+
+def test_shared_file_dialog_style_does_not_draw_an_outer_frame():
+    root_rule = re.search(r"QFileDialog \{(.*?)\}", styles.file_dialog_style(), re.DOTALL)
+
+    assert root_rule is not None
+    assert "border:" not in root_rule.group(1)
