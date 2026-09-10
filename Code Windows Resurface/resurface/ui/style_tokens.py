@@ -130,6 +130,30 @@ def power_action_title_background_color() -> QColor:
 def power_action_title_color() -> QColor:
     return dropdown_text_color()
 
+def power_action_color(severity: str) -> QColor:
+    """Return the theme-aware colour associated with a Power & Session action."""
+    dark_colors = {
+        "placeholder": QColor(26, 118, 214), "blue": QColor(36, 104, 196),
+        "yellow": QColor(196, 162, 32), "amber": QColor(207, 132, 30),
+        "orange": QColor(210, 95, 26), "orange_red": QColor(198, 67, 35),
+        "red": QColor(176, 38, 38),
+    }
+    light_colors = {
+        "placeholder": QColor(42, 134, 230), "blue": QColor(68, 142, 236),
+        "yellow": QColor(224, 196, 74), "amber": QColor(230, 154, 56),
+        "orange": QColor(234, 118, 42), "orange_red": QColor(220, 88, 48),
+        "red": QColor(204, 52, 52),
+    }
+    return (dark_colors if THEME_IS_DARK else light_colors)[severity]
+
+def power_action_item_foreground(label: str, background: QColor) -> QColor:
+    """Return the accessible text colour used on a Power & Session action."""
+    if THEME_IS_DARK and label in {"Sleep", "Log out"}:
+        return TEXT_LIGHT
+    if not THEME_IS_DARK and label == "Shutdown":
+        return QColor(0, 0, 0)
+    return contrasting_text_color(background)
+
 def tooltip_border() -> QColor:
     return SURFACE_BORDER if THEME_IS_DARK else QColor(120, 120, 120)
 

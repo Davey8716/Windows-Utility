@@ -1,17 +1,46 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QComboBox, QMessageBox, QPushButton
+import pytest
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QComboBox, QMessageBox, QPushButton, QWidget
 
 from resurface.ui.application_pages import QuickActionsGrid
+from resurface.ui.controllers.theme_controller import ApplicationThemeController
 from resurface.ui.quick_actions import (
     DEFAULT_QUICK_ACTION_IDS,
     QuickActionRegistry,
     QuickActionSpec,
 )
+from resurface.ui import styles
 from resurface.ui.tooltips import QtTooltipManager, registered_tooltip_text, tooltip_text
 
 
 def _app():
     return QApplication.instance() or QApplication([])
+
+
+@pytest.mark.parametrize(
+    ("is_dark", "expected_colors"),
+    [
+        (True, {"blue": "#2468c4", "yellow": "#c4a220", "orange": "#d25f1a", "orange_red": "#c64323", "red": "#b02626"}),
+        (False, {"blue": "#448eec", "yellow": "#e0c44a", "orange": "#ea762a", "orange_red": "#dc5830", "red": "#cc3434"}),
+    ],
+)
+def test_power_action_palette_is_shared_and_theme_aware(is_dark, expected_colors):
+    styles.set_theme(is_dark)
+    try:
+        for severity, expected_color in expected_colors.items():
+            assert styles.power_action_color(severity).name() == expected_color
+
+        sleep = styles.power_action_color("yellow")
+        shutdown = styles.power_action_color("red")
+        assert styles.power_action_item_foreground("Sleep", sleep) == (
+            styles.TEXT_LIGHT if is_dark else styles.contrasting_text_color(sleep)
+        )
+        assert styles.power_action_item_foreground("Shutdown", shutdown) == (
+            styles.contrasting_text_color(shutdown) if is_dark else QColor(0, 0, 0)
+        )
+    finally:
+        styles.set_theme(True)
 
 
 def test_registry_normalizes_duplicate_unknown_and_malformed_ids():
@@ -81,6 +110,70 @@ def test_grid_limits_to_eight_and_expands_inline():
     app.processEvents()
     assert list(grid.buttons) == ids
     grid.deleteLater()
+
+
+def test_power_quick_actions_keep_their_semantic_tile_style():
+    app = _app()
+    registry = QuickActionRegistry(
+        {"quick_action_ids": ["power.sleep", "standard", "toggle"]},
+        lambda _value: None,
+    )
+    registry.register(QuickActionSpec("power.sleep", "Sleep", lambda: None, severity="yellow"))
+    registry.register(QuickActionSpec("standard", "Standard", lambda: None))
+    registry.register(
+        QuickActionSpec(
+            "toggle",
+            "Toggle",
+            lambda: None,
+            checked=lambda: False,
+            set_checked=lambda _value: None,
+        )
+    )
+    registry.finalize()
+    grid = QuickActionsGrid(registry, lambda _widget, _text: None)
+
+    power = grid.buttons["power.sleep"]
+    assert power.property("quickActionSeverity") == "yellow"
+    assert f"background-color: {styles.power_action_color('yellow').name()};" in power.styleSheet()
+    assert "#c4a220" not in grid.buttons["standard"].styleSheet()
+    assert grid.buttons["toggle"].property("quickActionToggle")
+
+    grid.deleteLater()
+    app.processEvents()
+
+
+def test_live_theme_refresh_preserves_power_quick_action_severity():
+    app = _app()
+    root = QWidget()
+    power = QPushButton("Shutdown", root)
+    power.setProperty("styleFontSize", 13)
+    power.setProperty("quickActionSeverity", "red")
+    standard = QPushButton("Standard", root)
+    standard.setProperty("styleFontSize", 13)
+
+    class ThemeTarget:
+        def apply_theme(self):
+            pass
+
+    controller = ApplicationThemeController(
+        root=root,
+        window_chrome=ThemeTarget(),
+        navigation_shell=ThemeTarget(),
+        refresh_master_backup_path=lambda: None,
+        refresh_connected_drives_style=lambda: None,
+    )
+    try:
+        controller.apply_theme(False)
+        assert f"background-color: {styles.power_action_color('red').name()};" in power.styleSheet()
+        assert f"background-color: {styles.themed_button_bg().name()};" in standard.styleSheet()
+
+        controller.apply_theme(True)
+        assert f"background-color: {styles.power_action_color('red').name()};" in power.styleSheet()
+        assert f"background-color: {styles.themed_button_bg().name()};" in standard.styleSheet()
+    finally:
+        styles.set_theme(True)
+        root.deleteLater()
+        app.processEvents()
 
 
 def test_empty_grid_shows_registered_reset_button_only_when_no_actions_are_pinned():

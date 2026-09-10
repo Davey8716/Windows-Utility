@@ -30,6 +30,7 @@ class QuickActionSpec:
     checked: Callable[[], bool] | None = None
     set_checked: Callable[[bool], None] | None = None
     available: Callable[[], tuple[bool, str]] | None = None
+    severity: str | None = None
 
     @property
     def is_toggle(self) -> bool:

@@ -162,11 +162,17 @@ class QuickActionsGrid(QWidget):
             button = QuickActionButton(spec.action_id, self.registry, self)
             styles.apply_page_control_size(button)
             button.setProperty("styleFontSize", 13)
-            button.setStyleSheet(
-                styles.toggle_button_style(13)
-                if spec.is_toggle
-                else styles.organizing_button_style(13)
-            )
+            if spec.severity:
+                button.setProperty("quickActionSeverity", spec.severity)
+                button.setStyleSheet(
+                    styles.power_action_button_style(13, spec.severity, spec.label)
+                )
+            else:
+                button.setStyleSheet(
+                    styles.toggle_button_style(13)
+                    if spec.is_toggle
+                    else styles.organizing_button_style(13)
+                )
             if spec.is_toggle:
                 button.setCheckable(True)
                 button.setProperty("quickActionToggle", True)
@@ -692,6 +698,13 @@ class ApplicationPageComposer:
             "Restart": self.app.maintenance_actions.run_restart,
             "Shutdown": self.app.maintenance_actions.run_shutdown,
         }
+        power_severities = {
+            "Lock PC": "blue",
+            "Sleep": "yellow",
+            "Log out": "orange",
+            "Restart": "orange_red",
+            "Shutdown": "red",
+        }
         registry.register_dropdown(
             ui.power_actions_combo,
             [
@@ -700,6 +713,7 @@ class ApplicationPageComposer:
                     name,
                     lambda name=name, callback=callback: self.app.external_drive_controller.confirm_power_action(name, callback),
                     "Uses the normal power-action and external-drive confirmation.",
+                    severity=power_severities[name],
                 )
                 for name, callback in power_callbacks.items()
             ],

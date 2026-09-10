@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QComboBox,
     QKeySequenceEdit,
@@ -19,44 +18,22 @@ from resurface.ui import styles
 from resurface.ui.window_chrome import SeverityComboItemDelegate
 
 
-def _power_action_item_colors() -> dict[str, QColor]:
-    return {
-        "placeholder": QColor(26, 118, 214) if styles.THEME_IS_DARK else QColor(42, 134, 230),
-        "blue": QColor(36, 104, 196) if styles.THEME_IS_DARK else QColor(68, 142, 236),
-        "yellow": QColor(196, 162, 32) if styles.THEME_IS_DARK else QColor(224, 196, 74),
-        "amber": QColor(207, 132, 30) if styles.THEME_IS_DARK else QColor(230, 154, 56),
-        "orange": QColor(210, 95, 26) if styles.THEME_IS_DARK else QColor(234, 118, 42),
-        "orange_red": QColor(198, 67, 35) if styles.THEME_IS_DARK else QColor(220, 88, 48),
-        "red": QColor(176, 38, 38) if styles.THEME_IS_DARK else QColor(204, 52, 52),
-    }
-
-
-def _power_action_item_foreground(label: str, background: QColor) -> QColor:
-    if styles.THEME_IS_DARK and label in {"Sleep", "Log out"}:
-        return styles.TEXT_LIGHT
-    if not styles.THEME_IS_DARK and label == "Shutdown":
-        return QColor(0, 0, 0)
-    return styles.contrasting_text_color(background)
-
-
 def apply_power_action_dropdown_style(combo: QComboBox) -> None:
     font_size = styles.coerce_font_size(combo.property("styleFontSize"), 14) or 14
     combo.setStyleSheet(styles.power_combo_style(font_size))
 
     severity_map = combo.property("powerActionSeverityMap") or {}
     placeholder_text = combo.property("powerActionPlaceholder") or ""
-    color_map = _power_action_item_colors()
-
     for row in range(combo.count()):
         label = combo.itemText(row)
         severity = "placeholder" if label == placeholder_text else severity_map.get(label)
         if not severity:
             continue
-        background = color_map[severity]
+        background = styles.power_action_color(severity)
         combo.setItemData(row, background, Qt.ItemDataRole.BackgroundRole)
         combo.setItemData(
             row,
-            _power_action_item_foreground(label, background),
+            styles.power_action_item_foreground(label, background),
             Qt.ItemDataRole.ForegroundRole,
         )
 
@@ -153,7 +130,12 @@ class ApplicationThemeController:
             font_size = styles.coerce_font_size(
                 button.property("styleFontSize"), 14
             ) or 14
-            if button.property("quickActionToggle"):
+            severity = button.property("quickActionSeverity")
+            if severity:
+                button.setStyleSheet(
+                    styles.power_action_button_style(font_size, severity, button.text())
+                )
+            elif button.property("quickActionToggle"):
                 button.setStyleSheet(styles.toggle_button_style(font_size=font_size))
             else:
                 button.setStyleSheet(styles.organizing_button_style(font_size=font_size))

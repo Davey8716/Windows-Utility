@@ -56,6 +56,42 @@ def organizing_button_style(font_size: int | None = None) -> str:
 def toggle_button_style(font_size: int | None = None) -> str:
     return organizing_button_style(font_size=font_size)
 
+def power_action_button_style(
+    font_size: int | None, severity: str, label: str
+) -> str:
+    """Style a Quick Action tile with its Power & Session semantic colour."""
+    font_size = H.coerce_font_size(font_size)
+    font_rule = f"font-size: {font_size}px;" if font_size is not None else ""
+    background = T.power_action_color(severity)
+    foreground = T.power_action_item_foreground(label, background)
+    hover = background.lighter(112)
+    pressed = background.darker(118)
+    pressed_hover = background.darker(108)
+    border = background.lighter(135) if T.THEME_IS_DARK else background.darker(130)
+    return f"""
+        QPushButton {{
+            text-align: center;
+            padding: 4px 8px;
+            {font_rule}
+            font-weight: bold;
+            color: {H.qcolor_css(foreground)};
+            border: 1px solid {H.qcolor_css(border)};
+            border-radius: {T.BUTTON_CORNER_RADIUS}px;
+            background-color: {H.qcolor_css(background)};
+        }}
+        QPushButton:hover {{ background-color: {H.qcolor_css(hover)}; }}
+        QPushButton:pressed {{
+            background-color: {H.qcolor_css(pressed)};
+            border: 1px solid {H.qcolor_css(border)};
+        }}
+        QPushButton:pressed:hover {{ background-color: {H.qcolor_css(pressed_hover)}; }}
+        QPushButton:disabled {{
+            color: {H.qcolor_css(T.themed_button_disabled_text())};
+            border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+        }}
+    """
+
 def hotkey_edit_style(font_size: int = 13) -> str:
     """Style the Screen Mover shortcut editor as a persistent surface field."""
     font_size = H.coerce_font_size(font_size, 13) or 13
