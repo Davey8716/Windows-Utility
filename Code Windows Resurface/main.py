@@ -2,9 +2,7 @@
 
 import sys
 from pathlib import Path
-
 from PySide6.QtWidgets import QApplication
-
 from resurface.core.instance_runtime import ensure_single_instance
 from resurface.ui.application_window import UtilityControlApp
 
