@@ -45,6 +45,20 @@ def test_split_pages_are_independent_widgets():
             page.deleteLater()
 
 
+def test_recycle_bin_empty_action_is_disabled_when_no_items_exist():
+    _app()
+    page = RecycleBinPage({}, lambda _widget, _text: None)
+    try:
+        page.set_empty_action_availability_checker(lambda: False)
+        index = page.actions_combo.findText("Empty Recycle Bin")
+        assert not page.actions_combo.model().item(index).isEnabled()
+
+        page.set_empty_action_availability_checker(lambda: True)
+        assert page.actions_combo.model().item(index).isEnabled()
+    finally:
+        page.deleteLater()
+
+
 def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
     app = _app()
     page = FolderUtilitiesPage(lambda _widget, _text: None)

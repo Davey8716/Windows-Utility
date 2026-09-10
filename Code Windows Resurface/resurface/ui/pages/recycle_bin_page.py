@@ -1,4 +1,6 @@
-from PySide6.QtCore import Qt, Signal
+from collections.abc import Callable
+
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QGridLayout, QLabel, QWidget, QVBoxLayout, QSizePolicy
 
 from resurface.ui import styles
@@ -22,6 +24,10 @@ class RecycleBinPage(PageControls):
         )
         layout.addWidget(actions, 0, 0)
         self.actions_combo = actions
+        self._has_items_checker: Callable[[], bool] | None = None
+        self._empty_action_timer = QTimer(self)
+        self._empty_action_timer.setInterval(2_000)
+        self._empty_action_timer.timeout.connect(self.refresh_empty_action_availability)
         self.register_tooltip(actions, tooltip_text("cleanup_actions"))
         enabled = bool(settings.get("recycle_bin_auto_clean_enabled", False))
         toggle = self.make_toggle_button("Auto-clean", enabled)
@@ -47,6 +53,26 @@ class RecycleBinPage(PageControls):
         self._age_row.setVisible(enabled)
         toggle.toggled.connect(self._enabled_changed)
         age.currentTextChanged.connect(self._age_changed)
+
+    def set_empty_action_availability_checker(
+        self, has_items: Callable[[], bool]
+    ) -> None:
+        """Update the disabled state from the live Windows Recycle Bin state."""
+        self._has_items_checker = has_items
+        self.refresh_empty_action_availability()
+        self._empty_action_timer.start()
+
+    def refresh_empty_action_availability(self) -> None:
+        if self._has_items_checker is None:
+            return
+        try:
+            has_items = bool(self._has_items_checker())
+        except Exception:
+            has_items = False
+        index = self.actions_combo.findText("Empty Recycle Bin")
+        item = self.actions_combo.model().item(index)
+        if item is not None:
+            item.setEnabled(has_items)
 
     def _enabled_changed(self, enabled: bool) -> None:
         self._settings["recycle_bin_auto_clean_enabled"] = bool(enabled)

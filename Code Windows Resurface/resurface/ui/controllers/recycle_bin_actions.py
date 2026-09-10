@@ -50,6 +50,9 @@ class RecycleBinActionsController:
         quick_actions = getattr(self.app, "quick_actions", None)
         if quick_actions is not None:
             quick_actions.action_changed.emit("recycle.empty")
+        recycle_page = getattr(getattr(self.app, "pages", None), "recycle_bin_page", None)
+        if recycle_page is not None:
+            recycle_page.refresh_empty_action_availability()
 
     def run_auto_cleanup(self) -> None:
         if self.app.state.get("recycle_bin_auto_clean_enabled", False):

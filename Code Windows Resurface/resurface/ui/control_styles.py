@@ -377,6 +377,10 @@ def _modern_combo_style(
             padding: 6px 10px;
             border: none;
         }}
+        QComboBox QAbstractItemView::item:disabled {{
+            color: {H.qcolor_css(disabled_text)};
+            background-color: {H.qcolor_css(popup_background)};
+        }}
         QComboBox QAbstractItemView::item:selected {{
             background-color: {H.qcolor_css(hover)};
             color: {H.qcolor_css(popup_text)};
