@@ -1,9 +1,5 @@
 Wording inside tooltips needs tidying up re/ formatting /n usage etc + padding needs improving
 
-Make the Delete button inside each monitor rules entry be an X to mirror the logic of the clipboard provencenace whilst retianing the yes cancel popup
-
-Round the scroll bar slide corners and widen it slightly
-
 Make the add executable popup framless to match the others
 
 Round the corners of the import rules pyside gui and frame it to match the rest

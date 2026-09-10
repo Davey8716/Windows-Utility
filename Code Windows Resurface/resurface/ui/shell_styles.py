@@ -272,16 +272,16 @@ def window_style() -> str:
         }}
         QScrollBar:vertical {{
             background-color: {H.qcolor_css(T.SURFACE_BG)};
-            width: 12px;
+            width: 14px;
             margin: 2px 2px 2px 2px;
             border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
-            border-radius: 6px;
+            border-radius: 7px;
         }}
         QScrollBar::handle:vertical {{
             background-color: {H.qcolor_css(T.SURFACE_HOVER)};
             min-height: 28px;
             border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
-            border-radius: 6px;
+            border-radius: 7px;
         }}
         QScrollBar::handle:vertical:hover {{
             background-color: {H.qcolor_css(T.STATUS_ACCENT)};

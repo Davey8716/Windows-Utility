@@ -240,6 +240,14 @@ def test_styles_facade_delegates_to_focused_modules():
     assert styles.organizing_button_style is control_styles.organizing_button_style
 
 
+def test_window_style_uses_wide_rounded_vertical_scrollbars():
+    stylesheet = styles.window_style()
+
+    assert "QScrollBar:vertical" in stylesheet
+    assert "width: 14px;" in stylesheet
+    assert stylesheet.count("border-radius: 7px;") == 2
+
+
 def test_styles_facade_exposes_live_theme_tokens_after_theme_changes():
     styles.set_theme(False)
 
