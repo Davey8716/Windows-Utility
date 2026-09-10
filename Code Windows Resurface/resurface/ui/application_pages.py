@@ -782,7 +782,7 @@ class ApplicationPageComposer:
                 QuickActionSpec(
                     f"power.{name.lower().replace(' ', '_')}",
                     name,
-                    lambda name=name, callback=callback: self.app.external_drive_controller.confirm_power_action(name, callback),
+                    lambda _checked=False, name=name, callback=callback: self.app.external_drive_controller.confirm_power_action(name, callback),
                     "Uses the normal power-action and external-drive confirmation.",
                     severity=power_severities[name],
                 )
@@ -877,7 +877,7 @@ class ApplicationPageComposer:
                     QuickActionSpec(
                         f"maintenance.{label.lower().replace(' ', '_').replace('/', '_')}",
                         label,
-                        lambda label=label, callback=callback: (maintenance.set_output_context(label), callback()),
+                        lambda _checked=False, label=label, callback=callback: (maintenance.set_output_context(label), callback()),
                     )
                     for label, callback in action_map.items()
                 ],
@@ -890,7 +890,7 @@ class ApplicationPageComposer:
                 [
                     QuickActionSpec(
                         f"windows.{tool.key}", tool.label,
-                        lambda tool=tool: windows.invoke_tool(tool),
+                        lambda _checked=False, tool=tool: windows.invoke_tool(tool),
                         available=lambda tool=tool: windows.tool_availability(tool),
                     )
                     for tool in tools_by_label.values()
