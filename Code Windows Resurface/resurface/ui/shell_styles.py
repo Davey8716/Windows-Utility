@@ -125,6 +125,7 @@ def navigation_list_style() -> str:
             border: none;
             border-top: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             border-right: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
+            border-top-right-radius: {T.BUTTON_CORNER_RADIUS}px;
             outline: none;
             padding: 12px 8px;
             font-size: 13px;

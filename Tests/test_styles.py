@@ -281,6 +281,7 @@ def test_navigation_panel_joins_its_top_and_right_accent_lines(is_dark):
 
     assert f"border-top: 1px solid {border};" in stylesheet
     assert f"border-right: 1px solid {border};" in stylesheet
+    assert f"border-top-right-radius: {styles.BUTTON_CORNER_RADIUS}px;" in stylesheet
 
 
 @pytest.mark.parametrize("is_dark", [True, False])
