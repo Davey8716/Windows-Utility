@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from resurface.features.recycle_bin import service as recycle_module
 from resurface.features.recycle_bin.service import RecycleBinService, delete_recycle_bin_entry, read_recycle_bin_deleted_at
@@ -51,3 +51,17 @@ def test_has_items_uses_the_windows_recycle_bin_count(monkeypatch):
 
     monkeypatch.setattr(recycle_module.ctypes, "windll", Windll(), raising=False)
     assert RecycleBinService(FakeWindows()).has_items() is True
+
+
+def test_cleanup_age_rule_availability_uses_recycle_metadata(tmp_path, monkeypatch):
+    now = datetime.now(timezone.utc)
+    old = tmp_path / "$IOLD"
+    old.write_bytes(b"\0" * 16 + _filetime(now - timedelta(days=20)).to_bytes(8, "little"))
+    recent = tmp_path / "$IRECENT"
+    recent.write_bytes(b"\0" * 16 + _filetime(now - timedelta(days=3)).to_bytes(8, "little"))
+    monkeypatch.setattr(recycle_module, "iter_recycle_bin_metadata_files", lambda: iter((old, recent)))
+
+    service = RecycleBinService(FakeWindows())
+    assert service.cleanup_age_rule_availability() == {7: True, 14: True, 30: False}
+    assert service.has_items_older_than(14) is True
+    assert service.has_items_older_than(30) is False

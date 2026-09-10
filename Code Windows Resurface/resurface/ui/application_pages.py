@@ -1200,6 +1200,9 @@ class ApplicationPageComposer:
         page.action_requested.connect(lambda name: actions[name]())
         page.settings_changed.connect(self._recycle_settings_changed)
         page.set_empty_action_availability_checker(app.recycle_bin_service.has_items)
+        page.set_cleanup_age_availability_checker(
+            app.recycle_bin_service.cleanup_age_rule_availability
+        )
 
     def _recycle_settings_changed(self, settings: dict) -> None:
         old_days = self.state.get("recycle_bin_age_rule_days")

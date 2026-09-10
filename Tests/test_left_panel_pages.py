@@ -59,6 +59,28 @@ def test_recycle_bin_empty_action_is_disabled_when_no_items_exist():
         page.deleteLater()
 
 
+def test_recycle_bin_disables_unavailable_cleanup_age_choices():
+    _app()
+    page = RecycleBinPage({}, lambda _widget, _text: None)
+    try:
+        page.set_cleanup_age_availability_checker(
+            lambda: {7: True, 14: False, 30: False}
+        )
+        assert page.age_combo.isEnabled()
+        assert page.age_combo.model().item(page.age_combo.findText("7 days")).isEnabled()
+        assert not page.age_combo.model().item(page.age_combo.findText("14 days")).isEnabled()
+        assert not page.age_combo.model().item(page.age_combo.findText("30 days")).isEnabled()
+        run_index = page.actions_combo.findText("Run Auto-Clean Now")
+        page.age_combo.setCurrentText("7 days")
+        assert page.actions_combo.model().item(run_index).isEnabled()
+
+        page.set_cleanup_age_availability_checker(lambda: {7: False, 14: False, 30: False})
+        assert not page.age_combo.isEnabled()
+        assert not page.actions_combo.model().item(run_index).isEnabled()
+    finally:
+        page.deleteLater()
+
+
 def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
     app = _app()
     page = FolderUtilitiesPage(lambda _widget, _text: None)
