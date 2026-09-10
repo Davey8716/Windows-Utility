@@ -6,4 +6,3 @@ Button Sizes in general, colours relative to state
 
 The Black writing overall is horrible non contrasty on the blue buttons, need a different shade of black, use a greyer font for all the qpushbuttons 
 whilst light them is enabled
-

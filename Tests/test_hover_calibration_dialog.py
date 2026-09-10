@@ -149,8 +149,9 @@ class CalibrationDialogTests(unittest.TestCase):
             update,
         )
         def close_dialog():
-            with patch(
-                "resurface.features.hover_window_controls.ui.calibration.QMessageBox.question",
+            with patch.object(
+                dialog,
+                "_show_modal_message",
                 return_value=QMessageBox.StandardButton.Discard,
             ):
                 dialog.close()
@@ -211,23 +212,17 @@ class CalibrationDialogTests(unittest.TestCase):
         self.assertIn("(No JPEG)", dialog.action_selector.itemText(1))
         self.assertEqual(dialog.action_selector.itemText(2), "Close")
 
-    def test_only_one_four_field_editor_is_visible_and_synchronized(self):
+    def test_red_drag_updates_the_selected_position_without_coordinate_editor(self):
         dialog = self.make_dialog()
-        self.assertEqual(len(dialog.findChildren(QSpinBox)), 4)
+        self.assertEqual(len(dialog.findChildren(QSpinBox)), 0)
         dialog.canvas.rectChanged.emit((80, 10, 120, 45))
         self.assertEqual(dialog.current_rect(), (80, 10, 120, 45))
-        self.assertEqual(
-            [spin.value() for spin in dialog.coordinate_controls],
-            [80, 10, 40, 35],
-        )
-
-        dialog.coordinate_controls[0].setValue(90)
-
-        self.assertEqual(dialog.canvas.working_rect, (90, 10, 130, 45))
+        self.assertEqual(dialog.canvas.working_rect, (80, 10, 120, 45))
+        self.assertTrue(dialog._dirty)
 
     def test_save_updates_position_and_keeps_dialog_open(self):
         dialog = self.make_dialog()
-        dialog.coordinate_controls[0].setValue(90)
+        dialog.canvas.rectChanged.emit((90, 5, 120, 35))
 
         dialog.save_button.click()
 
@@ -246,7 +241,7 @@ class CalibrationDialogTests(unittest.TestCase):
         dialog = self.make_dialog()
         self.assertEqual(dialog.canvas.reference_rect, grouped_rect)
 
-        dialog.coordinate_controls[0].setValue(90)
+        dialog.canvas.rectChanged.emit((90, 5, 120, 35))
         dialog.save_button.click()
 
         self.assertEqual(dialog.canvas.reference_rect, grouped_rect)
@@ -254,17 +249,29 @@ class CalibrationDialogTests(unittest.TestCase):
 
     def test_dirty_switch_can_cancel_or_discard(self):
         dialog = self.make_dialog()
-        dialog.coordinate_controls[0].setValue(90)
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.question",
+        dialog.canvas.rectChanged.emit((90, 5, 120, 35))
+        with patch.object(
+            dialog,
+            "_show_modal_message",
             return_value=QMessageBox.StandardButton.Cancel,
-        ):
+        ) as show_modal:
             dialog.action_selector.setCurrentIndex(1)
         self.assertEqual(dialog.action_selector.currentIndex(), 0)
         self.assertEqual(dialog.current_rect(), (90, 5, 120, 35))
+        show_modal.assert_called_once_with(
+            QMessageBox.Icon.NoIcon,
+            "Save position changes?",
+            "Save the current action position before continuing?",
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+            popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
+        )
 
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.question",
+        with patch.object(
+            dialog,
+            "_show_modal_message",
             return_value=QMessageBox.StandardButton.Discard,
         ):
             dialog.action_selector.setCurrentIndex(1)
@@ -274,17 +281,19 @@ class CalibrationDialogTests(unittest.TestCase):
     def test_dirty_variant_switch_can_cancel_then_discard(self):
         dialog = self.make_dialog()
         dialog.action_selector.setCurrentIndex(1)
-        dialog.coordinate_controls[0].setValue(80)
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.question",
+        dialog.canvas.rectChanged.emit((80, 5, 110, 35))
+        with patch.object(
+            dialog,
+            "_show_modal_message",
             return_value=QMessageBox.StandardButton.Cancel,
         ):
             dialog.variant_selector.setCurrentIndex(1)
         self.assertEqual(dialog.variant_selector.currentIndex(), 0)
         self.assertEqual(dialog.current_rect(), (80, 5, 110, 35))
 
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.question",
+        with patch.object(
+            dialog,
+            "_show_modal_message",
             return_value=QMessageBox.StandardButton.Discard,
         ):
             dialog.variant_selector.setCurrentIndex(1)
@@ -295,16 +304,18 @@ class CalibrationDialogTests(unittest.TestCase):
         dialog = self.make_dialog()
         dialog.show()
         self.app.processEvents()
-        dialog.coordinate_controls[0].setValue(90)
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.question",
+        dialog.canvas.rectChanged.emit((90, 5, 120, 35))
+        with patch.object(
+            dialog,
+            "_show_modal_message",
             return_value=QMessageBox.StandardButton.Cancel,
         ):
             self.assertFalse(dialog.close())
         self.assertTrue(dialog.isVisible())
 
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.question",
+        with patch.object(
+            dialog,
+            "_show_modal_message",
             return_value=QMessageBox.StandardButton.Save,
         ):
             self.assertTrue(dialog.close())
@@ -321,16 +332,17 @@ class CalibrationDialogTests(unittest.TestCase):
         self.assertFalse(dialog.save_button.isEnabled())
         self.assertIn("missing", dialog.status_label.text())
 
-    def test_uses_host_theme_and_explicit_coordinate_labels(self):
+    def test_uses_host_theme_without_coordinate_editor(self):
         styles.set_theme(False)
         self.addCleanup(styles.set_theme, True)
         dialog = self.make_dialog()
         self.assertIn("#dde3ea", dialog.styleSheet())
         self.assertIn("#111820", dialog.styleSheet())
-        horizontal = dialog.findChild(QLabel, "horizontalCoordinateHeader")
-        vertical = dialog.findChild(QLabel, "verticalCoordinateHeader")
-        self.assertEqual(horizontal.text(), "X (Horizontal)")
-        self.assertEqual(vertical.text(), "Y (Vertical)")
+        self.assertEqual(len(dialog.findChildren(QSpinBox)), 0)
+        self.assertNotIn(
+            "Selected action position",
+            [label.text() for label in dialog.findChildren(QLabel)],
+        )
 
     def test_has_fixed_size_and_no_native_chrome(self):
         dialog = self.make_dialog()

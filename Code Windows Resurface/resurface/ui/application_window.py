@@ -72,7 +72,7 @@ class UtilityControlApp(
     WindowMessageMixin,
     QMainWindow,
 ):
-    APP_VERSION = "0.1.0"
+    APP_VERSION = "1.0.0"
     WINDOW_WIDTH = 1000
     WINDOW_HEIGHT = 850
     SIDEBAR_WIDTH = 220

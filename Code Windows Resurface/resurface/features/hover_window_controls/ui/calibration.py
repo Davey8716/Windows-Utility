@@ -20,14 +20,12 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
     QScrollArea,
-    QSpinBox,
     QVBoxLayout,
 )
 
@@ -53,7 +51,7 @@ _ACTION_ORDER = (
     CaptionAction.CLOSE,
 )
 _TARGET_COLOR = QColor("#ff4050")
-CALIBRATION_DIALOG_SIZE = (650, 530)
+CALIBRATION_DIALOG_SIZE = (650, 438)
 _CLOSE_ONLY_DIALOG_FLAGS = (
     Qt.WindowType.Dialog
     | Qt.WindowType.CustomizeWindowHint
@@ -107,8 +105,7 @@ QDialog#CalibrationDialog QGroupBox::title {{
     left: 8px;
     padding: 0 4px;
 }}
-QDialog#CalibrationDialog QComboBox,
-QDialog#CalibrationDialog QSpinBox {{
+QDialog#CalibrationDialog QComboBox {{
     background-color: {field_bg};
     color: {field_text};
     border: 1px solid {field_border};
@@ -123,8 +120,7 @@ QDialog#CalibrationDialog QPushButton {{
     padding: 5px 10px;
     font-weight: bold;
 }}
-QDialog#CalibrationDialog QComboBox:hover,
-QDialog#CalibrationDialog QSpinBox:hover {{
+QDialog#CalibrationDialog QComboBox:hover {{
     background-color: {surface_hover};
     border-color: {field_border};
 }}
@@ -134,8 +130,7 @@ QDialog#CalibrationDialog QPushButton:hover {{
 QDialog#CalibrationDialog QPushButton:pressed {{
     background-color: {button_pressed};
 }}
-QDialog#CalibrationDialog QComboBox:disabled,
-QDialog#CalibrationDialog QSpinBox:disabled {{
+QDialog#CalibrationDialog QComboBox:disabled {{
     background-color: {surface_bg};
     color: {muted};
 }}
@@ -515,21 +510,6 @@ class LiveCalibrationDialog(QDialog):
         scroll.setWidgetResizable(False)
         layout.addWidget(scroll)
 
-        group = QGroupBox("Selected action position")
-        grid = QGridLayout(group)
-        self.coordinate_controls = []
-        for column, label in enumerate(
-            ("X (Horizontal)", "Y (Vertical)", "Width", "Height")
-        ):
-            grid.addWidget(QLabel(label), 0, column)
-            spin = QSpinBox()
-            spin.setRange(0, 0)
-            spin.setEnabled(False)
-            spin.valueChanged.connect(self._coordinates_changed)
-            grid.addWidget(spin, 1, column)
-            self.coordinate_controls.append(spin)
-        layout.addWidget(group)
-
         button_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save
             | QDialogButtonBox.StandardButton.Cancel
@@ -581,7 +561,6 @@ class LiveCalibrationDialog(QDialog):
                 action,
                 rect,
             )
-            self._set_coordinates(rect)
         finally:
             self._updating = False
         self.status_label.setText(
@@ -592,32 +571,6 @@ class LiveCalibrationDialog(QDialog):
             )
         )
 
-    def _set_coordinates(
-        self,
-        rect: Optional[tuple[int, int, int, int]],
-    ) -> None:
-        width = self.snapshot.image.width()
-        height = self.snapshot.image.height()
-        for spin in self.coordinate_controls:
-            spin.setEnabled(rect is not None)
-        if rect is None:
-            return
-        x, y, right, bottom = rect
-        values = (x, y, right - x, bottom - y)
-        ranges = (
-            (0, width - 1),
-            (0, height - 1),
-            (1, width - x),
-            (1, height - y),
-        )
-        for spin, value, (minimum, maximum) in zip(
-            self.coordinate_controls,
-            values,
-            ranges,
-        ):
-            spin.setRange(minimum, maximum)
-            spin.setValue(value)
-
     def _include_changed(self, checked: bool) -> None:
         if self._updating:
             return
@@ -627,18 +580,10 @@ class LiveCalibrationDialog(QDialog):
         else:
             self._included.discard(action)
 
-    def _coordinates_changed(self, _value: int) -> None:
-        if self._updating or self.current_action not in self._rects:
-            return
-        x, y, width, height = (
-            spin.value() for spin in self.coordinate_controls
-        )
-        rect = (
-            x,
-            y,
-            min(x + width, self.snapshot.image.width()),
-            min(y + height, self.snapshot.image.height()),
-        )
+    def _canvas_changed(
+        self,
+        rect: tuple[int, int, int, int],
+    ) -> None:
         self._rects[self.current_action] = rect
         self.canvas.set_working_rect(rect)
         self._included.add(self.current_action)
@@ -646,21 +591,6 @@ class LiveCalibrationDialog(QDialog):
         try:
             self.include_checkbox.setEnabled(True)
             self.include_checkbox.setChecked(True)
-            self._set_coordinates(rect)
-        finally:
-            self._updating = False
-
-    def _canvas_changed(
-        self,
-        rect: tuple[int, int, int, int],
-    ) -> None:
-        self._rects[self.current_action] = rect
-        self._included.add(self.current_action)
-        self._updating = True
-        try:
-            self.include_checkbox.setEnabled(True)
-            self.include_checkbox.setChecked(True)
-            self._set_coordinates(rect)
         finally:
             self._updating = False
         self.status_label.setText("Manual box included.")
@@ -819,28 +749,6 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         scroll.setWidget(self.canvas)
         scroll.setWidgetResizable(False)
         layout.addWidget(scroll)
-
-        group = QGroupBox("Selected action position")
-        grid = QGridLayout(group)
-        headers = (
-            ("X (Horizontal)", "horizontalCoordinateHeader"),
-            ("Y (Vertical)", "verticalCoordinateHeader"),
-            ("Width", "widthCoordinateHeader"),
-            ("Height", "heightCoordinateHeader"),
-        )
-        self.coordinate_controls = []
-        for column, (label, object_name) in enumerate(headers):
-            header = QLabel(label)
-            header.setObjectName(object_name)
-            grid.addWidget(header, 0, column)
-            spin = QSpinBox()
-            spin.setObjectName(f"{object_name}Value")
-            spin.setRange(0, 0)
-            spin.setEnabled(False)
-            grid.addWidget(spin, 1, column)
-            self.coordinate_controls.append(spin)
-            spin.valueChanged.connect(self._coordinates_changed)
-        layout.addWidget(group)
 
         footer = QHBoxLayout()
         self.clear_button: Optional[QPushButton] = None
@@ -1042,14 +950,15 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
     def _confirm_transition(self) -> bool:
         if not self._dirty:
             return True
-        answer = QMessageBox.question(
-            self,
+        answer = self._show_modal_message(
+            QMessageBox.Icon.NoIcon,
             "Save position changes?",
             "Save the current action position before continuing?",
             QMessageBox.StandardButton.Save
             | QMessageBox.StandardButton.Discard
             | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
+            popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
         )
         if answer == QMessageBox.StandardButton.Save:
             return self._save_current(show_success=False)
@@ -1228,7 +1137,6 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             return
         self._selected_asset = asset
         self._dirty = False
-        self._set_coordinate_values(asset.rect)
         self.save_button.setEnabled(True)
         self.status_label.setText(f"Loaded {asset.image_path.name}.")
         self.setWindowTitle(
@@ -1239,83 +1147,20 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         self._selected_asset = None
         self._dirty = False
         self.canvas.clear_asset()
-        self._updating = True
-        try:
-            for spin in self.coordinate_controls:
-                spin.setRange(0, 0)
-                spin.setValue(0)
-                spin.setEnabled(False)
-        finally:
-            self._updating = False
         self.save_button.setEnabled(False)
         self.status_label.setText(message)
         self.setWindowTitle("Calibration Explorer")
 
-    def _set_coordinate_values(
-        self,
-        rect: tuple[int, int, int, int],
-    ) -> None:
-        if self._selected_asset is None:
-            return
-        x, y = rect[0], rect[1]
-        values = (x, y, rect[2] - x, rect[3] - y)
-        width, height = self._selected_asset.crop_size
-        self._updating = True
-        try:
-            ranges = (
-                (0, width - 1),
-                (0, height - 1),
-                (1, width - x),
-                (1, height - y),
-            )
-            for spin, value, limits in zip(
-                self.coordinate_controls,
-                values,
-                ranges,
-            ):
-                spin.setEnabled(True)
-                spin.setRange(*limits)
-                spin.setValue(value)
-        finally:
-            self._updating = False
-
     def current_rect(self) -> Optional[tuple[int, int, int, int]]:
         if self._selected_asset is None:
             return None
-        x, y, width, height = (
-            spin.value() for spin in self.coordinate_controls
-        )
-        return (x, y, x + width, y + height)
-
-    def _coordinates_changed(self, _value: int) -> None:
-        if self._updating or self._selected_asset is None:
-            return
-        rect = self.current_rect()
-        if rect is None:
-            return
-        width, height = self._selected_asset.crop_size
-        x, y = rect[0], rect[1]
-        self._updating = True
-        try:
-            self.coordinate_controls[2].setRange(1, width - x)
-            self.coordinate_controls[3].setRange(1, height - y)
-        finally:
-            self._updating = False
-        rect = self.current_rect()
-        if rect is not None:
-            self.canvas.set_working_rect(rect)
-            self._dirty = rect != self._selected_asset.rect
-            self.status_label.setText(
-                "Position changed. Save to update the tracked manifest."
-                if self._dirty
-                else f"Loaded {self._selected_asset.image_path.name}."
-            )
+        return self.canvas.working_rect
 
     def _canvas_changed(
         self,
         rect: tuple[int, int, int, int],
     ) -> None:
-        self._set_coordinate_values(rect)
+        self.canvas.set_working_rect(rect)
         if self._selected_asset is not None:
             self._dirty = rect != self._selected_asset.rect
             self.status_label.setText(
