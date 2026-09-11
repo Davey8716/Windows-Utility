@@ -156,6 +156,16 @@ class OrganisingActionsController:
             )
 
     def backup_taskbar_apps(self) -> None:
+        answer = self.show_modal_message(
+            self.app._message_box_icon("Question"),
+            "Backup Taskbar",
+            "Back up the current pinned taskbar shortcuts?",
+            self.app._message_box_button("Yes") | self.app._message_box_button("Cancel"),
+            self.app._message_box_button("Cancel"),
+        )
+        if answer != self.app._message_box_button("Yes"):
+            return
+
         def action():
             backup_dir = self.app.get_default_taskbar_backup_dir()
             result = self.taskbar_service.backup(backup_dir)
