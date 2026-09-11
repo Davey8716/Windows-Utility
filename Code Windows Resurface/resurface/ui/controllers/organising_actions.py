@@ -191,7 +191,7 @@ class OrganisingActionsController:
             "with the same names in the\n backup folder will be overwritten.",
             self.app._message_box_button("Yes") | self.app._message_box_button("Cancel"),
             self.app._message_box_button("Cancel"),
-            text_block_width=360,
+            text_block_width=320,
             center_text_block=True,
         )
         if answer != self.app._message_box_button("Yes"):
