@@ -139,6 +139,8 @@ class ApplicationThemeController:
                 button.setStyleSheet(
                     styles.power_action_button_style(font_size, severity, button.text())
                 )
+            elif button.property("dangerToggle"):
+                button.setStyleSheet(styles.danger_toggle_button_style(font_size))
             elif button.property("quickActionToggle"):
                 button.setStyleSheet(styles.toggle_button_style(font_size=font_size))
             else:

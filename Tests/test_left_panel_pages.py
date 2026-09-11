@@ -74,6 +74,11 @@ def test_disable_all_confirmations_uses_saved_value():
     )
     try:
         assert page.disable_all_confirmations_button.isChecked()
+        assert page.disable_all_confirmations_button.property("dangerToggle") is True
+        assert (
+            f"background-color: {styles.power_action_color('red').name()};"
+            in page.disable_all_confirmations_button.styleSheet()
+        )
     finally:
         page.deleteLater()
 
@@ -110,6 +115,10 @@ def test_disable_all_confirmations_is_saved_after_danger_confirmation(monkeypatc
         assert saved_states[-1]["disable_all_confirmations_enabled"] is True
         assert page.disable_all_confirmations_button.isChecked()
         assert page.disable_all_confirmations_button.text() == "Disable All Confirmations On"
+        assert (
+            f"background-color: {styles.power_action_color('red').name()};"
+            in page.disable_all_confirmations_button.styleSheet()
+        )
 
         page.disable_all_confirmations_button.click()
 

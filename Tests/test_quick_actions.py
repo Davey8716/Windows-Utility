@@ -234,6 +234,11 @@ def test_live_theme_refresh_preserves_power_quick_action_severity():
     power.setProperty("quickActionSeverity", "red")
     standard = QPushButton("Standard", root)
     standard.setProperty("styleFontSize", 13)
+    danger_toggle = QPushButton("Disable All Confirmations On", root)
+    danger_toggle.setProperty("styleFontSize", 13)
+    danger_toggle.setProperty("dangerToggle", True)
+    danger_toggle.setCheckable(True)
+    danger_toggle.setChecked(True)
 
     class ThemeTarget:
         def __init__(self):
@@ -256,10 +261,12 @@ def test_live_theme_refresh_preserves_power_quick_action_severity():
         controller.apply_theme(False)
         assert f"background-color: {styles.power_action_color('red').name()};" in power.styleSheet()
         assert f"background-color: {styles.themed_button_bg().name()};" in standard.styleSheet()
+        assert f"background-color: {styles.power_action_color('red').name()};" in danger_toggle.styleSheet()
 
         controller.apply_theme(True)
         assert f"background-color: {styles.power_action_color('red').name()};" in power.styleSheet()
         assert f"background-color: {styles.themed_button_bg().name()};" in standard.styleSheet()
+        assert f"background-color: {styles.power_action_color('red').name()};" in danger_toggle.styleSheet()
         assert monitor_rules_page.apply_calls == 2
     finally:
         styles.set_theme(True)

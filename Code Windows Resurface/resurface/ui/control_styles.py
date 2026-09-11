@@ -56,6 +56,32 @@ def organizing_button_style(font_size: int | None = None) -> str:
 def toggle_button_style(font_size: int | None = None) -> str:
     return organizing_button_style(font_size=font_size)
 
+
+def danger_toggle_button_style(font_size: int | None = None) -> str:
+    """Style a toggle normally until checked, then as a destructive action."""
+    background = T.power_action_color("red")
+    foreground = T.power_action_item_foreground("Shutdown", background)
+    hover = background.lighter(112)
+    pressed = background.darker(118)
+    pressed_hover = background.darker(108)
+    border = background.lighter(135) if T.THEME_IS_DARK else background.darker(130)
+    return organizing_button_style(font_size=font_size) + f"""
+        QPushButton:checked {{
+            color: {H.qcolor_css(foreground)};
+            border: 1px solid {H.qcolor_css(border)};
+            background-color: {H.qcolor_css(background)};
+        }}
+        QPushButton:checked:hover {{
+            background-color: {H.qcolor_css(hover)};
+        }}
+        QPushButton:checked:pressed {{
+            background-color: {H.qcolor_css(pressed)};
+        }}
+        QPushButton:checked:pressed:hover {{
+            background-color: {H.qcolor_css(pressed_hover)};
+        }}
+    """
+
 def power_action_button_style(
     font_size: int | None, severity: str, label: str
 ) -> str:

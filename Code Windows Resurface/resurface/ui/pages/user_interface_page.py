@@ -1,6 +1,7 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QWidget
 
+from resurface.ui import styles
 from resurface.ui.pages.page_controls import PageControls
 from resurface.ui.tooltips import tooltip_text
 
@@ -108,6 +109,8 @@ class UserInterfacePage(PageControls):
         self.bind_toggle_state_text(
             disable_confirmations, "Disable All Confirmations"
         )
+        disable_confirmations.setProperty("dangerToggle", True)
+        disable_confirmations.setStyleSheet(styles.danger_toggle_button_style(14))
         self.register_tooltip(
             disable_confirmations, tooltip_text("disable_all_confirmations")
         )
