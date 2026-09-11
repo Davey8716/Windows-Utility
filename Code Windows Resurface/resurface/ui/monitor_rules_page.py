@@ -484,10 +484,6 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
         )
         if answer == QMessageBox.StandardButton.Yes:
-            if self._has_backup_destination and self._export_rules(
-                safety_backup=True
-            ) is None:
-                return
             self.rules.clear()
             self._commit()
 
@@ -554,45 +550,42 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             description="application folder",
         )
 
-    def _export_rules(self, _checked=False, *, safety_backup=False) -> Path | None:
-        if not safety_backup:
-            backup_dir = self._backup_directory()
-            if backup_dir is None:
-                QMessageBox.warning(
-                    self,
-                    "Monitor Rules",
-                    "Set a Master Backup Path before exporting monitor rules.",
-                )
-                return None
-            try:
-                has_changes = self._repository.has_export_changes(self.rules)
-            except (OSError, TypeError, ValueError) as exc:
-                QMessageBox.warning(self, "Monitor Rules", f"Could not export monitor rules:\n{exc}")
-                return None
-            if not has_changes:
-                self.refresh_export_button()
-                return None
-            destination = backup_dir / "Monitor Rules"
-            destination_text = escape(str(destination))
-            link_color = styles.message_box_link_color().name()
-            answer = self._show_modal_message(
-                QMessageBox.Icon.NoIcon,
-                "Export Monitor Rules",
-                "Export Monitor Rules data to:<br>"
-                f'<a href="open-export-destination" '
-                f'style="color: {link_color}; text-decoration: underline;">'
-                f"{destination_text}</a>",
-                QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
-                QMessageBox.StandardButton.Save,
-                link_activated=lambda _link: self._open_export_directory(destination),
-                popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
+    def _export_rules(self, _checked=False) -> Path | None:
+        backup_dir = self._backup_directory()
+        if backup_dir is None:
+            QMessageBox.warning(
+                self,
+                "Monitor Rules",
+                "Set a Master Backup Path before exporting monitor rules.",
             )
-            if answer != QMessageBox.StandardButton.Save:
-                return None
+            return None
         try:
-            path = self._repository.export_rules(
-                self.rules, safety_backup=safety_backup
-            )
+            has_changes = self._repository.has_export_changes(self.rules)
+        except (OSError, TypeError, ValueError) as exc:
+            QMessageBox.warning(self, "Monitor Rules", f"Could not export monitor rules:\n{exc}")
+            return None
+        if not has_changes:
+            self.refresh_export_button()
+            return None
+        destination = backup_dir / "Monitor Rules"
+        destination_text = escape(str(destination))
+        link_color = styles.message_box_link_color().name()
+        answer = self._show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            "Export Monitor Rules",
+            "Export Monitor Rules data to:<br>"
+            f'<a href="open-export-destination" '
+            f'style="color: {link_color}; text-decoration: underline;">'
+            f"{destination_text}</a>",
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+            link_activated=lambda _link: self._open_export_directory(destination),
+            popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
+        )
+        if answer != QMessageBox.StandardButton.Save:
+            return None
+        try:
+            path = self._repository.export_rules(self.rules)
         except BackupDirectoryNotConfiguredError as exc:
             QMessageBox.warning(
                 self,
@@ -610,15 +603,14 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self.refresh_export_button()
         if path is None:
             return None
-        if not safety_backup:
-            self._show_timed_message(
-                QMessageBox.Icon.Information,
-                "Monitor Rules Exported",
-                f"Monitor rules were exported to:\n{path}",
-                show_close_now_button=True,
-                text_block_width=360,
-                popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
-            )
+        self._show_timed_message(
+            QMessageBox.Icon.Information,
+            "Monitor Rules Exported",
+            f"Monitor rules were exported to:\n{path}",
+            show_close_now_button=True,
+            text_block_width=360,
+            popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
+        )
         return path
 
     def _import_rules(self) -> None:
@@ -641,20 +633,14 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             choice = self._show_modal_message(
                 QMessageBox.Icon.Question,
                 "Import Monitor Rules",
-                "Replace the current rules? Choose No to merge the backup instead.",
+                "Importing will replace all current monitor rules.",
                 QMessageBox.StandardButton.Yes
-                | QMessageBox.StandardButton.No
                 | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Cancel,
                 popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
             )
             if choice == QMessageBox.StandardButton.Cancel:
                 return
-            if choice == QMessageBox.StandardButton.No:
-                by_id = {rule["id"]: rule for rule in self.rules}
-                for rule in imported:
-                    by_id[rule["id"]] = rule
-                imported = list(by_id.values())
         self.rules = imported
         self._commit()
         try:

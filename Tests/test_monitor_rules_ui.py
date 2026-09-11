@@ -1102,7 +1102,7 @@ def test_export_comparison_error_keeps_button_available(monkeypatch, tmp_path):
         app.processEvents()
 
 
-@pytest.mark.parametrize("mode", ["empty", "replace", "merge", "cancel", "invalid", "safety"])
+@pytest.mark.parametrize("mode", ["empty", "replace", "cancel", "invalid"])
 def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_path, mode):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
@@ -1121,7 +1121,7 @@ def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_pa
     )
     monkeypatch.setattr(QFileDialog, "exec", lambda _dialog: QDialog.DialogCode.Accepted)
     monkeypatch.setattr(QFileDialog, "selectedFiles", lambda _dialog: [str(source)])
-    choice = {"merge": QMessageBox.StandardButton.No, "cancel": QMessageBox.StandardButton.Cancel}
+    choice = {"cancel": QMessageBox.StandardButton.Cancel}
     monkeypatch.setattr(
         page,
         "_show_modal_message",
@@ -1136,12 +1136,6 @@ def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_pa
         baseline_before = copy.deepcopy(state["baseline"])
         if mode == "invalid":
             source.write_text("broken", encoding="utf-8")
-        if mode == "safety":
-            monkeypatch.setattr(QMessageBox, "exec", lambda _dialog: QMessageBox.StandardButton.Yes)
-            page._delete_all_rules()
-            source = next((tmp_path / "Monitor Rules").glob("monitor_rules_before_delete_*.json"))
-            imported = initial
-            assert page.rules == []
         commits.clear()
         before_files = set(tmp_path.rglob("*.json"))
         page._import_rules()
@@ -1150,11 +1144,10 @@ def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_pa
             assert state["baseline"] == baseline_before
         else:
             assert commits
-            assert page.export_rules_button.isEnabled() == (mode == "merge")
+            assert not page.export_rules_button.isEnabled()
             assert state["baseline"]["source_path"] == str(source.resolve())
-            if mode != "merge":
-                assert page.rules == monitor_rules_ui.normalize_monitor_rules(imported)
-                assert page._export_rules() is None
+            assert page.rules == monitor_rules_ui.normalize_monitor_rules(imported)
+            assert page._export_rules() is None
         assert set(tmp_path.rglob("*.json")) == before_files
     finally:
         page.deleteLater()
@@ -1193,11 +1186,10 @@ def test_import_choice_dialog_is_frameless_rounded_and_theme_aware(monkeypatch, 
             assert dialog.parent() is page
             assert dialog.windowTitle() == "Import Monitor Rules"
             assert dialog.text() == (
-                "Replace the current rules? Choose No to merge the backup instead."
+                "Importing will replace all current monitor rules."
             )
             assert dialog.standardButtons() == (
                 QMessageBox.StandardButton.Yes
-                | QMessageBox.StandardButton.No
                 | QMessageBox.StandardButton.Cancel
             )
             assert dialog.standardButton(dialog.defaultButton()) == (
@@ -1358,7 +1350,7 @@ def test_master_backup_directory_dialog_is_themed_and_non_native(is_dark):
         app.processEvents()
 
 
-def test_delete_all_creates_safety_backup(monkeypatch, tmp_path):
+def test_delete_all_does_not_create_a_backup(monkeypatch, tmp_path):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
     monkeypatch.setattr(
@@ -1376,11 +1368,7 @@ def test_delete_all_creates_safety_backup(monkeypatch, tmp_path):
     )
     try:
         page._delete_all_rules()
-        safety_backups = list(
-            (tmp_path / "Monitor Rules").glob("monitor_rules_before_delete_*.json")
-        )
-        assert len(safety_backups) == 1
-        assert json.loads(safety_backups[0].read_text(encoding="utf-8"))["rules"]
+        assert not (tmp_path / "Monitor Rules").exists()
         assert commits[-1] == []
     finally:
         page.deleteLater()

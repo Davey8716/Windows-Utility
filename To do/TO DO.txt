@@ -18,6 +18,4 @@ Clear Learned buttons Yes cancel dialogue, import hover data yes cancel dialogue
 
 Backup the current pinned taskbar shortcuts yes no dialogue needs it width adjust also, same for the desktop layout saved close now one needs centering
 
-Ask no code, should the monitor rules export overwrite ?
-
 Ask if globally , do the fonts used convey trust + also readability?

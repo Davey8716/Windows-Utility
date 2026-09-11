@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
@@ -15,6 +14,10 @@ from .rule_schema import normalize_monitor_rules
 
 BACKUP_FORMAT = "windows-resurface-monitor-rules"
 BACKUP_VERSION = 1
+CURRENT_BACKUP_FILENAME = "monitor_rules.json"
+LEGACY_BACKUP_PATTERN = re.compile(
+    r"monitor_rules(?:_before_delete)?_\d{8}_\d{6}_\d{6}\.json"
+)
 
 
 class BackupDirectoryNotConfiguredError(ValueError):
@@ -28,12 +31,10 @@ class MonitorRulesRepository:
         self,
         get_master_backup_dir: Callable[[], str] | None = None,
         *,
-        now: Callable[[], datetime] = datetime.now,
         get_import_baseline: Callable[[], dict | None] | None = None,
         set_import_baseline: Callable[[dict | None], None] | None = None,
     ) -> None:
         self._get_master_backup_dir = get_master_backup_dir
-        self._now = now
         self._get_import_baseline = get_import_baseline
         self._set_import_baseline = set_import_baseline
         self._import_baseline = None
@@ -89,7 +90,7 @@ class MonitorRulesRepository:
         return Path(raw_path) if raw_path else None
 
     def has_export_changes(self, rules: list[dict]) -> bool:
-        """Compare with an accepted import, or the latest compatible export."""
+        """Compare with an accepted import, or the current backup file."""
         imported_fingerprint = self._valid_import_fingerprint()
         if imported_fingerprint is not None:
             return self._fingerprint(rules) != imported_fingerprint
@@ -97,47 +98,43 @@ class MonitorRulesRepository:
         if backup_dir is None:
             return True
         current = normalize_monitor_rules(copy.deepcopy(rules))
-        candidates = sorted(
-            (
-                path
-                for path in (backup_dir / "Monitor Rules").glob("monitor_rules_*.json")
-                if re.fullmatch(r"monitor_rules_\d{8}_\d{6}_\d{6}\.json", path.name)
-            ),
-            reverse=True,
-        )
-        for path in candidates:
-            try:
-                payload = json.loads(path.read_text(encoding="utf-8"))
-                if (
-                    not isinstance(payload, dict)
-                    or payload.get("format") != BACKUP_FORMAT
-                    or payload.get("version") != BACKUP_VERSION
-                    or not isinstance(payload.get("rules"), list)
-                ):
-                    continue
-                previous = normalize_monitor_rules(payload["rules"])
-                if len(previous) != len(payload["rules"]):
-                    continue
-            except (OSError, ValueError, TypeError):
-                continue
-            return current != previous
-        return True
+        path = backup_dir / "Monitor Rules" / CURRENT_BACKUP_FILENAME
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if (
+                not isinstance(payload, dict)
+                or payload.get("format") != BACKUP_FORMAT
+                or payload.get("version") != BACKUP_VERSION
+                or not isinstance(payload.get("rules"), list)
+            ):
+                return True
+            previous = normalize_monitor_rules(payload["rules"])
+            if len(previous) != len(payload["rules"]):
+                return True
+        except (OSError, ValueError, TypeError):
+            return True
+        return current != previous or bool(self._legacy_backup_paths(path.parent))
 
-    def export_rules(
-        self, rules: list[dict], *, safety_backup: bool = False
-    ) -> Path | None:
+    @staticmethod
+    def _legacy_backup_paths(directory: Path) -> list[Path]:
+        return [
+            path
+            for path in directory.glob("monitor_rules*.json")
+            if LEGACY_BACKUP_PATTERN.fullmatch(path.name)
+        ]
+
+    def export_rules(self, rules: list[dict]) -> Path | None:
         backup_dir = self.backup_directory()
         if backup_dir is None:
             raise BackupDirectoryNotConfiguredError(
                 "Set a Master Backup Path before exporting monitor rules."
             )
 
-        if not safety_backup and not self.has_export_changes(rules):
+        if not self.has_export_changes(rules):
             return None
 
-        timestamp = self._now().strftime("%Y%m%d_%H%M%S_%f")
-        prefix = "monitor_rules_before_delete" if safety_backup else "monitor_rules"
-        path = backup_dir / "Monitor Rules" / f"{prefix}_{timestamp}.json"
+        directory = backup_dir / "Monitor Rules"
+        path = directory / CURRENT_BACKUP_FILENAME
         payload = {
             "format": BACKUP_FORMAT,
             "version": BACKUP_VERSION,
@@ -145,8 +142,9 @@ class MonitorRulesRepository:
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        if not safety_backup:
-            self._store_import_baseline(None)
+        for legacy_path in self._legacy_backup_paths(directory):
+            legacy_path.unlink()
+        self._store_import_baseline(None)
         return path
 
     def import_rules(self, path: str | Path) -> list[dict]:
