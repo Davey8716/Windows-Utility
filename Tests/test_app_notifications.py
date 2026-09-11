@@ -55,6 +55,33 @@ def test_enabled_preference_bypasses_existing_modal_confirmations(monkeypatch):
         host.deleteLater()
 
 
+def test_enabled_preference_bypasses_save_confirmations(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+    host.state = {"disable_all_confirmations_enabled": True}
+    shown = []
+
+    def capture_dialog(dialog):
+        shown.append(dialog)
+        return QMessageBox.StandardButton.Cancel
+
+    monkeypatch.setattr(QMessageBox, "exec", capture_dialog)
+    try:
+        answer = host._show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            "Export Hover Data",
+            "Export data?",
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+        )
+        app.processEvents()
+
+        assert answer == QMessageBox.StandardButton.Save
+        assert shown == []
+    finally:
+        host.deleteLater()
+
+
 def test_enabled_preference_keeps_non_confirmation_modal_messages(monkeypatch):
     app = QApplication.instance() or QApplication([])
     host = _MessageBoxHost()

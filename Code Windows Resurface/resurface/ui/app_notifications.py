@@ -41,10 +41,15 @@ class WindowMessageMixin:
         )
 
     def _affirmative_confirmation_result(self, buttons):
-        """Return Yes when the power-user policy suppresses this confirmation."""
+        """Return the affirmative action when the policy suppresses a confirmation."""
         yes = self._message_box_button("Yes")
-        if self.disable_all_confirmations_enabled() and buttons & yes:
+        save = self._message_box_button("Save")
+        if not self.disable_all_confirmations_enabled():
+            return None
+        if buttons & yes:
             return yes
+        if buttons & save:
+            return save
         return None
 
     @staticmethod
