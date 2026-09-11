@@ -637,14 +637,15 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
 
         source_rules = copy.deepcopy(imported)
         if self.rules:
-            choice = QMessageBox.question(
-                self,
+            choice = self._show_modal_message(
+                QMessageBox.Icon.Question,
                 "Import Monitor Rules",
                 "Replace the current rules? Choose No to merge the backup instead.",
                 QMessageBox.StandardButton.Yes
                 | QMessageBox.StandardButton.No
                 | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Cancel,
+                popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
             )
             if choice == QMessageBox.StandardButton.Cancel:
                 return

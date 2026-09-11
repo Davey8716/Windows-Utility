@@ -1121,7 +1121,11 @@ def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_pa
     monkeypatch.setattr(QFileDialog, "exec", lambda _dialog: QDialog.DialogCode.Accepted)
     monkeypatch.setattr(QFileDialog, "selectedFiles", lambda _dialog: [str(source)])
     choice = {"merge": QMessageBox.StandardButton.No, "cancel": QMessageBox.StandardButton.Cancel}
-    monkeypatch.setattr(QMessageBox, "question", lambda *args: choice.get(mode, QMessageBox.StandardButton.Yes))
+    monkeypatch.setattr(
+        page,
+        "_show_modal_message",
+        lambda *_args, **_kwargs: choice.get(mode, QMessageBox.StandardButton.Yes),
+    )
     monkeypatch.setattr(QMessageBox, "warning", lambda *args: None)
     try:
         if mode in {"cancel", "invalid"}:
@@ -1152,6 +1156,65 @@ def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_pa
                 assert page._export_rules() is None
         assert set(tmp_path.rglob("*.json")) == before_files
     finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_import_choice_dialog_is_frameless_rounded_and_theme_aware(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    source = tmp_path / "import.json"
+    source.write_text(
+        json.dumps({"rules": [make_rule("imported", "Imported")]}),
+        encoding="utf-8",
+    )
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[make_rule()],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    original_rules = copy.deepcopy(page.rules)
+    dialogs = []
+    monkeypatch.setattr(QFileDialog, "exec", lambda _dialog: QDialog.DialogCode.Accepted)
+    monkeypatch.setattr(QFileDialog, "selectedFiles", lambda _dialog: [str(source)])
+    monkeypatch.setattr(
+        QMessageBox,
+        "exec",
+        lambda dialog: dialogs.append(dialog) or QMessageBox.StandardButton.Cancel,
+    )
+    try:
+        for is_dark in (True, False):
+            monitor_rules_ui.styles.set_theme(is_dark)
+            page._import_rules()
+            dialog = dialogs[-1]
+            assert dialog.parent() is page
+            assert dialog.windowTitle() == "Import Monitor Rules"
+            assert dialog.text() == (
+                "Replace the current rules? Choose No to merge the backup instead."
+            )
+            assert dialog.standardButtons() == (
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+                | QMessageBox.StandardButton.Cancel
+            )
+            assert dialog.standardButton(dialog.defaultButton()) == (
+                QMessageBox.StandardButton.Cancel
+            )
+            assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+            assert (
+                dialog._popup_corner_radius
+                == monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS
+            )
+            assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style(
+                radius=monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS
+            )
+            app.processEvents()
+            assert not dialog.mask().isEmpty()
+            assert page.rules == original_rules
+    finally:
+        monitor_rules_ui.styles.set_theme(True)
         page.deleteLater()
         app.processEvents()
 
