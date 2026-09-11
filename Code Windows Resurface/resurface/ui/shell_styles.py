@@ -156,7 +156,7 @@ def sidebar_version_label_style() -> str:
             border: none;
             border-right: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             padding: 12px 16px 16px;
-            font-size: 11px;
+            font-size: 13px;
             font-weight: 600;
         }}
     """
