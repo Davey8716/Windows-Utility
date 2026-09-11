@@ -82,7 +82,17 @@ class OrganisingActionsController:
             )
         return show_message(icon, title, text, **options)
 
-    def show_modal_message(self, icon, title: str, text: str, buttons, default_button):
+    def show_modal_message(
+        self,
+        icon,
+        title: str,
+        text: str,
+        buttons,
+        default_button,
+        *,
+        text_block_width: int | None = None,
+        center_text_block: bool = False,
+    ):
         """Show an organising-utility confirmation with its rounded treatment."""
         show_message = self.app._show_modal_message
         try:
@@ -93,6 +103,10 @@ class OrganisingActionsController:
             {"popup_corner_radius": self.POPUP_CORNER_RADIUS}
             if "popup_corner_radius" in params else {}
         )
+        if text_block_width is not None and "text_block_width" in params:
+            options["text_block_width"] = text_block_width
+        if center_text_block and "center_text_block" in params:
+            options["center_text_block"] = True
         return show_message(icon, title, text, buttons, default_button, **options)
 
     def _save_state_safely(self) -> None:
@@ -173,9 +187,12 @@ class OrganisingActionsController:
         answer = self.show_modal_message(
             self.app._message_box_icon("Question"),
             "Backup Taskbar",
-            "Back up the current pinned taskbar shortcuts?",
+            "Back up the current pinned taskbar shortcuts?\nExisting shortcuts"
+            "with the same names in the\n backup folder will be overwritten.",
             self.app._message_box_button("Yes") | self.app._message_box_button("Cancel"),
             self.app._message_box_button("Cancel"),
+            text_block_width=360,
+            center_text_block=True,
         )
         if answer != self.app._message_box_button("Yes"):
             return
@@ -230,7 +247,8 @@ class OrganisingActionsController:
         answer = self.show_modal_message(
             self.app._message_box_icon("Question"),
             "Capture Desktop Layout",
-            "Save the current desktop icon layout?",
+            "Save the current desktop icon layout?\nThe existing saved layout"
+            "will be overwritten.",
             self.app._message_box_button("Yes") | self.app._message_box_button("Cancel"),
             self.app._message_box_button("Cancel"),
         )

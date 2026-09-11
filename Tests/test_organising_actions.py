@@ -17,6 +17,7 @@ class App:
         self.state = {}
         self.saved_state = {}
         self.modals = []
+        self.modal_options = []
         self.timed_messages = []
         self.minimized = 0
         self.settings_saves = 0
@@ -30,9 +31,24 @@ class App:
         return getattr(QMessageBox.StandardButton, name)
 
     def _show_modal_message(
-        self, icon, title, text, buttons, default_button, *, popup_corner_radius=None
+        self,
+        icon,
+        title,
+        text,
+        buttons,
+        default_button,
+        *,
+        popup_corner_radius=None,
+        text_block_width=None,
+        center_text_block=False,
     ):
+        kwargs = {"popup_corner_radius": popup_corner_radius}
+        if text_block_width is not None:
+            kwargs["text_block_width"] = text_block_width
+        if center_text_block:
+            kwargs["center_text_block"] = True
         self.modals.append((icon, title, text, buttons, default_button, popup_corner_radius))
+        self.modal_options.append(kwargs)
         return self.answer
 
     def get_default_desktop_layout_path(self):
@@ -85,12 +101,14 @@ def test_capture_layout_requires_rounded_confirmation(monkeypatch):
         (
             "Question",
             "Capture Desktop Layout",
-            "Save the current desktop icon layout?",
+            "Save the current desktop icon layout?\nThe existing saved layout."
+            "will be overwritten.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
             controller.POPUP_CORNER_RADIUS,
         )
     ]
+    assert app.modal_options == [{"popup_corner_radius": controller.POPUP_CORNER_RADIUS}]
 
 
 def test_capture_layout_uses_a_360px_text_block(monkeypatch):
@@ -193,11 +211,19 @@ def test_backup_taskbar_cancelled_before_minimize_or_backup():
         (
             "Question",
             "Backup Taskbar",
-            "Back up the current pinned taskbar shortcuts?",
+            "Back up the current pinned taskbar shortcuts? Existing shortcuts "
+            "with the same names in the backup folder will be overwritten.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
             controller.POPUP_CORNER_RADIUS,
         )
+    ]
+    assert app.modal_options == [
+        {
+            "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
+            "text_block_width": 360,
+            "center_text_block": True,
+        }
     ]
     assert taskbar_service.backup_paths == []
     assert app.minimized == 0
