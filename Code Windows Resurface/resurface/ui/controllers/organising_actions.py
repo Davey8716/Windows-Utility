@@ -61,6 +61,7 @@ class OrganisingActionsController:
         self, icon, title: str, text: str, timeout_ms: int = 10_000,
         show_close_now_button: bool = False,
         text_block_width: int | None = None,
+        center_text_block: bool = False,
     ):
         show_message = self.app._show_timed_message
         try:
@@ -73,6 +74,8 @@ class OrganisingActionsController:
         }
         if text_block_width is not None and "text_block_width" in params:
             options["text_block_width"] = text_block_width
+        if center_text_block and "center_text_block" in params:
+            options["center_text_block"] = True
         if "popup_corner_radius" in params:
             options["popup_corner_radius"] = self.POPUP_CORNER_RADIUS
         if "merge_group" in params and "merge_title" in params:
@@ -278,6 +281,7 @@ class OrganisingActionsController:
                 text,
                 show_close_now_button=True,
                 text_block_width=360,
+                center_text_block=True,
             )
         self.run_with_optional_minimize(action)
 

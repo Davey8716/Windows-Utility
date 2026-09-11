@@ -64,10 +64,17 @@ class App:
         self.settings_saves += 1
 
     def _show_timed_message(
-        self, *args, text_block_width=None, popup_corner_radius=None, **kwargs
+        self,
+        *args,
+        text_block_width=None,
+        center_text_block=False,
+        popup_corner_radius=None,
+        **kwargs,
     ):
         if text_block_width is not None:
             kwargs["text_block_width"] = text_block_width
+        if center_text_block:
+            kwargs["center_text_block"] = True
         if popup_corner_radius is not None:
             kwargs["popup_corner_radius"] = popup_corner_radius
         self.timed_messages.append((args, kwargs))
@@ -135,6 +142,7 @@ def test_capture_layout_uses_a_360px_text_block(monkeypatch):
                 "timeout_ms": 10_000,
                 "show_close_now_button": True,
                 "text_block_width": 360,
+                "center_text_block": True,
                 "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
             },
         )
