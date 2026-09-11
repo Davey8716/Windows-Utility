@@ -12,6 +12,7 @@ class UserInterfacePage(PageControls):
     tooltips_changed = Signal(bool)
     maximize_all_changed = Signal(bool)
     minimize_after_use_changed = Signal(bool)
+    disable_all_confirmations_changed = Signal(bool)
     power_action_requested = Signal(str)
 
     def __init__(
@@ -100,10 +101,25 @@ class UserInterfacePage(PageControls):
         self.register_tooltip(minimize_after, tooltip_text("minimize_after_use"))
         self.add_two_column_control_row(self.content_layout, maximize, minimize_after)
 
+        disable_confirmations = self.make_toggle_button(
+            "Disable All Confirmations",
+            bool(settings.get("disable_all_confirmations_enabled", False)),
+        )
+        self.bind_toggle_state_text(
+            disable_confirmations, "Disable All Confirmations"
+        )
+        self.register_tooltip(
+            disable_confirmations, tooltip_text("disable_all_confirmations")
+        )
+        self.add_two_column_control_row(
+            self.content_layout, disable_confirmations, QWidget()
+        )
+
         self.always_on_top_button = always
         self.tooltips_button = tips
         self.maximize_all_button = maximize
         self.minimize_after_use_button = minimize_after
+        self.disable_all_confirmations_button = disable_confirmations
 
         self._dark_mode_button.toggled.connect(self.theme_changed.emit)
         self._desktop_zen_button.toggled.connect(self.desktop_zen_changed.emit)
@@ -111,6 +127,9 @@ class UserInterfacePage(PageControls):
         tips.toggled.connect(self.tooltips_changed.emit)
         maximize.toggled.connect(self.maximize_all_changed.emit)
         minimize_after.toggled.connect(self.minimize_after_use_changed.emit)
+        disable_confirmations.toggled.connect(
+            self._disable_all_confirmations_toggled
+        )
 
     def set_desktop_zen_enabled(self, enabled: bool) -> None:
         if self._desktop_zen_button.isChecked() != enabled:
@@ -123,6 +142,23 @@ class UserInterfacePage(PageControls):
         refresh = getattr(self._desktop_zen_button, "_refresh_toggle_icon", None)
         if refresh:
             refresh()
+
+    def set_disable_all_confirmations_enabled(self, enabled: bool) -> None:
+        button = self.disable_all_confirmations_button
+        button.blockSignals(True)
+        button.setChecked(enabled)
+        button.blockSignals(False)
+        button.setText(
+            "Disable All Confirmations On"
+            if enabled
+            else "Disable All Confirmations Off"
+        )
+
+    def _disable_all_confirmations_toggled(self, enabled: bool) -> None:
+        if enabled:
+            # Keep the control visibly off until the danger dialog is approved.
+            self.set_disable_all_confirmations_enabled(False)
+        self.disable_all_confirmations_changed.emit(enabled)
 
     def refresh_icons(self) -> None:
         for button in (self._dark_mode_button, self._desktop_zen_button):

@@ -207,6 +207,9 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         self._render_history(self._service.history)
 
     def _clear_history(self) -> None:
+        if self.disable_all_confirmations_enabled():
+            self._service.clear()
+            return
         answer = ClipboardClearConfirmationDialog(self).exec()
         if answer == QMessageBox.StandardButton.Yes:
             self._service.clear()

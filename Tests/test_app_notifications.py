@@ -18,6 +18,94 @@ class _MessageBoxHost(QWidget, WindowMessageMixin):
     pass
 
 
+def test_disable_all_confirmation_policy_requires_an_explicit_enabled_preference():
+    host = _MessageBoxHost()
+    try:
+        assert not host.disable_all_confirmations_enabled()
+        host.state = {"disable_all_confirmations_enabled": True}
+        assert host.disable_all_confirmations_enabled()
+    finally:
+        host.deleteLater()
+
+
+def test_enabled_preference_bypasses_existing_modal_confirmations(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+    host.state = {"disable_all_confirmations_enabled": True}
+    shown = []
+
+    def capture_dialog(dialog):
+        shown.append(dialog)
+        return QMessageBox.StandardButton.Cancel
+
+    monkeypatch.setattr(QMessageBox, "exec", capture_dialog)
+    try:
+        answer = host._show_modal_message(
+            QMessageBox.Icon.Warning,
+            "Replace backup",
+            "Replace the existing backup?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        app.processEvents()
+
+        assert answer == QMessageBox.StandardButton.Yes
+        assert shown == []
+    finally:
+        host.deleteLater()
+
+
+def test_enabled_preference_keeps_non_confirmation_modal_messages(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+    host.state = {"disable_all_confirmations_enabled": True}
+    shown = []
+
+    def capture_dialog(dialog):
+        shown.append(dialog)
+        return QMessageBox.StandardButton.Ok
+
+    monkeypatch.setattr(QMessageBox, "exec", capture_dialog)
+    try:
+        answer = host._show_modal_message(
+            QMessageBox.Icon.Warning,
+            "Problem",
+            "The action could not be completed.",
+            QMessageBox.StandardButton.Ok,
+            QMessageBox.StandardButton.Ok,
+        )
+        app.processEvents()
+
+        assert answer == QMessageBox.StandardButton.Ok
+        assert len(shown) == 1
+    finally:
+        host.deleteLater()
+
+
+def test_disable_all_confirmations_warning_has_danger_symbol_and_button(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+    captured = []
+
+    def approve(dialog):
+        captured.append(dialog)
+        dialog.findChild(QWidget, "disableAllConfirmationsDangerButton").click()
+        return 0
+
+    monkeypatch.setattr(QMessageBox, "exec", approve)
+    try:
+        assert host.confirm_disable_all_confirmations()
+        app.processEvents()
+
+        dialog = captured[0]
+        assert dialog.minimumWidth() >= 570
+        assert dialog._popup_corner_radius == 18
+        assert not dialog.iconPixmap().isNull()
+        assert dialog.findChild(QWidget, "disableAllConfirmationsDangerButton")
+    finally:
+        host.deleteLater()
+
+
 def test_timed_message_uses_requested_text_width_without_changing_padding_or_close_button():
     app = QApplication.instance() or QApplication([])
     host = _MessageBoxHost()

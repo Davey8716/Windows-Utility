@@ -1,9 +1,12 @@
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QWidget
+from types import SimpleNamespace
 
 from resurface.features.screen_mover.hotkeys import VALID_ACTIONS
 from resurface.ui import styles
+from resurface.ui import application_pages
+from resurface.ui.application_pages import ApplicationPageComposer
 from resurface.ui.pages.external_drives_page import ExternalDrivesPage
 from resurface.ui.pages.folder_utilities_page import FolderUtilitiesPage
 from resurface.ui.pages.organising_utilities_page import OrganisingUtilitiesPage
@@ -43,6 +46,106 @@ def test_split_pages_are_independent_widgets():
     finally:
         for page in pages:
             page.deleteLater()
+
+
+def test_disable_all_confirmations_defaults_off_and_emits_changes():
+    _app()
+    changes = []
+    page = UserInterfacePage({}, lambda _widget, _text: None, lambda _combo: None)
+    try:
+        assert not page.disable_all_confirmations_button.isChecked()
+        page.disable_all_confirmations_changed.connect(changes.append)
+
+        page.disable_all_confirmations_button.click()
+
+        assert changes == [True]
+        assert not page.disable_all_confirmations_button.isChecked()
+        assert page.disable_all_confirmations_button.text() == "Disable All Confirmations Off"
+    finally:
+        page.deleteLater()
+
+
+def test_disable_all_confirmations_uses_saved_value():
+    _app()
+    page = UserInterfacePage(
+        {"disable_all_confirmations_enabled": True},
+        lambda _widget, _text: None,
+        lambda _combo: None,
+    )
+    try:
+        assert page.disable_all_confirmations_button.isChecked()
+    finally:
+        page.deleteLater()
+
+
+def test_disable_all_confirmations_is_saved_after_danger_confirmation(monkeypatch):
+    _app()
+    state = {}
+    saved_states = []
+    actions = SimpleNamespace(
+        run_lock_pc=lambda: None,
+        run_sleep=lambda: None,
+        run_logout=lambda: None,
+        run_restart=lambda: None,
+        run_shutdown=lambda: None,
+    )
+    composer = object.__new__(ApplicationPageComposer)
+    composer.app = SimpleNamespace(
+        state=state,
+        maintenance_actions=actions,
+        external_drive_controller=SimpleNamespace(),
+        confirm_disable_all_confirmations=lambda: True,
+    )
+    composer.state = state
+    monkeypatch.setattr(
+        application_pages, "save_state", lambda values: saved_states.append(dict(values))
+    )
+    page = UserInterfacePage({}, lambda _widget, _text: None, lambda _combo: None)
+    try:
+        composer._wire_user_interface_page(page)
+
+        page.disable_all_confirmations_button.click()
+
+        assert state["disable_all_confirmations_enabled"] is True
+        assert saved_states[-1]["disable_all_confirmations_enabled"] is True
+        assert page.disable_all_confirmations_button.isChecked()
+        assert page.disable_all_confirmations_button.text() == "Disable All Confirmations On"
+
+        page.disable_all_confirmations_button.click()
+
+        assert state["disable_all_confirmations_enabled"] is False
+        assert saved_states[-1]["disable_all_confirmations_enabled"] is False
+        assert page.disable_all_confirmations_button.text() == "Disable All Confirmations Off"
+    finally:
+        page.deleteLater()
+
+
+def test_disable_all_confirmations_reverts_after_danger_confirmation_is_cancelled(monkeypatch):
+    _app()
+    state = {}
+    composer = object.__new__(ApplicationPageComposer)
+    actions = SimpleNamespace(
+        run_lock_pc=lambda: None, run_sleep=lambda: None, run_logout=lambda: None,
+        run_restart=lambda: None, run_shutdown=lambda: None,
+    )
+    composer.app = SimpleNamespace(
+        state=state,
+        maintenance_actions=actions,
+        external_drive_controller=SimpleNamespace(),
+        confirm_disable_all_confirmations=lambda: False,
+    )
+    composer.state = state
+    monkeypatch.setattr(application_pages, "save_state", lambda _values: None)
+    page = UserInterfacePage({}, lambda _widget, _text: None, lambda _combo: None)
+    try:
+        composer._wire_user_interface_page(page)
+        page.disable_all_confirmations_button.click()
+
+        assert not page.disable_all_confirmations_button.isChecked()
+        assert page.disable_all_confirmations_button.text() == "Disable All Confirmations Off"
+        assert "disable_all_confirmations_enabled" not in state
+    finally:
+        page.deleteLater()
 
 
 def test_recycle_bin_empty_action_is_disabled_when_no_items_exist():

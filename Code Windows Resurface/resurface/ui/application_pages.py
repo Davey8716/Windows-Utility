@@ -1105,6 +1105,9 @@ class ApplicationPageComposer:
         page.minimize_after_use_changed.connect(
             lambda enabled: self._set_state_value("minimize_after_use_enabled", enabled)
         )
+        page.disable_all_confirmations_changed.connect(
+            lambda enabled: self._disable_all_confirmations_changed(page, enabled)
+        )
         page.desktop_zen_changed.connect(
             lambda enabled: self._desktop_zen_changed(page, enabled)
         )
@@ -1121,6 +1124,18 @@ class ApplicationPageComposer:
                 actions[name],
             )
         )
+
+    def _disable_all_confirmations_changed(
+        self, page: UserInterfacePage, enabled: bool
+    ) -> None:
+        if not enabled:
+            self._set_state_value("disable_all_confirmations_enabled", False)
+            return
+        if self.app.confirm_disable_all_confirmations():
+            self._set_state_value("disable_all_confirmations_enabled", True)
+            page.set_disable_all_confirmations_enabled(True)
+            return
+        page.set_disable_all_confirmations_enabled(False)
 
     def _theme_changed(self, enabled: bool) -> None:
         self.state["theme_dark"] = enabled

@@ -3,7 +3,15 @@ from typing import Callable
 
 from resurface.ui import styles
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer
-from PySide6.QtGui import QPainterPath, QPalette, QPixmap, QRegion
+from PySide6.QtGui import (
+    QColor,
+    QPainter,
+    QPainterPath,
+    QPalette,
+    QPen,
+    QPixmap,
+    QRegion,
+)
 from PySide6.QtWidgets import (
     QDialogButtonBox,
     QGridLayout,
@@ -14,6 +22,83 @@ from PySide6.QtWidgets import (
 
 
 class WindowMessageMixin:
+    def _confirmation_state(self) -> dict:
+        """Find the application state for this widget or one of its parents."""
+        widget = self
+        while widget is not None:
+            state = getattr(widget, "state", None)
+            if isinstance(state, dict):
+                return state
+            parent = getattr(widget, "parent", lambda: None)()
+            if parent is widget:
+                break
+            widget = parent
+        return {}
+
+    def disable_all_confirmations_enabled(self) -> bool:
+        return bool(
+            self._confirmation_state().get("disable_all_confirmations_enabled", False)
+        )
+
+    def _affirmative_confirmation_result(self, buttons):
+        """Return Yes when the power-user policy suppresses this confirmation."""
+        yes = self._message_box_button("Yes")
+        if self.disable_all_confirmations_enabled() and buttons & yes:
+            return yes
+        return None
+
+    @staticmethod
+    def _danger_symbol() -> QPixmap:
+        pixmap = QPixmap(76, 76)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(
+            QPen(
+                QColor(205, 48, 48),
+                9,
+                Qt.PenStyle.SolidLine,
+                Qt.PenCapStyle.RoundCap,
+            )
+        )
+        painter.drawLine(18, 18, 58, 58)
+        painter.drawLine(58, 18, 18, 58)
+        painter.end()
+        return pixmap
+
+    def confirm_disable_all_confirmations(self) -> bool:
+        """Show the one-time danger prompt required before disabling safeguards."""
+        message_box = QMessageBox(self)
+        self._apply_message_box_icon(message_box, self._message_box_icon("NoIcon"))
+        message_box.setIconPixmap(self._danger_symbol())
+        message_box.setWindowTitle("Disable all confirmation dialogs?")
+        message_box.setText(
+            "Destructive actions, overwrites, resets,imports, and power\n or "
+            "session actions will run immediately.\n"
+            "Only enable this if you are certain you do not want any action\n "
+            "confirmation dialogs."
+        )
+        message_box.setStandardButtons(self._message_box_button("Cancel"))
+        danger_button = message_box.addButton(
+            "Disable All Confirmations",
+            QMessageBox.ButtonRole.DestructiveRole,
+        )
+        danger_button.setObjectName("disableAllConfirmationsDangerButton")
+        danger_button.setStyleSheet(
+            "QPushButton { background-color: #c53030; color: white; "
+            "border: 2px solid #f06a6a; border-radius: 8px; padding: 8px 14px; "
+            "font-weight: bold; } "
+            "QPushButton:hover, QPushButton:pressed { background-color: #9f2020; }"
+        )
+        message_box.setDefaultButton(self._message_box_button("Cancel"))
+        message_box.setWindowModality(Qt.WindowModality.ApplicationModal)
+        message_box.setMinimumWidth(570)
+        message_box._text_block_width = 410
+        message_box._center_text_block = True
+        message_box._popup_corner_radius = 18
+        self._exec_message_box(message_box)
+        return message_box.clickedButton() is danger_button
+
     def _is_standard_message_box_icon(self, icon) -> bool:
         icon_namespace = getattr(QMessageBox, "Icon", QMessageBox)
         standard_icons = (
@@ -374,6 +459,9 @@ class WindowMessageMixin:
         link_activated: Callable[[str], None] | None = None,
         popup_corner_radius: int | None = None,
     ) -> int:
+        suppressed_result = self._affirmative_confirmation_result(buttons)
+        if suppressed_result is not None:
+            return suppressed_result
         try:
             message_box = QMessageBox(self)
         except TypeError:

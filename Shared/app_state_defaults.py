@@ -23,6 +23,7 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "theme_dark": True,
     "main_always_on_top_enabled": True,
     "tooltips_enabled": True,
+    "disable_all_confirmations_enabled": False,
     "maximize_all_enabled": True,
     "minimize_after_use_enabled": True,
     "power_options_enabled": False,

@@ -11,6 +11,7 @@ TOOLTIP_TEXT = {
     "dark_mode": "Switches the app between dark and light appearance.",
     "always_on_top": "Keeps the main window above other windows.",
     "enable_tooltips": "Enables or disables delayed hover tooltips across the app.",
+    "disable_all_confirmations": "Disables every app confirmation after a final danger warning. Errors, warnings, information, file pickers, and editor dialogs still appear.",
     "maximize_all": "Controls whether the maximize-all utility is enabled.",
     "minimize_after_use": "Controls whether launcher-style utilities minimize the app before opening or running.",
     "power_options": "Choose a power action such as sleep, lock, restart, log out, or shutdown.",

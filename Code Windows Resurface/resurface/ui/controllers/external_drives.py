@@ -281,6 +281,11 @@ class ExternalDriveController:
         action_callback,
         drives: tuple[str, ...],
     ) -> None:
+        if getattr(
+            self.window, "disable_all_confirmations_enabled", lambda: False
+        )():
+            action_callback()
+            return
         if not self.policy.should_remind(self._leave_reminder_enabled(), drives):
             action_callback()
             return
