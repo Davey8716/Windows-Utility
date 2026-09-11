@@ -421,10 +421,12 @@ class CalibrationDialogTests(unittest.TestCase):
         show_modal.assert_called_once_with(
             QMessageBox.Icon.NoIcon,
             "Clear all learned buttons?",
-            "This permanently removes every learned caption-button image and "
-            "all manual calibration data. Hover preferences are kept.",
+            "This permanently removes all learned caption-button images and "
+            "calibration data.\nHover preferences are kept.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
+            text_block_width=420,
+            center_text_block=True,
             popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
         )
 
