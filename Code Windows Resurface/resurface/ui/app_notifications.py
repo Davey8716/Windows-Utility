@@ -416,6 +416,7 @@ class WindowMessageMixin:
         accessory_icon_size: QSize | None = None,
         minimum_popup_width: int | None = None,
         text_minimum_width: int | None = None,
+        text_block_width: int | None = None,
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
         show_close_now_button: bool = False,
@@ -466,6 +467,7 @@ class WindowMessageMixin:
             message_box._accessory_icon_size = accessory_icon_size or QSize(42, 42)
             message_box._minimum_popup_width = minimum_popup_width or 420
             message_box._text_minimum_width = text_minimum_width or 280
+        message_box._text_block_width = text_block_width
         message_box._center_text_block = center_text_block
         message_box._show_close_now_button = show_close_now_button
         message_box._popup_corner_radius = popup_corner_radius

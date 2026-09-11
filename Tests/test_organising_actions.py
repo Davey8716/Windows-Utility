@@ -41,7 +41,9 @@ class App:
     def save_all_settings(self):
         self.settings_saves += 1
 
-    def _show_timed_message(self, *args, **kwargs):
+    def _show_timed_message(self, *args, text_block_width=None, **kwargs):
+        if text_block_width is not None:
+            kwargs["text_block_width"] = text_block_width
         self.timed_messages.append((args, kwargs))
 
 
@@ -77,6 +79,58 @@ def test_capture_layout_requires_rounded_confirmation(monkeypatch):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
             controller.POPUP_CORNER_RADIUS,
+        )
+    ]
+
+
+def test_capture_layout_uses_a_360px_text_block(monkeypatch):
+    app = App(answer=QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(organising_actions, "save_desktop_icon_layout", lambda _path: 3)
+    controller = OrganisingActionsController(app, None, None, None)
+    controller.run_with_optional_minimize = lambda action: action()
+
+    controller.capture_desktop_layout()
+
+    assert app.timed_messages == [
+        (
+            (
+                "Information",
+                "Desktop Layout",
+                "Captured desktop layout with 3 icon position(s) saved to:\nlayout.json",
+            ),
+            {
+                "timeout_ms": 10_000,
+                "show_close_now_button": True,
+                "text_block_width": 360,
+            },
+        )
+    ]
+
+
+def test_capture_layout_failure_uses_a_360px_text_block(monkeypatch):
+    app = App(answer=QMessageBox.StandardButton.Yes)
+
+    def fail_capture(_path):
+        raise OSError("disk unavailable")
+
+    monkeypatch.setattr(organising_actions, "save_desktop_icon_layout", fail_capture)
+    controller = OrganisingActionsController(app, None, None, None)
+    controller.run_with_optional_minimize = lambda action: action()
+
+    controller.capture_desktop_layout()
+
+    assert app.timed_messages == [
+        (
+            (
+                "Warning",
+                "Desktop Layout",
+                "Could not capture desktop layout to:\nlayout.json",
+            ),
+            {
+                "timeout_ms": 10_000,
+                "show_close_now_button": True,
+                "text_block_width": 360,
+            },
         )
     ]
 
