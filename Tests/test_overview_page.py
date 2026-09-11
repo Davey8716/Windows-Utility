@@ -33,6 +33,8 @@ def test_master_backup_path_is_theme_aware_clickable_explorer_link():
         )
         assert 'href="open-master-backup"' in backup_label.text()
         assert 'href="open-app-data"' in app_data_label.text()
+        assert "C:/Users/Example/AppData/Local/Windows Resurface" in app_data_label.text()
+        assert r"C:\Users\Example\AppData\Local\Windows Resurface" not in app_data_label.text()
         assert "color: #ffffff" in backup_label.text()
         assert "color: #ffffff" in app_data_label.text()
         backup_label.linkActivated.emit("open-master-backup")
@@ -57,7 +59,7 @@ def test_app_data_path_defaults_to_the_live_config_parent(monkeypatch):
     page = OverviewPage(None)
     try:
         page.refresh({}, set())
-        assert str(config_path.parent) in page.status_labels["app_data_path"].text()
+        assert str(config_path.parent).replace("\\", "/") in page.status_labels["app_data_path"].text()
     finally:
         page.deleteLater()
         app.processEvents()

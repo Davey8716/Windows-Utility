@@ -461,13 +461,14 @@ class OverviewPage(QWidget):
             backup_label.setText("Not set")
             backup_label.setToolTip("")
         app_data_path = str(self._get_app_data_path()).strip()
+        app_data_path_display = app_data_path.replace("\\", "/")
         app_data_label = self.status_labels["app_data_path"]
         if app_data_path:
             link_color = styles.message_box_link_color().name()
             app_data_label.setText(
                 f'<a href="open-app-data" '
                 f'style="color: {link_color}; text-decoration: underline;">'
-                f"{escape(app_data_path)}</a>"
+                f"{escape(app_data_path_display)}</a>"
             )
             app_data_label.setToolTip("Open the live App data path in Explorer")
         else:
