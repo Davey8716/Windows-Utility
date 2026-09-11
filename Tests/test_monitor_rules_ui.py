@@ -958,6 +958,7 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
             )
             assert timed_kwargs == {
                 "show_close_now_button": True,
+                "text_block_width": 360,
                 "popup_corner_radius": monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS,
             }
     finally:

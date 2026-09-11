@@ -616,6 +616,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
                 "Monitor Rules Exported",
                 f"Monitor rules were exported to:\n{path}",
                 show_close_now_button=True,
+                text_block_width=360,
                 popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
             )
         return path
