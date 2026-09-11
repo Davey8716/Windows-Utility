@@ -87,6 +87,7 @@ def test_disable_all_confirmations_is_saved_after_danger_confirmation(monkeypatc
     _app()
     state = {}
     saved_states = []
+    overview_refreshes = []
     actions = SimpleNamespace(
         run_lock_pc=lambda: None,
         run_sleep=lambda: None,
@@ -100,6 +101,7 @@ def test_disable_all_confirmations_is_saved_after_danger_confirmation(monkeypatc
         maintenance_actions=actions,
         external_drive_controller=SimpleNamespace(),
         confirm_disable_all_confirmations=lambda: True,
+        refresh_overview=lambda: overview_refreshes.append(True),
     )
     composer.state = state
     monkeypatch.setattr(
@@ -119,12 +121,14 @@ def test_disable_all_confirmations_is_saved_after_danger_confirmation(monkeypatc
             f"background-color: {styles.power_action_color('red').name()};"
             in page.disable_all_confirmations_button.styleSheet()
         )
+        assert overview_refreshes == [True]
 
         page.disable_all_confirmations_button.click()
 
         assert state["disable_all_confirmations_enabled"] is False
         assert saved_states[-1]["disable_all_confirmations_enabled"] is False
         assert page.disable_all_confirmations_button.text() == "Disable All Confirmations Off"
+        assert overview_refreshes == [True, True]
     finally:
         page.deleteLater()
 
@@ -132,6 +136,7 @@ def test_disable_all_confirmations_is_saved_after_danger_confirmation(monkeypatc
 def test_disable_all_confirmations_reverts_after_danger_confirmation_is_cancelled(monkeypatch):
     _app()
     state = {}
+    overview_refreshes = []
     composer = object.__new__(ApplicationPageComposer)
     actions = SimpleNamespace(
         run_lock_pc=lambda: None, run_sleep=lambda: None, run_logout=lambda: None,
@@ -142,6 +147,7 @@ def test_disable_all_confirmations_reverts_after_danger_confirmation_is_cancelle
         maintenance_actions=actions,
         external_drive_controller=SimpleNamespace(),
         confirm_disable_all_confirmations=lambda: False,
+        refresh_overview=lambda: overview_refreshes.append(True),
     )
     composer.state = state
     monkeypatch.setattr(application_pages, "save_state", lambda _values: None)
@@ -153,6 +159,7 @@ def test_disable_all_confirmations_reverts_after_danger_confirmation_is_cancelle
         assert not page.disable_all_confirmations_button.isChecked()
         assert page.disable_all_confirmations_button.text() == "Disable All Confirmations Off"
         assert "disable_all_confirmations_enabled" not in state
+        assert overview_refreshes == []
     finally:
         page.deleteLater()
 

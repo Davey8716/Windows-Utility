@@ -363,6 +363,7 @@ class OverviewPage(QWidget):
             (
                 ("quick_actions", "Quick Actions"),
                 ("user_interface", "User Interface"),
+                ("confirmations", "Confirmations"),
                 ("screen_mover", "Screen Mover"),
                 ("monitor_rules", "Monitor Rules"),
                 ("drives", "External Drives"),
@@ -410,6 +411,11 @@ class OverviewPage(QWidget):
                     else "Always on Top Off",
                 )
             )
+        )
+        self.status_labels["confirmations"].setText(
+            "Disable All Confirmations On"
+            if state.get("disable_all_confirmations_enabled", False)
+            else "Disable All Confirmations Off"
         )
         configured_shortcuts = len(
             active_hotkeys(state.get("screen_mover_keyboard_hotkeys", {}))
@@ -1130,10 +1136,12 @@ class ApplicationPageComposer:
     ) -> None:
         if not enabled:
             self._set_state_value("disable_all_confirmations_enabled", False)
+            self.app.refresh_overview()
             return
         if self.app.confirm_disable_all_confirmations():
             self._set_state_value("disable_all_confirmations_enabled", True)
             page.set_disable_all_confirmations_enabled(True)
+            self.app.refresh_overview()
             return
         page.set_disable_all_confirmations_enabled(False)
 

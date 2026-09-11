@@ -63,3 +63,17 @@ def test_app_data_path_defaults_to_the_live_config_parent(monkeypatch):
     finally:
         page.deleteLater()
         app.processEvents()
+
+
+def test_confirmation_safeguard_has_a_dedicated_overview_status():
+    app = QApplication.instance() or QApplication([])
+    page = OverviewPage(None)
+    try:
+        page.refresh({}, set())
+        assert page.status_labels["confirmations"].text() == "Disable All Confirmations Off"
+
+        page.refresh({"disable_all_confirmations_enabled": True}, set())
+        assert page.status_labels["confirmations"].text() == "Disable All Confirmations On"
+    finally:
+        page.deleteLater()
+        app.processEvents()
