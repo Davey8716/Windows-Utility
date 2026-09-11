@@ -168,14 +168,7 @@ class NavigationShell(QWidget):
         title.setObjectName("PageTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         title.setStyleSheet(styles.page_title_style())
-        description = QLabel(definition.description, content)
-        description.setObjectName("PageDescription")
-        description.setWordWrap(True)
-        description.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        description.setStyleSheet(styles.page_description_style())
         layout.addWidget(title)
-        layout.addWidget(description)
-        layout.addSpacing(6)
         scroll.setWidget(content)
         return page, content, layout, scroll
 

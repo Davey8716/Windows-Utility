@@ -173,8 +173,6 @@ class ApplicationThemeController:
 
         for label in self.root.findChildren(QLabel, "PageTitle"):
             label.setStyleSheet(styles.page_title_style())
-        for label in self.root.findChildren(QLabel, "PageDescription"):
-            label.setStyleSheet(styles.page_description_style())
         for label in self.root.findChildren(QLabel, "PageSectionHeading"):
             label.setStyleSheet(styles.page_section_heading_style())
         for label in self.root.findChildren(QLabel, "OverviewSummaryLabel"):

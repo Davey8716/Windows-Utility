@@ -1268,13 +1268,14 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
             Qt.ItemDataRole.ToolTipRole,
         ) == connected_combo.itemText(0)
 
-        for label_name in ("PageTitle", "PageDescription", "PageSectionHeading"):
+        for label_name in ("PageTitle", "PageSectionHeading"):
             labels = window.findChildren(QLabel, label_name)
             assert labels
             assert all(
                 label.alignment() & Qt.AlignmentFlag.AlignHCenter
                 for label in labels
             )
+        assert not window.findChildren(QLabel, "PageDescription")
 
         marked_controls = standard_controls + compact_controls + wide_controls
         size_snapshot = {
