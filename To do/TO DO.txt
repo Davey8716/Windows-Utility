@@ -13,6 +13,3 @@ If the Master backup up path moves it should move all the backups (if they exist
 
 Drive remove popup for both the connected drive list + the output frame, drive leave reminder on popup, drive connected one ets all need theme specific rounded corners + USB
 ICON is missing from way earlier in a commit + the requested popup needs rounding + 10 seconds kill + "Close now" button.
-
-Backup the current pinned taskbar shortcuts yes no dialogue needs it width adjust also, same for the desktop layout saved close now one needs centering
-
