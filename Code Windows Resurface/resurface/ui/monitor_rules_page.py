@@ -439,7 +439,11 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self._render_rules()
 
     def _add_rule(self) -> None:
-        dialog = MonitorRuleEditorDialog(self, app_hwnd=self._app_hwnd)
+        dialog = MonitorRuleEditorDialog(
+            self,
+            app_hwnd=self._app_hwnd,
+            popup_width=self._import_rules_popup_width(),
+        )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.rules.append(dialog.result_rule())
             self._commit(apply_rule_ids={self.rules[-1]["id"]})
@@ -449,6 +453,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             self,
             rule=self.rules[index],
             app_hwnd=self._app_hwnd,
+            popup_width=self._import_rules_popup_width(),
         )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.rules[index] = dialog.result_rule()
@@ -488,6 +493,15 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
 
     def _backup_directory(self) -> Path | None:
         return self._repository.backup_directory()
+
+    def _import_rules_popup_width(self) -> int:
+        backup_dir = self._backup_directory()
+        start_dir = str(backup_dir / "Monitor Rules") if backup_dir else ""
+        preview = ImportRulesDialog(self, start_dir)
+        try:
+            return preview.width()
+        finally:
+            preview.deleteLater()
 
     def _open_directory(
         self,

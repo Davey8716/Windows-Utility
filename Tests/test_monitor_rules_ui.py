@@ -630,6 +630,46 @@ def test_rule_editor_uses_edit_heading_for_existing_rule(monkeypatch):
         app.processEvents()
 
 
+def test_rule_editor_matches_import_rules_popup_width(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    (tmp_path / "Monitor Rules").mkdir()
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=[],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    import_dialog = monitor_rules_ui.ImportRulesDialog(
+        page,
+        str(tmp_path / "Monitor Rules"),
+    )
+    captured = []
+
+    def reject_and_capture(dialog):
+        captured.append(dialog)
+        return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(
+        monitor_rule_editor_dialog.MonitorRuleEditorDialog,
+        "exec",
+        reject_and_capture,
+    )
+    try:
+        page._add_rule()
+        editor = captured[0]
+        assert editor.width() == import_dialog.width()
+        assert editor.minimumSize() == editor.maximumSize()
+        assert editor.layout().contentsMargins().left() == 22
+        assert editor.layout().spacing() == 14
+        assert editor.window_combo.minimumWidth() == 0
+    finally:
+        import_dialog.deleteLater()
+        page.deleteLater()
+        app.processEvents()
+
+
 def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)

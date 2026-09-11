@@ -160,6 +160,7 @@ class MonitorRuleEditorDialog(QDialog):
         monitor_enumerator=None,
         window_enumerator=None,
         geometry_capturer=None,
+        popup_width: int | None = None,
     ):
         super().__init__(parent)
         dialog_title = "Edit Monitor Rule" if rule else "Add Monitor Rule"
@@ -170,7 +171,9 @@ class MonitorRuleEditorDialog(QDialog):
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
         self.setSizeGripEnabled(False)
         self.setStyleSheet(monitor_rule_editor_dialog_style())
-        self.setMinimumWidth(640)
+        self._popup_width = popup_width
+        if popup_width is None:
+            self.setMinimumWidth(640)
         self._original_rule = copy.deepcopy(rule) if rule else None
         self._app_hwnd = app_hwnd
         self._enumerate_monitors = monitor_enumerator or enumerate_monitors
@@ -191,7 +194,7 @@ class MonitorRuleEditorDialog(QDialog):
 
         selection_row = QHBoxLayout()
         self.window_combo = QComboBox(self)
-        self.window_combo.setMinimumWidth(410)
+        self.window_combo.setMinimumWidth(0 if popup_width is not None else 410)
         self.window_combo.currentIndexChanged.connect(self._running_window_selected)
         refresh_button = QPushButton("Refresh windows", self)
         browse_button = QPushButton("Browse executable", self)
@@ -257,7 +260,11 @@ class MonitorRuleEditorDialog(QDialog):
         self.refresh_running_windows()
         self._load_rule(rule or {})
         self._sync_capture_state()
-        self.setFixedSize(self.sizeHint())
+        if popup_width is not None:
+            self.setFixedWidth(popup_width)
+            self.setFixedHeight(self.sizeHint().height())
+        else:
+            self.setFixedSize(self.sizeHint())
 
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
