@@ -96,6 +96,7 @@ def hotkey_edit_style(font_size: int = 13) -> str:
     """Style the Screen Mover shortcut editor as a persistent surface field."""
     font_size = H.coerce_font_size(font_size, 13) or 13
     conflict_border = QColor(218, 92, 92) if T.THEME_IS_DARK else QColor(176, 45, 45)
+    border = T.SURFACE_BORDER if T.THEME_IS_DARK else T.themed_surface_field_border()
     return f"""
         QKeySequenceEdit#ScreenMoverShortcutEdit {{
             {H.label_style(
@@ -106,7 +107,7 @@ def hotkey_edit_style(font_size: int = 13) -> str:
             min-height: 22px;
             padding: 4px 8px;
             background-color: {H.qcolor_css(T.themed_surface_field_bg())};
-            border: 2px solid {H.qcolor_css(T.themed_surface_field_border())};
+            border: 2px solid {H.qcolor_css(border)};
             border-radius: 6px;
             selection-background-color: {H.qcolor_css(T.PANEL_HOVER)};
         }}
@@ -118,18 +119,18 @@ def hotkey_edit_style(font_size: int = 13) -> str:
             )}
             padding: 4px 8px;
             background-color: {H.qcolor_css(T.themed_surface_field_bg())};
-            border: 2px solid {H.qcolor_css(T.themed_surface_field_border())};
+            border: 2px solid {H.qcolor_css(border)};
             border-radius: 6px;
             selection-background-color: {H.qcolor_css(T.PANEL_HOVER)};
         }}
         QKeySequenceEdit#ScreenMoverShortcutEdit:hover,
         QKeySequenceEdit#ScreenMoverShortcutEdit:focus {{
-            border-color: {H.qcolor_css(T.themed_surface_field_border())};
+            border-color: {H.qcolor_css(border)};
             background-color: {H.qcolor_css(T.themed_surface_field_bg())};
         }}
         QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit:hover,
         QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit:focus {{
-            border-color: {H.qcolor_css(T.themed_surface_field_border())};
+            border-color: {H.qcolor_css(border)};
             background-color: {H.qcolor_css(T.themed_surface_field_bg())};
         }}
         QKeySequenceEdit#ScreenMoverShortcutEdit[shortcutConflict="true"] {{

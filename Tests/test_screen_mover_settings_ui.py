@@ -1994,7 +1994,11 @@ def test_screen_mover_shortcut_fields_keep_surface_style_after_restart_and_theme
 
     def assert_shortcut_field_style(window, is_dark: bool) -> None:
         expected_background = styles.qcolor_css(styles.themed_surface_field_bg())
-        expected_border = styles.qcolor_css(styles.themed_surface_field_border())
+        expected_border = styles.qcolor_css(
+            styles.SURFACE_BORDER
+            if is_dark
+            else styles.themed_surface_field_border()
+        )
 
         for edit in window.pages.screen_mover_settings_page._hotkey_edits.values():
             assert edit.objectName() == "ScreenMoverShortcutEdit"
