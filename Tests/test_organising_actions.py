@@ -135,6 +135,30 @@ def test_capture_layout_failure_uses_a_360px_text_block(monkeypatch):
     ]
 
 
+def test_restore_layout_success_uses_a_360px_text_block(monkeypatch):
+    app = App()
+    monkeypatch.setattr(organising_actions, "restore_desktop_icon_layout", lambda _path: 3)
+    controller = OrganisingActionsController(app, None, None, None)
+    controller.run_with_optional_minimize = lambda action: action()
+
+    controller.restore_desktop_layout()
+
+    assert app.timed_messages == [
+        (
+            (
+                "Information",
+                "Desktop Layout",
+                "Desktop icons restored from:\nlayout.json",
+            ),
+            {
+                "timeout_ms": 10_000,
+                "show_close_now_button": True,
+                "text_block_width": 360,
+            },
+        )
+    ]
+
+
 def test_backup_taskbar_cancelled_before_minimize_or_backup():
     app = App(answer=QMessageBox.StandardButton.Cancel)
     taskbar_service = TaskbarService(BackupResult(count=1, completed=True))

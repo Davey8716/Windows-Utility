@@ -262,7 +262,13 @@ class OrganisingActionsController:
                 count = 0
             icon = "Information" if count > 0 else "Warning"
             text = f"Desktop icons restored from:\n{path}" if count > 0 else f"Could not restore desktop layout from:\n{path}"
-            self.show_timed_message(self.app._message_box_icon(icon), "Desktop Layout", text, show_close_now_button=True)
+            self.show_timed_message(
+                self.app._message_box_icon(icon),
+                "Desktop Layout",
+                text,
+                show_close_now_button=True,
+                text_block_width=360 if count > 0 else None,
+            )
         self.run_with_optional_minimize(action)
 
     def export_bookmarks(self) -> None:
