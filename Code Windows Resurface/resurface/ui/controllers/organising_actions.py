@@ -19,6 +19,18 @@ from resurface.features.desktop.screenshot_service import (
 )
 
 
+def _format_desktop_layout_path(path: str) -> str:
+    """Break the layout folder onto its own line for compact notifications."""
+    directory, filename = os.path.split(path)
+    if not directory or not filename:
+        return path
+
+    parent_directory, layout_directory = os.path.split(directory)
+    if parent_directory and layout_directory:
+        return f"{parent_directory}{os.sep}\n{layout_directory}{os.sep}{filename}"
+    return f"{directory}{os.sep}\n{filename}"
+
+
 class OrganisingActionsController:
     # These utility actions are deliberately visually distinct from the
     # application-wide square message boxes.
@@ -238,7 +250,9 @@ class OrganisingActionsController:
                 count = 0
             icon = "Information" if count > 0 else "Warning"
             text = (
-                f"Captured desktop layout with {count} icon position(s) saved to:\n{path}"
+                "Captured desktop layout with "
+                f"{count} icon position(s) saved to:\n"
+                f"{_format_desktop_layout_path(path)}"
                 if count > 0 else f"Could not capture desktop layout to:\n{path}"
             )
             self.show_timed_message(
@@ -261,7 +275,10 @@ class OrganisingActionsController:
                 print(f"[DESKTOP ICONS] Restore failed: {exc}")
                 count = 0
             icon = "Information" if count > 0 else "Warning"
-            text = f"Desktop icons restored from:\n{path}" if count > 0 else f"Could not restore desktop layout from:\n{path}"
+            if count > 0:
+                text = f"Desktop icons restored from:\n{_format_desktop_layout_path(path)}"
+            else:
+                text = f"Could not restore desktop layout from:\n{path}"
             self.show_timed_message(
                 self.app._message_box_icon(icon),
                 "Desktop Layout",

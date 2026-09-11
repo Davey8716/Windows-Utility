@@ -85,6 +85,9 @@ def test_capture_layout_requires_rounded_confirmation(monkeypatch):
 
 def test_capture_layout_uses_a_360px_text_block(monkeypatch):
     app = App(answer=QMessageBox.StandardButton.Yes)
+    app.get_default_desktop_layout_path = (
+        lambda: "C:\\Backup\\Desktop Icon Layout\\desktop_icon_layout.json"
+    )
     monkeypatch.setattr(organising_actions, "save_desktop_icon_layout", lambda _path: 3)
     controller = OrganisingActionsController(app, None, None, None)
     controller.run_with_optional_minimize = lambda action: action()
@@ -96,7 +99,9 @@ def test_capture_layout_uses_a_360px_text_block(monkeypatch):
             (
                 "Information",
                 "Desktop Layout",
-                "Captured desktop layout with 3 icon position(s) saved to:\nlayout.json",
+                "Captured desktop layout with 3 icon position(s) saved to:\n"
+                "C:\\Backup\\\n"
+                "Desktop Icon Layout\\desktop_icon_layout.json",
             ),
             {
                 "timeout_ms": 10_000,
@@ -137,6 +142,9 @@ def test_capture_layout_failure_uses_a_360px_text_block(monkeypatch):
 
 def test_restore_layout_success_uses_a_360px_text_block(monkeypatch):
     app = App()
+    app.get_default_desktop_layout_path = (
+        lambda: "C:\\Backup\\Desktop Icon Layout\\desktop_icon_layout.json"
+    )
     monkeypatch.setattr(organising_actions, "restore_desktop_icon_layout", lambda _path: 3)
     controller = OrganisingActionsController(app, None, None, None)
     controller.run_with_optional_minimize = lambda action: action()
@@ -148,7 +156,9 @@ def test_restore_layout_success_uses_a_360px_text_block(monkeypatch):
             (
                 "Information",
                 "Desktop Layout",
-                "Desktop icons restored from:\nlayout.json",
+                "Desktop icons restored from:\n"
+                "C:\\Backup\\\n"
+                "Desktop Icon Layout\\desktop_icon_layout.json",
             ),
             {
                 "timeout_ms": 10_000,
