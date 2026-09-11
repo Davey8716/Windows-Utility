@@ -200,6 +200,11 @@ class WindowMessageMixin:
         self._center_message_box_text_block(message_box)
         self._ensure_timed_close_button(message_box)
         self._center_message_box_buttons(message_box)
+        fixed_popup_width = int(
+            getattr(message_box, "_fixed_popup_width", 0)
+        )
+        if fixed_popup_width > 0:
+            message_box.setFixedWidth(fixed_popup_width)
 
     def _configure_message_box_links(self, message_box: QMessageBox) -> None:
         link_activated = getattr(message_box, "_link_activated", None)
@@ -459,6 +464,7 @@ class WindowMessageMixin:
         minimum_popup_width: int | None = None,
         text_minimum_width: int | None = None,
         text_block_width: int | None = None,
+        fixed_popup_width: int | None = None,
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
         link_activated: Callable[[str], None] | None = None,
@@ -482,6 +488,12 @@ class WindowMessageMixin:
             message_box._accessory_icon_size = accessory_icon_size or QSize(42, 42)
             message_box._minimum_popup_width = minimum_popup_width or 420
             message_box._text_minimum_width = text_minimum_width or 280
+        if fixed_popup_width is not None:
+            fixed_popup_width = int(fixed_popup_width)
+            message_box._fixed_popup_width = fixed_popup_width
+            if text_block_width is None:
+                # The standard frameless popup uses 16 px on either side.
+                text_block_width = max(0, fixed_popup_width - 32)
         message_box._text_block_width = text_block_width
         message_box._center_text_block = center_text_block
         message_box._show_close_now_button = False

@@ -39,11 +39,11 @@ def test_main_clear_confirmation_uses_monitor_export_styling():
     app._show_modal_message.assert_called_once_with(
         QMessageBox.Icon.NoIcon,
         "Clear all learned buttons?",
-        "This permanently removes all learned caption-button\n images and "
+        "This permanently removes all learned caption-button images and "
         "calibration data.\nHover preferences are kept.",
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
         QMessageBox.StandardButton.Cancel,
-        text_block_width=420,
+        fixed_popup_width=360,
         center_text_block=True,
         popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
     )
@@ -116,11 +116,11 @@ def test_hover_import_confirmation_uses_compact_centered_text(tmp_path):
     app._show_modal_message.assert_called_once_with(
         QMessageBox.Icon.Warning,
         "Import Hover Data",
-        "Replace the current Hover Window Controls\n"
-        "settings and learned button data with this backup?",
+        "Replace the current Hover Window Controls settings and learned "
+        "button data with this backup?",
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
         QMessageBox.StandardButton.Cancel,
-        text_block_width=420,
+        fixed_popup_width=360,
         center_text_block=True,
         popup_corner_radius=application_pages.styles.BUTTON_CORNER_RADIUS,
     )

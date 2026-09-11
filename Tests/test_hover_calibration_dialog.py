@@ -425,7 +425,7 @@ class CalibrationDialogTests(unittest.TestCase):
             "calibration data.\nHover preferences are kept.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
-            text_block_width=420,
+            fixed_popup_width=360,
             center_text_block=True,
             popup_corner_radius=HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
         )

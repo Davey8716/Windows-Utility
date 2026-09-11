@@ -166,7 +166,7 @@ def test_timed_message_uses_requested_text_width_without_changing_padding_or_clo
     host.deleteLater()
 
 
-def test_compact_modal_message_wraps_and_centers_its_text_block(monkeypatch):
+def test_fixed_width_modal_confirmation_wraps_and_centers_its_text_block(monkeypatch):
     app = QApplication.instance() or QApplication([])
     host = _MessageBoxHost()
     captured = []
@@ -184,29 +184,20 @@ def test_compact_modal_message_wraps_and_centers_its_text_block(monkeypatch):
         "calibration data.\nHover preferences are kept.",
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
         QMessageBox.StandardButton.Cancel,
-        text_block_width=420,
+        fixed_popup_width=360,
         center_text_block=True,
     )
     app.processEvents()
 
     dialog = captured[0]
     text_label = dialog.findChild(QLabel, "qt_msgbox_label")
+    button_box = dialog.findChild(QDialogButtonBox)
     assert text_label.wordWrap()
-    assert text_label.width() == 420
-    assert text_label.minimumHeight() >= text_label.heightForWidth(420)
+    assert text_label.width() == 328
+    assert text_label.minimumHeight() >= text_label.heightForWidth(328)
     assert text_label.alignment() & Qt.AlignmentFlag.AlignHCenter
-
-    unconstrained_dialog = QMessageBox(host)
-    host._apply_message_box_icon(unconstrained_dialog, QMessageBox.Icon.NoIcon)
-    unconstrained_dialog.setText(
-        "This permanently removes all learned caption-button images and "
-        "calibration data.\nHover preferences are kept."
-    )
-    unconstrained_dialog.setStandardButtons(
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-    )
-    host._set_borderless_message_box(unconstrained_dialog)
-    host._prepare_message_box_layout(unconstrained_dialog)
-
-    assert dialog.sizeHint().width() < unconstrained_dialog.sizeHint().width()
+    assert dialog.minimumWidth() == 360
+    assert dialog.maximumWidth() == 360
+    assert dialog.defaultButton().text() == "Cancel"
+    assert [button.text() for button in button_box.buttons()] == ["Yes", "Cancel"]
     host.deleteLater()
