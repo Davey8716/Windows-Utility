@@ -1,6 +1,6 @@
 Wording inside tooltips needs tidying up re/ formatting /n usage etc + padding needs improving.
 
-In the light theme theres clipping over the border with squareness portruding + take a screenshot to show it to the ai.
+In the light + dark themes theres clipping over the border with squareness portruding + take a screenshot to show it to the ai.
 
 Wording gets cut off inside the folder to desktop drop down list for the light theme + this section needs a delete entry that removes from the GUI and the JSON that contains the entry.
 
@@ -17,3 +17,7 @@ ICON is missing from way earlier in a commit + the requested popup needs roundin
 Clear Learned buttons Yes cancel dialogue, import hover data yes cancel dialogue need sizing re adjusted.
 
 Backup the current pinned taskbar shortcuts yes no dialogue needs it width adjust also, same for the desktop layout saved close now one needs centering
+
+Ask no code, should the monitor rules export overwrite ?
+
+Ask if globally , do the fonts used convey trust + also readability?
