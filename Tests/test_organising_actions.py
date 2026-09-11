@@ -1,5 +1,11 @@
+from pathlib import Path
+
 from PySide6.QtWidgets import QMessageBox
 
+from resurface.features.desktop.screenshot_service import (
+    ScreenshotCapturePlan,
+    ScreenshotCaptureResult,
+)
 from resurface.features.taskbar.backup_service import BackupResult
 from resurface.ui.controllers import organising_actions
 from resurface.ui.controllers.organising_actions import OrganisingActionsController
@@ -41,9 +47,13 @@ class App:
     def save_all_settings(self):
         self.settings_saves += 1
 
-    def _show_timed_message(self, *args, text_block_width=None, **kwargs):
+    def _show_timed_message(
+        self, *args, text_block_width=None, popup_corner_radius=None, **kwargs
+    ):
         if text_block_width is not None:
             kwargs["text_block_width"] = text_block_width
+        if popup_corner_radius is not None:
+            kwargs["popup_corner_radius"] = popup_corner_radius
         self.timed_messages.append((args, kwargs))
 
 
@@ -107,6 +117,7 @@ def test_capture_layout_uses_a_360px_text_block(monkeypatch):
                 "timeout_ms": 10_000,
                 "show_close_now_button": True,
                 "text_block_width": 360,
+                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
             },
         )
     ]
@@ -135,6 +146,7 @@ def test_capture_layout_failure_uses_a_360px_text_block(monkeypatch):
                 "timeout_ms": 10_000,
                 "show_close_now_button": True,
                 "text_block_width": 360,
+                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
             },
         )
     ]
@@ -164,6 +176,7 @@ def test_restore_layout_success_uses_a_360px_text_block(monkeypatch):
                 "timeout_ms": 10_000,
                 "show_close_now_button": True,
                 "text_block_width": 360,
+                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
             },
         )
     ]
@@ -209,6 +222,118 @@ def test_backup_taskbar_runs_and_notifies_after_confirmation():
                 "Backup Taskbar",
                 "Backed up 2 taskbar shortcut(s) to:\nTaskBarApps",
             ),
-            {"timeout_ms": 10_000, "show_close_now_button": True},
+            {
+                "timeout_ms": 10_000,
+                "show_close_now_button": True,
+                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
+            },
         )
     ]
+
+
+class ScreenshotService:
+    def __init__(self, result):
+        self.result = result
+        self.restored_windows = []
+
+    def capture(self, _plan):
+        return self.result
+
+    def restore_windows(self, tracked):
+        self.restored_windows.append(tracked)
+
+
+def _screenshot_plan():
+    return ScreenshotCapturePlan(
+        monitors=(),
+        save_dir=Path("C:/Backups/Desktop Screenshots"),
+        target_paths=(),
+        stale_paths=(),
+        existing_paths=(),
+    )
+
+
+def test_successful_screenshot_persists_and_shows_rounded_ten_second_notification(
+    monkeypatch,
+):
+    app = App()
+    saved_paths = (
+        Path("C:/Backups/Desktop Screenshots/DesktopScreenshot_Monitor1.png"),
+        Path("C:/Backups/Desktop Screenshots/DesktopScreenshot_Monitor2.png"),
+    )
+    service = ScreenshotService(ScreenshotCaptureResult(saved_paths))
+    saved_states = []
+    monkeypatch.setattr(
+        organising_actions, "save_state", lambda state: saved_states.append(state)
+    )
+    controller = OrganisingActionsController(app, service, None, None)
+
+    controller._capture_desktop_screenshot(_screenshot_plan(), (), None)
+
+    assert app.state["desktop_screenshot_last_path"] == str(saved_paths[0])
+    assert app.state["desktop_screenshot_last_dir"] == "C:\\Backups\\Desktop Screenshots"
+    assert saved_states == [app.state]
+    assert app.timed_messages == [
+        (
+            (
+                "Information",
+                "Desktop Screenshot",
+                "Saved 2 desktop screenshot(s) to:\nC:\\Backups\\Desktop Screenshots"
+                "\nSaved files:\nDesktopScreenshot_Monitor1.png\n"
+                "DesktopScreenshot_Monitor2.png",
+            ),
+            {
+                "timeout_ms": 10_000,
+                "show_close_now_button": True,
+                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
+            },
+        )
+    ]
+
+
+def test_successful_screenshot_notifies_when_minimize_after_use_keeps_app_minimized(
+    monkeypatch,
+):
+    app = App()
+    app.state["minimize_after_use_enabled"] = True
+    service = ScreenshotService(
+        ScreenshotCaptureResult(
+            (Path("C:/Backups/Desktop Screenshots/DesktopScreenshot_Monitor1.png"),)
+        )
+    )
+    monkeypatch.setattr(organising_actions, "save_state", lambda _state: None)
+    controller = OrganisingActionsController(app, service, None, None)
+
+    controller._capture_desktop_screenshot(_screenshot_plan(), (), None)
+
+    assert app.timed_messages[0][0][0:2] == ("Information", "Desktop Screenshot")
+    assert app.timed_messages[0][1]["timeout_ms"] == 10_000
+
+
+def test_failed_screenshot_notification_remains_five_seconds_and_requires_restoration():
+    app = App()
+    app.state["minimize_after_use_enabled"] = False
+    service = ScreenshotService(ScreenshotCaptureResult((), "disk unavailable"))
+    controller = OrganisingActionsController(app, service, None, None)
+
+    controller._capture_desktop_screenshot(_screenshot_plan(), (), None)
+
+    assert app.timed_messages == [
+        (
+            (
+                "Warning",
+                "Desktop Screenshot",
+                "Could not save desktop screenshot:\ndisk unavailable",
+            ),
+            {
+                "timeout_ms": 5_000,
+                "show_close_now_button": True,
+                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
+            },
+        )
+    ]
+
+    app.state["minimize_after_use_enabled"] = True
+    controller._capture_desktop_screenshot(_screenshot_plan(), (), None)
+
+    assert len(app.timed_messages) == 1

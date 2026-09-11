@@ -160,15 +160,14 @@ class OrganisingActionsController:
         self.app.state["desktop_screenshot_last_dir"] = str(plan.save_dir)
         self._save_state_safely()
         print(f"[SCREENSHOT] Saved {len(paths)} monitor screenshot(s) to: {plan.save_dir}")
-        if app_restored:
-            summary = ""
-            if len(paths) <= 3:
-                summary = "\nSaved files:\n" + "\n".join(path.name for path in paths)
-            self.show_timed_message(
-                self.app._message_box_icon("Information"), "Desktop Screenshot",
-                f"Saved {len(paths)} desktop screenshot(s) to:\n{plan.save_dir}{summary}",
-                timeout_ms=5_000, show_close_now_button=True,
-            )
+        summary = ""
+        if len(paths) <= 3:
+            summary = "\nSaved files:\n" + "\n".join(path.name for path in paths)
+        self.show_timed_message(
+            self.app._message_box_icon("Information"), "Desktop Screenshot",
+            f"Saved {len(paths)} desktop screenshot(s) to:\n{plan.save_dir}{summary}",
+            timeout_ms=10_000, show_close_now_button=True,
+        )
 
     def backup_taskbar_apps(self) -> None:
         answer = self.show_modal_message(
