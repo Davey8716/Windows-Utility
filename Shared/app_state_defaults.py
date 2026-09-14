@@ -46,6 +46,7 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "recycle_bin_age_rule_days": 30,
     "recycle_bin_last_auto_clean_popup_days": None,
     "master_backup_output_path": str(Path.home()),
+    "master_backup_path_unavailable": False,
     "desktop_screenshot_last_dir": str(Path.home()),
 }
 
@@ -57,6 +58,7 @@ WINDOWS_RESURFACE_STATE_KEYS = frozenset(
         *WINDOWS_RESURFACE_DEFAULTS,
         "backup_folder_path",
         "backup_output_path",
+        "master_backup_path_unavailable",
         "desktop_layout_last_path",
         "desktop_screenshot_last_path",
         "desktop_zen_mode_enabled",

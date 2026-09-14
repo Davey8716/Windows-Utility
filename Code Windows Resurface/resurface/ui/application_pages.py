@@ -944,6 +944,20 @@ class ApplicationPageComposer:
             page.refresh_export_button()
 
     def _export_hover_controls(self) -> None:
+        has_master_backup_path = getattr(
+            self.app, "has_master_backup_path", lambda: True
+        )
+        if not has_master_backup_path():
+            self.app._show_modal_message(
+                QMessageBox.Icon.Warning,
+                "Master Backup Path Required",
+                "Choose a Master Backup Path before exporting Hover Window "
+                "Controls data.",
+                QMessageBox.StandardButton.Ok,
+                QMessageBox.StandardButton.Ok,
+                popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+            )
+            return
         service = self.app.hover_window_controls
         try:
             if not service.has_export_changes():

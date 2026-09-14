@@ -212,6 +212,8 @@ class UtilityControlApp(
         )
 
         self._build_ui()
+        self._migrate_desktop_master_backup_path()
+        self._start_master_backup_path_monitor()
         self.theme_controller = ApplicationThemeController(
             root=self,
             window_chrome=self.window_chrome,
@@ -416,6 +418,9 @@ class UtilityControlApp(
             return
 
         self._shutdown_complete = True
+        master_backup_timer = getattr(self, "_master_backup_path_check_timer", None)
+        if master_backup_timer is not None:
+            master_backup_timer.stop()
         self.session_event_adapter.unregister()
         self.external_drive_controller.shutdown()
 

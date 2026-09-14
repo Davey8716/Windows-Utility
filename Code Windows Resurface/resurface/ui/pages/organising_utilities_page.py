@@ -47,9 +47,15 @@ class OrganisingUtilitiesPage(PageControls):
         self.add_two_column_control_row(self.content_layout, choose, self._path_label)
         self.set_backup_path(backup_path)
 
-    def set_backup_path(self, path: str, tooltip: str = "") -> None:
+    def set_backup_path(
+        self, path: str, tooltip: str = "", *, unavailable: bool = False
+    ) -> None:
         self._path_label.setText(path)
         self._path_label.setToolTip(tooltip)
+        self._path_label.setStyleSheet(
+            styles.surfaced_label_style(15)
+            + ("QLabel { color: #c53030; }" if unavailable else "")
+        )
 
     def path_display_width(self) -> int:
         return self._path_label.width()

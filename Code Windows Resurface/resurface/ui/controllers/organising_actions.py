@@ -57,6 +57,22 @@ class OrganisingActionsController:
             return
         action()
 
+    def _require_master_backup_path(self) -> bool:
+        has_master_backup_path = getattr(
+            self.app, "has_master_backup_path", lambda: True
+        )
+        if has_master_backup_path():
+            return True
+        self.show_modal_message(
+            self.app._message_box_icon("Warning"),
+            "Master Backup Path Required",
+            "Choose a Master Backup Path before creating, restoring, or "
+            "exporting backups.",
+            self.app._message_box_button("Ok"),
+            self.app._message_box_button("Ok"),
+        )
+        return False
+
     def show_timed_message(
         self, icon, title: str, text: str, timeout_ms: int = 10_000,
         show_close_now_button: bool = False,
@@ -119,6 +135,8 @@ class OrganisingActionsController:
             print(f"[STATE] Save failed: {exc}")
 
     def take_desktop_screenshot(self) -> None:
+        if not self._require_master_backup_path():
+            return
         plan = self.screenshot_service.build_capture_plan(self.app.get_default_screenshot_path())
         if plan.existing_paths:
             answer = self.show_modal_message(
@@ -187,6 +205,8 @@ class OrganisingActionsController:
         )
 
     def backup_taskbar_apps(self) -> None:
+        if not self._require_master_backup_path():
+            return
         answer = self.show_modal_message(
             self.app._message_box_icon("Question"),
             "Backup Taskbar",
@@ -219,6 +239,8 @@ class OrganisingActionsController:
         self.run_with_optional_minimize(action)
 
     def open_taskbar_backup_folder(self) -> None:
+        if not self._require_master_backup_path():
+            return
         def action():
             path = self.app.get_default_taskbar_backup_dir()
             if self.explorer_service.is_folder_open(path):
@@ -247,6 +269,8 @@ class OrganisingActionsController:
         )
 
     def capture_desktop_layout(self) -> None:
+        if not self._require_master_backup_path():
+            return
         answer = self.show_modal_message(
             self.app._message_box_icon("Question"),
             "Capture Desktop Layout",
@@ -286,6 +310,8 @@ class OrganisingActionsController:
         self.run_with_optional_minimize(action)
 
     def restore_desktop_layout(self) -> None:
+        if not self._require_master_backup_path():
+            return
         def action():
             path = self.app.get_default_desktop_layout_path()
             try:
@@ -310,6 +336,8 @@ class OrganisingActionsController:
         self.run_with_optional_minimize(action)
 
     def export_bookmarks(self) -> None:
+        if not self._require_master_backup_path():
+            return
         result = self.run_bookmarks_export()
         if result:
             self.show_timed_message(
