@@ -184,7 +184,7 @@ class DriveSpacePage(QWidget):
         if not path:
             return
         menu = QMenu(self.drive_space_list)
-        styles.apply_popup_menu_style(menu)
+        styles.apply_popup_menu_style(menu, radius=styles.BUTTON_CORNER_RADIUS)
         remove_action = menu.addAction(f"Safely Remove {path}")
         if menu.exec(self.drive_space_list.mapToGlobal(pos)) is remove_action:
             self._safely_remove_drive(path)

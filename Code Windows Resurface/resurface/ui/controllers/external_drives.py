@@ -146,7 +146,7 @@ class ExternalDriveController:
             return
         combo = page.drive_combo()
         menu = QMenu(combo)
-        styles.apply_popup_menu_style(menu)
+        styles.apply_popup_menu_style(menu, radius=styles.BUTTON_CORNER_RADIUS)
         actions = {}
         for drive_path in self._current_drives:
             action = menu.addAction(f"Safely Remove {drive_path}")

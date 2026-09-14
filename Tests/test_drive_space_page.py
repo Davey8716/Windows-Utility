@@ -4,6 +4,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from resurface.features.drives.drive_service import DriveServiceError
 from resurface.ui.external_drive_popups import status_popup_options
+from resurface.ui import styles
 from resurface.ui.pages.drive_space_page import DriveSpacePage
 
 
@@ -57,3 +58,41 @@ def test_output_frame_safe_removal_error_uses_shared_popup_options(monkeypatch):
     assert args[1] == "Drive Removal"
     assert "Could not safely remove E:." in args[2]
     assert options == status_popup_options()
+
+
+def test_safe_removal_menu_uses_the_rounded_theme_aware_style(monkeypatch):
+    page = _bare_page(_DriveService(), [])
+    applied_radii = []
+
+    class Menu:
+        def __init__(self, _parent):
+            pass
+
+        def addAction(self, _label):
+            return object()
+
+        def exec(self, _position):
+            return None
+
+    item = type(
+        "Item",
+        (),
+        {"data": lambda _self, role: "E:\\" if role else None},
+    )()
+    page.drive_space_list = type(
+        "List",
+        (),
+        {
+            "itemAt": lambda _self, _pos: item,
+            "mapToGlobal": lambda _self, pos: pos,
+        },
+    )()
+    monkeypatch.setattr("resurface.ui.pages.drive_space_page.QMenu", Menu)
+    monkeypatch.setattr(
+        "resurface.ui.pages.drive_space_page.styles.apply_popup_menu_style",
+        lambda _menu, *, radius: applied_radii.append(radius),
+    )
+
+    page._show_drive_context_menu(object())
+
+    assert applied_radii == [styles.BUTTON_CORNER_RADIUS]

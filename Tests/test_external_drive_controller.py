@@ -182,6 +182,35 @@ def test_safe_removal_error_popup_uses_the_shared_options(monkeypatch):
     assert window.messages[-1][3] == status_popup_options()
 
 
+def test_safe_removal_menu_uses_the_rounded_theme_aware_style(monkeypatch):
+    controller, _window, page, _monitor, _refreshes = make_controller(["E:\\"])
+    controller._current_drives = ("E:\\",)
+    applied_radii = []
+
+    class Menu:
+        def __init__(self, _parent):
+            pass
+
+        def addAction(self, _label):
+            return object()
+
+        def exec(self, _position):
+            return None
+
+    monkeypatch.setattr("resurface.ui.controllers.external_drives.QMenu", Menu)
+    monkeypatch.setattr(
+        "resurface.ui.controllers.external_drives.styles.apply_popup_menu_style",
+        lambda _menu, *, radius: applied_radii.append(radius),
+    )
+    page.drive_combo = lambda: type(
+        "Combo", (), {"mapToGlobal": lambda _self, pos: pos}
+    )()
+
+    controller.show_context_menu(object())
+
+    assert applied_radii == [styles.BUTTON_CORNER_RADIUS]
+
+
 def test_confirmation_without_connected_drives_runs_action_immediately():
     controller, _window, _page, _monitor, _refreshes = make_controller()
     actions = []
