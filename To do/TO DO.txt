@@ -8,6 +8,3 @@ Button Sizes in general, colours relative to state.
 
 The Black writing overall is horrible non contrasty on the blue buttons, need a different shade of black, use a greyer font for all the qpushbuttons 
 whilst light them is enabled.
-
-Drive remove popup for both the connected drive list + the output frame, drive leave reminder on popup, drive connected one ets all need theme specific rounded corners + USB
-ICON is missing from way earlier in a commit + the requested popup needs rounding + 10 seconds kill + "Close now" button.
