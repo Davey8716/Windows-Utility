@@ -1,11 +1,7 @@
 The Export bookmarks save/cancel popup needs centering and its width can be reduced to 380 pixels wide whilst keeping the 
 formatting as is inside the frame. + same for its succes "close now" success dialogue. Same for desktop screenshot "close now" success dialogue.
 
-The close now button of the drive connected dialogue should be at the same place as the disconnected one within the dialogue gui.
-
 Wording inside tooltips needs tidying up re/ formatting /n usage etc + padding needs improving.
-
-The Delete Name button for the folder utilities should be greyed out if nothing is currently showing the folder name dropdown.
 
 In the light + dark themes theres clipping over the border with squareness portruding + take a screenshot to show it to the ai.
 

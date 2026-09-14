@@ -69,14 +69,15 @@ class FolderUtilitiesPage(PageControls):
         self._save_name.setEnabled(False)
 
     def refresh_saved_names(self, names: list[str] | None = None) -> None:
-        names = (
-            load_saved_folder_names(self._saved_names_path())
-            if names is None else names
-        )
+        if names is None:
+            names = (
+                load_saved_folder_names(self._saved_names_path())
+                if self._saved_names_path is not None
+                else []
+            )
         text = self._input.text()
         self._names.blockSignals(True); self._names.clear(); self._names.addItems(names)
         self._names.setCurrentIndex(-1); self._names.setEditText(text); self._names.blockSignals(False)
-        self._delete_name.setEnabled(bool(names))
         self._delete_all_names.setEnabled(bool(names))
         self._set_name_action_state(text)
 
@@ -119,6 +120,7 @@ class FolderUtilitiesPage(PageControls):
         self._save_name.setEnabled(
             bool(clean_name) and not self._name_is_saved(clean_name)
         )
+        self._delete_name.setEnabled(self._name_is_saved(clean_name))
 
     def _request_create(self) -> None:
         name = self._input.text().strip()
