@@ -15,6 +15,7 @@ from resurface.ui import styles
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.monitor_rule_editor_dialog import style_button
 from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
+from resurface.ui.tooltips import tooltip_text
 
 
 PANEL_WIDTH = 685
@@ -74,6 +75,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         service: ClipboardProvenanceService,
         get_master_backup_dir: Callable[[], str],
         open_backup_folder: Callable[[str], bool] | None = None,
+        register_tooltip: Callable[[QWidget, str], None] | None = None,
     ) -> None:
         super().__init__(parent)
         self.setObjectName("ClipboardProvenancePage")
@@ -98,6 +100,13 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         for button in (self.recording_button, self.export_button, self.clear_button):
             style_button(button)
             controls.addWidget(button)
+        if register_tooltip is not None:
+            register_tooltip(
+                self.export_button, tooltip_text("clipboard_provenance_export")
+            )
+            register_tooltip(
+                self.clear_button, tooltip_text("clipboard_provenance_clear")
+            )
         layout.addLayout(controls)
         self.status_label = QLabel(self.panel)
         self.status_label.setWordWrap(True)

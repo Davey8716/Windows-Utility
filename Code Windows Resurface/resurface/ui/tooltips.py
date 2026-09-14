@@ -60,6 +60,8 @@ TOOLTIP_TEXT = {
     "sidebar_dropdown_quick_open": "Opens common locations and tools such as Downloads, the Startup folder, and Clipboard History settings.",
     "sidebar_dropdown_integrity": "Runs system integrity and disk health tools such as SFC and CHKDSK.",
     "maintenance_clear_log": "Clears the Maintenance page output log without undoing any completed actions.",
+    "clipboard_provenance_export": "Exports the recorded clipboard provenance history to the Clipboard Provenance folder in the master backup path.",
+    "clipboard_provenance_clear": "Permanently clears every locally recorded clipboard provenance entry. Exported backup files are kept.",
 }
 
 def tooltip_text(key: str) -> str:

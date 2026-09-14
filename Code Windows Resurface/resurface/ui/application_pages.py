@@ -628,6 +628,7 @@ class ApplicationPageComposer:
             service=app.clipboard_provenance,
             get_master_backup_dir=app._get_master_backup_dir,
             open_backup_folder=app.explorer_windows.open_or_focus_folder,
+            register_tooltip=app.register_tooltip,
         )
         shell.mount_content("clipboard_provenance", clipboard_provenance_page)
 

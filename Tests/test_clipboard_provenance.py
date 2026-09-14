@@ -18,6 +18,7 @@ from resurface.ui.clipboard_provenance_page import (
     ClipboardClearConfirmationDialog,
     ClipboardProvenancePage,
 )
+from resurface.ui.tooltips import tooltip_text
 
 
 class FakeClipboard(QObject):
@@ -199,6 +200,24 @@ def test_page_exports_history_renders_inline_links_and_top_right_delete(monkeypa
         assert modal_calls[0]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
         assert exported[0][1]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
         assert not page.export_button.isEnabled()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_page_registers_export_and_clear_history_tooltips():
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    registered = {}
+    page = ClipboardProvenancePage(
+        None,
+        service=service,
+        get_master_backup_dir=lambda: "",
+        register_tooltip=lambda widget, text: registered.__setitem__(widget, text),
+    )
+    try:
+        assert registered[page.export_button] == tooltip_text("clipboard_provenance_export")
+        assert registered[page.clear_button] == tooltip_text("clipboard_provenance_clear")
     finally:
         page.deleteLater()
         app.processEvents()
