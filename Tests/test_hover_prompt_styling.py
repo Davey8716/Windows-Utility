@@ -87,6 +87,44 @@ def test_hover_export_confirmation_uses_monitor_export_styling(tmp_path):
     service.export_all_data.assert_not_called()
 
 
+def test_hover_export_success_uses_ten_second_closeable_notification(tmp_path):
+    export_directory = tmp_path / "Hover Window Controls"
+    service = type(
+        "Service",
+        (),
+        {
+            "has_export_changes": MagicMock(return_value=True),
+            "export_all_data": MagicMock(
+                return_value=type("ExportResult", (), {"directory": export_directory})()
+            ),
+        },
+    )()
+    app = type(
+        "App",
+        (),
+        {
+            "hover_window_controls": service,
+            "get_default_hover_controls_export_dir": lambda self: str(tmp_path),
+            "_show_modal_message": MagicMock(
+                return_value=QMessageBox.StandardButton.Save
+            ),
+            "_show_timed_message": MagicMock(),
+        },
+    )()
+    composer = _composer_for(app)
+
+    composer._export_hover_controls()
+
+    app._show_timed_message.assert_called_once_with(
+        QMessageBox.Icon.Information,
+        "Hover data exported",
+        f"The export was created successfully.\n\n{export_directory}",
+        timeout_ms=10_000,
+        show_close_now_button=True,
+        popup_corner_radius=application_pages.styles.BUTTON_CORNER_RADIUS,
+    )
+
+
 def test_hover_import_confirmation_uses_compact_centered_text(tmp_path):
     manifest_path = tmp_path / "export_manifest.json"
     service = type(

@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QLabel, QPushButton
 
 from resurface.ui import styles
 from resurface.ui.pages.page_controls import PageControls
-from resurface.ui.tooltips import tooltip_text
+from resurface.ui.tooltips import set_tooltip, tooltip_text
 
 
 class OrganisingUtilitiesPage(PageControls):
@@ -51,7 +51,7 @@ class OrganisingUtilitiesPage(PageControls):
         self, path: str, tooltip: str = "", *, unavailable: bool = False
     ) -> None:
         self._path_label.setText(path)
-        self._path_label.setToolTip(tooltip)
+        set_tooltip(self._path_label, tooltip)
         self._path_label.setStyleSheet(
             styles.surfaced_label_style(15)
             + ("QLabel { color: #c53030; }" if unavailable else "")

@@ -65,7 +65,7 @@ class ExternalDrivesPage(PageControls):
         for index in range(self._notify_combo.count()):
             self._notify_combo.setItemData(
                 index,
-                self._notify_combo.itemText(index),
+                format_tooltip_text(self._notify_combo.itemText(index)),
                 Qt.ItemDataRole.ToolTipRole,
             )
         self._notify_combo.setCursor(Qt.CursorShape.ArrowCursor)
@@ -95,7 +95,7 @@ class ExternalDrivesPage(PageControls):
             for path in drives:
                 text = f"{path} Connected"
                 self._drives.addItem(text, path)
-                self._drives.setItemData(self._drives.count() - 1, text, Qt.ItemDataRole.ToolTipRole)
+                self._drives.setItemData(self._drives.count() - 1, format_tooltip_text(text), Qt.ItemDataRole.ToolTipRole)
             self._drives.setCurrentIndex(0); self._drives.show(); self._empty_label.hide()
             self._drives.setToolTip(format_tooltip_text("Connected drives:\n" + "\n".join(f"{d} Connected" for d in drives)))
         else:

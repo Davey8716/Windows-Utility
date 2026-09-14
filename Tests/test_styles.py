@@ -85,6 +85,8 @@ def test_tooltips_use_rounded_corners_and_theme_colors(
     assert f"color: {text};" in stylesheet
     assert f"border: {styles.POPUP_BORDER_WIDTH}px solid {border};" in stylesheet
     assert f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;" in stylesheet
+    assert "padding: 0px;" in stylesheet
+    assert "text-align: center;" in stylesheet
 
 
 def test_message_box_style_supports_a_local_corner_radius_override():

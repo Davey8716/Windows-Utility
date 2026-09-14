@@ -14,7 +14,7 @@ from resurface.features.screen_mover.hotkeys import (
 )
 from resurface.ui import styles
 from resurface.ui.pages.page_controls import PageControls
-from resurface.ui.tooltips import tooltip_text
+from resurface.ui.tooltips import set_tooltip, tooltip_text
 
 
 class ScreenMoverShortcutEdit(QKeySequenceEdit):
@@ -45,7 +45,7 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
     def show_duplicate_message(self, text: str) -> None:
         self.setProperty("shortcutConflict", True)
         self.duplicate_message.setText(text)
-        self.duplicate_message.setToolTip(text)
+        set_tooltip(self.duplicate_message, text)
         self.duplicate_message.show()
         self.duplicate_message.raise_()
         self._position_duplicate_message()
@@ -54,7 +54,7 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
     def clear_duplicate_message(self) -> None:
         self.setProperty("shortcutConflict", False)
         self.duplicate_message.clear()
-        self.duplicate_message.setToolTip("")
+        set_tooltip(self.duplicate_message, "")
         self.duplicate_message.hide()
         self._refresh_style()
 

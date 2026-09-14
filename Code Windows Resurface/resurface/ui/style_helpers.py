@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QFontMetrics
 
 from resurface.ui import style_tokens as T
+from resurface.ui.tooltips import format_tooltip_text
 
 def qcolor_css(color: QColor) -> str:
     return color.name(QColor.NameFormat.HexRgb)
@@ -116,7 +117,7 @@ def fit_page_combo_width(
     for row in range(combo.count()):
         item_text = combo.itemText(row)
         popup_needed = max(popup_needed, metrics.horizontalAdvance(item_text) + 42)
-        combo.setItemData(row, item_text, Qt.ItemDataRole.ToolTipRole)
+        combo.setItemData(row, format_tooltip_text(item_text), Qt.ItemDataRole.ToolTipRole)
     popup_width = min(T.PAGE_COMBO_POPUP_MAX_WIDTH, popup_needed)
     combo.view().setMinimumWidth(popup_width)
     combo.setProperty("comboPopupWidth", popup_width)

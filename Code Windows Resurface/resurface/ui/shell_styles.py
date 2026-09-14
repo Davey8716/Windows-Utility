@@ -384,6 +384,7 @@ def tooltip_style() -> str:
             border: {T.POPUP_BORDER_WIDTH}px solid {H.qcolor_css(T.tooltip_border())};
             border-radius: {T.BUTTON_CORNER_RADIUS}px;
             padding: 0px;
+            text-align: center;
             font-weight: 700;
         }}
     """

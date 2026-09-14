@@ -1,10 +1,17 @@
-from PySide6.QtWidgets import QApplication, QPushButton, QToolTip
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QComboBox, QPushButton, QToolTip
 
 from resurface.features.system.command_runner import CommandRunner
 from resurface.features.system.maintenance_actions import MaintenanceActions
 from resurface.ui.pages.hover_window_controls_page import HoverWindowControlsPage
 from resurface.ui.pages.maintenance_page import MaintenancePage
-from resurface.ui.tooltips import QtTooltipManager, tooltip_text
+from resurface.ui.style_helpers import fit_page_combo_width
+from resurface.ui.tooltips import (
+    QtTooltipManager,
+    format_tooltip_text,
+    set_tooltip,
+    tooltip_text,
+)
 
 
 def _app():
@@ -61,6 +68,38 @@ def test_dynamic_nonempty_tooltip_still_displays(monkeypatch):
     assert len(shown) == 1
     assert "This action is unavailable" in shown[0][1]
     widget.deleteLater()
+
+
+def test_tooltip_html_is_centered_with_roomy_inline_padding():
+    rendered = format_tooltip_text("First line\nSecond line")
+
+    assert "text-align: center;" in rendered
+    assert "padding: 10px;" in rendered
+    assert "First line<br>Second line" in rendered
+
+
+def test_direct_widget_tooltips_use_the_roomy_formatter():
+    _app()
+    widget = QPushButton("Action")
+
+    set_tooltip(widget, "Available action")
+
+    assert widget.toolTip() == format_tooltip_text("Available action")
+    set_tooltip(widget, "")
+    assert widget.toolTip() == ""
+    widget.deleteLater()
+
+
+def test_combo_item_tooltips_use_the_roomy_formatter():
+    _app()
+    combo = QComboBox()
+    combo.addItems(["First", "Second"])
+
+    fit_page_combo_width(combo)
+
+    assert combo.itemData(0, Qt.ItemDataRole.ToolTipRole) == format_tooltip_text("First")
+    assert combo.itemData(1, Qt.ItemDataRole.ToolTipRole) == format_tooltip_text("Second")
+    combo.deleteLater()
 
 
 def test_taskbar_restoration_button_uses_central_tooltip_wording():

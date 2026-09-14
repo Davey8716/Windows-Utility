@@ -12,6 +12,11 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.ui.app_notifications import WindowMessageMixin
+from resurface.ui import styles
+from resurface.ui.external_drive_popups import (
+    USB_POPUP_ICON_SIZE,
+    usb_popup_icon_path,
+)
 
 
 class _MessageBoxHost(QWidget, WindowMessageMixin):
@@ -189,6 +194,45 @@ def test_timed_message_can_use_a_fixed_width_and_centered_text_block():
     dialog.close()
     app.processEvents()
     host.deleteLater()
+
+
+def test_grouped_timed_message_reapplies_the_usb_accessory_icon():
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+    try:
+        dialog = host._show_timed_message(
+            QMessageBox.Icon.NoIcon,
+            "Drive Removed",
+            "External drive removed:\nE:\\",
+            merge_group="external_drive_changes",
+        )
+        replacement = host._show_timed_message(
+            QMessageBox.Icon.NoIcon,
+            "Drive Connected",
+            "External drive connected:\nE:\\",
+            merge_group="external_drive_changes",
+            replace_grouped_entries=True,
+            accessory_icon_path=usb_popup_icon_path(),
+            accessory_icon_size=USB_POPUP_ICON_SIZE,
+            minimum_popup_width=460,
+            text_minimum_width=320,
+            center_text_block=True,
+            accessory_leading_spacer_width=34,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+        )
+        app.processEvents()
+
+        accessory = dialog.findChild(QLabel, "message_box_accessory_icon")
+        assert replacement is dialog
+        assert accessory is not None
+        assert not accessory.pixmap().isNull()
+        assert accessory.size() == USB_POPUP_ICON_SIZE
+        assert dialog.rect().contains(accessory.geometry().center())
+        assert dialog.mask().contains(accessory.geometry().center())
+    finally:
+        dialog.close()
+        app.processEvents()
+        host.deleteLater()
 
 
 def test_acknowledged_message_applies_its_requested_corner_radius():

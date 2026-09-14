@@ -15,7 +15,7 @@ from resurface.ui import styles
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.monitor_rule_editor_dialog import style_button
 from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
-from resurface.ui.tooltips import tooltip_text
+from resurface.ui.tooltips import set_tooltip, tooltip_text
 
 
 PANEL_WIDTH = 685
@@ -127,7 +127,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
 
     def _sync_recording(self, enabled: bool) -> None:
         self.recording_button.setText("Recording: On" if enabled else "Recording: Off")
-        self.recording_button.setToolTip(
+        set_tooltip(self.recording_button,
             "Stop recording clipboard changes" if enabled else "Start recording clipboard changes"
         )
 
@@ -173,7 +173,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         delete_button = QToolButton(card)
         delete_button.setText("×")
         delete_button.setAccessibleName("Delete clipboard provenance record")
-        delete_button.setToolTip("Delete this provenance record")
+        set_tooltip(delete_button, "Delete this provenance record")
         delete_button.setFixedSize(24, 24)
         delete_button.setStyleSheet(
             "QToolButton { border: none; background: transparent; font-size: 20px; }"
@@ -215,7 +215,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         label.setTextFormat(Qt.TextFormat.RichText)
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         label.setOpenExternalLinks(False)
-        label.setToolTip("Open this web link in your default browser")
+        set_tooltip(label, "Open this web link in your default browser")
         label.linkActivated.connect(lambda value: QDesktopServices.openUrl(QUrl(value)))
         return label
 

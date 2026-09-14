@@ -29,6 +29,7 @@ from resurface.features.monitor_rules import MonitorRulesRepository, rule_schema
 from resurface.ui import application_window as main
 from resurface.ui import monitor_rule_editor_dialog
 from resurface.ui import monitor_rules_page as monitor_rules_ui
+from resurface.ui.tooltips import format_tooltip_text
 from test_screen_mover_settings_ui import _build_offscreen_window
 
 
@@ -158,7 +159,7 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         assert page.help_button.text() == "?"
         assert page.help_button.size().width() == page.help_button.size().height() == 28
         assert page.help_button.accessibleName() == "Monitor Rules help"
-        assert page.help_button.toolTip() == "How Monitor Rules work"
+        assert page.help_button.toolTip() == format_tooltip_text("How Monitor Rules work")
         assert page.add_button.isEnabled()
         assert page.turn_off_all_button.isEnabled()
         assert page.turn_off_all_button.text() == "Turn Off All"
@@ -242,7 +243,7 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         assert all(button.text() == "×" for button in delete_buttons)
         assert all(
             button.accessibleName() == "Delete monitor rule"
-            and button.toolTip() == "Delete this monitor rule"
+            and button.toolTip() == format_tooltip_text("Delete this monitor rule")
             and button.size().width() == button.size().height() == 24
             for button in delete_buttons
         )

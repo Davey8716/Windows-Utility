@@ -45,7 +45,7 @@ from resurface.ui.pages.screen_mover_settings_page import ScreenMoverSettingsPag
 from resurface.ui.pages.user_interface_page import UserInterfacePage
 from resurface.ui.pages.windows_utilities_page import WindowsUtilitiesPage
 from resurface.ui.quick_actions import QuickActionRegistry, QuickActionSpec
-from resurface.ui.tooltips import tooltip_text
+from resurface.ui.tooltips import set_tooltip, tooltip_text
 
 
 QUICK_ACTION_MIME = "application/x-windows-resurface-quick-action"
@@ -278,7 +278,7 @@ class QuickActionsGrid(WindowMessageMixin, QWidget):
             button.blockSignals(False)
         available, reason = self.registry.availability(spec)
         button.setEnabled(available)
-        button.setToolTip(reason or spec.tooltip)
+        set_tooltip(button, reason or spec.tooltip)
         manager = self.tooltip_managers.get(action_id)
         if manager is not None:
             manager.set_text(reason or spec.tooltip)
@@ -462,10 +462,10 @@ class OverviewPage(QWidget):
                 f'style="color: {link_color}; text-decoration: underline;">'
                 f"{escape(backup_path)}</a>"
             )
-            backup_label.setToolTip("Open the Master Backup Path in Explorer")
+            set_tooltip(backup_label, "Open the Master Backup Path in Explorer")
         else:
             backup_label.setText("Not set")
-            backup_label.setToolTip("")
+            set_tooltip(backup_label, "")
         app_data_path = str(self._get_app_data_path()).strip()
         app_data_path_display = app_data_path.replace("\\", "/")
         app_data_label = self.status_labels["app_data_path"]
@@ -476,10 +476,10 @@ class OverviewPage(QWidget):
                 f'style="color: {link_color}; text-decoration: underline;">'
                 f"{escape(app_data_path_display)}</a>"
             )
-            app_data_label.setToolTip("Open the live App data path in Explorer")
+            set_tooltip(app_data_label, "Open the live App data path in Explorer")
         else:
             app_data_label.setText("Not available")
-            app_data_label.setToolTip("")
+            set_tooltip(app_data_label, "")
         recycle_enabled = bool(state.get("recycle_bin_auto_clean_enabled", False))
         recycle_days = state.get("recycle_bin_age_rule_days", 30)
         self.status_labels["recycle"].setText(
@@ -1022,6 +1022,7 @@ class ApplicationPageComposer:
             self.app._show_timed_message(
                 QMessageBox.Icon.Information, "Hover data exported",
                 f"The export was created successfully.\n\n{result.directory}",
+                timeout_ms=10_000,
                 show_close_now_button=True,
                 popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
             )

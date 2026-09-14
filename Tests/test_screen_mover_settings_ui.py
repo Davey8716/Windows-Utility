@@ -5,6 +5,7 @@ from resurface.ui import application_window as main
 from resurface.ui import application_pages, styles
 from resurface.ui.pages import folder_utilities_page
 from resurface.ui.window_chrome import CenteredTitleComboBox
+from resurface.ui.tooltips import format_tooltip_text
 from resurface.features.screen_mover.hotkeys import ACTION_LABELS
 from PySide6.QtCore import QObject, QPoint, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QKeySequence, QShortcut
@@ -1253,7 +1254,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
                 item_text = combo.itemText(row)
                 required = metrics.horizontalAdvance(item_text) + 42
                 assert required <= popup_width or popup_width == 420
-                assert combo.itemData(row, Qt.ItemDataRole.ToolTipRole) == item_text
+                assert combo.itemData(row, Qt.ItemDataRole.ToolTipRole) == format_tooltip_text(item_text)
 
         window.external_drive_controller.refresh_status(
             ("E:\\Example Removable Drive With A Long Volume Name",)
@@ -1266,7 +1267,7 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
         assert connected_combo.itemData(
             0,
             Qt.ItemDataRole.ToolTipRole,
-        ) == connected_combo.itemText(0)
+        ) == format_tooltip_text(connected_combo.itemText(0))
 
         for label_name in ("PageTitle", "PageSectionHeading"):
             labels = window.findChildren(QLabel, label_name)
@@ -1482,7 +1483,7 @@ def test_plug_notification_control_uses_simple_choices_and_stays_centered(monkey
             assert notification_combo.itemData(
                 row,
                 Qt.ItemDataRole.ToolTipRole,
-            ) == notification_combo.itemText(row)
+            ) == format_tooltip_text(notification_combo.itemText(row))
 
         window.external_drive_controller.refresh_status(
             ("E:\\Example Removable Drive With A Long Volume Name",)

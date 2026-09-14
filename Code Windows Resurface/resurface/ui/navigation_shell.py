@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.ui import styles
+from resurface.ui.tooltips import format_tooltip_text
 
 
 @dataclass(frozen=True)
@@ -178,7 +179,7 @@ class NavigationShell(QWidget):
             item = QListWidgetItem(entry["label"])
             item.setData(Qt.ItemDataRole.UserRole, entry["id"])
             item.setSizeHint(QSize(self.sidebar_width - 18, 46))
-            item.setToolTip(entry["description"])
+            item.setToolTip(format_tooltip_text(entry["description"]))
             self.navigation_list.addItem(item)
         self._refresh_navigation_icons()
 

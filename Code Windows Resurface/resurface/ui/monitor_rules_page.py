@@ -37,6 +37,7 @@ from resurface.ui.monitor_rule_editor_dialog import (
     style_button as _style_button,
 )
 from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
+from resurface.ui.tooltips import set_tooltip
 
 
 MONITOR_RULES_HELP_TEXT = (
@@ -142,14 +143,14 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         action_grid.setVerticalSpacing(panel_layout.spacing())
 
         self.add_button = QPushButton("Add Rule", self.rules_frame)
-        self.add_button.setToolTip("Create an automatic application placement rule")
+        set_tooltip(self.add_button, "Create an automatic application placement rule")
         self.alphabet_sort_button = QPushButton("A–Z", self.rules_frame)
         self.turn_off_all_button = QPushButton("Turn Off All", self.rules_frame)
         self.delete_all_button = QPushButton("Delete All", self.rules_frame)
-        self.delete_all_button.setToolTip("Delete all monitor rules")
+        set_tooltip(self.delete_all_button, "Delete all monitor rules")
 
         self.alphabet_sort_button.setAccessibleName("Sort monitor rules alphabetically")
-        self.alphabet_sort_button.setToolTip("Sort rules A to Z")
+        set_tooltip(self.alphabet_sort_button, "Sort rules A to Z")
         _style_button(self.add_button)
         _style_button(self.turn_off_all_button)
         _style_button(self.delete_all_button)
@@ -164,11 +165,11 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         action_grid.addWidget(self.delete_all_button, 0, 3)
         self.export_rules_button = QPushButton("Export Rules", self.rules_frame)
         self.export_rules_button.setProperty("lightModeBlackDisabledText", True)
-        self.export_rules_button.setToolTip(
+        set_tooltip(self.export_rules_button,
             "Export monitor rules to the Master Backup Path"
         )
         self.import_rules_button = QPushButton("Import Rules", self.rules_frame)
-        self.import_rules_button.setToolTip(
+        set_tooltip(self.import_rules_button,
             "Import monitor rules from a backup file"
         )
         _style_button(self.export_rules_button)
@@ -203,7 +204,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self.help_button.setText("?")
         self.help_button.setFixedSize(28, 28)
         self.help_button.setAccessibleName("Monitor Rules help")
-        self.help_button.setToolTip("How Monitor Rules work")
+        set_tooltip(self.help_button, "How Monitor Rules work")
         self.help_button.setStyleSheet(styles.monitor_rules_help_button_style())
         self.help_button.clicked.connect(self._show_rules_help)
         help_layout.addStretch(1)
@@ -334,7 +335,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self.turn_off_all_button.setText(
             "Turn Off All" if any_enabled else "Turn On All"
         )
-        self.turn_off_all_button.setToolTip(
+        set_tooltip(self.turn_off_all_button,
             "Disable all monitor rules" if any_enabled else "Enable all monitor rules"
         )
         if not self.rules:
@@ -382,7 +383,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             delete_button = QToolButton(card)
             delete_button.setText("×")
             delete_button.setAccessibleName("Delete monitor rule")
-            delete_button.setToolTip("Delete this monitor rule")
+            set_tooltip(delete_button, "Delete this monitor rule")
             delete_button.setFixedSize(24, 24)
             delete_button.setStyleSheet(
                 "QToolButton { border: none; background: transparent; font-size: 20px; }"
@@ -665,7 +666,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         )
         self._sort_ascending = not self._sort_ascending
         self.alphabet_sort_button.setText("A–Z" if self._sort_ascending else "Z–A")
-        self.alphabet_sort_button.setToolTip(
+        set_tooltip(self.alphabet_sort_button,
             "Sort rules A to Z" if self._sort_ascending else "Sort rules Z to A"
         )
         self._commit()

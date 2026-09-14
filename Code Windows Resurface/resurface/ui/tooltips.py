@@ -92,10 +92,17 @@ def format_tooltip_text(text: str, wrap_width: int = 62) -> str:
 
     wrapped_html = "<br>".join(paragraphs).strip("<br>")
     return (
-        "<div style='padding: 10px; margin: 0px;'>"
+        "<div style='padding: 10px; margin: 0px; text-align: center;'>"
         f"{wrapped_html}"
         "</div>"
     )
+
+
+def set_tooltip(widget, text: str | None) -> None:
+    """Assign the standard roomy tooltip markup to a widget."""
+    value = "" if text is None else str(text)
+    widget.setToolTip(format_tooltip_text(value) if value.strip() else "")
+
 
 class QtTooltipManager(QObject):
     def __init__(self, widget, text, delay=250):

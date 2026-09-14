@@ -40,7 +40,6 @@ class TrayIconManager(QObject):
             self.app.setWindowIcon(icon)
 
         self.tray.setIcon(icon)
-        self.tray.setToolTip("Utility Suite")
 
         menu = QMenu()
         styles.apply_popup_menu_style(menu)

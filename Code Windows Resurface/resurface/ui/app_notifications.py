@@ -160,7 +160,6 @@ class WindowMessageMixin:
         )
         message_box.setWindowTitle(title)
         message_box.setText(self._compose_timed_message_text(body, timeout_seconds))
-        self._apply_rounded_window_mask(message_box)
 
     def _message_box_icon(self, name: str):
         icon_namespace = getattr(QMessageBox, "Icon", QMessageBox)
@@ -539,18 +538,42 @@ class WindowMessageMixin:
                     active_grouped_box._grouped_entries = [(title, text)]
                 else:
                     active_grouped_box._grouped_entries.append((title, text))
+                if accessory_icon_path:
+                    active_grouped_box._accessory_icon_path = Path(accessory_icon_path)
+                    active_grouped_box._accessory_icon_size = (
+                        accessory_icon_size or QSize(42, 42)
+                    )
+                    active_grouped_box._minimum_popup_width = (
+                        minimum_popup_width or 420
+                    )
+                    active_grouped_box._text_minimum_width = (
+                        text_minimum_width or 280
+                    )
+                    if accessory_leading_spacer_width:
+                        active_grouped_box._accessory_leading_spacer_width = (
+                            accessory_leading_spacer_width
+                        )
                 self._apply_message_box_icon(active_grouped_box, icon)
                 self._refresh_grouped_timed_message(
                     active_grouped_box,
                     title=merge_title or title,
                     timeout_ms=timeout_ms,
                 )
+                self._apply_message_box_accessory(active_grouped_box)
+                self._center_message_box_text_block(active_grouped_box)
+                if popup_corner_radius is not None:
+                    active_grouped_box._popup_corner_radius = popup_corner_radius
+                active_grouped_box.adjustSize()
                 close_timer = getattr(active_grouped_box, "_close_timer", None)
                 if close_timer is not None:
                     close_timer.start(timeout_ms)
                 active_grouped_box.show()
                 active_grouped_box.raise_()
                 active_grouped_box.activateWindow()
+                QTimer.singleShot(
+                    0,
+                    lambda box=active_grouped_box: self._apply_rounded_window_mask(box),
+                )
                 return active_grouped_box
         try:
             message_box = QMessageBox(self)
