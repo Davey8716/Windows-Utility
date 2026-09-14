@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QFontMetrics
 from PySide6.QtWidgets import QDialogButtonBox, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QToolButton, QVBoxLayout, QWidget
 
 from resurface.features.clipboard_provenance import ClipboardProvenanceRepository, ClipboardProvenanceService
@@ -228,6 +228,39 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(directory)))
 
+    def _format_export_success_text(self, path: Path) -> str:
+        """Wrap an exported path at readable boundaries without clipping it."""
+        path_text = str(path)
+        metrics = QFontMetrics(self.font())
+        maximum_width = 330  # 380 px timed popup's available message width.
+        lines = []
+        remaining = path_text
+        while remaining:
+            if metrics.horizontalAdvance(remaining) <= maximum_width:
+                lines.append(remaining)
+                break
+
+            fitting_indexes = [
+                index
+                for index in range(1, len(remaining) + 1)
+                if metrics.horizontalAdvance(remaining[:index]) <= maximum_width
+            ]
+            split_at = max(fitting_indexes)
+            readable_indexes = [
+                index
+                for index in fitting_indexes
+                if remaining[index - 1] in "\\/_-"
+            ]
+            if readable_indexes:
+                split_at = max(readable_indexes)
+            lines.append(remaining[:split_at])
+            remaining = remaining[split_at:]
+
+        return (
+            "Clipboard provenance was exported to:\n"
+            + "\n".join(lines)
+        )
+
     def _export_history(self) -> None:
         destination = self._repository.backup_directory()
         if destination is None:
@@ -256,7 +289,9 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         self._show_timed_message(
             QMessageBox.Icon.Information,
             "Clipboard Provenance Exported",
-            f"Clipboard provenance was exported to:\n{path}",
+            self._format_export_success_text(path),
+            fixed_popup_width=380,
+            center_text_block=True,
             show_close_now_button=True,
             popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )

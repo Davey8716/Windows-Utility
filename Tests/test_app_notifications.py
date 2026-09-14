@@ -166,6 +166,31 @@ def test_timed_message_uses_requested_text_width_without_changing_padding_or_clo
     host.deleteLater()
 
 
+def test_timed_message_can_use_a_fixed_width_and_centered_text_block():
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+
+    dialog = host._show_timed_message(
+        QMessageBox.Icon.NoIcon,
+        "Clipboard Provenance Exported",
+        "Clipboard provenance was exported to:\nC:\\Backup\\clipboard_provenance.json",
+        fixed_popup_width=380,
+        center_text_block=True,
+        show_close_now_button=True,
+    )
+    app.processEvents()
+
+    text_label = dialog.findChild(QLabel, "qt_msgbox_label")
+    assert dialog.minimumWidth() == 380
+    assert dialog.maximumWidth() == 380
+    assert text_label.width() == 330
+    assert text_label.alignment() & Qt.AlignmentFlag.AlignHCenter
+
+    dialog.close()
+    app.processEvents()
+    host.deleteLater()
+
+
 def test_acknowledged_message_applies_its_requested_corner_radius():
     app = QApplication.instance() or QApplication([])
     host = _MessageBoxHost()

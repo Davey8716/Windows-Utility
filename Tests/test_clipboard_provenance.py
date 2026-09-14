@@ -1,5 +1,6 @@
 from datetime import datetime
 import json
+from pathlib import Path
 
 from PySide6.QtCore import QMimeData, QObject, Qt, QUrl, Signal
 from PySide6.QtWidgets import (
@@ -162,7 +163,7 @@ def test_page_exports_history_renders_inline_links_and_top_right_delete(monkeypa
     exported = []
     modal_calls = []
     page._show_modal_message = lambda *_args, **kwargs: modal_calls.append(kwargs) or QMessageBox.StandardButton.Save
-    page._show_timed_message = lambda *_args, **kwargs: exported.append(kwargs)
+    page._show_timed_message = lambda *args, **kwargs: exported.append((args, kwargs))
     try:
         assert page.export_button.isEnabled()
         link_label = next(
@@ -188,9 +189,40 @@ def test_page_exports_history_renders_inline_links_and_top_right_delete(monkeypa
         files = list((tmp_path / "Clipboard Provenance").glob("*.json"))
         assert len(files) == 1
         assert exported
+        message = exported[0][0][2]
+        message_lines = message.splitlines()
+        assert message_lines[0] == "Clipboard provenance was exported to:"
+        assert len(message_lines) >= 3
+        assert "".join(message_lines[1:]) == str(files[0])
+        assert exported[0][1]["fixed_popup_width"] == 380
+        assert exported[0][1]["center_text_block"] is True
         assert modal_calls[0]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
-        assert exported[0]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
+        assert exported[0][1]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
         assert not page.export_button.isEnabled()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_export_success_text_wraps_a_long_path_without_clipping_it():
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    page = ClipboardProvenancePage(
+        None, service=service, get_master_backup_dir=lambda: ""
+    )
+    path = Path(
+        r"C:\Users\davey\Desktop\Windows Resurface Backup\Clipboard Provenance\clipboard_provenance_20260914_203017_354088.json"
+    )
+    try:
+        message_lines = page._format_export_success_text(path).splitlines()
+
+        assert message_lines[0] == "Clipboard provenance was exported to:"
+        assert len(message_lines) > 3
+        assert "".join(message_lines[1:]) == str(path)
+        assert max(
+            page.fontMetrics().horizontalAdvance(line)
+            for line in message_lines[1:]
+        ) <= 330
     finally:
         page.deleteLater()
         app.processEvents()

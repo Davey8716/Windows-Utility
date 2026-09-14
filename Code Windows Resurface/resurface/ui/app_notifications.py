@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QGridLayout,
     QLabel,
+    QLayout,
     QMessageBox,
     QWidget,
 )
@@ -522,6 +523,7 @@ class WindowMessageMixin:
         minimum_popup_width: int | None = None,
         text_minimum_width: int | None = None,
         text_block_width: int | None = None,
+        fixed_popup_width: int | None = None,
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
         show_close_now_button: bool = False,
@@ -572,6 +574,12 @@ class WindowMessageMixin:
             message_box._accessory_icon_size = accessory_icon_size or QSize(42, 42)
             message_box._minimum_popup_width = minimum_popup_width or 420
             message_box._text_minimum_width = text_minimum_width or 280
+        if fixed_popup_width is not None:
+            fixed_popup_width = int(fixed_popup_width)
+            message_box._fixed_popup_width = fixed_popup_width
+            if text_block_width is None:
+                # Timed QMessageBoxes reserve 18 px beyond the standard side padding.
+                text_block_width = max(0, fixed_popup_width - 50)
         message_box._text_block_width = text_block_width
         message_box._center_text_block = center_text_block
         message_box._show_close_now_button = show_close_now_button
@@ -605,6 +613,14 @@ class WindowMessageMixin:
         if merge_group:
             grouped_boxes[merge_group] = message_box
         message_box.show()
+        fixed_popup_width = int(getattr(message_box, "_fixed_popup_width", 0))
+        if fixed_popup_width > 0:
+            layout = message_box.layout()
+            if isinstance(layout, QLayout):
+                layout.setSizeConstraint(QLayout.SizeConstraint.SetNoConstraint)
+            message_box.setMinimumWidth(0)
+            message_box.setMaximumWidth(16_777_215)
+            message_box.setFixedWidth(fixed_popup_width)
         self._apply_rounded_window_mask(message_box)
         close_timer.start(timeout_ms)
         return message_box
