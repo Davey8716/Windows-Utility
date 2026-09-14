@@ -8,7 +8,7 @@ from typing import Callable
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QToolButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QDialogButtonBox, QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton, QToolButton, QVBoxLayout, QWidget
 
 from resurface.features.clipboard_provenance import ClipboardProvenanceRepository, ClipboardProvenanceService
 from resurface.ui import styles
@@ -36,7 +36,7 @@ class ClipboardClearConfirmationDialog(QMessageBox):
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setStyleSheet(styles.message_box_style(outer_frame=False))
-        self.setIcon(QMessageBox.Icon.Question)
+        self.setIcon(QMessageBox.Icon.NoIcon)
         self.setWindowTitle("Clear Clipboard Provenance")
         self.setText(
             "Clear the local Clipboard Provenance history?\n\n"
@@ -46,6 +46,14 @@ class ClipboardClearConfirmationDialog(QMessageBox):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
         )
         self.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        text_label = self.findChild(QLabel, "qt_msgbox_label")
+        if text_label is not None:
+            text_label.setAlignment(
+                Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+            )
+        button_box = self.findChild(QDialogButtonBox)
+        if button_box is not None:
+            button_box.setCenterButtons(True)
         self.setSizeGripEnabled(False)
         self.setFixedSize(self.sizeHint())
 

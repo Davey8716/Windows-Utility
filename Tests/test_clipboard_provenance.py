@@ -2,7 +2,14 @@ from datetime import datetime
 import json
 
 from PySide6.QtCore import QMimeData, QObject, Qt, QUrl, Signal
-from PySide6.QtWidgets import QApplication, QFrame, QLabel, QMessageBox, QToolButton
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialogButtonBox,
+    QFrame,
+    QLabel,
+    QMessageBox,
+    QToolButton,
+)
 
 from resurface.features import clipboard_provenance as provenance
 from resurface.ui import styles
@@ -198,6 +205,13 @@ def test_clear_confirmation_matches_the_frameless_hover_import_dialog():
     assert dialog.mask().isEmpty()
     assert not dialog.isSizeGripEnabled()
     assert dialog.minimumSize() == dialog.maximumSize()
+    assert dialog.icon() == QMessageBox.Icon.NoIcon
+    text_label = dialog.findChild(QLabel, "qt_msgbox_label")
+    assert text_label is not None
+    assert text_label.alignment() & Qt.AlignmentFlag.AlignHCenter
+    button_box = dialog.findChild(QDialogButtonBox)
+    assert button_box is not None
+    assert button_box.centerButtons()
     assert (
         dialog.standardButton(dialog.defaultButton())
         == QMessageBox.StandardButton.Cancel
