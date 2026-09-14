@@ -561,6 +561,12 @@ class WindowMessageMixin:
                 )
                 self._apply_message_box_accessory(active_grouped_box)
                 self._center_message_box_text_block(active_grouped_box)
+                # Rebuild the action row after the text/accessory grid changes.
+                # This keeps the timed close button centered across the complete
+                # popup, rather than a stale subset of its columns.
+                active_grouped_box._show_close_now_button = show_close_now_button
+                self._ensure_timed_close_button(active_grouped_box)
+                self._center_message_box_buttons(active_grouped_box)
                 if popup_corner_radius is not None:
                     active_grouped_box._popup_corner_radius = popup_corner_radius
                 active_grouped_box.adjustSize()

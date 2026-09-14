@@ -15,6 +15,7 @@ from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui import styles
 from resurface.ui.external_drive_popups import (
     USB_POPUP_ICON_SIZE,
+    status_popup_options,
     usb_popup_icon_path,
 )
 
@@ -218,6 +219,7 @@ def test_grouped_timed_message_reapplies_the_usb_accessory_icon():
             text_minimum_width=320,
             center_text_block=True,
             accessory_leading_spacer_width=34,
+            show_close_now_button=True,
             popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
         )
         app.processEvents()
@@ -229,8 +231,43 @@ def test_grouped_timed_message_reapplies_the_usb_accessory_icon():
         assert accessory.size() == USB_POPUP_ICON_SIZE
         assert dialog.rect().contains(accessory.geometry().center())
         assert dialog.mask().contains(accessory.geometry().center())
+        button_box = dialog.findChild(QDialogButtonBox)
+        assert [button.text() for button in button_box.buttons()] == ["Close now"]
+        assert button_box.geometry().center().x() == dialog.rect().center().x()
     finally:
         dialog.close()
+        app.processEvents()
+        host.deleteLater()
+
+
+def test_external_drive_status_popups_keep_close_now_in_the_same_centered_bottom_row():
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+    dialogs = []
+    try:
+        for title, body in (
+            ("Drive Connected", "External drive connected:\nE:\\"),
+            ("Drive Removed", "External drive removed:\nE:\\"),
+        ):
+            dialog = host._show_timed_message(
+                QMessageBox.Icon.NoIcon,
+                title,
+                body,
+                **status_popup_options(),
+            )
+            dialogs.append(dialog)
+            app.processEvents()
+
+        button_geometries = [
+            dialog.findChild(QDialogButtonBox).geometry() for dialog in dialogs
+        ]
+        assert button_geometries[0] == button_geometries[1]
+        for dialog, button_geometry in zip(dialogs, button_geometries):
+            assert button_geometry.center().x() == dialog.rect().center().x()
+            assert button_geometry.bottom() == dialog.contentsRect().bottom() - 16
+    finally:
+        for dialog in dialogs:
+            dialog.close()
         app.processEvents()
         host.deleteLater()
 
