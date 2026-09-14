@@ -179,7 +179,8 @@ def test_timed_message_can_use_a_fixed_width_and_centered_text_block():
     dialog = host._show_timed_message(
         QMessageBox.Icon.NoIcon,
         "Clipboard Provenance Exported",
-        "Clipboard provenance was exported to:\nC:\\Backup\\clipboard_provenance.json",
+        "Clipboard provenance was exported to:\n"
+        "C:\\Backup\\Clipboard Provenance\\\nclipboard_provenance.json",
         fixed_popup_width=380,
         center_text_block=True,
         show_close_now_button=True,
@@ -187,10 +188,15 @@ def test_timed_message_can_use_a_fixed_width_and_centered_text_block():
     app.processEvents()
 
     text_label = dialog.findChild(QLabel, "qt_msgbox_label")
+    button_box = dialog.findChild(QDialogButtonBox)
     assert dialog.minimumWidth() == 380
     assert dialog.maximumWidth() == 380
     assert text_label.width() == 330
+    assert text_label.height() >= text_label.heightForWidth(330)
     assert text_label.alignment() & Qt.AlignmentFlag.AlignHCenter
+    assert [button.text() for button in button_box.buttons()] == ["Close now"]
+    assert dialog.layout().itemAt(dialog.layout().indexOf(button_box)).alignment() & Qt.AlignmentFlag.AlignHCenter
+    assert dialog.rect().contains(button_box.geometry().bottomRight())
 
     dialog.close()
     app.processEvents()

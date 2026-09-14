@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from resurface.features.desktop.screenshot_service import (
     ScreenshotCapturePlan,
@@ -40,11 +40,14 @@ class App:
         *,
         popup_corner_radius=None,
         text_block_width=None,
+        fixed_popup_width=None,
         center_text_block=False,
     ):
         kwargs = {"popup_corner_radius": popup_corner_radius}
         if text_block_width is not None:
             kwargs["text_block_width"] = text_block_width
+        if fixed_popup_width is not None:
+            kwargs["fixed_popup_width"] = fixed_popup_width
         if center_text_block:
             kwargs["center_text_block"] = True
         self.modals.append((icon, title, text, buttons, default_button, popup_corner_radius))
@@ -67,12 +70,15 @@ class App:
         self,
         *args,
         text_block_width=None,
+        fixed_popup_width=None,
         center_text_block=False,
         popup_corner_radius=None,
         **kwargs,
     ):
         if text_block_width is not None:
             kwargs["text_block_width"] = text_block_width
+        if fixed_popup_width is not None:
+            kwargs["fixed_popup_width"] = fixed_popup_width
         if center_text_block:
             kwargs["center_text_block"] = True
         if popup_corner_radius is not None:
@@ -290,6 +296,7 @@ def _screenshot_plan():
 def test_successful_screenshot_persists_and_shows_rounded_ten_second_notification(
     monkeypatch,
 ):
+    QApplication.instance() or QApplication([])
     app = App()
     saved_paths = (
         Path("C:/Backups/Desktop Screenshots/DesktopScreenshot_Monitor1.png"),
@@ -312,13 +319,24 @@ def test_successful_screenshot_persists_and_shows_rounded_ten_second_notificatio
             (
                 "Information",
                 "Desktop Screenshot",
-                "Saved 2 desktop screenshot(s) to:\nC:\\Backups\\Desktop Screenshots"
-                "\nSaved files:\nDesktopScreenshot_Monitor1.png\n"
-                "DesktopScreenshot_Monitor2.png",
+                "Saved 2 desktop screenshot(s) to:\n"
+                + controller._wrap_popup_path(
+                    "C:\\Backups\\Desktop Screenshots",
+                    controller.TIMED_PATH_TEXT_WIDTH,
+                )
+                + "\nSaved files:\n"
+                + "\n".join(
+                    controller._wrap_popup_path(
+                        path.name, controller.TIMED_PATH_TEXT_WIDTH
+                    )
+                    for path in saved_paths
+                ),
             ),
             {
                 "timeout_ms": 10_000,
                 "show_close_now_button": True,
+                "fixed_popup_width": 380,
+                "center_text_block": True,
                 "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
             },
         )
@@ -328,6 +346,7 @@ def test_successful_screenshot_persists_and_shows_rounded_ten_second_notificatio
 def test_successful_screenshot_notifies_when_minimize_after_use_keeps_app_minimized(
     monkeypatch,
 ):
+    QApplication.instance() or QApplication([])
     app = App()
     app.state["minimize_after_use_enabled"] = True
     service = ScreenshotService(
@@ -371,3 +390,112 @@ def test_failed_screenshot_notification_remains_five_seconds_and_requires_restor
     controller._capture_desktop_screenshot(_screenshot_plan(), (), None)
 
     assert len(app.timed_messages) == 1
+
+
+def test_bookmark_export_confirmation_uses_a_centered_380px_popup(monkeypatch, tmp_path):
+    QApplication.instance() or QApplication([])
+    app = App()
+    app.get_default_bookmarks_export_dir = lambda: str(tmp_path)
+    output_filename = "browser_bookmarks_" + "very_long_name_" * 16 + ".html"
+
+    class Exporter:
+        @staticmethod
+        def has_bookmarks():
+            return True
+
+    Exporter.output_filename = output_filename
+
+    monkeypatch.setattr(
+        organising_actions.BraveBookmarksExporter,
+        "supported_exporters",
+        lambda: (Exporter(),),
+    )
+    controller = OrganisingActionsController(app, None, None, None)
+
+    assert controller.run_bookmarks_export() is None
+    target = tmp_path / output_filename
+    prompt_lines = app.modals[0][2].splitlines()
+    assert prompt_lines[0] == "Export bookmarks to:"
+    assert "".join(prompt_lines[1:]) == str(target)
+    assert all(
+        controller._popup_font_metrics().horizontalAdvance(line)
+        <= controller.MODAL_PATH_TEXT_WIDTH
+        for line in prompt_lines[1:]
+    )
+    assert app.modal_options == [
+        {
+            "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
+            "fixed_popup_width": 380,
+            "center_text_block": True,
+        }
+    ]
+
+
+def test_successful_bookmark_export_uses_a_centered_380px_popup():
+    QApplication.instance() or QApplication([])
+    app = App()
+    controller = OrganisingActionsController(app, None, None, None)
+    exported_path = "C:/Backups/Bookmarks/" + "very_long_name_" * 16 + "browser.html"
+    controller.run_bookmarks_export = lambda: [exported_path]
+
+    controller.export_bookmarks()
+
+    assert app.timed_messages == [
+        (
+            (
+                "Information",
+                "Export Bookmarks",
+                "Bookmarks exported to:\n"
+                + controller._wrap_popup_path(
+                    exported_path, controller.TIMED_PATH_TEXT_WIDTH
+                ),
+            ),
+            {
+                "timeout_ms": 10_000,
+                "show_close_now_button": True,
+                "fixed_popup_width": 380,
+                "center_text_block": True,
+                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
+            },
+        )
+    ]
+
+    message_lines = app.timed_messages[0][0][2].splitlines()
+    assert "".join(message_lines[1:]) == exported_path
+    assert all(
+        controller._popup_font_metrics().horizontalAdvance(line)
+        <= controller.TIMED_PATH_TEXT_WIDTH
+        for line in message_lines[1:]
+    )
+
+
+def test_successful_screenshot_wraps_long_directory_and_filename_paths(monkeypatch):
+    QApplication.instance() or QApplication([])
+    app = App()
+    save_dir = Path("C:/Backups/" + "very_long_directory_name_" * 12)
+    filename = "DesktopScreenshot_" + "very_long_monitor_name_" * 10 + ".png"
+    saved_path = save_dir / filename
+    plan = ScreenshotCapturePlan(
+        monitors=(),
+        save_dir=save_dir,
+        target_paths=(),
+        stale_paths=(),
+        existing_paths=(),
+    )
+    monkeypatch.setattr(organising_actions, "save_state", lambda _state: None)
+    controller = OrganisingActionsController(
+        app, ScreenshotService(ScreenshotCaptureResult((saved_path,))), None, None
+    )
+
+    controller._capture_desktop_screenshot(plan, (), None)
+
+    message_lines = app.timed_messages[0][0][2].splitlines()
+    saved_files_index = message_lines.index("Saved files:")
+    assert "".join(message_lines[1:saved_files_index]) == str(save_dir)
+    assert "".join(message_lines[saved_files_index + 1:]) == filename
+    assert all(
+        controller._popup_font_metrics().horizontalAdvance(line)
+        <= controller.TIMED_PATH_TEXT_WIDTH
+        for line in message_lines[1:saved_files_index]
+        + message_lines[saved_files_index + 1:]
+    )

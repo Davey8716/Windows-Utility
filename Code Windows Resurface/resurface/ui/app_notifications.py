@@ -650,6 +650,8 @@ class WindowMessageMixin:
             message_box.setMinimumWidth(0)
             message_box.setMaximumWidth(16_777_215)
             message_box.setFixedWidth(fixed_popup_width)
+            layout.activate()
+            message_box.adjustSize()
         self._apply_rounded_window_mask(message_box)
         close_timer.start(timeout_ms)
         return message_box

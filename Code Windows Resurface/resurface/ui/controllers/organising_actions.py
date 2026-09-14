@@ -5,7 +5,8 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtGui import QFont, QFontMetrics
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from resurface.core.state_manager import save_state
 from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
@@ -35,6 +36,11 @@ class OrganisingActionsController:
     # These utility actions are deliberately visually distinct from the
     # application-wide square message boxes.
     POPUP_CORNER_RADIUS = 12
+    # Reserve generous visual margins because the rendered message label uses
+    # the styled popup font, which can be wider than the application font used
+    # to calculate the line breaks.
+    MODAL_PATH_TEXT_WIDTH = 280
+    TIMED_PATH_TEXT_WIDTH = 270
 
     def __init__(self, app, screenshot_service: ScreenshotService, taskbar_service, explorer_service):
         self.app = app
@@ -77,6 +83,7 @@ class OrganisingActionsController:
         self, icon, title: str, text: str, timeout_ms: int = 10_000,
         show_close_now_button: bool = False,
         text_block_width: int | None = None,
+        fixed_popup_width: int | None = None,
         center_text_block: bool = False,
     ):
         show_message = self.app._show_timed_message
@@ -90,6 +97,8 @@ class OrganisingActionsController:
         }
         if text_block_width is not None and "text_block_width" in params:
             options["text_block_width"] = text_block_width
+        if fixed_popup_width is not None and "fixed_popup_width" in params:
+            options["fixed_popup_width"] = fixed_popup_width
         if center_text_block and "center_text_block" in params:
             options["center_text_block"] = True
         if "popup_corner_radius" in params:
@@ -110,6 +119,7 @@ class OrganisingActionsController:
         default_button,
         *,
         text_block_width: int | None = None,
+        fixed_popup_width: int | None = None,
         center_text_block: bool = False,
     ):
         """Show an organising-utility confirmation with its rounded treatment."""
@@ -124,6 +134,8 @@ class OrganisingActionsController:
         )
         if text_block_width is not None and "text_block_width" in params:
             options["text_block_width"] = text_block_width
+        if fixed_popup_width is not None and "fixed_popup_width" in params:
+            options["fixed_popup_width"] = fixed_popup_width
         if center_text_block and "center_text_block" in params:
             options["center_text_block"] = True
         return show_message(icon, title, text, buttons, default_button, **options)
@@ -133,6 +145,50 @@ class OrganisingActionsController:
             save_state(self.app.state)
         except Exception as exc:
             print(f"[STATE] Save failed: {exc}")
+
+    def _popup_font_metrics(self) -> QFontMetrics:
+        get_font = getattr(self.app, "font", None)
+        if callable(get_font):
+            try:
+                return QFontMetrics(get_font())
+            except (TypeError, RuntimeError):
+                pass
+        application = QApplication.instance()
+        if application is not None:
+            return QFontMetrics(application.font())
+        return QFontMetrics(QFont())
+
+    def _wrap_popup_path(self, path: str | Path, maximum_width: int) -> str:
+        """Wrap a path at readable boundaries without dropping characters."""
+        path_text = str(path)
+        metrics = self._popup_font_metrics()
+        lines: list[str] = []
+        remaining = path_text
+        while remaining:
+            if metrics.horizontalAdvance(remaining) <= maximum_width:
+                lines.append(remaining)
+                break
+
+            fitting_indexes = [
+                index
+                for index in range(1, len(remaining) + 1)
+                if metrics.horizontalAdvance(remaining[:index]) <= maximum_width
+            ]
+            if not fitting_indexes:
+                lines.append(remaining[0])
+                remaining = remaining[1:]
+                continue
+
+            readable_indexes = [
+                index
+                for index in fitting_indexes
+                if remaining[index - 1] in "\\/_-"
+            ]
+            split_at = max(readable_indexes or fitting_indexes)
+            lines.append(remaining[:split_at])
+            remaining = remaining[split_at:]
+
+        return "\n".join(lines)
 
     def take_desktop_screenshot(self) -> None:
         if not self._require_master_backup_path():
@@ -197,11 +253,18 @@ class OrganisingActionsController:
         print(f"[SCREENSHOT] Saved {len(paths)} monitor screenshot(s) to: {plan.save_dir}")
         summary = ""
         if len(paths) <= 3:
-            summary = "\nSaved files:\n" + "\n".join(path.name for path in paths)
+            summary = "\nSaved files:\n" + "\n".join(
+                self._wrap_popup_path(path.name, self.TIMED_PATH_TEXT_WIDTH)
+                for path in paths
+            )
         self.show_timed_message(
             self.app._message_box_icon("Information"), "Desktop Screenshot",
-            f"Saved {len(paths)} desktop screenshot(s) to:\n{plan.save_dir}{summary}",
+            "Saved "
+            f"{len(paths)} desktop screenshot(s) to:\n"
+            f"{self._wrap_popup_path(plan.save_dir, self.TIMED_PATH_TEXT_WIDTH)}"
+            f"{summary}",
             timeout_ms=10_000, show_close_now_button=True,
+            fixed_popup_width=380, center_text_block=True,
         )
 
     def backup_taskbar_apps(self) -> None:
@@ -342,8 +405,13 @@ class OrganisingActionsController:
         if result:
             self.show_timed_message(
                 self.app._message_box_icon("Information"), "Export Bookmarks",
-                "Bookmarks exported to:\n" + "\n".join(result),
+                "Bookmarks exported to:\n"
+                + "\n".join(
+                    self._wrap_popup_path(path, self.TIMED_PATH_TEXT_WIDTH)
+                    for path in result
+                ),
                 show_close_now_button=True,
+                fixed_popup_width=380, center_text_block=True,
             )
         elif result is False:
             self.show_timed_message(
@@ -358,13 +426,17 @@ class OrganisingActionsController:
         if not exporters:
             return False
         targets = [(exporter, output_dir / exporter.output_filename) for exporter in exporters]
-        prompt = "Export bookmarks to:\n" + "\n".join(str(path) for _, path in targets)
+        prompt = "Export bookmarks to:\n" + "\n".join(
+            self._wrap_popup_path(path, self.MODAL_PATH_TEXT_WIDTH)
+            for _, path in targets
+        )
         if any(path.exists() for _, path in targets):
             prompt += "\n\nExisting bookmark export files in this list will be overwritten."
         answer = self.show_modal_message(
             QMessageBox.Icon.NoIcon, "Export Bookmarks", prompt,
             QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Save,
+            fixed_popup_width=380, center_text_block=True,
         )
         if answer != QMessageBox.StandardButton.Save:
             return None
