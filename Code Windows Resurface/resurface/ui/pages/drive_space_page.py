@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from resurface.features.drives.drive_service import DriveService, DriveServiceError
 from resurface.ui import styles
+from resurface.ui.external_drive_popups import status_popup_options
 from resurface.ui.tooltips import format_tooltip_text, tooltip_text
 
 
@@ -193,9 +194,19 @@ class DriveSpacePage(QWidget):
         try:
             self.drive_service.eject(path)
         except DriveServiceError as exc:
-            self.show_timed_message(QMessageBox.Icon.Warning, "Drive Removal", f"Could not safely remove {drive_name}.\n{exc}")
+            self.show_timed_message(
+                QMessageBox.Icon.Warning,
+                "Drive Removal",
+                f"Could not safely remove {drive_name}.\n{exc}",
+                **status_popup_options(),
+            )
             return
-        self.show_timed_message(QMessageBox.Icon.Information, "Drive Removal", f"Requested safe removal for {drive_name}.")
+        self.show_timed_message(
+            QMessageBox.Icon.Information,
+            "Drive Removal",
+            f"Requested safe removal for {drive_name}.",
+            **status_popup_options(),
+        )
         QTimer.singleShot(1500, self.drive_space_list.clear)
         QTimer.singleShot(1600, self.refresh_drives)
 

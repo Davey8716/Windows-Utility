@@ -166,6 +166,26 @@ def test_timed_message_uses_requested_text_width_without_changing_padding_or_clo
     host.deleteLater()
 
 
+def test_acknowledged_message_applies_its_requested_corner_radius():
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+    try:
+        dialog = host._show_acknowledged_message(
+            QMessageBox.Icon.NoIcon,
+            "Drive Reminder",
+            "An external drive is still connected.",
+            popup_corner_radius=6,
+        )
+        app.processEvents()
+
+        assert dialog._popup_corner_radius == 6
+        assert not dialog.mask().isEmpty()
+    finally:
+        dialog.close()
+        app.processEvents()
+        host.deleteLater()
+
+
 def test_fixed_width_modal_confirmation_wraps_and_centers_its_text_block(monkeypatch):
     app = QApplication.instance() or QApplication([])
     host = _MessageBoxHost()

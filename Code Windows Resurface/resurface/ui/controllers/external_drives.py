@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
-from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QMenu, QMessageBox
 
 from resurface.features.drives.drive_monitor import external_drive_signature
@@ -16,11 +15,13 @@ from resurface.features.drives.drive_reminder_logic import (
 )
 from resurface.features.drives.drive_service import DriveServiceError
 from resurface.ui import styles
+from resurface.ui.external_drive_popups import (
+    reminder_popup_options,
+    status_popup_options,
+)
 
 
 class ExternalDriveController:
-    USB_POPUP_ICON_SIZE = QSize(126, 126)
-
     def __init__(
         self,
         *,
@@ -117,7 +118,6 @@ class ExternalDriveController:
                 self.window._message_box_icon("Information"),
                 "Drive Connected",
                 f"External {drive_label} connected:\n" + "\n".join(changes.added),
-                timeout_ms=10_000,
                 **self._popup_options(),
             )
         if changes.removed:
@@ -126,26 +126,15 @@ class ExternalDriveController:
                 self.window._message_box_icon("Information"),
                 "Drive Removed",
                 f"External {drive_label} removed:\n" + "\n".join(changes.removed),
-                timeout_ms=10_000,
                 **self._popup_options(),
             )
 
     def _popup_options(self) -> dict:
-        return {
+        return status_popup_options() | {
             "merge_group": "external_drive_changes",
             "merge_title": "External Drives",
-            "accessory_icon_path": self._usb_popup_icon_path(),
-            "accessory_icon_size": self.USB_POPUP_ICON_SIZE,
-            "minimum_popup_width": 460,
-            "text_minimum_width": 320,
-            "center_text_block": True,
-            "accessory_leading_spacer_width": 34,
-            "show_close_now_button": True,
             "replace_grouped_entries": True,
         }
-
-    def _usb_popup_icon_path(self) -> Path:
-        return Path(__file__).resolve().parents[4] / "App Icons" / "Usb Icon.png"
 
     def open_drive(self, drive_path: str) -> None:
         if drive_path:
@@ -176,12 +165,14 @@ class ExternalDriveController:
                 QMessageBox.Icon.Warning,
                 "Drive Removal",
                 f"Could not safely remove {drive_name}.\n{exc}",
+                **status_popup_options(),
             )
             return
         self.window._show_timed_message(
             QMessageBox.Icon.Information,
             "Drive Removal",
             f"Requested safe removal for {drive_name}.",
+            **status_popup_options(),
         )
         QTimer.singleShot(1600, self.monitor.request_scan)
         drive_page = self._drive_space_page()
@@ -214,12 +205,7 @@ class ExternalDriveController:
             title,
             body,
             on_close=on_close,
-            accessory_icon_path=self._usb_popup_icon_path(),
-            accessory_icon_size=self.USB_POPUP_ICON_SIZE,
-            minimum_popup_width=460,
-            text_minimum_width=320,
-            center_text_block=True,
-            accessory_leading_spacer_width=34,
+            **reminder_popup_options(),
         )
 
     def handle_session_lock(self) -> None:
@@ -297,12 +283,8 @@ class ExternalDriveController:
             message_box,
             self.window._message_box_icon("NoIcon"),
         )
-        message_box._accessory_icon_path = self._usb_popup_icon_path()
-        message_box._accessory_icon_size = self.USB_POPUP_ICON_SIZE
-        message_box._minimum_popup_width = 460
-        message_box._text_minimum_width = 320
-        message_box._center_text_block = True
-        message_box._accessory_leading_spacer_width = 34
+        for option, value in reminder_popup_options().items():
+            setattr(message_box, f"_{option}", value)
         message_box.setStandardButtons(
             self.window._message_box_button("Yes")
             | self.window._message_box_button("Cancel")

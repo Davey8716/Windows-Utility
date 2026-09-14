@@ -2,8 +2,10 @@ from resurface.features.drives.drive_reminder_logic import (
     DriveChanges,
     DriveReminderPolicy,
 )
-from resurface.features.drives.drive_service import DriveInfo
+from resurface.features.drives.drive_service import DriveInfo, DriveServiceError
 from resurface.ui.controllers.external_drives import ExternalDriveController
+from resurface.ui.external_drive_popups import status_popup_options, usb_popup_icon_path
+from resurface.ui import styles
 
 
 class FakeSignal:
@@ -59,11 +61,18 @@ class FakeWindow:
 
 
 class FakeDriveService:
-    def __init__(self, paths=()):
+    def __init__(self, paths=(), eject_error=None):
         self.paths = tuple(paths)
+        self.eject_error = eject_error
+        self.ejected_paths = []
 
     def list_drives(self):
         return [DriveInfo(path, 100, 40, 60, True) for path in self.paths]
+
+    def eject(self, path):
+        if self.eject_error is not None:
+            raise self.eject_error
+        self.ejected_paths.append(path)
 
 
 def make_controller(paths=()):
@@ -99,6 +108,78 @@ def test_snapshot_updates_page_overview_and_connection_notification():
         "Drive Connected",
         "External drive connected:\nE:\\",
     )
+    assert window.messages[0][3] == status_popup_options() | {
+        "merge_group": "external_drive_changes",
+        "merge_title": "External Drives",
+        "replace_grouped_entries": True,
+    }
+
+
+def test_removed_drive_notification_uses_the_shared_status_options():
+    controller, window, _page, _monitor, _refreshes = make_controller()
+
+    controller._handle_snapshot(
+        DriveChanges(current=(), removed=("E:\\",))
+    )
+
+    assert window.messages[0][1:3] == (
+        "Drive Removed",
+        "External drive removed:\nE:\\",
+    )
+    assert window.messages[0][3] == status_popup_options() | {
+        "merge_group": "external_drive_changes",
+        "merge_title": "External Drives",
+        "replace_grouped_entries": True,
+    }
+
+
+def test_usb_popup_icon_resolves_the_moved_historical_asset():
+    path = usb_popup_icon_path()
+
+    assert path.is_file()
+    assert path.name == "Usb Icon.png"
+    assert path.parent.name == "Light Theme"
+
+
+def test_status_popup_uses_standard_rounding_in_both_themes():
+    try:
+        for is_dark in (False, True):
+            styles.set_theme(is_dark)
+            options = status_popup_options()
+            assert options["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
+            assert options["accessory_icon_path"].is_file()
+    finally:
+        styles.set_theme(True)
+
+
+def test_safe_removal_status_popup_uses_the_shared_options(monkeypatch):
+    controller, window, _page, _monitor, _refreshes = make_controller()
+    monkeypatch.setattr(
+        "resurface.ui.controllers.external_drives.QTimer.singleShot",
+        lambda *_args: None,
+    )
+
+    controller.safely_remove("E:\\")
+
+    assert window.messages[-1][1:3] == (
+        "Drive Removal",
+        "Requested safe removal for E:.",
+    )
+    assert window.messages[-1][3] == status_popup_options()
+
+
+def test_safe_removal_error_popup_uses_the_shared_options(monkeypatch):
+    controller, window, _page, _monitor, _refreshes = make_controller()
+    controller.drive_service.eject_error = DriveServiceError("device busy")
+    monkeypatch.setattr(
+        "resurface.ui.controllers.external_drives.QTimer.singleShot",
+        lambda *_args: None,
+    )
+
+    controller.safely_remove("E:\\")
+
+    assert window.messages[-1][1] == "Drive Removal"
+    assert window.messages[-1][3] == status_popup_options()
 
 
 def test_confirmation_without_connected_drives_runs_action_immediately():
@@ -122,3 +203,7 @@ def test_end_session_uses_fresh_synchronous_snapshot_and_blocks(monkeypatch):
     assert blocked
     assert window.warnings[0][1] == "Log Out Blocked"
     assert "E:\\" in window.warnings[0][2]
+    options = window.warnings[0][3]
+    assert options["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
+    assert options["accessory_icon_path"] == usb_popup_icon_path()
+    assert "timeout_ms" not in options

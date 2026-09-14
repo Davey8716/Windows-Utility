@@ -467,8 +467,8 @@ class WindowMessageMixin:
         fixed_popup_width: int | None = None,
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
-        link_activated: Callable[[str], None] | None = None,
         popup_corner_radius: int | None = None,
+        link_activated: Callable[[str], None] | None = None,
     ) -> int:
         suppressed_result = self._affirmative_confirmation_result(buttons)
         if suppressed_result is not None:
@@ -621,6 +621,7 @@ class WindowMessageMixin:
         text_minimum_width: int | None = None,
         center_text_block: bool = False,
         accessory_leading_spacer_width: int | None = None,
+        popup_corner_radius: int | None = None,
     ) -> QMessageBox:
         try:
             message_box = QMessageBox(self)
@@ -638,6 +639,7 @@ class WindowMessageMixin:
             message_box._text_minimum_width = text_minimum_width or 280
         message_box._center_text_block = center_text_block
         message_box._show_close_now_button = False
+        message_box._popup_corner_radius = popup_corner_radius
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(self._message_box_button("Ok"))
