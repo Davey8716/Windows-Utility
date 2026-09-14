@@ -1,3 +1,4 @@
+import shutil
 import sys
 from pathlib import Path
 
@@ -43,6 +44,22 @@ class MasterBackupDirectoryDialog(QFileDialog):
 
 class MasterBackupPathsMixin:
     MASTER_BACKUP_PATH_TOOLTIP_PREFIX = "Master backup folder:"
+    HOVER_STAGING_ENTRY = ".hover-window-controls-staging"
+    # These are the only top-level entries the application creates in a master
+    # backup folder. Keeping this explicit protects unrelated files when the
+    # default home directory is being used as the master path.
+    MANAGED_BACKUP_ENTRIES = (
+        "Bookmarks",
+        "Clipboard Provenance",
+        "Desktop Icon Layout",
+        "Desktop Screenshots",
+        "Hover Window Controls",
+        "Monitor Rules",
+        "Saved Folder Names",
+        "TaskBarApps",
+        HOVER_STAGING_ENTRY,
+    )
+    MATERIAL_BACKUP_ENTRIES = MANAGED_BACKUP_ENTRIES[:-1]
 
     def _get_app_module_attr(self, name: str, default):
         module = sys.modules.get(self.__class__.__module__)
@@ -86,29 +103,28 @@ class MasterBackupPathsMixin:
         new_root = Path(clean_path)
         if old_root != new_root:
             try:
-                old_names = load_saved_folder_names(get_saved_folder_names_path(old_root))
-                new_names_path = get_saved_folder_names_path(new_root)
-                new_names = load_saved_folder_names(new_names_path)
-                merged = [*new_names]
-                seen = {name.casefold() for name in merged}
-                for name in old_names:
-                    if name.casefold() not in seen:
-                        merged.append(name)
-                        seen.add(name.casefold())
-                if old_names and not save_saved_folder_names(merged[:20], new_names_path):
-                    raise OSError("Could not move saved folder names to the new Master Backup Path.")
+                adopting = self._should_adopt_backup_root(old_root, new_root)
+                self._validate_backup_relocation(
+                    old_root, new_root, ignore_staging=adopting
+                )
                 hover_service = getattr(self, "hover_window_controls", None)
-                if hover_service is not None:
-                    hover_service.relocate_data_root(
-                        new_root / ".hover-window-controls-staging"
-                    )
-                old_names_path = get_saved_folder_names_path(old_root)
-                if old_names_path.exists():
-                    old_names_path.unlink()
-                    try:
-                        old_names_path.parent.rmdir()
-                    except OSError:
-                        pass
+                if adopting:
+                    self._adopt_backup_root(old_root, new_root, hover_service)
+                else:
+                    if hover_service is not None:
+                        hover_service.relocate_data_root(
+                            new_root / self.HOVER_STAGING_ENTRY
+                        )
+                    self._move_saved_folder_names(old_root, new_root)
+                    self._move_managed_backups(old_root, new_root)
+                # A master path can be the user's home directory or contain
+                # unrelated files. Remove only an empty, dedicated old root.
+                if (
+                    old_root.exists()
+                    and old_root != Path.home()
+                    and not any(old_root.iterdir())
+                ):
+                    old_root.rmdir()
             except OSError as error:
                 self._show_modal_message(
                     self._message_box_icon("Critical"),
@@ -128,6 +144,117 @@ class MasterBackupPathsMixin:
 
         save_state_fn = self._get_app_module_attr("save_state", save_state)
         save_state_fn(self.state)
+
+    def _should_adopt_backup_root(self, old_root: Path, new_root: Path) -> bool:
+        """Return whether an existing backup set should become the active root."""
+        old_has_backups = any(
+            (old_root / name).exists() or (old_root / name).is_symlink()
+            for name in self.MATERIAL_BACKUP_ENTRIES
+        )
+        new_has_backups = any(
+            (new_root / name).exists() or (new_root / name).is_symlink()
+            for name in self.MATERIAL_BACKUP_ENTRIES
+        )
+        return not old_has_backups and new_has_backups
+
+    def _adopt_backup_root(self, old_root: Path, new_root: Path, hover_service) -> None:
+        """Adopt an orphaned backup set without replacing any of its files."""
+        old_staging = old_root / self.HOVER_STAGING_ENTRY
+        new_staging = new_root / self.HOVER_STAGING_ENTRY
+        if hover_service is not None:
+            hover_service.adopt_data_root(new_staging)
+            return
+
+        if new_staging.exists() or new_staging.is_symlink():
+            if old_staging.exists() or old_staging.is_symlink():
+                if old_staging.is_dir() and not old_staging.is_symlink():
+                    shutil.rmtree(old_staging)
+                else:
+                    old_staging.unlink()
+        elif old_staging.exists() or old_staging.is_symlink():
+            new_staging.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(old_staging), str(new_staging))
+
+    def _validate_backup_relocation(
+        self,
+        old_root: Path,
+        new_root: Path,
+        *,
+        ignore_staging: bool = False,
+    ) -> None:
+        """Reject unsafe nesting and file collisions before moving anything."""
+        old_resolved = old_root.resolve(strict=False)
+        new_resolved = new_root.resolve(strict=False)
+        if new_resolved.is_relative_to(old_resolved):
+            raise OSError("The new Master Backup Path cannot be inside the old path.")
+
+        for name in self.MANAGED_BACKUP_ENTRIES:
+            if name == "Saved Folder Names" or (
+                ignore_staging and name == self.HOVER_STAGING_ENTRY
+            ):
+                continue
+            source = old_root / name
+            if source.exists() or source.is_symlink():
+                self._validate_backup_entry(source, new_root / name)
+
+    @classmethod
+    def _validate_backup_entry(cls, source: Path, destination: Path) -> None:
+        if not destination.exists() and not destination.is_symlink():
+            return
+        if source.is_dir() and not source.is_symlink() and destination.is_dir():
+            for child in source.iterdir():
+                cls._validate_backup_entry(child, destination / child.name)
+            return
+        raise OSError(f"Cannot move backup because it already exists: {destination}")
+
+    @staticmethod
+    def _move_saved_folder_names(old_root: Path, new_root: Path) -> None:
+        """Merge saved names because both master paths can contain a list."""
+        old_path = get_saved_folder_names_path(old_root)
+        if not old_path.exists():
+            return
+        new_path = get_saved_folder_names_path(new_root)
+        merged = [*load_saved_folder_names(new_path)]
+        seen = {name.casefold() for name in merged}
+        for name in load_saved_folder_names(old_path):
+            if name.casefold() not in seen:
+                merged.append(name)
+                seen.add(name.casefold())
+        if not save_saved_folder_names(merged[:20], new_path):
+            raise OSError("Could not move saved folder names to the new Master Backup Path.")
+        old_path.unlink()
+        try:
+            old_path.parent.rmdir()
+        except OSError:
+            pass
+
+    def _move_managed_backups(self, old_root: Path, new_root: Path) -> None:
+        """Relocate all application-owned backup entries to *new_root*.
+
+        Existing destination folders are merged so changing a path never
+        discards backups already stored at the new location.
+        """
+        for name in self.MANAGED_BACKUP_ENTRIES:
+            source = old_root / name
+            if source.exists() or source.is_symlink():
+                self._move_backup_entry(source, new_root / name)
+
+    @classmethod
+    def _move_backup_entry(cls, source: Path, destination: Path) -> None:
+        if not destination.exists() and not destination.is_symlink():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(source), str(destination))
+            return
+
+        if source.is_dir() and not source.is_symlink() and destination.is_dir():
+            for child in source.iterdir():
+                cls._move_backup_entry(child, destination / child.name)
+            source.rmdir()
+            return
+
+        # A file collision cannot be merged safely without overwriting an
+        # existing backup. Leave both paths intact and keep the old setting.
+        raise OSError(f"Cannot move backup because it already exists: {destination}")
 
     def _get_master_backup_path_tooltip_text(self) -> str:
         full_path = self._get_master_backup_dir().strip()

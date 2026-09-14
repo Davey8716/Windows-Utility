@@ -1060,7 +1060,9 @@ def test_export_button_refreshes_for_destination_and_page_display(monkeypatch, t
         app.processEvents()
         assert not page.export_rules_button.isEnabled()
         owner._set_master_backup_dir(str(tmp_path / "second"))
-        assert page.export_rules_button.isEnabled()
+        # The existing rules backup follows the master path, so no new export
+        # is needed immediately after changing its location.
+        assert not page.export_rules_button.isEnabled()
         owner._set_master_backup_dir(str(tmp_path / "first"))
         assert not page.export_rules_button.isEnabled()
         page.hide()
@@ -1072,6 +1074,154 @@ def test_export_button_refreshes_for_destination_and_page_display(monkeypatch, t
         page.close()
         page.deleteLater()
         app.processEvents()
+
+
+def test_changing_master_backup_path_moves_all_managed_backups(monkeypatch, tmp_path):
+    old_root = tmp_path / "old-backups"
+    new_root = tmp_path / "new-backups"
+    for name in MasterBackupPathsMixin.MANAGED_BACKUP_ENTRIES:
+        if name == "Saved Folder Names":
+            continue
+        entry = old_root / name
+        entry.mkdir(parents=True)
+        (entry / "backup.txt").write_text(name, encoding="utf-8")
+
+    old_names = old_root / "Saved Folder Names" / "saved_folder_names.json"
+    old_names.parent.mkdir(parents=True)
+    old_names.write_text('["Old folder"]', encoding="utf-8")
+    new_names = new_root / "Saved Folder Names" / "saved_folder_names.json"
+    new_names.parent.mkdir(parents=True)
+    new_names.write_text('["New folder"]', encoding="utf-8")
+
+    owner = MasterBackupPathsMixin()
+    owner.state = {"master_backup_output_path": str(old_root)}
+    monkeypatch.setattr(owner, "_get_app_module_attr", lambda _name, _default: lambda _state: None)
+
+    owner._set_master_backup_dir(str(new_root))
+
+    assert owner.state["master_backup_output_path"] == str(new_root)
+    assert not old_root.exists()
+    for name in MasterBackupPathsMixin.MANAGED_BACKUP_ENTRIES:
+        if name == "Saved Folder Names":
+            continue
+        assert (new_root / name / "backup.txt").read_text(encoding="utf-8") == name
+    assert json.loads(new_names.read_text(encoding="utf-8")) == ["New folder", "Old folder"]
+
+
+def test_orphaned_backup_root_can_be_adopted_then_fully_moved(monkeypatch, tmp_path):
+    abandoned_root = tmp_path / "abandoned-current"
+    orphaned_root = tmp_path / "orphaned-backups"
+    final_root = tmp_path / "final-backups"
+    abandoned_staging = (
+        abandoned_root / MasterBackupPathsMixin.HOVER_STAGING_ENTRY
+    )
+    abandoned_staging.mkdir(parents=True)
+    (abandoned_staging / "settings.json").write_text("temporary", encoding="utf-8")
+
+    for name in MasterBackupPathsMixin.MATERIAL_BACKUP_ENTRIES:
+        entry = orphaned_root / name
+        entry.mkdir(parents=True)
+        if name == "Saved Folder Names":
+            (entry / "saved_folder_names.json").write_text(
+                '["Recovered"]', encoding="utf-8"
+            )
+        else:
+            (entry / "backup.txt").write_text(name, encoding="utf-8")
+    orphaned_staging = orphaned_root / MasterBackupPathsMixin.HOVER_STAGING_ENTRY
+    orphaned_staging.mkdir()
+    (orphaned_staging / "settings.json").write_text("existing", encoding="utf-8")
+
+    owner = MasterBackupPathsMixin()
+    owner.state = {"master_backup_output_path": str(abandoned_root)}
+    monkeypatch.setattr(owner, "_get_app_module_attr", lambda _name, _default: lambda _state: None)
+
+    owner._set_master_backup_dir(str(orphaned_root))
+
+    assert owner.state["master_backup_output_path"] == str(orphaned_root)
+    assert not abandoned_root.exists()
+    assert (orphaned_staging / "settings.json").read_text(encoding="utf-8") == "existing"
+
+    owner._set_master_backup_dir(str(final_root))
+
+    assert owner.state["master_backup_output_path"] == str(final_root)
+    assert not orphaned_root.exists()
+    for name in MasterBackupPathsMixin.MATERIAL_BACKUP_ENTRIES:
+        assert (final_root / name).is_dir()
+    assert (
+        final_root
+        / MasterBackupPathsMixin.HOVER_STAGING_ENTRY
+        / "settings.json"
+    ).read_text(encoding="utf-8") == "existing"
+
+
+def test_changing_master_backup_path_merges_existing_directories(monkeypatch, tmp_path):
+    old_root = tmp_path / "old-backups"
+    new_root = tmp_path / "new-backups"
+    old_bookmarks = old_root / "Bookmarks"
+    new_bookmarks = new_root / "Bookmarks"
+    old_bookmarks.mkdir(parents=True)
+    new_bookmarks.mkdir(parents=True)
+    (old_bookmarks / "old.html").write_text("old", encoding="utf-8")
+    (new_bookmarks / "existing.html").write_text("existing", encoding="utf-8")
+
+    owner = MasterBackupPathsMixin()
+    owner.state = {"master_backup_output_path": str(old_root)}
+    monkeypatch.setattr(owner, "_get_app_module_attr", lambda _name, _default: lambda _state: None)
+
+    owner._set_master_backup_dir(str(new_root))
+
+    assert not old_root.exists()
+    assert (new_bookmarks / "old.html").read_text(encoding="utf-8") == "old"
+    assert (new_bookmarks / "existing.html").read_text(encoding="utf-8") == "existing"
+
+
+def test_changing_master_backup_path_preserves_unrelated_old_files(monkeypatch, tmp_path):
+    old_root = tmp_path / "old-backups"
+    new_root = tmp_path / "new-backups"
+    taskbar = old_root / "TaskBarApps"
+    taskbar.mkdir(parents=True)
+    (taskbar / "app.lnk").write_text("shortcut", encoding="utf-8")
+    unrelated = old_root / "personal.txt"
+    unrelated.write_text("keep", encoding="utf-8")
+
+    owner = MasterBackupPathsMixin()
+    owner.state = {"master_backup_output_path": str(old_root)}
+    monkeypatch.setattr(owner, "_get_app_module_attr", lambda _name, _default: lambda _state: None)
+
+    owner._set_master_backup_dir(str(new_root))
+
+    assert owner.state["master_backup_output_path"] == str(new_root)
+    assert unrelated.read_text(encoding="utf-8") == "keep"
+    assert (new_root / "TaskBarApps" / "app.lnk").read_text(encoding="utf-8") == "shortcut"
+
+
+def test_backup_collision_aborts_before_moving_anything(monkeypatch, tmp_path):
+    old_root = tmp_path / "old-backups"
+    new_root = tmp_path / "new-backups"
+    old_bookmark = old_root / "Bookmarks" / "same.html"
+    new_bookmark = new_root / "Bookmarks" / "same.html"
+    old_taskbar = old_root / "TaskBarApps" / "app.lnk"
+    old_bookmark.parent.mkdir(parents=True)
+    new_bookmark.parent.mkdir(parents=True)
+    old_taskbar.parent.mkdir(parents=True)
+    old_bookmark.write_text("old", encoding="utf-8")
+    new_bookmark.write_text("new", encoding="utf-8")
+    old_taskbar.write_text("shortcut", encoding="utf-8")
+
+    owner = MasterBackupPathsMixin()
+    owner.state = {"master_backup_output_path": str(old_root)}
+    messages = []
+    monkeypatch.setattr(owner, "_show_modal_message", lambda *args: messages.append(args), raising=False)
+    monkeypatch.setattr(owner, "_message_box_icon", lambda name: name, raising=False)
+    monkeypatch.setattr(owner, "_message_box_button", lambda name: name, raising=False)
+
+    owner._set_master_backup_dir(str(new_root))
+
+    assert owner.state["master_backup_output_path"] == str(old_root)
+    assert old_bookmark.read_text(encoding="utf-8") == "old"
+    assert new_bookmark.read_text(encoding="utf-8") == "new"
+    assert old_taskbar.read_text(encoding="utf-8") == "shortcut"
+    assert len(messages) == 1
 
 
 def test_export_comparison_error_keeps_button_available(monkeypatch, tmp_path):

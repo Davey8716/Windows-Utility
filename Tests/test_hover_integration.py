@@ -225,6 +225,42 @@ def test_export_writes_integrated_settings_and_resumes(monkeypatch, tmp_path):
     }
 
 
+def test_service_adopts_existing_data_root_without_overwriting_it(monkeypatch, tmp_path):
+    old_root = tmp_path / "abandoned" / ".hover-window-controls-staging"
+    destination = tmp_path / "orphaned" / ".hover-window-controls-staging"
+    service, _saves = _service(monkeypatch, old_root, {})
+    service.window_api._vision = SimpleNamespace(
+        cache=SimpleNamespace(base_dir=old_root / "vision-cache")
+    )
+    (old_root / "temporary.txt").write_text("discard", encoding="utf-8")
+    destination.mkdir(parents=True)
+    destination_settings = {
+        "schema_version": 1,
+        "hover": {
+            "enabled": False,
+            "taskbar_restore_enabled": False,
+            "dwell_ms": 1250,
+            "pending_export": True,
+        },
+    }
+    (destination / "settings.json").write_text(
+        json.dumps(destination_settings), encoding="utf-8"
+    )
+    (destination / "existing.txt").write_text("preserve", encoding="utf-8")
+
+    service.adopt_data_root(destination)
+
+    assert service.data_root == destination
+    assert service.window_api._vision.cache.base_dir == destination / "vision-cache"
+    assert not old_root.exists()
+    assert (destination / "existing.txt").read_text(encoding="utf-8") == "preserve"
+    assert json.loads((destination / "settings.json").read_text(encoding="utf-8")) == destination_settings
+    assert service.enabled is False
+    assert service.taskbar_restore_enabled is False
+    assert service.dwell_ms == 1250
+    assert service._pending_export is True
+
+
 def test_import_applies_settings_persists_and_resumes(monkeypatch, tmp_path):
     state = {
         "hover_window_controls_enabled": True,

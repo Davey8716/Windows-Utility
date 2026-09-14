@@ -204,6 +204,60 @@ class HoverWindowControlsService(QObject):
         if old_export_root.exists() and old_export_root != new_export_root:
             shutil.rmtree(old_export_root)
 
+    def adopt_data_root(self, destination: Path) -> None:
+        """Use an existing cache when an orphaned master backup is adopted."""
+        destination = Path(destination)
+        if destination == self.data_root:
+            return
+        if not destination.exists():
+            self.relocate_data_root(destination)
+            return
+        if not destination.is_dir() or destination.is_symlink():
+            raise OSError("The existing Hover Window Controls data is not a usable folder.")
+        if self._busy:
+            raise OSError("Hover Window Controls is busy and cannot change storage folders.")
+
+        old_root = self.data_root
+        old_values = (
+            self.enabled,
+            self.taskbar_restore_enabled,
+            self.dwell_ms,
+            self._pending_export,
+        )
+        self._busy = True
+        self._suspend_for_operation()
+        try:
+            self.data_root = destination
+            self.window_api._vision.cache.base_dir = destination / "vision-cache"
+            hover = self._load_data_settings().get("hover", {})
+            self.enabled = bool(hover.get("enabled", self.enabled))
+            self.taskbar_restore_enabled = bool(
+                hover.get("taskbar_restore_enabled", self.taskbar_restore_enabled)
+            )
+            self.dwell_ms = normalized_dwell_ms(
+                hover.get("dwell_ms", self.dwell_ms)
+            )
+            self._pending_export = bool(
+                hover.get("pending_export", self._pending_export)
+            )
+            self.controller.set_dwell_ms(self.dwell_ms)
+            if old_root.exists():
+                shutil.rmtree(old_root)
+            self._emit_settings()
+        except Exception:
+            self.data_root = old_root
+            self.window_api._vision.cache.base_dir = old_root / "vision-cache"
+            (
+                self.enabled,
+                self.taskbar_restore_enabled,
+                self.dwell_ms,
+                self._pending_export,
+            ) = old_values
+            self.controller.set_dwell_ms(self.dwell_ms)
+            raise
+        finally:
+            self._finish_operation()
+
     @property
     def export_root(self) -> Path:
         return self.data_root.parent / "Hover Window Controls"
