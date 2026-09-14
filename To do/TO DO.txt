@@ -1,7 +1,5 @@
 Wording inside tooltips needs tidying up re/ formatting /n usage etc + padding needs improving.
 
-In the light + dark themes theres clipping over the border with squareness portruding + take a screenshot to show it to the ai.
-
 Wording gets cut off inside the folder to desktop drop down list for the light theme + this section needs a delete entry that removes from the GUI and the JSON that contains the entry.
 
 Button Sizes in general, colours relative to state.
