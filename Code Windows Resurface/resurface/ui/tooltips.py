@@ -1,11 +1,23 @@
 import html
 import textwrap
 
-from PySide6.QtCore import QObject, QTimer, QPoint, QEvent
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QToolTip
+from PySide6.QtCore import QObject, QTimer, QPoint, QEvent, QRectF, Qt
+from PySide6.QtGui import QFont, QGuiApplication, QPainter, QPen
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QApplication,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
+
+from resurface.ui import style_tokens as styles
 
 REGISTERED_TOOLTIP_PROPERTY = "resurfaceRegisteredTooltip"
+_TOOLTIP_POPUPS: dict[int, "RoundedTooltipPopup"] = {}
+_TOOLTIP_ROUTERS: dict[int, "TooltipEventRouter"] = {}
+TOOLTIP_CONTENT_INSET = 10
+TOOLTIP_SCREEN_INSET = 8
 
 TOOLTIP_TEXT = {
     "dark_mode": "Switches the app between dark and light appearance.",
@@ -92,7 +104,7 @@ def format_tooltip_text(text: str, wrap_width: int = 62) -> str:
 
     wrapped_html = "<br>".join(paragraphs).strip("<br>")
     return (
-        "<div style='padding: 10px; margin: 0px; text-align: center;'>"
+        "<div style='margin: 0px; text-align: center;'>"
         f"{wrapped_html}"
         "</div>"
     )
@@ -102,6 +114,207 @@ def set_tooltip(widget, text: str | None) -> None:
     """Assign the standard roomy tooltip markup to a widget."""
     value = "" if text is None else str(text)
     widget.setToolTip(format_tooltip_text(value) if value.strip() else "")
+
+
+class RoundedTooltipPopup(QWidget):
+    """A transparent tooltip window that paints one continuous rounded surface."""
+
+    def __init__(self) -> None:
+        flags = (
+            Qt.WindowType.ToolTip
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowDoesNotAcceptFocus
+            | Qt.WindowType.BypassWindowManagerHint
+        )
+        super().__init__(None, flags)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+
+        self.label = QLabel(self)
+        self.label.setTextFormat(Qt.TextFormat.RichText)
+        self.label.setWordWrap(True)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(
+            TOOLTIP_CONTENT_INSET,
+            TOOLTIP_CONTENT_INSET,
+            TOOLTIP_CONTENT_INSET,
+            TOOLTIP_CONTENT_INSET,
+        )
+        layout.addWidget(self.label)
+        self._anchor_pos = QPoint()
+
+    def _apply_theme(self) -> None:
+        self.label.setStyleSheet(
+            "background: transparent; border: none; "
+            f"color: {styles.tooltip_text_color().name()};"
+        )
+
+    @staticmethod
+    def _available_screen_geometry(pos: QPoint):
+        screen = QGuiApplication.screenAt(pos) or QGuiApplication.primaryScreen()
+        if screen is None:
+            return None
+        return screen.availableGeometry()
+
+    def _resize_for_text(self, pos: QPoint) -> None:
+        geometry = self._available_screen_geometry(pos)
+        max_content_width = 16_384
+        if geometry is not None:
+            max_content_width = max(
+                1,
+                geometry.width() - (2 * TOOLTIP_SCREEN_INSET) - (2 * TOOLTIP_CONTENT_INSET),
+            )
+
+        self.label.setMinimumSize(0, 0)
+        self.label.setMaximumSize(16_384, 16_384)
+        self.label.adjustSize()
+        content_width = min(self.label.sizeHint().width(), max_content_width)
+        self.label.setFixedWidth(max(1, content_width))
+        self.label.setFixedHeight(max(1, self.label.heightForWidth(content_width)))
+        self.layout().activate()
+        self.adjustSize()
+
+    def _move_inside_screen(self, pos: QPoint) -> None:
+        geometry = self._available_screen_geometry(pos)
+        if geometry is None:
+            self.move(pos)
+            return
+        min_x = geometry.left() + TOOLTIP_SCREEN_INSET
+        min_y = geometry.top() + TOOLTIP_SCREEN_INSET
+        max_x = max(min_x, geometry.right() - self.width() - TOOLTIP_SCREEN_INSET + 1)
+        max_y = max(min_y, geometry.bottom() - self.height() - TOOLTIP_SCREEN_INSET + 1)
+        self.move(
+            max(min_x, min(pos.x(), max_x)),
+            max(min_y, min(pos.y(), max_y)),
+        )
+
+    def show_tooltip(self, pos: QPoint, text: str, font: QFont | None = None) -> None:
+        self.label.setFont(font or QApplication.font())
+        self.label.setText(text)
+        self._anchor_pos = QPoint(pos)
+        self._apply_theme()
+        self._resize_for_text(pos)
+        self._move_inside_screen(pos)
+        self.show()
+        self.raise_()
+
+    def refresh_theme(self) -> None:
+        self._apply_theme()
+        self._resize_for_text(self._anchor_pos)
+        self._move_inside_screen(self._anchor_pos)
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        del event
+        inset = styles.POPUP_BORDER_WIDTH / 2
+        rect = QRectF(self.rect()).adjusted(inset, inset, -inset, -inset)
+        if rect.isEmpty():
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(styles.tooltip_border(), styles.POPUP_BORDER_WIDTH))
+        painter.setBrush(styles.tooltip_bg())
+        radius = max(0, styles.BUTTON_CORNER_RADIUS - inset)
+        painter.drawRoundedRect(rect, radius, radius)
+
+
+def tooltip_popup() -> RoundedTooltipPopup:
+    """Return the one tooltip surface shared by the current QApplication."""
+    app = QApplication.instance()
+    if app is None:
+        raise RuntimeError("A QApplication is required before showing a tooltip")
+    app_key = id(app)
+    popup = _TOOLTIP_POPUPS.get(app_key)
+    if popup is None:
+        popup = RoundedTooltipPopup()
+        _TOOLTIP_POPUPS[app_key] = popup
+    return popup
+
+
+def show_tooltip(pos: QPoint, text: str, font: QFont | None = None) -> None:
+    if text.strip():
+        tooltip_popup().show_tooltip(pos, text, font)
+
+
+def hide_tooltip() -> None:
+    app = QApplication.instance()
+    if app is None:
+        return
+    popup = _TOOLTIP_POPUPS.get(id(app))
+    if popup is not None:
+        popup.hide()
+
+
+def refresh_visible_tooltip() -> None:
+    """Repaint the shared popup after the mutable theme palette changes."""
+    app = QApplication.instance()
+    if app is None:
+        return
+    popup = _TOOLTIP_POPUPS.get(id(app))
+    if popup is not None and popup.isVisible():
+        popup.refresh_theme()
+
+
+class TooltipEventRouter(QObject):
+    """Routes standard Qt tooltip events into the rounded app tooltip surface."""
+
+    _HIDE_EVENTS = {
+        QEvent.Type.Leave,
+        QEvent.Type.MouseButtonPress,
+        QEvent.Type.WindowDeactivate,
+        QEvent.Type.FocusOut,
+    }
+
+    @staticmethod
+    def _tooltip_text_for(obj: QWidget, event) -> str:
+        text = obj.toolTip()
+        if text.strip():
+            return text
+
+        view = obj if isinstance(obj, QAbstractItemView) else obj.parentWidget()
+        if not isinstance(view, QAbstractItemView):
+            return ""
+        index = view.indexAt(event.pos())
+        if not index.isValid():
+            return view.toolTip()
+        value = view.model().data(index, Qt.ItemDataRole.ToolTipRole)
+        return "" if value is None else str(value)
+
+    def eventFilter(self, obj, event):
+        if isinstance(obj, RoundedTooltipPopup):
+            return False
+        if event.type() == QEvent.Type.ToolTip and isinstance(obj, QWidget):
+            text = self._tooltip_text_for(obj, event)
+            if not text.strip():
+                return False
+            window = obj.window()
+            if not (
+                hasattr(window, "tooltips_enabled") and not window.tooltips_enabled
+            ):
+                show_tooltip(event.globalPos(), text, obj.font())
+            else:
+                hide_tooltip()
+            return True
+        if event.type() in self._HIDE_EVENTS:
+            hide_tooltip()
+        return False
+
+
+def install_tooltip_router() -> TooltipEventRouter:
+    """Install the application-wide router once and return it for test access."""
+    app = QApplication.instance()
+    if app is None:
+        raise RuntimeError("A QApplication is required before installing tooltip routing")
+    app_key = id(app)
+    router = _TOOLTIP_ROUTERS.get(app_key)
+    if router is None:
+        router = TooltipEventRouter(app)
+        app.installEventFilter(router)
+        _TOOLTIP_ROUTERS[app_key] = router
+    return router
 
 
 class QtTooltipManager(QObject):
@@ -125,9 +338,6 @@ class QtTooltipManager(QObject):
         if etype == QEvent.Type.Enter:
             self._schedule()
 
-        elif etype == QEvent.Type.ToolTip:
-            return True
-
         elif etype in (QEvent.Type.Leave, QEvent.Type.MouseButtonPress):
             self._hide()
         return False
@@ -146,9 +356,8 @@ class QtTooltipManager(QObject):
         if hasattr(app, "tooltips_enabled") and not app.tooltips_enabled:
             return
 
-        QToolTip.setFont(self._build_tooltip_font())
         pos = self.widget.mapToGlobal(QPoint(20, self.widget.height()))
-        QToolTip.showText(pos, format_tooltip_text(self.text), self.widget)
+        show_tooltip(pos, format_tooltip_text(self.text), self._build_tooltip_font())
 
     def set_text(self, text) -> None:
         self.text = "" if text is None else str(text)
@@ -158,7 +367,7 @@ class QtTooltipManager(QObject):
 
     def _hide(self):
         self._timer.stop()
-        QToolTip.hideText()
+        hide_tooltip()
 
     def _safe_tooltip_font(
         self,

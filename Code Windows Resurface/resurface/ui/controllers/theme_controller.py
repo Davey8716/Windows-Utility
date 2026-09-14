@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.ui import styles
+from resurface.ui.tooltips import refresh_visible_tooltip
 from resurface.ui.window_chrome import SeverityComboItemDelegate
 
 
@@ -102,7 +103,8 @@ class ApplicationThemeController:
 
     def apply_theme(self, is_dark: bool) -> None:
         styles.set_theme(is_dark)
-        self.root.setStyleSheet(styles.window_style() + styles.tooltip_style())
+        self.root.setStyleSheet(styles.window_style())
+        refresh_visible_tooltip()
         self.window_chrome.apply_theme()
 
         for line_edit in self.root.findChildren(QLineEdit):

@@ -49,7 +49,7 @@ from resurface.ui.controllers import (
     RecycleBinActionsController,
     ScreenMoverSettingsController,
 )
-from resurface.ui.tooltips import QtTooltipManager
+from resurface.ui.tooltips import QtTooltipManager, install_tooltip_router
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.window_chrome import WindowChrome
@@ -99,7 +99,8 @@ class UtilityControlApp(
         self.saved_state = self.state
         styles.set_theme(bool(self.state.get("theme_dark", True)))
         self.setWindowTitle("Windows Resurface")
-        self.setStyleSheet(styles.window_style() + styles.tooltip_style())
+        self.setStyleSheet(styles.window_style())
+        self._tooltip_router = install_tooltip_router()
         self.setWindowIcon(resolve_application_icon(self))
         self.COLLAPSED_WIDTH = self.WINDOW_WIDTH
         self.EXPANDED_WIDTH = self.WINDOW_WIDTH
