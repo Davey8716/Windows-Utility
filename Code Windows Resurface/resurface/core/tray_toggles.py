@@ -2,6 +2,8 @@ import os
 import sys
 from pathlib import Path
 
+from resurface.features.folder_creator.launcher import DEFAULT_WINDOW_TITLES
+from resurface.features.windows.window_management import close_window_handles
 from resurface.ui import styles
 from PySide6.QtWidgets import QApplication, QSystemTrayIcon, QMenu
 from PySide6.QtGui import QIcon, QAction
@@ -21,6 +23,8 @@ class TrayIconManager(QObject):
         super().__init__(app)
         self.app = app
         self.tray = None
+        self.menu = None
+        self.folder_creator_action = None
         self.zen_mode_action = None
         self.hover_controls_action = None
         self.monitor_rules_action = None
@@ -42,7 +46,15 @@ class TrayIconManager(QObject):
         self.tray.setIcon(icon)
 
         menu = QMenu()
-        styles.apply_popup_menu_style(menu)
+        self.menu = menu
+        self.refresh_menu_style()
+
+        self.folder_creator_action = QAction("Open Folder Creator", self.app)
+        self.folder_creator_action.setCheckable(True)
+        self.folder_creator_action.toggled.connect(self.toggle_folder_creator)
+        menu.addAction(self.folder_creator_action)
+
+        menu.addSeparator()
 
         self.zen_mode_action = QAction("Zen Mode", self.app)
         self.zen_mode_action.setCheckable(True)
@@ -61,17 +73,39 @@ class TrayIconManager(QObject):
         self.monitor_rules_action.toggled.connect(self.toggle_monitor_rules)
         menu.addAction(self.monitor_rules_action)
 
-        menu.addSeparator()
-
         quit_action = QAction("Quit", self.app)
         quit_action.triggered.connect(self.quit_from_tray)
         menu.addAction(quit_action)
 
-        menu.aboutToShow.connect(self.sync_actions)
+        menu.aboutToShow.connect(self.refresh_menu)
         self.tray.setContextMenu(menu)
         self.tray.activated.connect(self.on_tray_activated)
         self.tray.show()
         self.sync_actions()
+
+    def refresh_menu(self):
+        """Update the tray menu's live theme and checked-action state."""
+        self.refresh_menu_style()
+        self.sync_actions()
+
+    def refresh_menu_style(self):
+        if self.menu is not None:
+            styles.apply_popup_menu_style(
+                self.menu, radius=styles.BUTTON_CORNER_RADIUS
+            )
+
+    def toggle_folder_creator(self, enabled: bool):
+        if enabled:
+            self.open_folder_creator()
+            return
+
+        close_window_handles(self._folder_creator_handles())
+
+    def open_folder_creator(self):
+        actions = getattr(self.app, "folder_actions", None)
+        opener = getattr(actions, "open_folder_creator", None)
+        if callable(opener):
+            opener()
 
     def toggle_window(self):
         if self.app.isVisible():
@@ -90,8 +124,34 @@ class TrayIconManager(QObject):
 
     def sync_actions(self):
         self.sync_zen_mode_action()
+        self.sync_folder_creator_action()
         self.sync_hover_controls_action()
         self.sync_monitor_rules_action()
+
+    def sync_folder_creator_action(self):
+        if not self.folder_creator_action:
+            return
+
+        is_open = bool(self._folder_creator_handles())
+
+        self.folder_creator_action.blockSignals(True)
+        self.folder_creator_action.setChecked(is_open)
+        self.folder_creator_action.blockSignals(False)
+
+    def _folder_creator_handles(self) -> list[int]:
+        launcher = getattr(self.app, "folder_creator_launcher", None)
+        if launcher is None:
+            return []
+        try:
+            root = launcher.resolve_project_root()
+            target = launcher.resolve_launch_target(root / "Code Folder Creator")
+            return (
+                launcher.window_handles(DEFAULT_WINDOW_TITLES, target)
+                if target
+                else []
+            )
+        except Exception:
+            return []
 
     def sync_hover_controls_action(self):
         if not self.hover_controls_action:

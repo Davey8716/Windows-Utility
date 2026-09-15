@@ -10,6 +10,9 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QApplication
 
+from resurface.core import tray_toggles
+from resurface.ui import styles
+
 from resurface.core.tray_toggles import (
     TRAY_ICON_BUNDLE_NAME,
     TRAY_ICON_ENV_VAR,
@@ -65,6 +68,87 @@ def test_tray_hover_controls_action_syncs_and_dispatches() -> None:
 
     assert window.enabled_calls == [True]
     assert manager.hover_controls_action.isChecked()
+
+
+def test_tray_folder_creator_action_opens_or_closes_and_precedes_toggles(monkeypatch) -> None:
+    _app()
+
+    class FakeFolderActions:
+        def __init__(self):
+            self.open_calls = 0
+
+        def open_folder_creator(self):
+            self.open_calls += 1
+
+    class FakeFolderCreatorLauncher:
+        def __init__(self):
+            self.handles = []
+
+        def resolve_project_root(self):
+            return Path("C:/project")
+
+        def resolve_launch_target(self, project_dir):
+            return project_dir / "main.py"
+
+        def window_handles(self, titles, target):
+            assert target.name == "main.py"
+            return self.handles
+
+    class FakeWindow(QObject):
+        def __init__(self):
+            super().__init__()
+            self.folder_actions = FakeFolderActions()
+            self.folder_creator_launcher = FakeFolderCreatorLauncher()
+
+        def windowIcon(self):
+            return QIcon()
+
+    window = FakeWindow()
+    manager = TrayIconManager(window)
+    manager.create_tray_icon()
+
+    assert manager.menu.actions()[0] is manager.folder_creator_action
+    assert manager.folder_creator_action.text() == "Open Folder Creator"
+    assert manager.folder_creator_action.isCheckable()
+    assert not manager.folder_creator_action.isChecked()
+    manager.folder_creator_action.trigger()
+    assert window.folder_actions.open_calls == 1
+
+    window.folder_creator_launcher.handles = [42]
+    manager.sync_folder_creator_action()
+    assert manager.folder_creator_action.isChecked()
+    closed_handles = []
+    monkeypatch.setattr(
+        tray_toggles, "close_window_handles", lambda handles: closed_handles.extend(handles)
+    )
+    manager.folder_creator_action.trigger()
+    assert not manager.folder_creator_action.isChecked()
+    assert closed_handles == [42]
+
+
+def test_tray_menu_restyles_with_live_theme_and_rounded_corners() -> None:
+    _app()
+
+    class FakeWindow(QObject):
+        def windowIcon(self):
+            return QIcon()
+
+    manager = TrayIconManager(FakeWindow())
+    manager.create_tray_icon()
+
+    styles.set_theme(True)
+    manager.refresh_menu()
+    dark_style = manager.menu.styleSheet()
+    assert f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;" in dark_style
+    assert f"background-color: {styles.qcolor_css(styles.SURFACE_BG)};" in dark_style
+
+    styles.set_theme(False)
+    manager.refresh_menu()
+    light_style = manager.menu.styleSheet()
+    assert f"border-radius: {styles.BUTTON_CORNER_RADIUS}px;" in light_style
+    assert f"background-color: {styles.qcolor_css(styles.SURFACE_BG)};" in light_style
+    assert light_style != dark_style
+    styles.set_theme(True)
 
 
 def test_application_icon_candidates_prioritize_env_var(monkeypatch, tmp_path) -> None:
