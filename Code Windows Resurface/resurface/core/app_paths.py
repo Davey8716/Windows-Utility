@@ -55,6 +55,7 @@ class MasterBackupPathsMixin:
         "Clipboard Provenance",
         "Desktop Icon Layout",
         "Desktop Screenshots",
+        "Folder Creator Templates",
         "Hover Window Controls",
         "Monitor Rules",
         "Saved Folder Names",

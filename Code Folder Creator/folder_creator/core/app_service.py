@@ -13,8 +13,11 @@ class AppService:
         self.folder_builder = FolderStructureBuilder()
         self.template_service = TemplateService()
         self.state_manager = StateManager()
-        self.template_paths =  TemplatePaths()
         self.state = self.state_manager.load_state()
+        self.template_paths = TemplatePaths(self.state)
+
+    def templates_available(self) -> bool:
+        return self.template_paths.available
 
     def add_folder(self):
         self.tree_controller.add_root_folder()
@@ -42,12 +45,16 @@ class AppService:
         )
         return data if data is not None else None
 
-    def save_to_user_templates(self, path):
+    def save_to_user_templates(self, path) -> bool:
+        if not self.templates_available():
+            return False
         src = Path(path)
+        assert self.template_paths.user_dir is not None
         dst = self.template_paths.user_dir / src.name
 
         if src.resolve() != dst.resolve():
             copy(src, dst)
+        return True
 
     def get_state(self, key, default=None):
         return self.state.get(key, default)

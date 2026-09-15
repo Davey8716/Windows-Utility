@@ -102,13 +102,13 @@ class TemplatePanel:
         path_layout.setContentsMargins(0, 0, 0, 0)
         path_layout.setSpacing(tight_gap)
 
-        self.template_path_title = QLabel("TEMPLATE SAVE LOCATION")
+        self.template_path_title = QLabel("TEMPLATE MASTER BACKUP LOCATION")
         self.template_path_title.setFixedSize(288, 40)
         self.template_path_title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.template_path_title.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         self.template_path_line = PathDisplayLabel()
         self.template_path_line.setPlaceholderText(
-            "OUTPUT LOCATION FOR USER MADE TEMPLATES."
+            "MASTER BACKUP LOCATION FOR USER TEMPLATES."
         )
         self.template_path_line.setFixedSize(288, 40)
         self.template_path_line.setProperty("surfaceLabelStyle", True)

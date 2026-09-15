@@ -75,9 +75,16 @@ Templates can be saved and loaded as:
 - `.txt`
 - `.md`
 
-User templates and app state are stored in:
+User and editable default templates are stored under the configured Windows
+Resurface Master Backup Path:
 
-%LOCALAPPDATA%\FolderCreator
+`Folder Creator Templates\\user_templates`
+
+`Folder Creator Templates\\default_templates`
+
+Folder Creator app state remains in the shared Windows Resurface configuration.
+Template save and import operations are unavailable until a valid Master Backup
+Path is configured.
 
 The app also includes default templates for common workflows, including:
 
@@ -145,7 +152,7 @@ Code Folder Creator/
 - Folder names are limited to 64 characters in the app.
 - Invalid Windows folder characters are blocked: `< > : " / \ | ? *`
 - Files dropped into the tree are ignored when importing folder structures.
-- Default templates are copied into `%LOCALAPPDATA%\FolderCreator\default_templates` on first run.
+- Default templates are copied into `Folder Creator Templates\default_templates` in the Master Backup Path on first run.
 
 ## License
 

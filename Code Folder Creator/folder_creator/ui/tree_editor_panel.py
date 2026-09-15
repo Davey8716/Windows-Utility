@@ -22,7 +22,7 @@ TREE_PLACEHOLDER = (
     "Duplicate default files in these folders will be ignored.\n\n"
     "User templates using the save button are saved as .json, md or.txt."
     "A copy of them will be saved to:\n"
-    "C:/Users/yourusername/AppData/Local/FolderCreator/.\n"
+    "the Folder Creator Templates folder in the Master Backup Path.\n"
     "To access this easily, right click the dropdown arrow on 'User Templates'.\n"
     "Drag-and-dropped templates are also saved there automatically.\n\n"
     "Folder trees can be copy pasted in here using Ctrl + V as plain text."

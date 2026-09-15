@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from shutil import copy
 
 from PySide6.QtCore import QFileSystemWatcher, QTimer, Qt
 from PySide6.QtWidgets import QFileDialog
@@ -11,6 +10,10 @@ from folder_creator.features.tree.outline_parser import parse_indented_text
 class TemplateController:
     """Own template loading, saving, selection, and filesystem refreshes."""
 
+    MASTER_BACKUP_UNAVAILABLE_MESSAGE = (
+        "Set a valid Master Backup Path in Windows Resurface before working with templates."
+    )
+
     def __init__(self, window):
         self.window = window
         self.service = window.service
@@ -19,14 +22,32 @@ class TemplateController:
         self._current_loaded_template = None
         self.watcher = QFileSystemWatcher()
 
-        user_dir = str(self.service.template_paths.user_dir)
-        self.watcher.addPath(user_dir)
+        user_dir = self._user_template_dir()
+        if user_dir is not None:
+            self.watcher.addPath(str(user_dir))
         self.watcher.directoryChanged.connect(self.refresh_user_templates_dropdown)
+
+    def _templates_available(self) -> bool:
+        resolver = getattr(self.service, "templates_available", None)
+        return bool(resolver()) if callable(resolver) else True
+
+    def _user_template_dir(self) -> Path | None:
+        directory = getattr(self.service.template_paths, "user_dir", None)
+        return Path(directory) if directory is not None else None
+
+    def _show_master_backup_unavailable(self) -> None:
+        self.window.status.set(
+            self.MASTER_BACKUP_UNAVAILABLE_MESSAGE,
+            target="nested",
+            status_type="error",
+        )
 
     def reset_loaded_template(self):
         self._current_loaded_template = None
 
     def load_template_dialog(self, parent):
+        if not self._templates_available():
+            return "unavailable", self.MASTER_BACKUP_UNAVAILABLE_MESSAGE
         file_path, _ = QFileDialog.getOpenFileName(
             parent,
             "Load Template",
@@ -51,6 +72,9 @@ class TemplateController:
             self.window.status.set(message, target="nested", status_type="error")
 
     def load_template_from_path(self, file_path):
+        if not self._templates_available():
+            self._show_master_backup_unavailable()
+            return
         try:
             self._loading_template = True
             auto_number_was_enabled = self.window.auto_enumerate_folders.isChecked()
@@ -63,7 +87,9 @@ class TemplateController:
                 data,
                 renumber=auto_number_was_enabled,
             )
-            self.service.save_to_user_templates(file_path)
+            if not self.service.save_to_user_templates(file_path):
+                self._show_master_backup_unavailable()
+                return
             self._current_loaded_template = (
                 Path(file_path).stem.replace("_", " ").title()
             )
@@ -106,9 +132,13 @@ class TemplateController:
             self.window.ui_state.update_build_button_state()
             return
 
+        user_dir = self._user_template_dir()
+        if user_dir is None:
+            self._show_master_backup_unavailable()
+            return
         matches = [
             file
-            for file in self.service.template_paths.user_dir.glob("*.*")
+            for file in user_dir.glob("*.*")
             if file.stem.replace("_", " ").title() == text
         ]
         if not matches:
@@ -123,8 +153,10 @@ class TemplateController:
         dropdown.clear()
         dropdown.addItem("User Templates")
         dropdown.insertSeparator(dropdown.count())
-        for file in sorted(self.service.template_paths.user_dir.glob("*.*")):
-            dropdown.addItem(file.stem.replace("_", " ").title())
+        user_dir = self._user_template_dir()
+        if user_dir is not None:
+            for file in sorted(user_dir.glob("*.*")):
+                dropdown.addItem(file.stem.replace("_", " ").title())
         dropdown.blockSignals(False)
 
         if self._current_loaded_template:
@@ -133,10 +165,10 @@ class TemplateController:
                 dropdown.setCurrentIndex(index)
 
         current_loaded = self._current_loaded_template
-        if current_loaded:
+        if current_loaded and user_dir is not None:
             names = [
                 file.stem.replace("_", " ").title()
-                for file in self.service.template_paths.user_dir.glob("*.*")
+                for file in user_dir.glob("*.*")
             ]
             if current_loaded not in names:
                 self.reset_loaded_template()
@@ -145,45 +177,51 @@ class TemplateController:
                 self.window.ui_state.update_build_button_state()
 
     def user_template_save(self):
-        start_dir = self.window.template_path_line.text().strip()
+        user_dir = self._user_template_dir()
+        if not self._templates_available() or user_dir is None:
+            self._show_master_backup_unavailable()
+            return
         file_path, _ = QFileDialog.getSaveFileName(
             self.window,
             "Save Template",
-            start_dir,
+            str(user_dir),
             "Templates (*.json *.txt *.md);;JSON (*.json);;Text (*.txt);;Markdown (*.md)",
         )
         if not file_path:
             return
 
-        self.window.template_path_line.setText(str(Path(file_path).parent.resolve()))
+        destination = user_dir / Path(file_path).name
         data = self.service.tree_controller.serialize_tree()
-        if Path(file_path).suffix.lower() == ".json":
-            status, message = self.service.template_service.save_json(file_path, data)
+        if destination.suffix.lower() == ".json":
+            status, message = self.service.template_service.save_json(str(destination), data)
         else:
             try:
-                Path(file_path).write_text(self.tree_to_outline(data), encoding="utf-8")
+                destination.write_text(self.tree_to_outline(data), encoding="utf-8")
                 status, message = "success", "Template exported"
             except Exception:
                 status, message = "error", "Error saving template"
 
         if status == "success":
             self.window.status.set(message, target="nested", status_type="success")
-            copy(file_path, self.service.template_paths.user_dir / Path(file_path).name)
             self.refresh_user_templates_dropdown()
         else:
             self.window.status.set(message, target="nested", status_type="error")
 
     def load_default_template(self):
+        if not self._templates_available():
+            self._show_master_backup_unavailable()
+            return
         text = self.window.load_default_template_dropdown.currentText()
         if text == "Default Templates":
             self.tree.clear()
             self.window.ui_state.update_build_button_state()
             return
 
-        template_path = (
-            self.service.template_paths.default_dir
-            / (text.lower().replace(" ", "_") + ".txt")
-        )
+        default_dir = self.service.template_paths.default_dir
+        if default_dir is None:
+            self._show_master_backup_unavailable()
+            return
+        template_path = default_dir / (text.lower().replace(" ", "_") + ".txt")
         if not template_path.exists():
             return
 
@@ -238,5 +276,12 @@ class TemplateController:
         window.save_template_btn.clicked.connect(self.create_template)
         window.load_user_template_dropdown.setContextMenuPolicy(Qt.CustomContextMenu)
         window.load_user_template_dropdown.customContextMenuRequested.connect(
-            lambda _position: os.startfile(str(self.service.template_paths.user_dir))
+            lambda _position: self.open_user_templates_folder()
         )
+
+    def open_user_templates_folder(self) -> None:
+        user_dir = self._user_template_dir()
+        if user_dir is None:
+            self._show_master_backup_unavailable()
+            return
+        os.startfile(str(user_dir))

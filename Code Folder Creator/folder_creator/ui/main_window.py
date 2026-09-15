@@ -355,7 +355,10 @@ class MainWindow(QMainWindow):
             "nested_date_stamp_enabled",
             "nested_date_stamp_mode",
         )
-        self.template_path_line.setText(str(self.service.template_paths.user_dir))
+        user_dir = self.service.template_paths.user_dir
+        self.template_path_line.setText(
+            str(user_dir) if user_dir is not None else "Master Backup Path unavailable"
+        )
         self.base_path_line.setText(state.get("last_base_dir", ""))
         self.auto_enumerate_folders.setChecked(
             state.get("nested_auto_number_enabled", False)

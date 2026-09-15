@@ -18,6 +18,7 @@ from folder_creator.ui.output_location_controller import (  # noqa: E402
     OutputLocationController,
 )
 from folder_creator.ui import output_location_controller as output_module  # noqa: E402
+from folder_creator.ui.template_controller import TemplateController  # noqa: E402
 from PySide6.QtCore import Signal  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
@@ -79,6 +80,9 @@ class TreeControllerStub:
 
     def deserialize_tree(self, data, **kwargs):
         self.deserialize_calls.append((data, kwargs))
+
+    def serialize_tree(self):
+        return [{"name": "Project", "children": []}]
 
     def expand_all_animated(self):
         pass
@@ -339,3 +343,47 @@ def test_auto_number_disable_removes_only_trailing_numeric_suffixes(qapp, tmp_pa
     assert window.tree.topLevelItem(0).text(0) == "Project"
     assert window.tree.topLevelItem(1).text(0) == "2026 Plan"
     assert ("nested_auto_number_enabled", False) in window.service.state_manager.updates
+
+
+def test_template_save_writes_to_master_backed_user_folder(qapp, tmp_path, monkeypatch):
+    window = make_window(tmp_path)
+    user_dir = window.service.template_paths.user_dir
+    selected_elsewhere = tmp_path / "elsewhere" / "project.json"
+
+    def save_json(path, data):
+        Path(path).write_text(str(data), encoding="utf-8")
+        return "success", "saved"
+
+    window.service.template_service = SimpleNamespace(
+        save_json=save_json
+    )
+    monkeypatch.setattr(
+        "folder_creator.ui.template_controller.QFileDialog.getSaveFileName",
+        lambda *_args: (str(selected_elsewhere), "JSON (*.json)"),
+    )
+
+    TemplateController(window).user_template_save()
+
+    assert (user_dir / "project.json").exists()
+    assert not selected_elsewhere.exists()
+
+
+def test_templates_are_blocked_when_master_backup_path_is_unavailable(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    window.service.templates_available = lambda: False
+    window.service.template_paths = SimpleNamespace(user_dir=None, default_dir=None)
+    opened = []
+    monkeypatch.setattr(
+        "folder_creator.ui.template_controller.QFileDialog.getSaveFileName",
+        lambda *_args: opened.append(True),
+    )
+
+    TemplateController(window).user_template_save()
+
+    assert opened == []
+    assert window.status.calls[-1][0] == (
+        "Set a valid Master Backup Path in Windows Resurface before working with templates.",
+    )
+    assert window.status.calls[-1][1]["status_type"] == "error"
