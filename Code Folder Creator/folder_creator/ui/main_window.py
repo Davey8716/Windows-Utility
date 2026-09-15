@@ -38,7 +38,7 @@ from resurface.ui.tooltips import (
 
 MAX_NESTED_FOLDER_NAME_LENGTH = 64
 WINDOWS_RESURFACE_EXPANDED_WIDTH = 1000
-WINDOWS_RESURFACE_HEIGHT = 850
+WINDOWS_RESURFACE_HEIGHT = 860
 
 
 class TitleBarDragRegion(QWidget):
@@ -111,8 +111,10 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             "control_gap": 8,
             "tight_gap": 4,
             "top_frame_inset": 1,
-            "controls_to_tree_gap": 2,
-            "tree_to_controls_gap": 2,
+            # Keep the editor visually separated from both its top actions and
+            # its toolbar, without stealing meaningful space from the tree.
+            "controls_to_tree_gap": 8,
+            "tree_to_controls_gap": 8,
             "find_input_width": 230,
             "expand_width": 120,
             "collapse_width": 160,
@@ -201,6 +203,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         )
         self.smart_layout = QVBoxLayout(self.smart_folder_creator_frame)
         self.smart_layout.setSpacing(0)
+        self.smart_layout.setAlignment(Qt.AlignTop)
         self.smart_layout.setContentsMargins(
             frame_padding,
             metrics["top_frame_inset"],
@@ -221,7 +224,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             self.build_buttons_frame,
         )
         for column, frame in enumerate(top_frames):
-            controls_layout.addWidget(frame, 0, column)
+            controls_layout.addWidget(frame, 0, column, alignment=Qt.AlignTop)
             controls_layout.setColumnStretch(column, 1)
         self.smart_layout.addLayout(controls_layout)
         self.smart_layout.addSpacing(metrics["controls_to_tree_gap"])

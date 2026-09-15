@@ -13,11 +13,16 @@ from folder_creator.ui.path_display_label import PathDisplayLabel
 
 
 PATH_DISPLAY_WIDTH = 450
-TEMPLATE_CONTROLS_HEIGHT = 330
+# The template stack needs a little more room than the neighboring 230 px
+# columns, but not the old 330 px height that created a large blank band
+# before the tree editor.
+TEMPLATE_CONTROLS_HEIGHT = 240
 # The grid vertically centers the shorter toolbar columns by 36 px in the
 # composed window. Match that offset so the template column's first button is
 # level with the other first-row actions.
-TEMPLATE_TOP_ALIGNMENT_SPACER = 36
+# All top-control columns are explicitly top-aligned in the composed window,
+# so the template controls no longer need an internal compensating offset.
+TEMPLATE_TOP_ALIGNMENT_SPACER = 0
 
 
 class TemplatePanel:
@@ -95,9 +100,8 @@ class TemplatePanel:
         )
         template_layout.setSpacing(control_gap)
         template_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
-        # This frame is taller than its neighboring toolbar columns because it
-        # contains one extra control. Center the control stack vertically so
-        # its first button aligns with theirs.
+        # The composed grid top-aligns every control column, keeping the first
+        # template action level with the adjacent action rows.
         template_layout.addSpacing(TEMPLATE_TOP_ALIGNMENT_SPACER)
         template_layout.addWidget(self.load_template_btn)
         template_layout.addWidget(self.save_template_btn)
