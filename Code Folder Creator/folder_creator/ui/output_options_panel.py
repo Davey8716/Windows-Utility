@@ -12,6 +12,9 @@ from folder_creator.ui import styles
 from folder_creator.ui.path_display_label import PathDisplayLabel
 
 
+PATH_DISPLAY_WIDTH = 450
+
+
 class OutputOptionsPanel:
     """Build date, output-location, and build controls."""
 
@@ -106,22 +109,22 @@ class OutputOptionsPanel:
 
         self.base_path_column = QFrame()
         self.base_path_column.setFrameShape(QFrame.NoFrame)
-        self.base_path_column.setFixedWidth(300)
+        self.base_path_column.setFixedWidth(PATH_DISPLAY_WIDTH)
         self.base_path_column.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.base_path_column.setStyleSheet("border: none;")
         path_layout = QVBoxLayout(self.base_path_column)
-        path_layout.setContentsMargins(100, 0, 0, 0)
+        path_layout.setContentsMargins(0, 0, 0, 0)
         path_layout.setSpacing(tight_gap)
 
         self.base_path_title = QLabel("OUTPUT FOLDER LOCATION")
-        self.base_path_title.setFixedSize(300, 40)
+        self.base_path_title.setFixedSize(PATH_DISPLAY_WIDTH, 40)
         self.base_path_title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.base_path_title.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         self.base_path_line = PathDisplayLabel()
         self.base_path_line.setPlaceholderText(
             "Select base directory for output folder location"
         )
-        self.base_path_line.setFixedSize(300, 40)
+        self.base_path_line.setFixedSize(PATH_DISPLAY_WIDTH, 40)
         self.base_path_line.setProperty("surfaceLabelStyle", True)
         self.base_path_line.setProperty("styleFontSize", 14)
         self.base_path_line.setStyleSheet(styles.surfaced_label_style(14))

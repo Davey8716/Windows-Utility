@@ -305,20 +305,14 @@ class MainWindow(QMainWindow):
         paths_layout.setContentsMargins(0, metrics["frame_padding"], 0, metrics["frame_padding"])
         paths_layout.setHorizontalSpacing(0)
         paths_layout.setVerticalSpacing(metrics["tight_gap"])
-        paths_layout.setColumnMinimumWidth(0, metrics["expand_width"])
-        paths_layout.setColumnMinimumWidth(1, metrics["control_gap"])
-        paths_layout.setColumnMinimumWidth(2, metrics["collapse_width"])
-        paths_layout.setColumnStretch(3, 1)
-        paths_layout.setColumnMinimumWidth(4, metrics["sort_width"])
-        paths_layout.setColumnMinimumWidth(5, metrics["control_gap"])
-        paths_layout.setColumnMinimumWidth(6, metrics["find_width"])
-        paths_layout.setColumnMinimumWidth(7, metrics["control_gap"])
-        paths_layout.setColumnMinimumWidth(8, metrics["find_input_width"])
+        paths_layout.setColumnMinimumWidth(0, self.template_path_column.width())
+        paths_layout.setColumnStretch(1, 1)
+        paths_layout.setColumnMinimumWidth(2, self.base_path_column.width())
         paths_layout.addWidget(
-            self.template_path_column, 0, 0, 1, 3, alignment=Qt.AlignLeft
+            self.template_path_column, 0, 0, alignment=Qt.AlignLeft
         )
         paths_layout.addWidget(
-            self.base_path_column, 0, 4, 1, 1, alignment=Qt.AlignLeft
+            self.base_path_column, 0, 2, alignment=Qt.AlignLeft
         )
         return paths_layout
 

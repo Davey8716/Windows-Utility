@@ -12,6 +12,9 @@ from folder_creator.ui import styles
 from folder_creator.ui.path_display_label import PathDisplayLabel
 
 
+PATH_DISPLAY_WIDTH = 450
+
+
 class TemplatePanel:
     """Build the template controls and template-save location display."""
 
@@ -96,21 +99,21 @@ class TemplatePanel:
         self.template_path_column = QFrame()
         self.template_path_column.setFrameShape(QFrame.NoFrame)
         self.template_path_column.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.template_path_column.setFixedWidth(400)
+        self.template_path_column.setFixedWidth(PATH_DISPLAY_WIDTH)
         self.template_path_column.setStyleSheet("border: none;")
         path_layout = QVBoxLayout(self.template_path_column)
         path_layout.setContentsMargins(0, 0, 0, 0)
         path_layout.setSpacing(tight_gap)
 
         self.template_path_title = QLabel("TEMPLATE MASTER BACKUP LOCATION")
-        self.template_path_title.setFixedSize(288, 40)
+        self.template_path_title.setFixedSize(PATH_DISPLAY_WIDTH, 40)
         self.template_path_title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.template_path_title.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         self.template_path_line = PathDisplayLabel()
         self.template_path_line.setPlaceholderText(
             "MASTER BACKUP LOCATION FOR USER TEMPLATES."
         )
-        self.template_path_line.setFixedSize(288, 40)
+        self.template_path_line.setFixedSize(PATH_DISPLAY_WIDTH, 40)
         self.template_path_line.setProperty("surfaceLabelStyle", True)
         self.template_path_line.setProperty("styleFontSize", 14)
         self.template_path_line.setStyleSheet(styles.surfaced_label_style(14))

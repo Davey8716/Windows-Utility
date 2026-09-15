@@ -102,12 +102,16 @@ def test_folder_creator_path_displays_use_surfaced_labels_in_both_themes(tmp_pat
     env["LOCALAPPDATA"] = str(tmp_path)
     env["QT_QPA_PLATFORM"] = "offscreen"
     command = (
+        "from PySide6.QtCore import QPoint; "
         "from PySide6.QtWidgets import QApplication; "
         "from folder_creator.ui import styles; "
         "from folder_creator.ui.main_window import MainWindow; "
-        "app = QApplication([]); window = MainWindow(); "
+        "app = QApplication([]); window = MainWindow(); window.show(); app.processEvents(); "
         "paths = (window.template_path_line, window.base_path_line); "
-        "assert [path.size().toTuple() for path in paths] == [(288, 40), (300, 40)]; "
+        "assert [path.size().toTuple() for path in paths] == [(450, 40), (450, 40)]; "
+        "path_lefts = [path.mapTo(window, QPoint()).x() for path in paths]; "
+        "assert all(left >= 0 and left + path.width() <= window.width() for left, path in zip(path_lefts, paths)); "
+        "assert path_lefts[0] + paths[0].width() <= path_lefts[1]; "
         "assert all(path.property('surfaceLabelStyle') for path in paths); "
         "assert not any(path.property('plainThemeLabelStyle') for path in paths); "
         "assert all(path.property('styleFontSize') == 14 for path in paths)\n"
