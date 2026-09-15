@@ -62,7 +62,7 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
     env["QT_QPA_PLATFORM"] = "offscreen"
     command = (
         "from PySide6.QtCore import QPoint, Qt; "
-        "from PySide6.QtWidgets import QApplication; "
+        "from PySide6.QtWidgets import QApplication, QPushButton; "
         "from folder_creator.ui.main_window import MainWindow; "
         "app = QApplication([]); "
         "minimize_calls = []; close_calls = []; "
@@ -81,6 +81,9 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
         "assert window.window_close_btn.x() > window.window_minimize_btn.x(); "
         "assert not window.window_minimize_btn.icon().isNull(); "
         "assert not window.window_close_btn.icon().isNull(); "
+        "assert all(button.toolTip() for button in window.findChildren(QPushButton)); "
+        "assert 'text-align: center' in window.add_folder_btn.toolTip(); "
+        "assert window._tooltip_router is not None; "
         "tree_left = window.tree.mapTo(window, QPoint()).x(); "
         "expand_left = window.expand_tree_btn.mapTo(window, QPoint()).x(); "
         "find_right = window.find_output_line.mapTo(window, QPoint()).x() + window.find_output_line.width(); "

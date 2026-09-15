@@ -29,6 +29,11 @@ from folder_creator.ui.template_panel import TemplatePanel
 from folder_creator.ui.tree_editor_panel import TreeEditorPanel
 from folder_creator.ui.ui_state_controller import UIStateController
 from resurface.ui.app_notifications import WindowMessageMixin
+from resurface.ui.tooltips import (
+    install_tooltip_router,
+    refresh_visible_tooltip,
+    set_tooltip,
+)
 
 
 MAX_NESTED_FOLDER_NAME_LENGTH = 64
@@ -81,6 +86,9 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.tree = SmartTreeWidget()
         self.service = AppService(self.tree)
         self._theme_dark = bool(self.service.state.get("theme_dark", True))
+        # Folder Creator follows the same preference as its Windows Resurface
+        # host, including when that preference changes while it is open.
+        self.tooltips_enabled = bool(self.service.state.get("tooltips_enabled", True))
         self._shared_state_path = self.service.state_manager.get_config_path()
         self._shared_state_mtime_ns = None
         styles.set_theme(self._theme_dark)
@@ -116,6 +124,8 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.tree_width = smart_frame_width - (toolbar_edge_inset * 2)
         self._create_panels(metrics)
         self._compose_window(metrics)
+        self._configure_tooltips()
+        self._tooltip_router = install_tooltip_router()
         styles.opt_in_light_mode_black_disabled_text(self)
 
         self.ui_state = UIStateController(self)
@@ -266,6 +276,38 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.window_close_btn.clicked.connect(self.close)
         self._position_title_bar_controls()
 
+    def _configure_tooltips(self):
+        """Give Folder Creator controls the shared rounded, themed tooltips."""
+        tooltips = {
+            self.window_minimize_btn: "Minimize Nested Folder Creator.",
+            self.window_close_btn: "Close Nested Folder Creator.",
+            self.add_folder_btn: "Add a top-level folder to the structure.",
+            self.add_subfolder_btn: "Add a subfolder beneath the selected folder.",
+            self.remove_btn: "Remove the selected folder and its contents from the structure.",
+            self.remove_all_btn: "Remove every folder from the current structure.",
+            self.file_dropdown: "Add a blank file of the selected type to the selected folder.",
+            self.expand_tree_btn: "Expand the editing area and hide the output details.",
+            self.expand_folders_collapse_btn: "Expand or collapse every folder in the structure.",
+            self.sort_btn: "Sort folders alphabetically at every level.",
+            self.find_btn: "Find folders matching the text entered beside this button.",
+            self.load_template_btn: "Load a saved folder-structure template from a file.",
+            self.save_template_btn: "Save the current folder structure as a reusable template.",
+            self.delete_template_btn: "Delete the selected user template.",
+            self.load_user_template_dropdown: "Choose one of your saved folder-structure templates.",
+            self.load_default_template_dropdown: "Choose one of the included folder-structure templates.",
+            self.auto_enumerate_folders: "Add a number to duplicate folder and subfolder names created with the Add controls.",
+            self.nested_date_toggle: "Add the selected date format to parent folder names when building.",
+            self.nested_date_config: "Choose the date format used for parent folder names.",
+            self.default_to_desktop_btn: "Set the output location to your Desktop.",
+            self.output_location_btn: "Choose where the completed folder structure will be created.",
+            self.build_folders_btn: "Create the folder structure in the selected output location.",
+            self.open_folder_build_toggle: "Open the output folder after the structure is created.",
+            self.minimize_after_build_toggle: "Minimize Folder Creator after the structure is created.",
+            self.close_app_after_build_toggle: "Close Folder Creator after the structure is created.",
+        }
+        for widget, text in tooltips.items():
+            set_tooltip(widget, text)
+
     def _position_title_bar_controls(self):
         title_control_width = (
             self.window_minimize_btn.width() + self.window_close_btn.width()
@@ -411,6 +453,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self._shared_state_mtime_ns = current_mtime_ns
         state = self.service.state_manager.load_state()
         self.service.state = state
+        self.tooltips_enabled = bool(state.get("tooltips_enabled", True))
         theme_dark = bool(state.get("theme_dark", True))
         if theme_dark != self._theme_dark:
             self.apply_theme(theme_dark)
@@ -456,6 +499,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             ) or 14
             button.setStyleSheet(styles.organizing_button_style(font_size))
         styles.refresh_fluent_icons(self)
+        refresh_visible_tooltip()
 
     def _apply_native_window_corner_preference(self):
         """Request the standard Windows 11 rounding for this native window."""

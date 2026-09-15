@@ -1,5 +1,3 @@
-Add in theme specific tooltips for Nested folder creator buttons?
-
 The expand buttons collpe folders sort and find and find search now need putting under the qtreewdidget
 
 ADD BLANK gets cut off in the  drop down fix the font size here and the white writing should be the muted grey etc

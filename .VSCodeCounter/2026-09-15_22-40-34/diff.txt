@@ -1,0 +1,82 @@
+Date : 2026-09-15 22:40:34
+Directory : c:\Users\davey\Desktop\Projects\Win-11-Resurface
+Total : 39 files,  2279 codes, 32 comments, 391 blanks, all 2702 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |         37 |      2,230 |         32 |        389 |      2,651 |
+| JSON     |          1 |         44 |          0 |          0 |         44 |
+| Markdown |          1 |          5 |          0 |          2 |          7 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                                        | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                           |         39 |      2,279 |         32 |        391 |      2,702 |
+| .test-localappdata                                                                                                          |          1 |         44 |          0 |          0 |         44 |
+| .test-localappdata\Windows Resurface                                                                                        |          1 |         44 |          0 |          0 |         44 |
+| Code Folder Creator                                                                                                         |         16 |        617 |         17 |         84 |        718 |
+| Code Folder Creator (Files)                                                                                                 |          1 |          5 |          0 |          2 |          7 |
+| Code Folder Creator\folder_creator                                                                                          |         15 |        612 |         17 |         82 |        711 |
+| Code Folder Creator\folder_creator\core                                                                                     |          1 |          8 |          0 |          1 |          9 |
+| Code Folder Creator\folder_creator\features                                                                                 |          1 |         33 |        -14 |        -12 |          7 |
+| Code Folder Creator\folder_creator\features\templates                                                                       |          1 |         33 |        -14 |        -12 |          7 |
+| Code Folder Creator\folder_creator\ui                                                                                       |         13 |        571 |         31 |         93 |        695 |
+| Code Windows Resurface                                                                                                      |         12 |        376 |         15 |         48 |        439 |
+| Code Windows Resurface\resurface                                                                                            |         12 |        376 |         15 |         48 |        439 |
+| Code Windows Resurface\resurface\core                                                                                       |          2 |         66 |          1 |         14 |         81 |
+| Code Windows Resurface\resurface\ui                                                                                         |         10 |        310 |         14 |         34 |        358 |
+| Code Windows Resurface\resurface\ui (Files)                                                                                 |          5 |        242 |         10 |         28 |        280 |
+| Code Windows Resurface\resurface\ui\controllers                                                                             |          2 |         65 |          4 |          5 |         74 |
+| Code Windows Resurface\resurface\ui\pages                                                                                   |          3 |          3 |          0 |          1 |          4 |
+| Tests                                                                                                                       |         10 |      1,242 |          0 |        259 |      1,501 |
++-----------------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                                                                    | language | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\.test-localappdata\Windows Resurface\app_state.json                        | JSON     |         44 |          0 |          0 |         44 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\README.md                                              | Markdown |          5 |          0 |          2 |          7 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\core\app_service.py                     | Python   |          8 |          0 |          1 |          9 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\features\templates\template_IO_layer.py | Python   |         33 |        -14 |        -12 |          7 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\main_window.py                       | Python   |        104 |          2 |         14 |        120 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\nested_ui_controller.py              | Python   |         -4 |          0 |          0 |         -4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\output_directory_dialog.py           | Python   |         29 |          1 |          9 |         39 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\output_location_controller.py        | Python   |         10 |          0 |          0 |         10 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\output_options_panel.py              | Python   |          7 |          0 |          2 |          9 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\post_build_panel.py                  | Python   |          4 |          0 |          0 |          4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\status_controller.py                 | Python   |         29 |          2 |          4 |         35 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\styles.py                            | Python   |         97 |         -7 |         13 |        103 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\template_controller.py               | Python   |        116 |          1 |         17 |        134 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\template_load_dialog.py              | Python   |         33 |          1 |          9 |         43 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\template_panel.py                    | Python   |         17 |          5 |          2 |         24 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\template_save_dialog.py              | Python   |        116 |         24 |         22 |        162 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Folder Creator\folder_creator\ui\tree_editor_panel.py                 | Python   |         13 |          2 |          1 |         16 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\app_paths.py                         | Python   |        -15 |          0 |         -1 |        -16 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\core\tray_toggles.py                      | Python   |         81 |          1 |         15 |         97 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\app_notifications.py                   | Python   |         19 |          3 |          0 |         22 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\application_pages.py                   | Python   |          1 |          0 |          0 |          1 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\application_window.py                  | Python   |          1 |          0 |          0 |          1 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\control_styles.py                      | Python   |         45 |          2 |          0 |         47 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\controllers\organising_actions.py      | Python   |         63 |          4 |          5 |         72 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\controllers\theme_controller.py        | Python   |          2 |          0 |          0 |          2 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\folder_utilities_page.py         | Python   |          2 |          0 |          0 |          2 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\organising_utilities_page.py     | Python   |         -2 |          0 |          0 |         -2 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\pages\user_interface_page.py           | Python   |          3 |          0 |          1 |          4 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Code Windows Resurface\resurface\ui\tooltips.py                            | Python   |        176 |          5 |         28 |        209 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_app_notifications.py                                            | Python   |         40 |          0 |          3 |         43 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_folder_creator_template_paths.py                                | Python   |        101 |          0 |         25 |        126 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_folder_creator_ui_controllers.py                                | Python   |        341 |          0 |         99 |        440 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_folder_creator_ui_structure.py                                  | Python   |        346 |          0 |         48 |        394 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_hover_prompt_styling.py                                         | Python   |         34 |          0 |          4 |         38 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_left_panel_pages.py                                             | Python   |         43 |          0 |          8 |         51 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_organising_actions.py                                           | Python   |        113 |          0 |         15 |        128 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_styles.py                                                       | Python   |         66 |          0 |         10 |         76 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_tooltips.py                                                     | Python   |         70 |          0 |         17 |         87 |
+| c:\Users\davey\Desktop\Projects\Win-11-Resurface\Tests\test_tray_toggles.py                                                 | Python   |         88 |          0 |         30 |        118 |
+| Total                                                                                                                       |          |      2,279 |         32 |        391 |      2,702 |
++-----------------------------------------------------------------------------------------------------------------------------+----------+------------+------------+------------+------------+
