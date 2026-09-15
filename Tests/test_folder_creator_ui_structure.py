@@ -182,6 +182,38 @@ def test_folder_creator_tree_refreshes_to_the_maintenance_output_surface(tmp_pat
     assert "FOLDER_CREATOR_TREE_SURFACE_READY" in result.stdout
 
 
+def test_folder_creator_add_blank_dropdown_matches_user_templates_height(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui import styles\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow()\n"
+        "assert window.file_dropdown.width() == 170\n"
+        "assert window.file_dropdown.height() == window.load_user_template_dropdown.height()\n"
+        "assert window.file_dropdown.height() == styles.DEFAULT_BUTTON_HEIGHT\n"
+        "print('FOLDER_CREATOR_FILE_DROPDOWN_SIZE_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_FILE_DROPDOWN_SIZE_READY" in result.stdout
+
+
 def test_folder_creator_requests_standard_dwm_rounded_corners(monkeypatch):
     calls = []
 
