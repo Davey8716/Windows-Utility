@@ -68,9 +68,6 @@ class CallRecorder:
     def show_find_result(self, *args, **kwargs):
         self.find_calls.append((args, kwargs))
 
-    def show_template_loaded(self):
-        self.calls.append((("Template loaded",), {"themed": True}))
-
     def show_action_result(self, *args, **kwargs):
         self.calls.append((args, {**kwargs, "themed": True}))
 
@@ -306,7 +303,7 @@ def test_confirmation_uses_themed_rounded_modal_popup(
         host.deleteLater()
 
 
-def test_template_loaded_uses_the_shared_timed_popup(qapp, tmp_path, monkeypatch):
+def test_template_load_does_not_show_a_success_popup(qapp, tmp_path, monkeypatch):
     window = make_window(tmp_path)
     (window.service.template_paths.user_dir / "project.json").write_text(
         "[]", encoding="utf-8"
@@ -320,7 +317,7 @@ def test_template_loaded_uses_the_shared_timed_popup(qapp, tmp_path, monkeypatch
 
     controller.load_template()
 
-    assert window.status.calls == [(("Template loaded",), {"themed": True})]
+    assert window.status.calls == []
 
 
 def test_selecting_user_templates_clears_tree_without_changing_saved_templates(
@@ -811,8 +808,7 @@ def test_delete_selected_user_template_removes_its_file_and_resets_ui(
     assert window.load_user_template_dropdown.currentIndex() == 0
     assert window.load_user_template_dropdown.findText("Project") == -1
     assert window.tree.topLevelItemCount() == 0
-    assert window.status.calls[-1][0] == ("Template deleted.",)
-    assert window.status.calls[-1][1]["themed"]
+    assert window.status.calls == []
 
 
 def test_delete_selected_user_template_keeps_file_when_cancelled(
@@ -861,8 +857,7 @@ def test_delete_all_user_templates_removes_every_dropdown_file_and_resets_ui(
     assert window.load_user_template_dropdown.count() == 2
     assert not window.delete_all_templates_btn.isEnabled()
     assert window.tree.topLevelItemCount() == 0
-    assert window.status.calls[-1][0] == ("2 templates deleted successfully.",)
-    assert window.status.calls[-1][1]["themed"]
+    assert window.status.calls == []
 
 
 def test_delete_all_user_templates_keeps_every_file_when_cancelled(

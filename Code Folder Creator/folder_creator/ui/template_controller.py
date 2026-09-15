@@ -118,9 +118,7 @@ class TemplateController:
         if not self._user_templates_available():
             return
         status, message = self.load_template_dialog(self.window)
-        if status == "success":
-            self.window.status.show_template_loaded()
-        elif status != "cancelled":
+        if status != "success" and status != "cancelled":
             self.window.status.set(message, target="nested", status_type="error")
 
     def load_template_from_path(self, file_path):
@@ -161,7 +159,6 @@ class TemplateController:
                 self._loading_template = False
 
             QTimer.singleShot(0, finalize)
-            self.window.status.show_template_loaded()
         except Exception:
             self._loading_template = False
             self.window.status.set(
@@ -251,9 +248,6 @@ class TemplateController:
         self.window.load_user_template_dropdown.setCurrentIndex(0)
         self.tree.clear()
         self.window.ui_state.update_build_button_state()
-        self.window.status.show_action_result(
-            "Template deleted.", status_type="success"
-        )
 
     def delete_all_user_templates(self):
         if not self._templates_available():
@@ -290,11 +284,6 @@ class TemplateController:
                 "Error deleting all templates.", status_type="error"
             )
             return
-        template_label = "template" if len(template_paths) == 1 else "templates"
-        self.window.status.show_action_result(
-            f"{len(template_paths)} {template_label} deleted successfully.",
-            status_type="success",
-        )
 
     def _confirm_template_deletion(self, template_path: Path) -> bool:
         return self.window.status.confirm_action(

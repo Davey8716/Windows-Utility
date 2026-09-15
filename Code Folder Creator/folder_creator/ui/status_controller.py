@@ -74,14 +74,6 @@ class StatusController:
         """Show a Find-only notification using the main app's timed popup style."""
         self._show_timed_result(message, status_type=status_type)
 
-    def show_template_loaded(self) -> None:
-        """Show the successful template-load notification in the shared popup style."""
-        self._show_timed_result(
-            "Template loaded",
-            status_type="success",
-            merge_group="folder_creator_template_load",
-        )
-
     def show_action_result(self, message: str, *, status_type: str) -> None:
         """Show a themed, closeable result popup for a completed UI action."""
         self._show_timed_result(message, status_type=status_type)
