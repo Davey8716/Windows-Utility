@@ -94,6 +94,9 @@ class TemplatePanel:
         ):
             styles.apply_default_button_size(dropdown)
             dropdown.setProperty("styleFontSize", 14)
+            # These are primary template actions, so keep their blue treatment
+            # in the light theme instead of allowing a pale surface fill.
+            dropdown.setProperty("lightModeKeepEnabledBackground", True)
             dropdown.setStyleSheet(styles.organizing_combo_style(14))
 
         self.template_path_column = QFrame()
