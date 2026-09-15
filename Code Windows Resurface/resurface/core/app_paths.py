@@ -12,7 +12,6 @@ from resurface.core.saved_folder_names import (
     load_saved_folder_names,
     save_saved_folder_names,
 )
-from resurface.ui.tooltips import format_tooltip_text
 from resurface.ui import styles
 from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 
@@ -43,7 +42,6 @@ class MasterBackupDirectoryDialog(QFileDialog):
 
 
 class MasterBackupPathsMixin:
-    MASTER_BACKUP_PATH_TOOLTIP_PREFIX = "Master backup folder:"
     MASTER_BACKUP_PATH_UNAVAILABLE_KEY = "master_backup_path_unavailable"
     NO_MASTER_BACKUP_PATH_TEXT = "No master backup path set"
     DESKTOP_BACKUP_FOLDER_NAME = "Windows Resurface Backup"
@@ -435,19 +433,6 @@ class MasterBackupPathsMixin:
         # existing backup. Leave both paths intact and keep the old setting.
         raise OSError(f"Cannot move backup because it already exists: {destination}")
 
-    def _get_master_backup_path_tooltip_text(self) -> str:
-        full_path = self._get_master_backup_dir().strip()
-        if not full_path:
-            return (
-                self.NO_MASTER_BACKUP_PATH_TEXT
-                if self.state.get(self.MASTER_BACKUP_PATH_UNAVAILABLE_KEY, False)
-                else ""
-            )
-        return format_tooltip_text(
-            f"{self.MASTER_BACKUP_PATH_TOOLTIP_PREFIX}\n{full_path}",
-            wrap_width=160,
-        )
-
     def _get_master_backup_path_display_text(self) -> str:
         full_path = self._get_master_backup_dir().strip()
         if not full_path:
@@ -486,10 +471,8 @@ class MasterBackupPathsMixin:
             return
 
         display_text = self._get_master_backup_path_display_text()
-        tooltip_text = self._get_master_backup_path_tooltip_text()
         page.set_backup_path(
             display_text,
-            tooltip_text,
             unavailable=bool(
                 self.state.get(self.MASTER_BACKUP_PATH_UNAVAILABLE_KEY, False)
             ),

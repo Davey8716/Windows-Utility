@@ -48,6 +48,19 @@ def test_split_pages_are_independent_widgets():
             page.deleteLater()
 
 
+def test_master_backup_path_display_never_has_a_tooltip():
+    _app()
+    page = OrganisingUtilitiesPage("C:\\Backups", lambda _widget, _text: None)
+    try:
+        assert page._path_label.toolTip() == ""
+
+        page.set_backup_path("C:\\Updated Backups")
+
+        assert page._path_label.toolTip() == ""
+    finally:
+        page.deleteLater()
+
+
 def test_disable_all_confirmations_defaults_off_and_emits_changes():
     _app()
     changes = []
