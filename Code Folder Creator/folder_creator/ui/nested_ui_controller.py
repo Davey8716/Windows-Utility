@@ -25,18 +25,16 @@ class NestedUIController:
 
     def on_sort_tree(self):
         if self.tree.topLevelItemCount() == 0:
-            self.window.status.set(
-                "Nothing to sort.", target="nested", status_type="error"
+            self.window.status.show_action_result(
+                "Nothing to sort.", status_type="error"
             )
             return
 
         self.service.tree_controller.sort_tree()
         if self.tree.topLevelItemCount() > 0:
             self.tree.setCurrentItem(self.tree.topLevelItem(0))
-        self.window.status.set(
-            "Folder tree sorted alphabetically.",
-            target="nested",
-            status_type="success",
+        self.window.status.show_action_result(
+            "Folder tree sorted alphabetically.", status_type="success"
         )
 
     def find_folder_in_tree(self):
