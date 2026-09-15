@@ -1,6 +1,5 @@
-import ctypes
-
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QSize, QTimer, Qt
+from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -12,6 +11,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QPushButton,
     QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -33,8 +33,45 @@ WINDOWS_RESURFACE_EXPANDED_WIDTH = 985
 WINDOWS_RESURFACE_HEIGHT = 875
 
 
+class TitleBarDragRegion(QWidget):
+    """Provide native-feeling window dragging for the frameless title bar."""
+
+    def __init__(self, window):
+        super().__init__(window)
+        self._window = window
+        self._drag_offset = None
+
+    def mousePressEvent(self, event):
+        if event.button() != Qt.MouseButton.LeftButton:
+            return super().mousePressEvent(event)
+        window_handle = self._window.windowHandle()
+        self._drag_offset = (
+            None
+            if window_handle is not None and window_handle.startSystemMove()
+            else event.globalPosition().toPoint()
+            - self._window.frameGeometry().topLeft()
+        )
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._drag_offset is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            self._window.move(event.globalPosition().toPoint() - self._drag_offset)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_offset = None
+        super().mouseReleaseEvent(event)
+
+
 class MainWindow(QMainWindow):
     """Compose Folder Creator panels, controllers, state, and lifecycle behavior."""
+
+    TITLE_BAR_HEIGHT = 50
+    TITLE_TEXT_ROW_HEIGHT = 40
+    TITLE_TEXT_TOP_PADDING = 10
+    TITLE_CONTROL_WIDTH = 42
 
     def __init__(self):
         super().__init__()
@@ -53,6 +90,7 @@ class MainWindow(QMainWindow):
         self.tree_width = 925
         self.tree_frame_padding = 2
         self.setWindowTitle("Folder Generator")
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setFixedSize(self.window_width, self.window_height)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
 
@@ -65,7 +103,6 @@ class MainWindow(QMainWindow):
             "top_frame_inset": 1,
             "controls_to_tree_gap": 2,
             "tree_to_controls_gap": 2,
-            "header_gap": 1,
             "find_input_width": 230,
             "expand_width": 120,
             "collapse_width": 160,
@@ -80,7 +117,6 @@ class MainWindow(QMainWindow):
         self.nested_ui.connect_signals()
         self._restore_ui_state()
         self._start_theme_sync()
-        self._apply_fixed_window_style()
 
     def _create_panels(self, metrics):
         frame_padding = metrics["frame_padding"]
@@ -121,33 +157,25 @@ class MainWindow(QMainWindow):
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
+        root_layout = QVBoxLayout(central_widget)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+        self._create_title_bar()
+        root_layout.addWidget(self.window_title_bar)
+
+        content_widget = QWidget()
+        root_layout.addWidget(content_widget)
+        main_layout = QVBoxLayout(content_widget)
         main_layout.setAlignment(Qt.AlignTop)
         main_layout.setContentsMargins(
             outer_margin, outer_margin, outer_margin, outer_margin
         )
         main_layout.setSpacing(section_gap)
 
-        header_grid = QGridLayout()
-        header_grid.setContentsMargins(
-            frame_padding, frame_padding, frame_padding, frame_padding
-        )
-        header_grid.setHorizontalSpacing(metrics["header_gap"])
-        header_grid.setVerticalSpacing(frame_padding)
-        self.title_label = QLabel("Nested Folder Creator")
-        self.title_label.setFixedSize(230, 50)
-        self.title_label.setAlignment(Qt.AlignCenter)
-        self.title_label.setStyleSheet(styles.title_label_style())
-        header_grid.addWidget(self.title_label, 0, 0)
-        header_grid.setColumnStretch(0, 1)
-        main_layout.addLayout(header_grid)
-
-        header_height = self.title_label.height() + (frame_padding * 2)
         content_height = (
             self.window_height
+            - self.TITLE_BAR_HEIGHT
             - (outer_margin * 2)
-            - section_gap
-            - header_height
         )
         self.smart_folder_creator_frame = QFrame()
         self.smart_folder_creator_frame.setFrameShape(QFrame.NoFrame)
@@ -201,6 +229,74 @@ class MainWindow(QMainWindow):
         bottom_layout.addWidget(self.smart_status_frame, alignment=Qt.AlignLeft)
         self.smart_layout.addWidget(self.bottom_info_frame, alignment=Qt.AlignLeft)
         main_layout.addWidget(self.smart_folder_creator_frame, alignment=Qt.AlignHCenter)
+
+    def _create_title_bar(self):
+        self.window_title_bar = QFrame()
+        self.window_title_bar.setObjectName("FolderCreatorTitleBar")
+        self.window_title_bar.setFixedHeight(self.TITLE_BAR_HEIGHT)
+        self.window_drag_region = TitleBarDragRegion(self)
+        self.window_drag_region.setParent(self.window_title_bar)
+
+        self.title_label = QLabel("Nested Folder Creator", self.window_title_bar)
+        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
+        )
+        self.window_minimize_btn = QToolButton(self.window_title_bar)
+        self.window_minimize_btn.setProperty("titleBarMinimizeButton", True)
+        self.window_minimize_btn.setCursor(Qt.CursorShape.ArrowCursor)
+        self.window_minimize_btn.setIconSize(QSize(16, 16))
+        self.window_minimize_btn.setFixedSize(
+            self.TITLE_CONTROL_WIDTH, self.TITLE_TEXT_ROW_HEIGHT
+        )
+        self.window_minimize_btn.clicked.connect(self.showMinimized)
+        self.window_close_btn = QToolButton(self.window_title_bar)
+        self.window_close_btn.setProperty("titleBarCloseButton", True)
+        self.window_close_btn.setCursor(Qt.CursorShape.ArrowCursor)
+        self.window_close_btn.setIconSize(QSize(16, 16))
+        self.window_close_btn.setFixedSize(
+            self.TITLE_CONTROL_WIDTH, self.TITLE_TEXT_ROW_HEIGHT
+        )
+        self.window_close_btn.clicked.connect(self.close)
+        self._position_title_bar_controls()
+
+    def _position_title_bar_controls(self):
+        title_control_width = (
+            self.window_minimize_btn.width() + self.window_close_btn.width()
+        )
+        self.window_drag_region.setGeometry(
+            0,
+            0,
+            max(0, self.width() - title_control_width),
+            self.TITLE_TEXT_ROW_HEIGHT,
+        )
+        self.title_label.setGeometry(
+            0,
+            self.TITLE_TEXT_TOP_PADDING,
+            self.width(),
+            self.TITLE_TEXT_ROW_HEIGHT - self.TITLE_TEXT_TOP_PADDING,
+        )
+        close_x = self.width() - self.window_close_btn.width()
+        self.window_minimize_btn.move(close_x - self.window_minimize_btn.width(), 0)
+        self.window_close_btn.move(close_x, 0)
+        self.window_drag_region.lower()
+        self.title_label.raise_()
+        self.window_minimize_btn.raise_()
+        self.window_close_btn.raise_()
+
+    def _title_bar_icon(self, action: str) -> QIcon:
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QPen(styles.theme_text_color(), 2))
+        if action == "minimize":
+            painter.drawLine(3, 11, 13, 11)
+        else:
+            painter.drawLine(4, 4, 12, 12)
+            painter.drawLine(12, 4, 4, 12)
+        painter.end()
+        return QIcon(pixmap)
 
     def _create_paths_layout(self, metrics):
         paths_layout = QGridLayout()
@@ -299,28 +395,6 @@ class MainWindow(QMainWindow):
         )
         self._shared_state_watch_timer.start(500)
 
-    def _apply_fixed_window_style(self):
-        hwnd = int(self.winId())
-        if not hwnd:
-            return
-        user32 = ctypes.windll.user32
-        get_window_long = user32.GetWindowLongW
-        set_window_long = user32.SetWindowLongW
-        set_window_pos = user32.SetWindowPos
-        style = get_window_long(hwnd, -16)
-        style &= ~0x00010000
-        style &= ~0x00040000
-        set_window_long(hwnd, -16, style)
-        set_window_pos(
-            hwnd,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0x0002 | 0x0001 | 0x0004 | 0x0020,
-        )
-
     def _get_shared_state_mtime_ns(self):
         try:
             return self._shared_state_path.stat().st_mtime_ns
@@ -343,6 +417,16 @@ class MainWindow(QMainWindow):
         styles.set_theme(self._theme_dark)
         styles.apply_app_theme(QApplication.instance())
         self.title_label.setStyleSheet(styles.title_label_style())
+        self.window_title_bar.setStyleSheet(
+            "QFrame#FolderCreatorTitleBar "
+            f"{{ background-color: {styles.qcolor_css(styles.WINDOW_BG)}; }}"
+        )
+        self.window_minimize_btn.setStyleSheet(styles.title_bar_control_style())
+        self.window_minimize_btn.setIcon(self._title_bar_icon("minimize"))
+        self.window_close_btn.setStyleSheet(
+            styles.title_bar_control_style(close_button=True)
+        )
+        self.window_close_btn.setIcon(self._title_bar_icon("close"))
         self.tree_frame.setStyleSheet(styles.tree_outer_frame_style())
         self.tree.setStyleSheet(styles.surfaced_tree_widget_style())
         self.find_output_line.setStyleSheet(
@@ -363,6 +447,10 @@ class MainWindow(QMainWindow):
                 button.property("styleFontSize"), 14
             ) or 14
             button.setStyleSheet(styles.organizing_button_style(font_size))
+
+    def resizeEvent(self, event):
+        self._position_title_bar_controls()
+        super().resizeEvent(event)
 
     def update_build_button_state(self):
         self.ui_state.update_build_button_state()

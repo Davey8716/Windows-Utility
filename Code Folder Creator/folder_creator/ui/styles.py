@@ -105,6 +105,11 @@ def title_label_style() -> str:
     """
 
 
+def title_bar_control_style(*, close_button: bool = False) -> str:
+    """Return the shared title-bar control treatment for the active theme."""
+    return resurface_styles.title_bar_control_style(close_button=close_button)
+
+
 def status_label_style() -> str:
     return resurface_styles.label_style(
         font_size=14,
