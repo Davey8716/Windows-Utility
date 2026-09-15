@@ -86,8 +86,10 @@ class TreeEditorPanel:
         self.tree = tree
         self._configure_tree()
 
-        self.add_folder_btn = QPushButton("📁 Add")
-        self.add_subfolder_btn = QPushButton("📂 Sub")
+        self.add_folder_btn = QPushButton("Add")
+        self.add_subfolder_btn = QPushButton("Sub")
+        styles.apply_fluent_icon(self.add_folder_btn, "\ue710")
+        styles.apply_fluent_icon(self.add_subfolder_btn, "\ue8b7")
         self.remove_btn = QPushButton("Remove\nSelected")
         self.remove_all_btn = QPushButton("Remove\nAll")
         self.file_dropdown = self._create_file_dropdown()
@@ -118,10 +120,14 @@ class TreeEditorPanel:
         self.tree.setPlaceholderText(TREE_PLACEHOLDER, bold=True)
         tree_layout.addWidget(self.tree)
 
-        self.expand_tree_btn = QPushButton("EXPAND 🌳")
+        self.expand_tree_btn = QPushButton("EXPAND")
         self.expand_folders_collapse_btn = QPushButton("EXPAND FOLDERS")
-        self.sort_btn = QPushButton("SORT A/Z ↕️")
-        self.find_btn = QPushButton("FIND 🔎")
+        self.sort_btn = QPushButton("SORT A/Z")
+        self.find_btn = QPushButton("FIND")
+        styles.apply_fluent_icon(self.expand_tree_btn, "\ue740")
+        styles.apply_fluent_icon(self.expand_folders_collapse_btn, "\ue70d")
+        styles.apply_fluent_icon(self.sort_btn, "\ue8cb")
+        styles.apply_fluent_icon(self.find_btn, "\ue721")
         self.find_output_line = QLineEdit()
         self.find_output_line.setPlaceholderText("INPUT FOR FINDING FOLDERS.")
         self.find_output_line.setReadOnly(False)
@@ -189,6 +195,7 @@ class TreeEditorPanel:
             ]
         )
         dropdown.setFixedSize(170, 40)
+        styles.apply_fluent_item_icon(dropdown, 0, "\ue8a5")
         dropdown.setProperty("styleFontSize", 14)
         dropdown.setStyleSheet(styles.organizing_combo_style(14))
         return dropdown

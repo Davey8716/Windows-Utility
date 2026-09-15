@@ -4,8 +4,9 @@ import importlib.util
 import sys
 from pathlib import Path
 
-from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtWidgets import QApplication, QComboBox, QPushButton
 
 
 _RESURFACE_PACKAGE_ROOT = (
@@ -86,6 +87,53 @@ def qcolor_css(color: QColor) -> str:
 
 def theme_text_color() -> QColor:
     return QColor(TEXT_COLOR)
+
+
+def create_fluent_icon(glyph: str, icon_size: int = 16) -> QIcon:
+    """Create a theme-aware Windows Fluent icon for a control."""
+    pixmap = QPixmap(icon_size, icon_size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    font = QFont("Segoe Fluent Icons")
+    font.setPixelSize(icon_size)
+    painter.setFont(font)
+    painter.setPen(theme_text_color())
+    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
+    painter.end()
+    return QIcon(pixmap)
+
+
+def apply_fluent_icon(button: QPushButton, glyph: str, icon_size: int = 16) -> None:
+    """Attach an icon and retain its metadata for theme refreshes."""
+    button.setProperty("fluentIconGlyph", glyph)
+    button.setProperty("fluentIconSize", icon_size)
+    button.setIconSize(QSize(icon_size, icon_size))
+    button.setIcon(create_fluent_icon(glyph, icon_size))
+
+
+def apply_fluent_item_icon(
+    combo: QComboBox, index: int, glyph: str, icon_size: int = 16
+) -> None:
+    """Attach a Fluent icon to a combo-box item and preserve it across themes."""
+    item_icons = dict(combo.property("fluentItemIcons") or {})
+    item_icons[index] = (glyph, icon_size)
+    combo.setProperty("fluentItemIcons", item_icons)
+    combo.setIconSize(QSize(icon_size, icon_size))
+    combo.setItemIcon(index, create_fluent_icon(glyph, icon_size))
+
+
+def refresh_fluent_icons(widget) -> None:
+    """Repaint Fluent control icons with the active theme's text colour."""
+    for button in widget.findChildren(QPushButton):
+        glyph = button.property("fluentIconGlyph")
+        if glyph:
+            icon_size = int(button.property("fluentIconSize") or 16)
+            apply_fluent_icon(button, glyph, icon_size)
+    for combo in widget.findChildren(QComboBox):
+        item_icons = combo.property("fluentItemIcons") or {}
+        for index, (glyph, icon_size) in item_icons.items():
+            combo.setItemIcon(index, create_fluent_icon(glyph, int(icon_size)))
 
 
 def tree_placeholder_color() -> QColor:

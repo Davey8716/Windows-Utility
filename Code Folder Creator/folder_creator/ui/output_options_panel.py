@@ -82,7 +82,8 @@ class OutputOptionsPanel:
 
         self.default_to_desktop_btn = QPushButton("Default To Desk")
         self.output_location_btn = QPushButton("Output Dir")
-        self.build_folders_btn = QPushButton("Build 📁")
+        self.build_folders_btn = QPushButton("Build")
+        styles.apply_fluent_icon(self.build_folders_btn, "\ue8b7")
         for button in (
             self.default_to_desktop_btn,
             self.output_location_btn,

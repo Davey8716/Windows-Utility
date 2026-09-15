@@ -453,6 +453,7 @@ class MainWindow(QMainWindow):
                 button.property("styleFontSize"), 14
             ) or 14
             button.setStyleSheet(styles.organizing_button_style(font_size))
+        styles.refresh_fluent_icons(self)
 
     def _apply_native_window_corner_preference(self):
         """Request the standard Windows 11 rounding for this native window."""
@@ -519,12 +520,12 @@ class MainWindow(QMainWindow):
             self.bottom_info_frame.hide()
             self.tree.setFixedHeight(self.tree_expanded_height)
             self._set_tree_frame_height(self.tree_expanded_height)
-            self.expand_tree_btn.setText("COLLAPSE 🌳")
+            self.expand_tree_btn.setText("COLLAPSE")
         else:
             self.bottom_info_frame.show()
             self.tree.setFixedHeight(self.tree_default_height)
             self._set_tree_frame_height(self.tree_default_height)
-            self.expand_tree_btn.setText("EXPAND 🌳")
+            self.expand_tree_btn.setText("EXPAND")
         QTimer.singleShot(0, self.ui_state.update_build_button_state)
         self.tree.setVisible(True)
 
