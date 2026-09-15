@@ -22,6 +22,7 @@ from folder_creator.ui.template_controller import TemplateController  # noqa: E4
 from folder_creator.ui import template_controller as template_controller_module  # noqa: E402
 from folder_creator.ui.template_load_dialog import TemplateLoadDialog  # noqa: E402
 from folder_creator.ui.template_save_dialog import TemplateSaveDialog  # noqa: E402
+from folder_creator.ui.output_directory_dialog import OutputDirectoryDialog  # noqa: E402
 from PySide6.QtCore import Qt, Signal  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
@@ -398,17 +399,39 @@ def test_open_output_folder_ignores_missing_path_and_opens_existing(
     assert opened == [str(tmp_path)]
 
 
+def test_output_directory_dialog_is_themed_and_directory_only(qapp, tmp_path):
+    dialog = OutputDirectoryDialog(None, tmp_path)
+
+    try:
+        assert dialog.testOption(QFileDialog.Option.DontUseNativeDialog)
+        assert dialog.testOption(QFileDialog.Option.ShowDirsOnly)
+        assert dialog.fileMode() == QFileDialog.FileMode.Directory
+        assert dialog.acceptMode() == QFileDialog.AcceptMode.AcceptOpen
+        assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert "QFileDialog" in dialog.styleSheet()
+        assert Path(dialog.directory().absolutePath()).resolve() == tmp_path.resolve()
+    finally:
+        dialog.close()
+
+
 def test_output_selection_persists_normalized_directory(qapp, tmp_path, monkeypatch):
     window = make_window(tmp_path)
     selected = tmp_path / "selected"
     selected.mkdir()
     desktop = tmp_path / "desktop"
     desktop.mkdir()
-    monkeypatch.setattr(
-        output_module.QFileDialog,
-        "getExistingDirectory",
-        lambda *_args: str(selected),
-    )
+    class AcceptedDialog:
+        def __init__(self, parent, directory):
+            assert parent is window
+            assert directory == desktop
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+        def selectedFiles(self):
+            return [str(selected)]
+
+    monkeypatch.setattr(output_module, "OutputDirectoryDialog", AcceptedDialog)
     monkeypatch.setattr(output_module, "get_desktop_path", lambda: desktop)
 
     OutputLocationController(window).select_base_directory()
@@ -424,15 +447,46 @@ def test_cancelled_output_selection_reports_error_off_desktop(
     desktop = tmp_path / "desktop"
     desktop.mkdir()
     window.base_path_line.setText(str(tmp_path))
-    monkeypatch.setattr(
-        output_module.QFileDialog, "getExistingDirectory", lambda *_args: ""
-    )
+    class RejectedDialog:
+        def __init__(self, *_args):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(output_module, "OutputDirectoryDialog", RejectedDialog)
     monkeypatch.setattr(output_module, "get_desktop_path", lambda: desktop)
 
     OutputLocationController(window).select_base_directory()
 
     assert window.status.calls[-1][0] == ("No directory selected.",)
     assert window.status.calls[-1][1]["status_type"] == "error"
+
+
+def test_output_directory_dialog_starts_at_current_valid_output_path(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    current = tmp_path / "current"
+    current.mkdir()
+    desktop = tmp_path / "desktop"
+    desktop.mkdir()
+    window.base_path_line.setText(str(current))
+    initial_directories = []
+
+    class RejectedDialog:
+        def __init__(self, _parent, directory):
+            initial_directories.append(directory)
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(output_module, "OutputDirectoryDialog", RejectedDialog)
+    monkeypatch.setattr(output_module, "get_desktop_path", lambda: desktop)
+
+    OutputLocationController(window).select_base_directory()
+
+    assert initial_directories == [current.resolve()]
 
 
 def test_auto_number_disable_removes_only_trailing_numeric_suffixes(qapp, tmp_path):

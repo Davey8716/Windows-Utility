@@ -1,9 +1,10 @@
 import os
 from pathlib import Path
 
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QDialog
 
 from folder_creator.core.system_paths import get_desktop_path
+from folder_creator.ui.output_directory_dialog import OutputDirectoryDialog
 
 
 class OutputLocationController:
@@ -14,12 +15,22 @@ class OutputLocationController:
         self.service = window.service
 
     def select_base_directory(self):
-        directory = QFileDialog.getExistingDirectory(
-            self.window, "Select Base Directory"
+        desktop_path = get_desktop_path().resolve()
+        current_path_text = self.window.base_path_line.text().strip()
+        current_path = Path(current_path_text)
+        start_directory = (
+            current_path.resolve()
+            if current_path_text and current_path.is_dir()
+            else desktop_path
         )
+        dialog = OutputDirectoryDialog(self.window, start_directory)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            selected_files = dialog.selectedFiles()
+            directory = selected_files[0] if selected_files else ""
+        else:
+            directory = ""
         if directory:
-            desktop_path = get_desktop_path().resolve()
-            current_path = Path(self.window.base_path_line.text().strip()).resolve()
+            current_path = current_path.resolve()
             selected_path = Path(directory).resolve()
             if selected_path == desktop_path and current_path == desktop_path:
                 self.window.update_build_button_state()
@@ -41,8 +52,7 @@ class OutputLocationController:
             )
             return
 
-        desktop_path = get_desktop_path().resolve()
-        current_path = Path(self.window.base_path_line.text().strip()).resolve()
+        current_path = current_path.resolve()
         if current_path != desktop_path:
             self.window.status.set(
                 "No directory selected.", target="nested", status_type="error"
