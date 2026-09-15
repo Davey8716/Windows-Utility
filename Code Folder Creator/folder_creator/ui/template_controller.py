@@ -75,7 +75,7 @@ class TemplateController:
     def load_template(self):
         status, message = self.load_template_dialog(self.window)
         if status == "success":
-            self.window.status.set(message, target="nested", status_type="success")
+            self.window.status.show_template_loaded()
         elif status != "cancelled":
             self.window.status.set(message, target="nested", status_type="error")
 
@@ -117,11 +117,7 @@ class TemplateController:
                 self._loading_template = False
 
             QTimer.singleShot(0, finalize)
-            self.window.status.set(
-                "Template loaded",
-                target="nested",
-                status_type="success",
-            )
+            self.window.status.show_template_loaded()
         except Exception:
             self._loading_template = False
             self.window.status.set(

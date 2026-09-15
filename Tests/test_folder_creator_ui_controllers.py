@@ -67,6 +67,9 @@ class CallRecorder:
     def show_find_result(self, *args, **kwargs):
         self.find_calls.append((args, kwargs))
 
+    def show_template_loaded(self):
+        self.calls.append((("Template loaded",), {"themed": True}))
+
 
 class UIStateStub:
     def __init__(self):
@@ -225,6 +228,20 @@ def test_find_result_dialog_matches_themed_timed_message_pattern(qapp):
     finally:
         dialog.close()
         host.deleteLater()
+
+
+def test_template_loaded_uses_the_shared_timed_popup(qapp, tmp_path, monkeypatch):
+    window = make_window(tmp_path)
+    controller = TemplateController(window)
+    monkeypatch.setattr(
+        controller,
+        "load_template_dialog",
+        lambda _parent: ("success", "Template loaded"),
+    )
+
+    controller.load_template()
+
+    assert window.status.calls == [(("Template loaded",), {"themed": True})]
 
 
 def test_default_template_signal_loads_once_and_resets_user_selection(qapp, tmp_path):

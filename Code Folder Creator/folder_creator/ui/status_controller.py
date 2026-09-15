@@ -72,12 +72,31 @@ class StatusController:
 
     def show_find_result(self, message: str, *, status_type: str) -> None:
         """Show a Find-only notification using the main app's timed popup style."""
+        self._show_timed_result(message, status_type=status_type)
+
+    def show_template_loaded(self) -> None:
+        """Show the successful template-load notification in the shared popup style."""
+        self._show_timed_result(
+            "Template loaded",
+            status_type="success",
+            merge_group="folder_creator_template_load",
+        )
+
+    def _show_timed_result(
+        self,
+        message: str,
+        *,
+        status_type: str,
+        merge_group: str | None = None,
+    ) -> None:
         icon_name = "Warning" if status_type == "error" else "Information"
         self.w._show_timed_message(
             self.w._message_box_icon(icon_name),
             "Folder Creator",
             message,
             timeout_ms=10_000,
+            merge_group=merge_group,
+            replace_grouped_entries=merge_group is not None,
             center_text_block=True,
             show_close_now_button=True,
             popup_corner_radius=styles.resurface_styles.BUTTON_CORNER_RADIUS,
