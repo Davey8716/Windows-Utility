@@ -53,6 +53,10 @@ class OutputOptionsPanel:
             DATE_STAMP_CONTROL_WIDTH, styles.DEFAULT_BUTTON_HEIGHT
         )
         self.nested_date_config.setProperty("styleFontSize", 14)
+        # Keep the selector and its arrow on the primary blue action surface
+        # while date stamping is enabled.  Its disabled treatment remains the
+        # neutral grey state used when date stamping is off.
+        self.nested_date_config.setProperty("lightModeKeepEnabledBackground", True)
         self.nested_date_config.setStyleSheet(styles.organizing_combo_style(14))
         for index in range(self.nested_date_config.count()):
             self.nested_date_config.setItemData(
