@@ -78,6 +78,42 @@ def test_disable_all_confirmations_defaults_off_and_emits_changes():
         page.deleteLater()
 
 
+def test_set_theme_enabled_uses_the_existing_theme_changed_persistence_path(monkeypatch):
+    _app()
+    state = {"theme_dark": True}
+    saved_states = []
+    applied_themes = []
+    composer = object.__new__(ApplicationPageComposer)
+    composer.app = SimpleNamespace(
+        state=state,
+        apply_theme=applied_themes.append,
+        maintenance_actions=SimpleNamespace(
+            run_lock_pc=lambda: None,
+            run_sleep=lambda: None,
+            run_logout=lambda: None,
+            run_restart=lambda: None,
+            run_shutdown=lambda: None,
+        ),
+        external_drive_controller=SimpleNamespace(),
+    )
+    composer.state = state
+    monkeypatch.setattr(
+        application_pages, "save_state", lambda values: saved_states.append(dict(values))
+    )
+    page = UserInterfacePage(state, lambda _widget, _text: None, lambda _combo: None)
+    try:
+        composer._wire_user_interface_page(page)
+
+        page.set_theme_enabled(False)
+
+        assert not page._dark_mode_button.isChecked()
+        assert state["theme_dark"] is False
+        assert applied_themes == [False]
+        assert saved_states[-1]["theme_dark"] is False
+    finally:
+        page.deleteLater()
+
+
 def test_disable_all_confirmations_uses_saved_value():
     _app()
     page = UserInterfacePage(

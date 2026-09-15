@@ -138,6 +138,10 @@ class UserInterfacePage(PageControls):
         if self._desktop_zen_button.isChecked() != enabled:
             self._desktop_zen_button.setChecked(enabled)
 
+    def set_theme_enabled(self, enabled: bool) -> None:
+        if self._dark_mode_button.isChecked() != enabled:
+            self._dark_mode_button.setChecked(enabled)
+
     def revert_desktop_zen(self, enabled: bool) -> None:
         self._desktop_zen_button.blockSignals(True)
         self._desktop_zen_button.setChecked(enabled)

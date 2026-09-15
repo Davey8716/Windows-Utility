@@ -25,6 +25,7 @@ class TrayIconManager(QObject):
         self.tray = None
         self.menu = None
         self.folder_creator_action = None
+        self.theme_action = None
         self.zen_mode_action = None
         self.hover_controls_action = None
         self.monitor_rules_action = None
@@ -55,6 +56,10 @@ class TrayIconManager(QObject):
         menu.addAction(self.folder_creator_action)
 
         menu.addSeparator()
+
+        self.theme_action = QAction(self.app)
+        self.theme_action.triggered.connect(self.toggle_theme)
+        menu.addAction(self.theme_action)
 
         self.zen_mode_action = QAction("Zen Mode", self.app)
         self.zen_mode_action.setCheckable(True)
@@ -101,6 +106,28 @@ class TrayIconManager(QObject):
 
         close_window_handles(self._folder_creator_handles())
 
+    def toggle_theme(self):
+        is_dark = bool(getattr(self.app, "state", {}).get("theme_dark", True))
+        enabled = not is_dark
+        page = getattr(
+            getattr(self.app, "pages", None), "user_interface_page", None
+        )
+        setter = getattr(page, "set_theme_enabled", None)
+        if callable(setter):
+            setter(enabled)
+        else:
+            state = getattr(self.app, "state", None)
+            if isinstance(state, dict):
+                state["theme_dark"] = enabled
+            apply_theme = getattr(self.app, "apply_theme", None)
+            if callable(apply_theme):
+                apply_theme(enabled)
+            save_settings = getattr(self.app, "save_all_settings", None)
+            if callable(save_settings):
+                save_settings()
+
+        self.refresh_menu()
+
     def open_folder_creator(self):
         actions = getattr(self.app, "folder_actions", None)
         opener = getattr(actions, "open_folder_creator", None)
@@ -123,10 +150,20 @@ class TrayIconManager(QObject):
         self.zen_mode_action.blockSignals(False)
 
     def sync_actions(self):
+        self.sync_theme_action()
         self.sync_zen_mode_action()
         self.sync_folder_creator_action()
         self.sync_hover_controls_action()
         self.sync_monitor_rules_action()
+
+    def sync_theme_action(self):
+        if not self.theme_action:
+            return
+
+        is_dark = bool(getattr(self.app, "state", {}).get("theme_dark", True))
+        self.theme_action.setText(
+            "Switch to Light Mode" if is_dark else "Switch to Dark Mode"
+        )
 
     def sync_folder_creator_action(self):
         if not self.folder_creator_action:

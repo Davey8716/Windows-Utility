@@ -151,6 +151,40 @@ def test_tray_menu_restyles_with_live_theme_and_rounded_corners() -> None:
     styles.set_theme(True)
 
 
+def test_tray_theme_action_switches_theme_through_user_interface_page() -> None:
+    _app()
+
+    class UserInterfacePage:
+        def __init__(self):
+            self.enabled_calls = []
+
+        def set_theme_enabled(self, enabled):
+            self.enabled_calls.append(enabled)
+            window.state["theme_dark"] = enabled
+
+    class FakeWindow(QObject):
+        def __init__(self):
+            super().__init__()
+            self.state = {"theme_dark": True}
+            self.pages = SimpleNamespace(user_interface_page=UserInterfacePage())
+
+        def windowIcon(self):
+            return QIcon()
+
+    window = FakeWindow()
+    manager = TrayIconManager(window)
+    manager.create_tray_icon()
+
+    assert manager.menu.actions()[2] is manager.theme_action
+    assert manager.theme_action.text() == "Switch to Light Mode"
+
+    manager.theme_action.trigger()
+
+    assert window.pages.user_interface_page.enabled_calls == [False]
+    assert window.state["theme_dark"] is False
+    assert manager.theme_action.text() == "Switch to Dark Mode"
+
+
 def test_application_icon_candidates_prioritize_env_var(monkeypatch, tmp_path) -> None:
     env_icon = tmp_path / "from-env.ico"
     fake_exe = tmp_path / "Windows Resurface.exe"
