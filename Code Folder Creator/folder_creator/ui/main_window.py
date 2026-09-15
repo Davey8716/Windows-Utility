@@ -532,5 +532,7 @@ class MainWindow(QMainWindow):
     def update_expand_button_text(self):
         if self.ui_state.tree_has_collapsed_nodes():
             self.expand_folders_collapse_btn.setText("EXPAND FOLDERS")
+            self.expand_folders_collapse_btn.setFixedWidth(160)
         else:
             self.expand_folders_collapse_btn.setText("COLLAPSE FOLDERS")
+            self.expand_folders_collapse_btn.setFixedWidth(175)
