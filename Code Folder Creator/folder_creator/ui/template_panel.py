@@ -13,11 +13,11 @@ from folder_creator.ui.path_display_label import PathDisplayLabel
 
 
 PATH_DISPLAY_WIDTH = 450
-BASE_TOOLBAR_HEIGHT = 230
 TEMPLATE_CONTROLS_HEIGHT = 330
-TEMPLATE_TOP_ALIGNMENT_SPACER = (
-    TEMPLATE_CONTROLS_HEIGHT - BASE_TOOLBAR_HEIGHT
-) // 2
+# The grid vertically centers the shorter toolbar columns by 36 px in the
+# composed window. Match that offset so the template column's first button is
+# level with the other first-row actions.
+TEMPLATE_TOP_ALIGNMENT_SPACER = 36
 
 
 class TemplatePanel:
@@ -38,7 +38,6 @@ class TemplatePanel:
 
     def __init__(self, frame_padding: int, control_gap: int, tight_gap: int):
         self.load_template_btn = QPushButton("Load Templates")
-        self.load_template_btn.setProperty("themeMutedDisabledAppearance", True)
         self.save_template_btn = QPushButton("Save Templates")
         self.delete_template_btn = QPushButton("Delete Template")
         self.delete_template_btn.setEnabled(False)

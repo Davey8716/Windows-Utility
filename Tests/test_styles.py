@@ -266,11 +266,14 @@ def test_styles_facade_exposes_live_theme_tokens_after_theme_changes():
     assert 'QPushButton[lightModePlaceholderButton="true"]:disabled' not in dark_style
 
 
-def test_light_mode_opt_in_keeps_disabled_button_text_black():
+def test_light_mode_buttons_use_black_text_when_enabled_and_opted_in_when_disabled():
     styles.set_theme(False)
     light_style = styles.organizing_button_style(14)
+    enabled_rules, disabled_rules = light_style.split("QPushButton:disabled", 1)
+
+    assert "color: #000000;" in enabled_rules
     assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' in light_style
-    assert "color: #000000;" in light_style
+    assert "color: #000000;" in disabled_rules
 
     styles.set_theme(True)
     dark_style = styles.organizing_button_style(14)

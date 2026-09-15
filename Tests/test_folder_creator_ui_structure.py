@@ -205,13 +205,18 @@ def test_folder_creator_uses_black_disabled_control_text_in_light_mode(tmp_path)
         "buttons = window.findChildren(QPushButton)\n"
         "combos = window.findChildren(QComboBox)\n"
         "assert buttons and combos\n"
-        "assert window.load_template_btn.property('lightModeBlackDisabledText') is False\n"
+        "assert window.load_template_btn.property('lightModeBlackDisabledText') is True\n"
         "assert window.load_user_template_dropdown.property('lightModeBlackDisabledText') is True\n"
         "assert all(button.property('lightModeBlackDisabledText') is True for button in buttons if button is not window.load_template_btn)\n"
         "assert all(combo.property('lightModeBlackDisabledText') is True for combo in combos)\n"
         "window.apply_theme(False)\n"
         "assert 'QPushButton[lightModeBlackDisabledText=\\\"true\\\"]:disabled' in styles.organizing_button_style(14)\n"
         "assert 'QComboBox[lightModeBlackDisabledText=\\\"true\\\"]:disabled' in styles.organizing_combo_style(14)\n"
+        "window.show()\n"
+        "app.processEvents()\n"
+        "top_row_y = window.open_folder_build_toggle.mapTo(window, window.open_folder_build_toggle.rect().topLeft()).y()\n"
+        "assert window.load_template_btn.mapTo(window, window.load_template_btn.rect().topLeft()).y() == top_row_y\n"
+        "assert window.default_to_desktop_btn.mapTo(window, window.default_to_desktop_btn.rect().topLeft()).y() == top_row_y\n"
         "window.apply_theme(True)\n"
         "assert 'lightModeBlackDisabledText' not in styles.organizing_button_style(14)\n"
         "assert 'lightModeBlackDisabledText' not in styles.organizing_combo_style(14)\n"
@@ -531,24 +536,3 @@ def test_template_panel_places_bulk_delete_below_delete_template():
     assert panel.delete_template_btn.height() == styles.DEFAULT_BUTTON_HEIGHT
     assert panel.delete_all_templates_btn.width() == styles.DEFAULT_BUTTON_WIDTH
     assert panel.delete_all_templates_btn.height() == styles.DEFAULT_BUTTON_HEIGHT
-
-
-def test_template_load_button_aligns_with_neighboring_toolbar_controls():
-    app = QApplication.instance() or QApplication([])
-    template_panel = TemplatePanel(frame_padding=6, control_gap=8, tight_gap=4)
-    post_build_panel = PostBuildPanel(frame_padding=6, control_gap=8)
-    container = QWidget()
-    layout = QGridLayout(container)
-    layout.addWidget(post_build_panel.post_build_frame, 0, 0)
-    layout.addWidget(template_panel.template_controls_frame, 0, 1)
-    container.show()
-    app.processEvents()
-
-    assert (
-        template_panel.load_template_btn.mapTo(container, template_panel.load_template_btn.rect().topLeft()).y()
-        == post_build_panel.open_folder_build_toggle.mapTo(
-            container, post_build_panel.open_folder_build_toggle.rect().topLeft()
-        ).y()
-    )
-
-    container.close()
