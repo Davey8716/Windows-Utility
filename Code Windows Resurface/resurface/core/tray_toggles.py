@@ -51,8 +51,7 @@ class TrayIconManager(QObject):
         self.refresh_menu_style()
 
         self.folder_creator_action = QAction("Open Folder Creator", self.app)
-        self.folder_creator_action.setCheckable(True)
-        self.folder_creator_action.toggled.connect(self.toggle_folder_creator)
+        self.folder_creator_action.triggered.connect(self.toggle_folder_creator)
         menu.addAction(self.folder_creator_action)
 
         menu.addSeparator()
@@ -62,20 +61,17 @@ class TrayIconManager(QObject):
         menu.addAction(self.theme_action)
 
         self.zen_mode_action = QAction("Zen Mode", self.app)
-        self.zen_mode_action.setCheckable(True)
-        self.zen_mode_action.toggled.connect(self.toggle_zen_mode)
+        self.zen_mode_action.triggered.connect(self.toggle_zen_mode)
         menu.addAction(self.zen_mode_action)
 
         self.hover_controls_action = QAction(
-            "Hover Window Controls Enabled", self.app
+            "Turn Hover Window Controls On", self.app
         )
-        self.hover_controls_action.setCheckable(True)
-        self.hover_controls_action.toggled.connect(self.toggle_hover_controls)
+        self.hover_controls_action.triggered.connect(self.toggle_hover_controls)
         menu.addAction(self.hover_controls_action)
 
-        self.monitor_rules_action = QAction("Monitor Rules Enabled", self.app)
-        self.monitor_rules_action.setCheckable(True)
-        self.monitor_rules_action.toggled.connect(self.toggle_monitor_rules)
+        self.monitor_rules_action = QAction("Turn Monitor Rules On", self.app)
+        self.monitor_rules_action.triggered.connect(self.toggle_monitor_rules)
         menu.addAction(self.monitor_rules_action)
 
         quit_action = QAction("Quit", self.app)
@@ -99,12 +95,12 @@ class TrayIconManager(QObject):
                 self.menu, radius=styles.BUTTON_CORNER_RADIUS
             )
 
-    def toggle_folder_creator(self, enabled: bool):
-        if enabled:
+    def toggle_folder_creator(self, _checked: bool = False):
+        if not self._folder_creator_handles():
             self.open_folder_creator()
-            return
-
-        close_window_handles(self._folder_creator_handles())
+        else:
+            close_window_handles(self._folder_creator_handles())
+        self.sync_folder_creator_action()
 
     def toggle_theme(self):
         is_dark = bool(getattr(self.app, "state", {}).get("theme_dark", True))
@@ -145,9 +141,9 @@ class TrayIconManager(QObject):
             return
 
         enabled = bool(getattr(self.app, "state", {}).get("desktop_zen_mode_enabled", False))
-        self.zen_mode_action.blockSignals(True)
-        self.zen_mode_action.setChecked(enabled)
-        self.zen_mode_action.blockSignals(False)
+        self.zen_mode_action.setText(
+            "Turn Zen Mode Off" if enabled else "Turn Zen Mode On"
+        )
 
     def sync_actions(self):
         self.sync_theme_action()
@@ -170,10 +166,9 @@ class TrayIconManager(QObject):
             return
 
         is_open = bool(self._folder_creator_handles())
-
-        self.folder_creator_action.blockSignals(True)
-        self.folder_creator_action.setChecked(is_open)
-        self.folder_creator_action.blockSignals(False)
+        self.folder_creator_action.setText(
+            "Close Folder Creator" if is_open else "Open Folder Creator"
+        )
 
     def _folder_creator_handles(self) -> list[int]:
         launcher = getattr(self.app, "folder_creator_launcher", None)
@@ -203,23 +198,27 @@ class TrayIconManager(QObject):
                 ),
             )
         )
-        self.hover_controls_action.blockSignals(True)
-        self.hover_controls_action.setChecked(enabled)
-        self.hover_controls_action.blockSignals(False)
+        self.hover_controls_action.setText(
+            "Turn Hover Window Controls Off"
+            if enabled
+            else "Turn Hover Window Controls On"
+        )
 
     def sync_monitor_rules_action(self):
         if not self.monitor_rules_action:
             return
 
         rules = getattr(self.app, "state", {}).get("monitor_rules", [])
-        self.monitor_rules_action.blockSignals(True)
         self.monitor_rules_action.setEnabled(bool(rules))
-        self.monitor_rules_action.setChecked(
-            any(bool(rule.get("enabled", True)) for rule in rules)
+        enabled = any(bool(rule.get("enabled", True)) for rule in rules)
+        self.monitor_rules_action.setText(
+            "Turn Monitor Rules Off" if enabled else "Turn Monitor Rules On"
         )
-        self.monitor_rules_action.blockSignals(False)
 
-    def toggle_zen_mode(self, enabled: bool):
+    def toggle_zen_mode(self, _checked: bool = False):
+        enabled = not bool(
+            getattr(self.app, "state", {}).get("desktop_zen_mode_enabled", False)
+        )
         page = getattr(
             getattr(self.app, "pages", None), "user_interface_page", None
         )
@@ -242,17 +241,31 @@ class TrayIconManager(QObject):
 
         self.sync_zen_mode_action()
 
-    def toggle_hover_controls(self, enabled: bool):
+    def toggle_hover_controls(self, _checked: bool = False):
+        service = getattr(self.app, "hover_window_controls", None)
+        enabled = not bool(
+            getattr(
+                service,
+                "enabled",
+                getattr(self.app, "state", {}).get(
+                    "hover_window_controls_enabled", True
+                ),
+            )
+        )
         setter = getattr(self.app, "set_hover_window_controls_enabled", None)
         if callable(setter):
             setter(enabled)
+            self.sync_hover_controls_action()
         else:
             self.sync_hover_controls_action()
 
-    def toggle_monitor_rules(self, enabled: bool):
+    def toggle_monitor_rules(self, _checked: bool = False):
+        rules = getattr(self.app, "state", {}).get("monitor_rules", [])
+        enabled = not any(bool(rule.get("enabled", True)) for rule in rules)
         setter = getattr(self.app, "set_monitor_rules_enabled", None)
         if callable(setter):
             setter(enabled)
+            self.sync_monitor_rules_action()
         else:
             self.sync_monitor_rules_action()
 

@@ -56,18 +56,17 @@ def test_tray_hover_controls_action_syncs_and_dispatches() -> None:
     window = FakeWindow()
     manager = TrayIconManager(window)
     manager.hover_controls_action = QAction(
-        "Hover Window Controls Enabled", window
+        "Turn Hover Window Controls On", window
     )
-    manager.hover_controls_action.setCheckable(True)
 
     manager.sync_hover_controls_action()
-    assert not manager.hover_controls_action.isChecked()
+    assert not manager.hover_controls_action.isCheckable()
+    assert manager.hover_controls_action.text() == "Turn Hover Window Controls On"
 
-    manager.toggle_hover_controls(True)
-    manager.sync_hover_controls_action()
+    manager.toggle_hover_controls()
 
     assert window.enabled_calls == [True]
-    assert manager.hover_controls_action.isChecked()
+    assert manager.hover_controls_action.text() == "Turn Hover Window Controls Off"
 
 
 def test_tray_folder_creator_action_opens_or_closes_and_precedes_toggles(monkeypatch) -> None:
@@ -109,21 +108,22 @@ def test_tray_folder_creator_action_opens_or_closes_and_precedes_toggles(monkeyp
 
     assert manager.menu.actions()[0] is manager.folder_creator_action
     assert manager.folder_creator_action.text() == "Open Folder Creator"
-    assert manager.folder_creator_action.isCheckable()
-    assert not manager.folder_creator_action.isChecked()
+    assert not manager.folder_creator_action.isCheckable()
     manager.folder_creator_action.trigger()
     assert window.folder_actions.open_calls == 1
 
     window.folder_creator_launcher.handles = [42]
     manager.sync_folder_creator_action()
-    assert manager.folder_creator_action.isChecked()
+    assert manager.folder_creator_action.text() == "Close Folder Creator"
     closed_handles = []
     monkeypatch.setattr(
-        tray_toggles, "close_window_handles", lambda handles: closed_handles.extend(handles)
+        tray_toggles,
+        "close_window_handles",
+        lambda handles: (closed_handles.extend(handles), window.folder_creator_launcher.handles.clear()),
     )
     manager.folder_creator_action.trigger()
-    assert not manager.folder_creator_action.isChecked()
     assert closed_handles == [42]
+    assert manager.folder_creator_action.text() == "Open Folder Creator"
 
 
 def test_tray_menu_restyles_with_live_theme_and_rounded_corners() -> None:
@@ -338,23 +338,32 @@ def test_tray_zen_mode_uses_composed_user_interface_page() -> None:
     _app()
 
     class UserInterfacePage:
-        def __init__(self):
+        def __init__(self, window):
+            self.window = window
             self.enabled_calls = []
 
         def set_desktop_zen_enabled(self, enabled):
             self.enabled_calls.append(enabled)
+            self.window.state["desktop_zen_mode_enabled"] = enabled
 
     class FakeWindow(QObject):
         def __init__(self):
             super().__init__()
-            self.pages = SimpleNamespace(user_interface_page=UserInterfacePage())
+            self.state = {"desktop_zen_mode_enabled": False}
+            self.pages = SimpleNamespace(user_interface_page=UserInterfacePage(self))
 
     window = FakeWindow()
     manager = TrayIconManager(window)
+    manager.zen_mode_action = QAction("Turn Zen Mode On", window)
+    manager.sync_zen_mode_action()
 
-    manager.toggle_zen_mode(True)
+    assert not manager.zen_mode_action.isCheckable()
+    assert manager.zen_mode_action.text() == "Turn Zen Mode On"
+
+    manager.toggle_zen_mode()
 
     assert window.pages.user_interface_page.enabled_calls == [True]
+    assert manager.zen_mode_action.text() == "Turn Zen Mode Off"
 
 
 def test_tray_monitor_rules_action_syncs_and_dispatches() -> None:
@@ -378,19 +387,34 @@ def test_tray_monitor_rules_action_syncs_and_dispatches() -> None:
 
     window = FakeWindow()
     manager = TrayIconManager(window)
-    manager.monitor_rules_action = QAction("Monitor Rules Enabled", window)
-    manager.monitor_rules_action.setCheckable(True)
+    manager.monitor_rules_action = QAction("Turn Monitor Rules On", window)
 
     manager.sync_monitor_rules_action()
     assert manager.monitor_rules_action.isEnabled()
-    assert manager.monitor_rules_action.isChecked()
+    assert not manager.monitor_rules_action.isCheckable()
+    assert manager.monitor_rules_action.text() == "Turn Monitor Rules Off"
 
-    manager.toggle_monitor_rules(False)
-    manager.sync_monitor_rules_action()
+    manager.toggle_monitor_rules()
     assert window.enabled_calls == [False]
-    assert not manager.monitor_rules_action.isChecked()
+    assert manager.monitor_rules_action.text() == "Turn Monitor Rules On"
 
-    manager.toggle_monitor_rules(True)
-    manager.sync_monitor_rules_action()
+    manager.toggle_monitor_rules()
     assert window.enabled_calls == [False, True]
-    assert manager.monitor_rules_action.isChecked()
+    assert manager.monitor_rules_action.text() == "Turn Monitor Rules Off"
+
+
+def test_tray_monitor_rules_action_is_disabled_without_rules() -> None:
+    _app()
+
+    class FakeWindow(QObject):
+        def __init__(self):
+            super().__init__()
+            self.state = {"monitor_rules": []}
+
+    manager = TrayIconManager(FakeWindow())
+    manager.monitor_rules_action = QAction("Turn Monitor Rules On", manager.app)
+
+    manager.sync_monitor_rules_action()
+
+    assert not manager.monitor_rules_action.isEnabled()
+    assert manager.monitor_rules_action.text() == "Turn Monitor Rules On"

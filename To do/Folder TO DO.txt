@@ -11,5 +11,3 @@ Add in a delete all templates button for the user templates, if clicked it remov
 Fix the padding between the top of the qtreewidget  and the buttons above and the bottom of the qtreewidget and the template master backup location and output folder location etc
 
 All the folder dialogue pop up changes must respect the silence dialogues from the main gui
-
-The tray items need to follow the switch to light mode on off logic not the tick version 
