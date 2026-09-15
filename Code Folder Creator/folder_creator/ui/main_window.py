@@ -80,6 +80,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
     TITLE_TEXT_ROW_HEIGHT = 40
     TITLE_TEXT_TOP_PADDING = 10
     TITLE_CONTROL_WIDTH = 42
+    CONTROL_FONT_SIZE = 12
 
     def __init__(self):
         super().__init__()
@@ -441,14 +442,39 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.update_expand_button_text()
         self.ui_state.update_build_button_state()
         self.ui_state.update_nested_build_state()
+        self._configure_control_font_sizes()
         styles.apply_standard_button_styles(self)
-        for toggle in (
+        self.apply_theme(self._theme_dark)
+
+    def _configure_control_font_sizes(self) -> None:
+        """Keep the primary controls at one explicit, theme-stable size."""
+        top_control_buttons = (
+            self.add_folder_btn,
+            self.add_subfolder_btn,
+            self.remove_btn,
+            self.remove_all_btn,
+            self.auto_enumerate_folders,
+            self.nested_date_toggle,
             self.open_folder_build_toggle,
             self.minimize_after_build_toggle,
             self.close_app_after_build_toggle,
-        ):
-            toggle.setStyleSheet(styles.organizing_button_style(font_size=11))
-        self.apply_theme(self._theme_dark)
+            self.load_template_btn,
+            self.save_template_btn,
+            self.delete_template_btn,
+            self.delete_all_templates_btn,
+            self.default_to_desktop_btn,
+            self.output_location_btn,
+            self.build_folders_btn,
+        )
+        tree_toolbar_buttons = (
+            self.expand_tree_btn,
+            self.expand_folders_collapse_btn,
+            self.sort_btn,
+            self.find_btn,
+        )
+        for button in (*top_control_buttons, *tree_toolbar_buttons):
+            button.setProperty("styleFontSize", self.CONTROL_FONT_SIZE)
+        self.find_output_line.setProperty("styleFontSize", self.CONTROL_FONT_SIZE)
 
     def _start_theme_sync(self):
         self._shared_state_mtime_ns = self._get_shared_state_mtime_ns()
@@ -493,8 +519,11 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.window_close_btn.setIcon(self._title_bar_icon("close"))
         self.tree_frame.setStyleSheet(styles.tree_outer_frame_style())
         self.tree.setStyleSheet(styles.surfaced_tree_widget_style())
+        find_font_size = styles.resurface_styles.coerce_font_size(
+            self.find_output_line.property("styleFontSize"), 15
+        ) or 15
         self.find_output_line.setStyleSheet(
-            styles.frameless_surfaced_line_edit_style(15)
+            styles.frameless_surfaced_line_edit_style(find_font_size)
         )
         self.smart_status_icon.setStyleSheet(styles.status_label_style())
         self.smart_status_text.setStyleSheet(styles.status_label_style())
