@@ -2,10 +2,11 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import QFileSystemWatcher, QTimer, Qt
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 from folder_creator.features.tree.outline_parser import parse_indented_text
 from folder_creator.ui import styles
+from folder_creator.ui.template_load_dialog import TemplateLoadDialog
 from folder_creator.ui.template_save_dialog import TemplateSaveDialog
 
 
@@ -50,12 +51,17 @@ class TemplateController:
     def load_template_dialog(self, parent):
         if not self._templates_available():
             return "unavailable", self.MASTER_BACKUP_UNAVAILABLE_MESSAGE
-        file_path, _ = QFileDialog.getOpenFileName(
-            parent,
-            "Load Template",
-            "",
-            "Templates (*.json *.txt *.md);;JSON Files (*.json);;Text Outline (*.txt)",
-        )
+
+        user_dir = self._user_template_dir()
+        if user_dir is None:
+            return "unavailable", self.MASTER_BACKUP_UNAVAILABLE_MESSAGE
+
+        dialog = TemplateLoadDialog(parent, user_dir)
+        if dialog.exec() != dialog.DialogCode.Accepted:
+            return "cancelled", ""
+
+        selected_files = dialog.selectedFiles()
+        file_path = selected_files[0] if selected_files else ""
 
         if not file_path:
             return "cancelled", ""
@@ -288,6 +294,7 @@ class TemplateController:
         )
         window.tree.fileDropped.connect(self.load_template_from_path)
         window.tree.loadTemplateShortcut.connect(self.load_template)
+        window.load_template_btn.clicked.connect(self.load_template)
         window.save_template_btn.clicked.connect(self.create_template)
         window.load_user_template_dropdown.setContextMenuPolicy(Qt.CustomContextMenu)
         window.load_user_template_dropdown.customContextMenuRequested.connect(

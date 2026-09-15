@@ -19,12 +19,16 @@ from folder_creator.ui.output_location_controller import (  # noqa: E402
 )
 from folder_creator.ui import output_location_controller as output_module  # noqa: E402
 from folder_creator.ui.template_controller import TemplateController  # noqa: E402
+from folder_creator.ui import template_controller as template_controller_module  # noqa: E402
+from folder_creator.ui.template_load_dialog import TemplateLoadDialog  # noqa: E402
 from folder_creator.ui.template_save_dialog import TemplateSaveDialog  # noqa: E402
-from PySide6.QtCore import Signal  # noqa: E402
+from PySide6.QtCore import Qt, Signal  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
     QCheckBox,
     QComboBox,
+    QDialog,
+    QFileDialog,
     QLineEdit,
     QPushButton,
     QTreeWidget,
@@ -140,6 +144,7 @@ def make_window(tmp_path):
         open_folder_build_toggle=QCheckBox(),
         minimize_after_build_toggle=QCheckBox(),
         close_app_after_build_toggle=QCheckBox(),
+        load_template_btn=QPushButton(),
         save_template_btn=QPushButton(),
         add_folder_btn=QPushButton(),
         add_subfolder_btn=QPushButton(),
@@ -181,6 +186,104 @@ def test_default_template_signal_loads_once_and_resets_user_selection(qapp, tmp_
 
     assert window.load_user_template_dropdown.currentIndex() == 0
     assert len(window.service.tree_controller.deserialize_calls) == 1
+
+
+def test_load_templates_button_invokes_template_loader(qapp, tmp_path):
+    window = make_window(tmp_path)
+    controller = NestedUIController(window)
+    calls = []
+    controller.template_controller.load_template = lambda: calls.append(True)
+
+    controller.connect_signals()
+    window.load_template_btn.click()
+
+    assert calls == [True]
+
+
+def test_template_load_dialog_is_themed_and_starts_in_user_templates(qapp, tmp_path):
+    user_dir = tmp_path / "Folder Creator Templates" / "user_templates"
+    user_dir.mkdir(parents=True)
+    dialog = TemplateLoadDialog(None, user_dir)
+
+    try:
+        assert dialog.windowTitle() == "Load Template"
+        assert dialog.directory().absolutePath() == user_dir.as_posix()
+        assert dialog.nameFilters() == [
+            "Templates (*.json *.txt *.md)",
+            "JSON Files (*.json)",
+            "Text Outline (*.txt)",
+            "Markdown Outline (*.md)",
+        ]
+        assert dialog.testOption(QFileDialog.Option.DontUseNativeDialog)
+        assert dialog.fileMode() == QFileDialog.FileMode.ExistingFile
+        assert dialog.acceptMode() == QFileDialog.AcceptMode.AcceptOpen
+        assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert dialog.minimumSize() == dialog.maximumSize()
+        assert "QFileDialog" in dialog.styleSheet()
+    finally:
+        dialog.deleteLater()
+
+
+def test_template_load_dialog_accepts_selected_file_and_loads_it(qapp, tmp_path, monkeypatch):
+    window = make_window(tmp_path)
+    selected = tmp_path / "incoming.txt"
+    selected.write_text("Project", encoding="utf-8")
+    window.service.load_template_data = lambda _path: [{"name": "Project", "children": []}]
+    saved = []
+    window.service.save_to_user_templates = lambda path: saved.append(path) or True
+    monkeypatch.setattr(
+        TemplateLoadDialog,
+        "exec",
+        lambda _dialog: QDialog.DialogCode.Accepted,
+    )
+    monkeypatch.setattr(
+        TemplateLoadDialog,
+        "selectedFiles",
+        lambda _dialog: [str(selected)],
+    )
+    monkeypatch.setattr(
+        template_controller_module.QTimer,
+        "singleShot",
+        lambda _delay, callback: callback(),
+    )
+
+    status, message = TemplateController(window).load_template_dialog(window)
+
+    assert (status, message) == ("success", "Template loaded")
+    assert window.service.tree_controller.deserialize_calls == [
+        ([{"name": "Project", "children": []}], {"renumber": False})
+    ]
+    assert saved == [str(selected)]
+
+
+def test_template_load_dialog_rejection_does_not_load(qapp, tmp_path, monkeypatch):
+    window = make_window(tmp_path)
+    window.service.load_template_data = lambda _path: pytest.fail("should not load")
+    monkeypatch.setattr(
+        TemplateLoadDialog,
+        "exec",
+        lambda _dialog: QDialog.DialogCode.Rejected,
+    )
+
+    assert TemplateController(window).load_template_dialog(window) == ("cancelled", "")
+
+
+def test_template_load_is_blocked_when_master_backup_path_is_unavailable(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    window.service.templates_available = lambda: False
+    window.service.template_paths = SimpleNamespace(user_dir=None, default_dir=None)
+    monkeypatch.setattr(
+        TemplateLoadDialog,
+        "exec",
+        lambda _dialog: pytest.fail("dialog should not open"),
+    )
+
+    assert TemplateController(window).load_template_dialog(window) == (
+        "unavailable",
+        "Set a valid Master Backup Path in Windows Resurface before working with templates.",
+    )
 
 
 def test_remove_all_signal_cleans_all_selection_state_once(
