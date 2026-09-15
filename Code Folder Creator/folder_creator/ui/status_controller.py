@@ -82,6 +82,30 @@ class StatusController:
             merge_group="folder_creator_template_load",
         )
 
+    def show_action_result(self, message: str, *, status_type: str) -> None:
+        """Show a themed, closeable result popup for a completed UI action."""
+        self._show_timed_result(message, status_type=status_type)
+
+    def confirm_action(
+        self,
+        title: str,
+        message: str,
+        *,
+        affirmative_label: str,
+    ) -> bool:
+        """Show a rounded, themed confirmation dialog for an irreversible action."""
+        result = self.w._show_modal_message(
+            self.w._message_box_icon("Warning"),
+            title,
+            message,
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes,
+            QMessageBox.StandardButton.Cancel,
+            center_text_block=True,
+            popup_corner_radius=styles.resurface_styles.BUTTON_CORNER_RADIUS,
+            affirmative_button_text=affirmative_label,
+        )
+        return result == QMessageBox.StandardButton.Yes
+
     def _show_timed_result(
         self,
         message: str,

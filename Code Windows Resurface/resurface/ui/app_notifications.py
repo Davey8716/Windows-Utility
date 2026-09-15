@@ -480,6 +480,7 @@ class WindowMessageMixin:
         accessory_leading_spacer_width: int | None = None,
         popup_corner_radius: int | None = None,
         link_activated: Callable[[str], None] | None = None,
+        affirmative_button_text: str | None = None,
     ) -> int:
         suppressed_result = self._affirmative_confirmation_result(buttons)
         if suppressed_result is not None:
@@ -512,6 +513,10 @@ class WindowMessageMixin:
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(buttons)
+        if affirmative_button_text is not None:
+            affirmative_button = message_box.button(self._message_box_button("Yes"))
+            if affirmative_button is not None:
+                affirmative_button.setText(affirmative_button_text)
         message_box.setDefaultButton(default_button)
         message_box.setWindowModality(Qt.WindowModality.ApplicationModal)
         return self._exec_message_box(

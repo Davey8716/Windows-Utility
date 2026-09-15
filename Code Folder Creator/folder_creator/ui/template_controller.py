@@ -2,10 +2,8 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import QFileSystemWatcher, QTimer, Qt
-from PySide6.QtWidgets import QMessageBox
 
 from folder_creator.features.tree.outline_parser import parse_indented_text
-from folder_creator.ui import styles
 from folder_creator.ui.template_load_dialog import TemplateLoadDialog
 from folder_creator.ui.template_save_dialog import TemplateSaveDialog
 
@@ -77,7 +75,12 @@ class TemplateController:
             self._user_templates_available()
         )
 
-    def _show_master_backup_unavailable(self) -> None:
+    def _show_master_backup_unavailable(self, *, action_result: bool = False) -> None:
+        if action_result:
+            self.window.status.show_action_result(
+                self.MASTER_BACKUP_UNAVAILABLE_MESSAGE, status_type="error"
+            )
+            return
         self.window.status.set(
             self.MASTER_BACKUP_UNAVAILABLE_MESSAGE,
             target="nested",
@@ -218,26 +221,28 @@ class TemplateController:
 
     def delete_user_template(self):
         if not self._templates_available():
-            self._show_master_backup_unavailable()
+            self._show_master_backup_unavailable(action_result=True)
             return
 
         template_path = self._selected_user_template_path()
         if template_path is None:
-            self.window.status.set(
+            self.window.status.show_action_result(
                 "Select a user template to delete.",
-                target="nested",
                 status_type="error",
             )
             self._update_delete_template_button_state()
             return
         if not self._confirm_template_deletion(template_path):
+            self.window.status.show_action_result(
+                "Template deletion cancelled.", status_type="info"
+            )
             return
 
         try:
             template_path.unlink()
         except OSError:
-            self.window.status.set(
-                "Error deleting template.", target="nested", status_type="error"
+            self.window.status.show_action_result(
+                "Error deleting template.", status_type="error"
             )
             return
 
@@ -246,20 +251,26 @@ class TemplateController:
         self.window.load_user_template_dropdown.setCurrentIndex(0)
         self.tree.clear()
         self.window.ui_state.update_build_button_state()
-        self.window.status.set(
-            "Template deleted.", target="nested", status_type="success"
+        self.window.status.show_action_result(
+            "Template deleted.", status_type="success"
         )
 
     def delete_all_user_templates(self):
         if not self._templates_available():
-            self._show_master_backup_unavailable()
+            self._show_master_backup_unavailable(action_result=True)
             return
 
         template_paths = self._user_template_files()
         if not template_paths:
             self._update_delete_template_button_state()
+            self.window.status.show_action_result(
+                "No user templates to delete.", status_type="info"
+            )
             return
         if not self._confirm_all_template_deletion(len(template_paths)):
+            self.window.status.show_action_result(
+                "Deleting all templates cancelled.", status_type="info"
+            )
             return
 
         failed = False
@@ -275,56 +286,49 @@ class TemplateController:
         self.tree.clear()
         self.window.ui_state.update_build_button_state()
         if failed:
-            self.window.status.set(
-                "Error deleting all templates.", target="nested", status_type="error"
+            self.window.status.show_action_result(
+                "Error deleting all templates.", status_type="error"
             )
             return
-        self.window.status.set(
-            "All templates deleted.", target="nested", status_type="success"
+        template_label = "template" if len(template_paths) == 1 else "templates"
+        self.window.status.show_action_result(
+            f"{len(template_paths)} {template_label} deleted successfully.",
+            status_type="success",
         )
 
     def _confirm_template_deletion(self, template_path: Path) -> bool:
-        box = QMessageBox(self.window)
-        box.setWindowTitle("Delete Template?")
-        box.setText(f'Permanently delete "{template_path.name}"?')
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setStandardButtons(
-            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes
+        return self.window.status.confirm_action(
+            "Delete Template?",
+            f'Permanently delete "{template_path.name}"?',
+            affirmative_label="Delete",
         )
-        delete_button = box.button(QMessageBox.StandardButton.Yes)
-        delete_button.setText("Delete")
-        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        box.setStyleSheet(styles.resurface_styles.message_box_style(radius=12))
-        return box.exec() == QMessageBox.StandardButton.Yes
 
     def _confirm_all_template_deletion(self, template_count: int) -> bool:
-        box = QMessageBox(self.window)
-        box.setWindowTitle("Delete All Templates?")
-        box.setText(
-            f"Permanently delete all {template_count} user template(s)?"
+        return self.window.status.confirm_action(
+            "Delete All Templates?",
+            f"Permanently delete all {template_count} user template(s)?",
+            affirmative_label="Delete All",
         )
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setStandardButtons(
-            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes
-        )
-        delete_button = box.button(QMessageBox.StandardButton.Yes)
-        delete_button.setText("Delete All")
-        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        box.setStyleSheet(styles.resurface_styles.message_box_style(radius=12))
-        return box.exec() == QMessageBox.StandardButton.Yes
 
     def user_template_save(self):
         user_dir = self._user_template_dir()
         if not self._templates_available() or user_dir is None:
-            self._show_master_backup_unavailable()
+            self._show_master_backup_unavailable(action_result=True)
             return
 
         dialog = TemplateSaveDialog(self.window, user_dir)
         if dialog.exec() != dialog.DialogCode.Accepted or dialog.destination is None:
+            self.window.status.show_action_result(
+                "Template save cancelled.", status_type="info"
+            )
             return
 
         destination = dialog.destination
-        if destination.exists() and not self._confirm_template_replacement(destination):
+        replacing_template = destination.exists()
+        if replacing_template and not self._confirm_template_replacement(destination):
+            self.window.status.show_action_result(
+                "Template save cancelled.", status_type="info"
+            )
             return
 
         data = self.service.tree_controller.serialize_tree()
@@ -338,7 +342,14 @@ class TemplateController:
                 status, message = "error", "Error saving template"
 
         if status == "success":
-            self.window.status.set(message, target="nested", status_type="success")
+            completion_message = (
+                f'Template "{destination.name}" replaced successfully.'
+                if replacing_template
+                else message
+            )
+            self.window.status.show_action_result(
+                completion_message, status_type="success"
+            )
             self.refresh_user_templates_dropdown()
             dropdown = self.window.load_user_template_dropdown
             saved_template_index = dropdown.findData(
@@ -347,21 +358,14 @@ class TemplateController:
             if saved_template_index != -1:
                 dropdown.setCurrentIndex(saved_template_index)
         else:
-            self.window.status.set(message, target="nested", status_type="error")
+            self.window.status.show_action_result(message, status_type="error")
 
     def _confirm_template_replacement(self, destination: Path) -> bool:
-        box = QMessageBox(self.window)
-        box.setWindowTitle("Replace Template?")
-        box.setText(f'"{destination.name}" already exists. Replace it?')
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setStandardButtons(
-            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes
+        return self.window.status.confirm_action(
+            "Replace Template?",
+            f'"{destination.name}" already exists. Replace it?',
+            affirmative_label="Replace",
         )
-        replace_button = box.button(QMessageBox.StandardButton.Yes)
-        replace_button.setText("Replace")
-        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        box.setStyleSheet(styles.resurface_styles.message_box_style(radius=12))
-        return box.exec() == QMessageBox.StandardButton.Yes
 
     def load_default_template(self):
         if not self._templates_available():
@@ -392,8 +396,8 @@ class TemplateController:
 
     def create_template(self):
         if self.tree.topLevelItemCount() == 0:
-            self.window.status.set(
-                "Tree is empty.", target="nested", status_type="error"
+            self.window.status.show_action_result(
+                "Tree is empty.", status_type="error"
             )
             return
         self.user_template_save()

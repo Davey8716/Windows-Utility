@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (  # noqa: E402
     QLineEdit,
     QLabel,
     QDialogButtonBox,
+    QMessageBox,
     QPushButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -69,6 +70,9 @@ class CallRecorder:
 
     def show_template_loaded(self):
         self.calls.append((("Template loaded",), {"themed": True}))
+
+    def show_action_result(self, *args, **kwargs):
+        self.calls.append((args, {**kwargs, "themed": True}))
 
 
 class UIStateStub:
@@ -229,6 +233,77 @@ def test_find_result_dialog_matches_themed_timed_message_pattern(qapp):
         assert button_box.centerButtons()
     finally:
         dialog.close()
+        host.deleteLater()
+
+
+@pytest.mark.parametrize(
+    "status_type",
+    [
+        "success",
+        "info",
+        "error",
+    ],
+)
+def test_action_result_uses_themed_ten_second_closeable_popup(qapp, status_type):
+    class Host(WindowMessageMixin, QWidget):
+        pass
+
+    host = Host()
+    controller = StatusController(host, service=None)
+    controller.show_action_result("Action result", status_type=status_type)
+
+    try:
+        dialog = host._active_message_boxes[-1]
+        text_label = dialog.findChild(QLabel, "qt_msgbox_label")
+        button_box = dialog.findChild(QDialogButtonBox)
+
+        assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert dialog._popup_corner_radius == folder_styles.resurface_styles.BUTTON_CORNER_RADIUS
+        assert dialog._close_timer.interval() == 10_000
+        assert dialog._suppress_standard_icon
+        assert text_label.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert "This message will disappear in 10 seconds." in text_label.text()
+        assert [button.text() for button in button_box.buttons()] == ["Close now"]
+        assert button_box.centerButtons()
+    finally:
+        dialog.close()
+        host.deleteLater()
+
+
+@pytest.mark.parametrize("affirmative_label", ["Delete", "Delete All", "Replace"])
+def test_confirmation_uses_themed_rounded_modal_popup(
+    qapp, monkeypatch, affirmative_label
+):
+    class Host(WindowMessageMixin, QWidget):
+        pass
+
+    host = Host()
+    controller = StatusController(host, service=None)
+    captured = []
+
+    def accept_dialog(dialog):
+        captured.append(dialog)
+        return QMessageBox.StandardButton.Yes
+
+    monkeypatch.setattr(QMessageBox, "exec", accept_dialog)
+
+    try:
+        assert controller.confirm_action(
+            "Confirm action?",
+            "This action cannot be undone.",
+            affirmative_label=affirmative_label,
+        )
+
+        dialog = captured[0]
+        button_box = dialog.findChild(QDialogButtonBox)
+        assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert dialog._popup_corner_radius == folder_styles.resurface_styles.BUTTON_CORNER_RADIUS
+        assert dialog.defaultButton().text() == "Cancel"
+        assert {button.text().replace("&", "") for button in button_box.buttons()} == {
+            "Cancel",
+            affirmative_label,
+        }
+    finally:
         host.deleteLater()
 
 
@@ -670,6 +745,53 @@ def test_template_save_writes_to_master_backed_user_folder(qapp, tmp_path, monke
     ) == str(destination)
 
 
+def test_template_save_cancel_uses_themed_action_result(qapp, tmp_path, monkeypatch):
+    window = make_window(tmp_path)
+    monkeypatch.setattr(
+        TemplateSaveDialog,
+        "exec",
+        lambda _self: QDialog.DialogCode.Rejected,
+    )
+
+    TemplateController(window).user_template_save()
+
+    assert window.status.calls[-1] == (
+        ("Template save cancelled.",),
+        {"status_type": "info", "themed": True},
+    )
+
+
+def test_template_overwrite_reports_the_saved_template_name(qapp, tmp_path, monkeypatch):
+    window = make_window(tmp_path)
+    destination = window.service.template_paths.user_dir / "project.json"
+    destination.write_text("old", encoding="utf-8")
+
+    def save_json(path, data):
+        Path(path).write_text(str(data), encoding="utf-8")
+        return "success", "saved"
+
+    window.service.template_service = SimpleNamespace(
+        save_json=save_json
+    )
+
+    def accept_dialog(self):
+        self.filename_input.setText("project")
+        self._accept_if_valid()
+        return self.result()
+
+    monkeypatch.setattr(TemplateSaveDialog, "exec", accept_dialog)
+    monkeypatch.setattr(
+        TemplateController, "_confirm_template_replacement", lambda *_args: True
+    )
+
+    TemplateController(window).user_template_save()
+
+    assert window.status.calls[-1] == (
+        ('Template "project.json" replaced successfully.',),
+        {"status_type": "success", "themed": True},
+    )
+
+
 def test_delete_selected_user_template_removes_its_file_and_resets_ui(
     qapp, tmp_path, monkeypatch
 ):
@@ -691,6 +813,7 @@ def test_delete_selected_user_template_removes_its_file_and_resets_ui(
     assert window.load_user_template_dropdown.findText("Project") == -1
     assert window.tree.topLevelItemCount() == 0
     assert window.status.calls[-1][0] == ("Template deleted.",)
+    assert window.status.calls[-1][1]["themed"]
 
 
 def test_delete_selected_user_template_keeps_file_when_cancelled(
@@ -710,6 +833,10 @@ def test_delete_selected_user_template_keeps_file_when_cancelled(
 
     assert template.exists()
     assert window.load_user_template_dropdown.currentText() == "Project"
+    assert window.status.calls[-1] == (
+        ("Template deletion cancelled.",),
+        {"status_type": "info", "themed": True},
+    )
 
 
 def test_delete_all_user_templates_removes_every_dropdown_file_and_resets_ui(
@@ -735,7 +862,8 @@ def test_delete_all_user_templates_removes_every_dropdown_file_and_resets_ui(
     assert window.load_user_template_dropdown.count() == 2
     assert not window.delete_all_templates_btn.isEnabled()
     assert window.tree.topLevelItemCount() == 0
-    assert window.status.calls[-1][0] == ("All templates deleted.",)
+    assert window.status.calls[-1][0] == ("2 templates deleted successfully.",)
+    assert window.status.calls[-1][1]["themed"]
 
 
 def test_delete_all_user_templates_keeps_every_file_when_cancelled(
@@ -758,6 +886,22 @@ def test_delete_all_user_templates_keeps_every_file_when_cancelled(
     assert json_template.exists()
     assert text_template.exists()
     assert window.load_user_template_dropdown.currentText() == "Notes"
+    assert window.status.calls[-1] == (
+        ("Deleting all templates cancelled.",),
+        {"status_type": "info", "themed": True},
+    )
+
+
+def test_delete_all_user_templates_reports_when_there_are_none(qapp, tmp_path):
+    window = make_window(tmp_path)
+    controller = TemplateController(window)
+
+    controller.delete_all_user_templates()
+
+    assert window.status.calls[-1] == (
+        ("No user templates to delete.",),
+        {"status_type": "info", "themed": True},
+    )
 
 
 def test_delete_all_user_templates_refreshes_remaining_files_after_failure(
@@ -789,6 +933,7 @@ def test_delete_all_user_templates_refreshes_remaining_files_after_failure(
     assert window.load_user_template_dropdown.findText("Project") == -1
     assert window.load_user_template_dropdown.findText("Notes") != -1
     assert window.status.calls[-1][0] == ("Error deleting all templates.",)
+    assert window.status.calls[-1][1]["themed"]
 
 
 def test_delete_all_templates_is_disabled_when_storage_is_unavailable(qapp, tmp_path):
