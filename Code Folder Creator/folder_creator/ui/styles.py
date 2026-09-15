@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QApplication, QComboBox, QPushButton
 
 
@@ -112,6 +112,42 @@ def apply_fluent_icon(button: QPushButton, glyph: str, icon_size: int = 16) -> N
     button.setIcon(create_fluent_icon(glyph, icon_size))
 
 
+def create_window_action_icon(action: str, icon_size: int = 16) -> QIcon:
+    """Create consistently sized minimize and close glyphs for action buttons."""
+    pixmap = QPixmap(icon_size, icon_size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    pen = QPen(theme_text_color())
+    pen.setWidthF(max(1.25, icon_size / 10))
+    pen.setCapStyle(Qt.PenCapStyle.SquareCap)
+    painter.setPen(pen)
+
+    inset = icon_size * 0.25
+    far_edge = icon_size - inset
+    centre = icon_size / 2
+    if action == "minimize":
+        painter.drawLine(inset, centre, far_edge, centre)
+    elif action == "close":
+        painter.drawLine(inset, inset, far_edge, far_edge)
+        painter.drawLine(inset, far_edge, far_edge, inset)
+    else:
+        raise ValueError(f"Unsupported window action icon: {action}")
+
+    painter.end()
+    return QIcon(pixmap)
+
+
+def apply_window_action_icon(
+    button: QPushButton, action: str, icon_size: int = 16
+) -> None:
+    """Attach a fixed-bounds window action icon that survives theme refreshes."""
+    button.setProperty("windowActionIcon", action)
+    button.setProperty("windowActionIconSize", icon_size)
+    button.setIconSize(QSize(icon_size, icon_size))
+    button.setIcon(create_window_action_icon(action, icon_size))
+
+
 def apply_fluent_item_icon(
     combo: QComboBox, index: int, glyph: str, icon_size: int = 16
 ) -> None:
@@ -126,6 +162,11 @@ def apply_fluent_item_icon(
 def refresh_fluent_icons(widget) -> None:
     """Repaint Fluent control icons with the active theme's text colour."""
     for button in widget.findChildren(QPushButton):
+        window_action = button.property("windowActionIcon")
+        if window_action:
+            icon_size = int(button.property("windowActionIconSize") or 16)
+            apply_window_action_icon(button, str(window_action), icon_size)
+            continue
         glyph = button.property("fluentIconGlyph")
         if glyph:
             icon_size = int(button.property("fluentIconSize") or 16)

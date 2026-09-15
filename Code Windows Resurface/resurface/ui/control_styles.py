@@ -49,6 +49,10 @@ def organizing_button_style(font_size: int | None = None) -> str:
             border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
             background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
         }}
+        QPushButton[postBuildActionButton="true"] {{
+            text-align: left;
+            padding-left: 30px;
+        }}
         {placeholder_disabled_override}
         {black_disabled_text_override}
     """
