@@ -33,9 +33,6 @@ class NestedUIController:
         self.service.tree_controller.sort_tree()
         if self.tree.topLevelItemCount() > 0:
             self.tree.setCurrentItem(self.tree.topLevelItem(0))
-        self.window.status.show_action_result(
-            "Folder tree sorted alphabetically.", status_type="success"
-        )
 
     def find_folder_in_tree(self):
         text = self.window.find_output_line.text().strip().lower()
@@ -67,9 +64,6 @@ class NestedUIController:
                         horizontal_bar.value() + rect.right() - viewport_width
                     )
 
-                self.window.status.show_find_result(
-                    f'Folder "{item.text(0)}" found.', status_type="success"
-                )
                 return
             iterator += 1
 

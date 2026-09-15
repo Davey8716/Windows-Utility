@@ -192,7 +192,7 @@ def make_window(tmp_path):
     return window
 
 
-def test_find_outcomes_use_the_find_specific_timed_popup(qapp, tmp_path):
+def test_find_only_reports_errors(qapp, tmp_path):
     window = make_window(tmp_path)
     controller = NestedUIController(window)
 
@@ -205,7 +205,6 @@ def test_find_outcomes_use_the_find_specific_timed_popup(qapp, tmp_path):
 
     assert window.status.find_calls == [
         (("Enter a folder name to search for.",), {"status_type": "error"}),
-        (('Folder "Project" found.',), {"status_type": "success"}),
         (("No matching folder found.",), {"status_type": "error"}),
     ]
     assert window.status.calls == []
