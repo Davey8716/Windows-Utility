@@ -387,3 +387,29 @@ def test_folder_creator_uses_shared_palette_and_modern_combo_rules():
         assert stylesheet.count("QWidget {") == 1
     finally:
         folder_styles.set_theme(True)
+
+
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_folder_creator_tree_uses_the_maintenance_output_surface(is_dark):
+    spec = importlib.util.spec_from_file_location(
+        "_test_folder_creator_tree_styles",
+        FOLDER_CREATOR_STYLES_PATH,
+    )
+    assert spec is not None and spec.loader is not None
+    folder_styles = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(folder_styles)
+
+    try:
+        folder_styles.set_theme(is_dark)
+        tree_stylesheet = folder_styles.surfaced_tree_widget_style()
+        maintenance_stylesheet = folder_styles.resurface_styles.frame_text_edit_style(
+            "Consolas", 15
+        )
+        surface_background = folder_styles.qcolor_css(
+            folder_styles.resurface_styles.SURFACE_BG
+        )
+
+        assert f"background-color: {surface_background};" in tree_stylesheet
+        assert f"background-color: {surface_background};" in maintenance_stylesheet
+    finally:
+        folder_styles.set_theme(True)

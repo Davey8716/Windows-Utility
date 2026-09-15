@@ -144,6 +144,44 @@ def test_folder_creator_path_displays_use_surfaced_labels_in_both_themes(tmp_pat
     assert "FOLDER_CREATOR_SURFACED_PATHS_READY" in result.stdout
 
 
+def test_folder_creator_tree_refreshes_to_the_maintenance_output_surface(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui import styles\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow()\n"
+        "window.show()\n"
+        "app.processEvents()\n"
+        "for is_dark in (True, False):\n"
+        " window.apply_theme(is_dark)\n"
+        " app.processEvents()\n"
+        " surface = styles.qcolor_css(styles.resurface_styles.SURFACE_BG)\n"
+        " assert window.tree.styleSheet() == styles.surfaced_tree_widget_style()\n"
+        " assert f'background-color: {surface};' in window.tree.styleSheet()\n"
+        " assert f'background-color: {surface};' in styles.resurface_styles.frame_text_edit_style('Consolas', 15)\n"
+        "print('FOLDER_CREATOR_TREE_SURFACE_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_TREE_SURFACE_READY" in result.stdout
+
+
 def test_folder_creator_requests_standard_dwm_rounded_corners(monkeypatch):
     calls = []
 

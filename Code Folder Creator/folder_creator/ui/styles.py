@@ -254,13 +254,15 @@ def tree_outer_frame_style() -> str:
 
 
 def surfaced_tree_widget_style(font_size: int = 14) -> str:
-    surface_bg = qcolor_css(QColor(resurface_styles.themed_surface_field_bg()))
-    surface_text = qcolor_css(QColor(resurface_styles.themed_surface_field_text()))
+    # Match the standard read-only output surface used by Maintenance, rather
+    # than the blue data-entry field treatment used by editable controls.
+    surface_bg = qcolor_css(QColor(resurface_styles.SURFACE_BG))
+    surface_text = qcolor_css(QColor(resurface_styles.theme_text_color()))
     selection_bg = qcolor_css(QColor(resurface_styles.PANEL_HOVER))
 
     return f"""
         QTreeWidget {{
-            {resurface_styles.label_style(font_size=font_size, bold=True, color=QColor(resurface_styles.themed_surface_field_text()), font_family="Segoe UI")}
+            {resurface_styles.label_style(font_size=font_size, bold=True, color=QColor(resurface_styles.theme_text_color()), font_family="Segoe UI")}
             background-color: {surface_bg};
             color: {surface_text};
             border: none;
