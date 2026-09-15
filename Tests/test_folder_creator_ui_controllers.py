@@ -663,7 +663,11 @@ def test_template_save_writes_to_master_backed_user_folder(qapp, tmp_path, monke
 
     TemplateController(window).user_template_save()
 
-    assert (user_dir / "project.json").exists()
+    destination = (user_dir / "project.json").resolve()
+    assert destination.exists()
+    assert window.load_user_template_dropdown.currentData(
+        Qt.ItemDataRole.UserRole
+    ) == str(destination)
 
 
 def test_delete_selected_user_template_removes_its_file_and_resets_ui(

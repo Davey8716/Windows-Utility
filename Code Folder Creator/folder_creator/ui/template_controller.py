@@ -340,6 +340,12 @@ class TemplateController:
         if status == "success":
             self.window.status.set(message, target="nested", status_type="success")
             self.refresh_user_templates_dropdown()
+            dropdown = self.window.load_user_template_dropdown
+            saved_template_index = dropdown.findData(
+                str(destination.resolve()), Qt.ItemDataRole.UserRole
+            )
+            if saved_template_index != -1:
+                dropdown.setCurrentIndex(saved_template_index)
         else:
             self.window.status.set(message, target="nested", status_type="error")
 
