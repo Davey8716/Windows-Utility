@@ -182,6 +182,46 @@ def test_folder_creator_tree_refreshes_to_the_maintenance_output_surface(tmp_pat
     assert "FOLDER_CREATOR_TREE_SURFACE_READY" in result.stdout
 
 
+def test_folder_creator_uses_black_disabled_control_text_in_light_mode(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication, QComboBox, QPushButton\n"
+        "from folder_creator.ui import styles\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow()\n"
+        "buttons = window.findChildren(QPushButton)\n"
+        "combos = window.findChildren(QComboBox)\n"
+        "assert buttons and combos\n"
+        "assert all(button.property('lightModeBlackDisabledText') is True for button in buttons)\n"
+        "assert all(combo.property('lightModeBlackDisabledText') is True for combo in combos)\n"
+        "window.apply_theme(False)\n"
+        "assert 'QPushButton[lightModeBlackDisabledText=\\\"true\\\"]:disabled' in styles.organizing_button_style(14)\n"
+        "assert 'QComboBox[lightModeBlackDisabledText=\\\"true\\\"]:disabled' in styles.organizing_combo_style(14)\n"
+        "window.apply_theme(True)\n"
+        "assert 'lightModeBlackDisabledText' not in styles.organizing_button_style(14)\n"
+        "assert 'lightModeBlackDisabledText' not in styles.organizing_combo_style(14)\n"
+        "print('FOLDER_CREATOR_LIGHT_DISABLED_TEXT_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_LIGHT_DISABLED_TEXT_READY" in result.stdout
+
+
 def test_folder_creator_add_blank_dropdown_matches_user_templates_height(tmp_path):
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)

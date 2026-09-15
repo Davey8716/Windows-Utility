@@ -116,6 +116,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.tree_width = smart_frame_width - (toolbar_edge_inset * 2)
         self._create_panels(metrics)
         self._compose_window(metrics)
+        styles.opt_in_light_mode_black_disabled_text(self)
 
         self.ui_state = UIStateController(self)
         self.nested_ui = NestedUIController(self)
