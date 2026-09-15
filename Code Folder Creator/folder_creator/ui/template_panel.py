@@ -14,7 +14,7 @@ from folder_creator.ui.path_display_label import PathDisplayLabel
 
 PATH_DISPLAY_WIDTH = 450
 BASE_TOOLBAR_HEIGHT = 230
-TEMPLATE_CONTROLS_HEIGHT = 280
+TEMPLATE_CONTROLS_HEIGHT = 330
 TEMPLATE_TOP_ALIGNMENT_SPACER = (
     TEMPLATE_CONTROLS_HEIGHT - BASE_TOOLBAR_HEIGHT
 ) // 2
@@ -28,6 +28,7 @@ class TemplatePanel:
         "load_template_btn",
         "save_template_btn",
         "delete_template_btn",
+        "delete_all_templates_btn",
         "load_user_template_dropdown",
         "load_default_template_dropdown",
         "template_path_column",
@@ -41,6 +42,8 @@ class TemplatePanel:
         self.save_template_btn = QPushButton("Save Templates")
         self.delete_template_btn = QPushButton("Delete Template")
         self.delete_template_btn.setEnabled(False)
+        self.delete_all_templates_btn = QPushButton("Delete All Templates")
+        self.delete_all_templates_btn.setEnabled(False)
         self.load_user_template_dropdown = QComboBox()
         self.load_user_template_dropdown.setObjectName(
             "FolderCreatorUserTemplatesDropdown"
@@ -100,6 +103,7 @@ class TemplatePanel:
         template_layout.addWidget(self.load_template_btn)
         template_layout.addWidget(self.save_template_btn)
         template_layout.addWidget(self.delete_template_btn)
+        template_layout.addWidget(self.delete_all_templates_btn)
         template_layout.addWidget(self.load_user_template_dropdown)
         template_layout.addWidget(self.load_default_template_dropdown)
 
@@ -107,6 +111,7 @@ class TemplatePanel:
             self.load_template_btn,
             self.save_template_btn,
             self.delete_template_btn,
+            self.delete_all_templates_btn,
         ):
             styles.apply_default_button_size(button)
         for dropdown in (

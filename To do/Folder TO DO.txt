@@ -6,8 +6,6 @@ Default to desktop, output dir save templates delete templates delete all templa
 
 Make sure all the Folder Creator fonts match for the buttons and use same font size etc relative to each other and the main app GUI
 
-Add in a delete all templates button for the user templates, if clicked it removes all templates from user created json and from the dropdown itself
-
 Fix the padding between the top of the qtreewidget  and the buttons above and the bottom of the qtreewidget and the template master backup location and output folder location etc
 
 All the folder dialogue pop up changes must respect the silence dialogues from the main gui

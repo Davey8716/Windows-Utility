@@ -293,6 +293,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             self.load_template_btn: "Load a saved folder-structure template from a file.",
             self.save_template_btn: "Save the current folder structure as a reusable template.",
             self.delete_template_btn: "Delete the selected user template.",
+            self.delete_all_templates_btn: "Permanently delete every saved user template.",
             self.load_user_template_dropdown: "Choose one of your saved folder-structure templates.",
             self.load_default_template_dropdown: "Choose one of the included folder-structure templates.",
             self.auto_enumerate_folders: "Add a number to duplicate folder and subfolder names created with the Add controls.",

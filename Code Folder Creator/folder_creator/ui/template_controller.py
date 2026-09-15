@@ -73,6 +73,9 @@ class TemplateController:
             self._templates_available()
             and self._selected_user_template_path() is not None
         )
+        self.window.delete_all_templates_btn.setEnabled(
+            self._user_templates_available()
+        )
 
     def _show_master_backup_unavailable(self) -> None:
         self.window.status.set(
@@ -247,6 +250,39 @@ class TemplateController:
             "Template deleted.", target="nested", status_type="success"
         )
 
+    def delete_all_user_templates(self):
+        if not self._templates_available():
+            self._show_master_backup_unavailable()
+            return
+
+        template_paths = self._user_template_files()
+        if not template_paths:
+            self._update_delete_template_button_state()
+            return
+        if not self._confirm_all_template_deletion(len(template_paths)):
+            return
+
+        failed = False
+        for template_path in template_paths:
+            try:
+                template_path.unlink()
+            except OSError:
+                failed = True
+
+        self.reset_loaded_template()
+        self.refresh_user_templates_dropdown()
+        self.window.load_user_template_dropdown.setCurrentIndex(0)
+        self.tree.clear()
+        self.window.ui_state.update_build_button_state()
+        if failed:
+            self.window.status.set(
+                "Error deleting all templates.", target="nested", status_type="error"
+            )
+            return
+        self.window.status.set(
+            "All templates deleted.", target="nested", status_type="success"
+        )
+
     def _confirm_template_deletion(self, template_path: Path) -> bool:
         box = QMessageBox(self.window)
         box.setWindowTitle("Delete Template?")
@@ -257,6 +293,22 @@ class TemplateController:
         )
         delete_button = box.button(QMessageBox.StandardButton.Yes)
         delete_button.setText("Delete")
+        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        box.setStyleSheet(styles.resurface_styles.message_box_style(radius=12))
+        return box.exec() == QMessageBox.StandardButton.Yes
+
+    def _confirm_all_template_deletion(self, template_count: int) -> bool:
+        box = QMessageBox(self.window)
+        box.setWindowTitle("Delete All Templates?")
+        box.setText(
+            f"Permanently delete all {template_count} user template(s)?"
+        )
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes
+        )
+        delete_button = box.button(QMessageBox.StandardButton.Yes)
+        delete_button.setText("Delete All")
         box.setDefaultButton(QMessageBox.StandardButton.Cancel)
         box.setStyleSheet(styles.resurface_styles.message_box_style(radius=12))
         return box.exec() == QMessageBox.StandardButton.Yes
@@ -378,6 +430,7 @@ class TemplateController:
         window.load_template_btn.clicked.connect(self.load_template)
         window.save_template_btn.clicked.connect(self.create_template)
         window.delete_template_btn.clicked.connect(self.delete_user_template)
+        window.delete_all_templates_btn.clicked.connect(self.delete_all_user_templates)
         window.load_user_template_dropdown.setContextMenuPolicy(Qt.CustomContextMenu)
         window.load_user_template_dropdown.customContextMenuRequested.connect(
             lambda _position: self.open_user_templates_folder()

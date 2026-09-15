@@ -514,18 +514,23 @@ def test_panels_export_unique_legacy_widget_bindings():
     assert {"tree", "load_template_btn", "build_folders_btn"} <= set(exported)
 
 
-def test_template_panel_places_delete_between_save_and_user_templates():
+def test_template_panel_places_bulk_delete_below_delete_template():
     app = QApplication.instance() or QApplication([])
     panel = TemplatePanel(frame_padding=6, control_gap=8, tight_gap=4)
     layout = panel.template_controls_frame.layout()
 
     assert panel.delete_template_btn.text() == "Delete Template"
     assert not panel.delete_template_btn.isEnabled()
+    assert panel.delete_all_templates_btn.text() == "Delete All Templates"
+    assert not panel.delete_all_templates_btn.isEnabled()
     assert layout.itemAt(0).spacerItem().sizeHint().height() == TEMPLATE_TOP_ALIGNMENT_SPACER
     assert layout.indexOf(panel.delete_template_btn) == 3
-    assert layout.indexOf(panel.load_user_template_dropdown) == 4
+    assert layout.indexOf(panel.delete_all_templates_btn) == 4
+    assert layout.indexOf(panel.load_user_template_dropdown) == 5
     assert panel.delete_template_btn.width() == styles.DEFAULT_BUTTON_WIDTH
     assert panel.delete_template_btn.height() == styles.DEFAULT_BUTTON_HEIGHT
+    assert panel.delete_all_templates_btn.width() == styles.DEFAULT_BUTTON_WIDTH
+    assert panel.delete_all_templates_btn.height() == styles.DEFAULT_BUTTON_HEIGHT
 
 
 def test_template_load_button_aligns_with_neighboring_toolbar_controls():
