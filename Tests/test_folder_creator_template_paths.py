@@ -6,6 +6,7 @@ FOLDER_CREATOR_DIR = PROJECT_ROOT / "Code Folder Creator"
 sys.path.insert(0, str(FOLDER_CREATOR_DIR))
 
 from folder_creator.features.templates.template_IO_layer import TemplatePaths  # noqa: E402
+from folder_creator.core.app_service import AppService  # noqa: E402
 
 
 def test_template_paths_use_master_backup_location_and_preserve_legacy_files(
@@ -81,3 +82,44 @@ def test_unavailable_master_backup_does_not_create_template_fallback(tmp_path, m
     assert paths.default_dir is None
     assert paths.user_dir is None
     assert not (local_app_data / "FolderCreator").exists()
+
+
+def test_startup_removes_top_level_readmes_after_legacy_migration(tmp_path, monkeypatch):
+    master_root = tmp_path / "master"
+    local_app_data = tmp_path / "local-app-data"
+    legacy_user = local_app_data / "FolderCreator" / "user_templates"
+    legacy_user.mkdir(parents=True)
+    (legacy_user / "README.md").write_text("legacy readme", encoding="utf-8")
+    (legacy_user / "readme.MD").write_text("legacy readme", encoding="utf-8")
+    (legacy_user / "template.md").write_text("keep", encoding="utf-8")
+    user_dir = master_root / "Folder Creator Templates" / "user_templates"
+    user_dir.mkdir(parents=True)
+    (user_dir / "ReadMe.md").write_text("master readme", encoding="utf-8")
+    nested_readme = user_dir / "nested" / "README.md"
+    nested_readme.parent.mkdir()
+    nested_readme.write_text("nested", encoding="utf-8")
+    monkeypatch.setenv("LOCALAPPDATA", str(local_app_data))
+
+    TemplatePaths({"master_backup_output_path": str(master_root)})
+
+    assert not (user_dir / "README.md").exists()
+    assert not (user_dir / "readme.MD").exists()
+    assert not (user_dir / "ReadMe.md").exists()
+    assert (user_dir / "template.md").read_text(encoding="utf-8") == "keep"
+    assert nested_readme.read_text(encoding="utf-8") == "nested"
+
+
+def test_readme_is_loaded_once_without_being_copied_to_user_templates(tmp_path):
+    user_dir = tmp_path / "user_templates"
+    user_dir.mkdir()
+    source_readme = tmp_path / "README.md"
+    source_markdown_template = tmp_path / "project-template.md"
+    source_readme.write_text("Project", encoding="utf-8")
+    source_markdown_template.write_text("Project", encoding="utf-8")
+    service = object.__new__(AppService)
+    service.template_paths = type("Paths", (), {"available": True, "user_dir": user_dir})()
+
+    assert service.save_to_user_templates(source_readme)
+    assert not (user_dir / "README.md").exists()
+    assert service.save_to_user_templates(source_markdown_template)
+    assert (user_dir / "project-template.md").read_text(encoding="utf-8") == "Project"

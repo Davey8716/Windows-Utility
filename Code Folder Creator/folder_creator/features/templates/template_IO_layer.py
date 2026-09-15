@@ -17,6 +17,10 @@ class TemplatePaths:
     DEFAULT_FOLDER_NAME = "default_templates"
     USER_FOLDER_NAME = "user_templates"
 
+    @staticmethod
+    def is_readme_template(path: Path) -> bool:
+        return path.name.casefold() == "readme.md"
+
     def __init__(self, state: dict):
         self.available = not state.get("master_backup_path_unavailable", False)
         raw_master_path = str(state.get("master_backup_output_path") or "").strip()
@@ -44,6 +48,7 @@ class TemplatePaths:
             self.bundle_dir = Path(__file__).resolve().parents[3] / "Default Templates"
 
         self._migrate_legacy_templates()
+        self._remove_user_template_readmes()
         self._ensure_templates()
 
     @staticmethod
@@ -74,6 +79,12 @@ class TemplatePaths:
             destination = self.default_dir / file.name
             if not destination.exists():
                 shutil.copy2(file, destination)
+
+    def _remove_user_template_readmes(self) -> None:
+        assert self.user_dir is not None
+        for file in self.user_dir.iterdir():
+            if file.is_file() and self.is_readme_template(file):
+                file.unlink()
 
 
 class TemplateService:

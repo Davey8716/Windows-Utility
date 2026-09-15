@@ -49,6 +49,8 @@ class AppService:
         if not self.templates_available():
             return False
         src = Path(path)
+        if TemplatePaths.is_readme_template(src):
+            return True
         assert self.template_paths.user_dir is not None
         dst = self.template_paths.user_dir / src.name
 
