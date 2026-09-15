@@ -261,6 +261,87 @@ def test_folder_creator_uses_black_disabled_control_text_in_light_mode(tmp_path)
     assert "FOLDER_CREATOR_LIGHT_DISABLED_TEXT_READY" in result.stdout
 
 
+def test_folder_creator_top_control_buttons_keep_12px_font_across_themes(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui import styles\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow()\n"
+        "buttons = (\n"
+        " window.add_folder_btn, window.add_subfolder_btn, window.remove_btn, window.remove_all_btn,\n"
+        " window.auto_enumerate_folders, window.nested_date_toggle,\n"
+        " window.open_folder_build_toggle, window.minimize_after_build_toggle, window.close_app_after_build_toggle,\n"
+        " window.load_template_btn, window.save_template_btn, window.delete_template_btn, window.delete_all_templates_btn,\n"
+        " window.default_to_desktop_btn, window.output_location_btn, window.build_folders_btn,\n"
+        ")\n"
+        "assert len(buttons) == 16\n"
+        "assert all(button.property('styleFontSize') == 12 for button in buttons)\n"
+        "for is_dark in (True, False):\n"
+        " window.apply_theme(is_dark)\n"
+        " assert all(button.styleSheet() == styles.organizing_button_style(12) for button in buttons)\n"
+        "print('FOLDER_CREATOR_TOP_CONTROL_BUTTON_FONTS_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_TOP_CONTROL_BUTTON_FONTS_READY" in result.stdout
+
+
+def test_folder_creator_top_control_dropdowns_keep_12px_font_across_themes(
+    tmp_path,
+):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui import styles\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow()\n"
+        "dropdowns = (\n"
+        " window.file_dropdown, window.nested_date_config,\n"
+        " window.load_user_template_dropdown, window.load_default_template_dropdown,\n"
+        ")\n"
+        "assert len(dropdowns) == 4\n"
+        "assert all(dropdown.property('styleFontSize') == 12 for dropdown in dropdowns)\n"
+        "for is_dark in (True, False):\n"
+        " window.apply_theme(is_dark)\n"
+        " assert all(dropdown.styleSheet() == styles.organizing_combo_style(12) for dropdown in dropdowns)\n"
+        "print('FOLDER_CREATOR_TOP_CONTROL_DROPDOWN_FONTS_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_TOP_CONTROL_DROPDOWN_FONTS_READY" in result.stdout
+
+
 def test_folder_creator_user_templates_dropdown_matches_add_blank_treatment(
     tmp_path,
 ):

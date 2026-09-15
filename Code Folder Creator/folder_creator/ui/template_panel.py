@@ -117,16 +117,17 @@ class TemplatePanel:
             self.delete_all_templates_btn,
         ):
             styles.apply_default_button_size(button)
+            button.setProperty("styleFontSize", 12)
         for dropdown in (
             self.load_user_template_dropdown,
             self.load_default_template_dropdown,
         ):
             styles.apply_default_button_size(dropdown)
-            dropdown.setProperty("styleFontSize", 14)
+            dropdown.setProperty("styleFontSize", 12)
             # These are primary template actions, so keep their blue treatment
             # in the light theme instead of allowing a pale surface fill.
             dropdown.setProperty("lightModeKeepEnabledBackground", True)
-            dropdown.setStyleSheet(styles.organizing_combo_style(14))
+            dropdown.setStyleSheet(styles.organizing_combo_style(12))
 
         self.template_path_column = QFrame()
         self.template_path_column.setFrameShape(QFrame.NoFrame)

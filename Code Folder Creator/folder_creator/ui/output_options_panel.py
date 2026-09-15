@@ -43,6 +43,7 @@ class OutputOptionsPanel:
         for button in (self.auto_enumerate_folders, self.nested_date_toggle):
             button.setFixedSize(DATE_STAMP_CONTROL_WIDTH, 80)
             button.setCheckable(True)
+            button.setProperty("styleFontSize", 12)
 
         self.nested_date_config = QComboBox()
         self.nested_date_config.addItems(
@@ -53,8 +54,8 @@ class OutputOptionsPanel:
             DATE_STAMP_CONTROL_WIDTH, styles.DEFAULT_BUTTON_HEIGHT
         )
         self.nested_date_config.setObjectName("FolderCreatorDateStampDropdown")
-        self.nested_date_config.setProperty("styleFontSize", 14)
-        self.nested_date_config.setStyleSheet(styles.organizing_combo_style(14))
+        self.nested_date_config.setProperty("styleFontSize", 12)
+        self.nested_date_config.setStyleSheet(styles.organizing_combo_style(12))
         for index in range(self.nested_date_config.count()):
             self.nested_date_config.setItemData(
                 index,
@@ -94,6 +95,7 @@ class OutputOptionsPanel:
             self.build_folders_btn,
         ):
             styles.apply_default_button_size(button)
+            button.setProperty("styleFontSize", 12)
 
         self.build_buttons_frame = QFrame()
         self.build_buttons_frame.setFrameShape(QFrame.NoFrame)

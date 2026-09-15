@@ -92,6 +92,13 @@ class TreeEditorPanel:
         styles.apply_fluent_icon(self.add_subfolder_btn, "\ue8b7")
         self.remove_btn = QPushButton("Remove\nSelected")
         self.remove_all_btn = QPushButton("Remove\nAll")
+        for button in (
+            self.add_folder_btn,
+            self.add_subfolder_btn,
+            self.remove_btn,
+            self.remove_all_btn,
+        ):
+            button.setProperty("styleFontSize", 12)
         self.file_dropdown = self._create_file_dropdown()
         self.folder_buttons_frame = self._create_folder_controls(
             frame_padding, control_gap
@@ -197,11 +204,11 @@ class TreeEditorPanel:
         dropdown.setFixedSize(170, styles.DEFAULT_BUTTON_HEIGHT)
         dropdown.setObjectName("FolderCreatorAddBlankDropdown")
         styles.apply_fluent_item_icon(dropdown, 0, "\ue8a5")
-        dropdown.setProperty("styleFontSize", 14)
+        dropdown.setProperty("styleFontSize", 12)
         # Keep the active blue treatment, but use the button palette across
         # both disabled segments when no folder is available to receive a file.
         dropdown.setProperty("lightModeKeepEnabledBackground", True)
-        dropdown.setStyleSheet(styles.organizing_combo_style(14))
+        dropdown.setStyleSheet(styles.organizing_combo_style(12))
         return dropdown
 
     def _create_folder_controls(self, frame_padding, control_gap):

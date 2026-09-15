@@ -35,7 +35,7 @@ class PostBuildPanel:
         ):
             button.setFixedSize(180, styles.DEFAULT_BUTTON_HEIGHT)
             button.setCheckable(True)
-            button.setProperty("styleFontSize", 11)
+            button.setProperty("styleFontSize", 12)
 
         self.post_build_layout = QVBoxLayout(self.post_build_frame)
         self.post_build_layout.setContentsMargins(
