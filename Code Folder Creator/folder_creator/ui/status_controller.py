@@ -1,6 +1,8 @@
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMessageBox, QPushButton
 
+from folder_creator.ui import styles
+
 class StatusController:
     def __init__(self, window, service):
         self.w = window
@@ -67,6 +69,20 @@ class StatusController:
 
         self._active_message_box = box
         QTimer.singleShot(timeout_ms, lambda: self._close_message_box(box))
+
+    def show_find_result(self, message: str, *, status_type: str) -> None:
+        """Show a Find-only notification using the main app's timed popup style."""
+        icon_name = "Warning" if status_type == "error" else "Information"
+        self.w._show_timed_message(
+            self.w._message_box_icon(icon_name),
+            "Folder Creator",
+            message,
+            timeout_ms=10_000,
+            center_text_block=True,
+            show_close_now_button=True,
+            popup_corner_radius=styles.resurface_styles.BUTTON_CORNER_RADIUS,
+            timeout_verb="disappear",
+        )
 
     # ---------------------------------------------------------
     # RESET STATUS

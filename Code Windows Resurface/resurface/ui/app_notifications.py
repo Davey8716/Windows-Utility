@@ -143,8 +143,13 @@ class WindowMessageMixin:
         message_box._suppress_standard_icon = False
         message_box.setIcon(icon)
 
-    def _compose_timed_message_text(self, text: str, timeout_seconds: int) -> str:
-        return f"{text}\n\nThis message will close in {timeout_seconds} seconds."
+    def _compose_timed_message_text(
+        self,
+        text: str,
+        timeout_seconds: int,
+        timeout_verb: str = "close",
+    ) -> str:
+        return f"{text}\n\nThis message will {timeout_verb} in {timeout_seconds} seconds."
 
     def _refresh_grouped_timed_message(
         self,
@@ -159,7 +164,13 @@ class WindowMessageMixin:
             f"{entry_title}\n{entry_text}" for entry_title, entry_text in entries
         )
         message_box.setWindowTitle(title)
-        message_box.setText(self._compose_timed_message_text(body, timeout_seconds))
+        message_box.setText(
+            self._compose_timed_message_text(
+                body,
+                timeout_seconds,
+                getattr(message_box, "_timeout_verb", "close"),
+            )
+        )
 
     def _message_box_icon(self, name: str):
         icon_namespace = getattr(QMessageBox, "Icon", QMessageBox)
@@ -528,6 +539,7 @@ class WindowMessageMixin:
         show_close_now_button: bool = False,
         replace_grouped_entries: bool = False,
         popup_corner_radius: int | None = None,
+        timeout_verb: str = "close",
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
         grouped_boxes = self._get_grouped_timed_message_boxes()
@@ -554,6 +566,7 @@ class WindowMessageMixin:
                             accessory_leading_spacer_width
                         )
                 self._apply_message_box_icon(active_grouped_box, icon)
+                active_grouped_box._timeout_verb = timeout_verb
                 self._refresh_grouped_timed_message(
                     active_grouped_box,
                     title=merge_title or title,
@@ -596,7 +609,7 @@ class WindowMessageMixin:
             )
         else:
             message_box.setText(
-                self._compose_timed_message_text(text, timeout_seconds)
+                self._compose_timed_message_text(text, timeout_seconds, timeout_verb)
             )
         if accessory_icon_path:
             message_box._accessory_icon_path = Path(accessory_icon_path)
@@ -613,6 +626,7 @@ class WindowMessageMixin:
         message_box._center_text_block = center_text_block
         message_box._show_close_now_button = show_close_now_button
         message_box._popup_corner_radius = popup_corner_radius
+        message_box._timeout_verb = timeout_verb
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(self._message_box_button("NoButton"))

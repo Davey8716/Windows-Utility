@@ -42,10 +42,8 @@ class NestedUIController:
     def find_folder_in_tree(self):
         text = self.window.find_output_line.text().strip().lower()
         if not text:
-            self.window.status.set(
-                "Enter a folder name to search for.",
-                target="nested",
-                status_type="error",
+            self.window.status.show_find_result(
+                "Enter a folder name to search for.", status_type="error"
             )
             return
 
@@ -71,16 +69,14 @@ class NestedUIController:
                         horizontal_bar.value() + rect.right() - viewport_width
                     )
 
-                self.window.status.set(
-                    f'Folder "{item.text(0)}" found.',
-                    target="nested",
-                    status_type="success",
+                self.window.status.show_find_result(
+                    f'Folder "{item.text(0)}" found.', status_type="success"
                 )
                 return
             iterator += 1
 
-        self.window.status.set(
-            "No matching folder found.", target="nested", status_type="error"
+        self.window.status.show_find_result(
+            "No matching folder found.", status_type="error"
         )
 
     def remove_all_folders(self):

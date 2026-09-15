@@ -18,12 +18,15 @@ from folder_creator.ui.output_location_controller import (  # noqa: E402
     OutputLocationController,
 )
 from folder_creator.ui import output_location_controller as output_module  # noqa: E402
+from folder_creator.ui import styles as folder_styles  # noqa: E402
+from folder_creator.ui.status_controller import StatusController  # noqa: E402
 from folder_creator.ui.template_controller import TemplateController  # noqa: E402
 from folder_creator.ui import template_controller as template_controller_module  # noqa: E402
 from folder_creator.ui.template_load_dialog import TemplateLoadDialog  # noqa: E402
 from folder_creator.ui.template_save_dialog import TemplateSaveDialog  # noqa: E402
 from folder_creator.ui.output_directory_dialog import OutputDirectoryDialog  # noqa: E402
 from PySide6.QtCore import Qt, Signal  # noqa: E402
+from resurface.ui.app_notifications import WindowMessageMixin  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
     QCheckBox,
@@ -31,9 +34,12 @@ from PySide6.QtWidgets import (  # noqa: E402
     QDialog,
     QFileDialog,
     QLineEdit,
+    QLabel,
+    QDialogButtonBox,
     QPushButton,
     QTreeWidget,
     QTreeWidgetItem,
+    QWidget,
 )
 
 
@@ -53,9 +59,13 @@ class TreeWidget(QTreeWidget):
 class CallRecorder:
     def __init__(self):
         self.calls = []
+        self.find_calls = []
 
     def set(self, *args, **kwargs):
         self.calls.append((args, kwargs))
+
+    def show_find_result(self, *args, **kwargs):
+        self.find_calls.append((args, kwargs))
 
 
 class UIStateStub:
@@ -171,6 +181,50 @@ def make_window(tmp_path):
     )
     window.nested_date_config.addItems(["ISO", "UK", "US"])
     return window
+
+
+def test_find_outcomes_use_the_find_specific_timed_popup(qapp, tmp_path):
+    window = make_window(tmp_path)
+    controller = NestedUIController(window)
+
+    controller.find_folder_in_tree()
+    window.find_output_line.setText("Project")
+    window.tree.addTopLevelItem(QTreeWidgetItem(["Project"]))
+    controller.find_folder_in_tree()
+    window.find_output_line.setText("Missing")
+    controller.find_folder_in_tree()
+
+    assert window.status.find_calls == [
+        (("Enter a folder name to search for.",), {"status_type": "error"}),
+        (('Folder "Project" found.',), {"status_type": "success"}),
+        (("No matching folder found.",), {"status_type": "error"}),
+    ]
+    assert window.status.calls == []
+
+
+def test_find_result_dialog_matches_themed_timed_message_pattern(qapp):
+    class Host(WindowMessageMixin, QWidget):
+        pass
+
+    host = Host()
+    controller = StatusController(host, service=None)
+    controller.show_find_result("Folder \"Project\" found.", status_type="success")
+
+    try:
+        dialog = host._active_message_boxes[-1]
+        text_label = dialog.findChild(QLabel, "qt_msgbox_label")
+        button_box = dialog.findChild(QDialogButtonBox)
+
+        assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
+        assert dialog._popup_corner_radius == folder_styles.resurface_styles.BUTTON_CORNER_RADIUS
+        assert dialog._close_timer.interval() == 10_000
+        assert text_label.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert "This message will disappear in 10 seconds." in text_label.text()
+        assert [button.text() for button in button_box.buttons()] == ["Close now"]
+        assert button_box.centerButtons()
+    finally:
+        dialog.close()
+        host.deleteLater()
 
 
 def test_default_template_signal_loads_once_and_resets_user_selection(qapp, tmp_path):

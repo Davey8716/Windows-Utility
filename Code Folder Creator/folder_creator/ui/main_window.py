@@ -28,6 +28,7 @@ from folder_creator.ui.status_controller import StatusController
 from folder_creator.ui.template_panel import TemplatePanel
 from folder_creator.ui.tree_editor_panel import TreeEditorPanel
 from folder_creator.ui.ui_state_controller import UIStateController
+from resurface.ui.app_notifications import WindowMessageMixin
 
 
 MAX_NESTED_FOLDER_NAME_LENGTH = 64
@@ -67,7 +68,7 @@ class TitleBarDragRegion(QWidget):
         super().mouseReleaseEvent(event)
 
 
-class MainWindow(QMainWindow):
+class MainWindow(WindowMessageMixin, QMainWindow):
     """Compose Folder Creator panels, controllers, state, and lifecycle behavior."""
 
     TITLE_BAR_HEIGHT = 50
