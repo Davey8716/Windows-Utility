@@ -5,6 +5,9 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSizePolicy,
+    QStyle,
+    QStyleOptionComboBox,
+    QStylePainter,
     QVBoxLayout,
 )
 
@@ -14,6 +17,28 @@ from folder_creator.ui.path_display_label import PathDisplayLabel
 
 PATH_DISPLAY_WIDTH = 450
 DATE_STAMP_CONTROL_WIDTH = 180
+
+
+class CenteredDateFormatComboBox(QComboBox):
+    """A date-format selector whose current label is centered as a whole."""
+
+    def paintEvent(self, event):
+        option = QStyleOptionComboBox()
+        self.initStyleOption(option)
+
+        # Draw the normal styled frame and arrow without the default label,
+        # whose text rectangle deliberately excludes the arrow button.
+        option.currentText = ""
+        painter = QStylePainter(self)
+        painter.drawComplexControl(QStyle.CC_ComboBox, option)
+
+        painter.drawItemText(
+            self.rect().adjusted(4, 0, -4, 0),
+            Qt.AlignHCenter | Qt.AlignVCenter,
+            option.palette,
+            self.isEnabled(),
+            self.currentText(),
+        )
 
 
 class OutputOptionsPanel:
@@ -45,7 +70,7 @@ class OutputOptionsPanel:
             button.setCheckable(True)
             button.setProperty("styleFontSize", 12)
 
-        self.nested_date_config = QComboBox()
+        self.nested_date_config = CenteredDateFormatComboBox()
         self.nested_date_config.addItems(
             ["ISO YYYY-MM-DD", "UK DD-MM-YYYY", "US MM-DD-YYYY"]
         )
@@ -59,15 +84,9 @@ class OutputOptionsPanel:
         for index in range(self.nested_date_config.count()):
             self.nested_date_config.setItemData(
                 index,
-                Qt.AlignLeft | Qt.AlignVCenter,
+                Qt.AlignHCenter | Qt.AlignVCenter,
                 Qt.TextAlignmentRole,
             )
-        self.nested_date_config.setEditable(True)
-        self.nested_date_config.lineEdit().setAlignment(
-            Qt.AlignLeft | Qt.AlignVCenter
-        )
-        self.nested_date_config.lineEdit().setReadOnly(True)
-
         self.date_controls_frame = QFrame()
         self.date_controls_frame.setFrameShape(QFrame.NoFrame)
         self.date_controls_frame.setSizePolicy(
