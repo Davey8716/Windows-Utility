@@ -19,6 +19,7 @@ from folder_creator.ui.output_location_controller import (  # noqa: E402
 )
 from folder_creator.ui import output_location_controller as output_module  # noqa: E402
 from folder_creator.ui.template_controller import TemplateController  # noqa: E402
+from folder_creator.ui.template_save_dialog import TemplateSaveDialog  # noqa: E402
 from PySide6.QtCore import Signal  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
@@ -348,8 +349,6 @@ def test_auto_number_disable_removes_only_trailing_numeric_suffixes(qapp, tmp_pa
 def test_template_save_writes_to_master_backed_user_folder(qapp, tmp_path, monkeypatch):
     window = make_window(tmp_path)
     user_dir = window.service.template_paths.user_dir
-    selected_elsewhere = tmp_path / "elsewhere" / "project.json"
-
     def save_json(path, data):
         Path(path).write_text(str(data), encoding="utf-8")
         return "success", "saved"
@@ -357,15 +356,69 @@ def test_template_save_writes_to_master_backed_user_folder(qapp, tmp_path, monke
     window.service.template_service = SimpleNamespace(
         save_json=save_json
     )
-    monkeypatch.setattr(
-        "folder_creator.ui.template_controller.QFileDialog.getSaveFileName",
-        lambda *_args: (str(selected_elsewhere), "JSON (*.json)"),
-    )
+
+    def accept_dialog(self):
+        self.filename_input.setText("project")
+        self._accept_if_valid()
+        return self.result()
+
+    monkeypatch.setattr(TemplateSaveDialog, "exec", accept_dialog)
 
     TemplateController(window).user_template_save()
 
     assert (user_dir / "project.json").exists()
-    assert not selected_elsewhere.exists()
+
+
+def test_template_save_dialog_rejects_paths_and_keeps_destination_in_user_folder(qapp, tmp_path):
+    user_dir = tmp_path / "user"
+    user_dir.mkdir()
+    dialog = TemplateSaveDialog(None, user_dir)
+
+    dialog.filename_input.setText("../outside")
+    dialog._accept_if_valid()
+
+    assert dialog.destination is None
+    assert dialog.error_label.text() == "Template names cannot contain folders."
+
+    dialog.filename_input.setText("project")
+    dialog._accept_if_valid()
+
+    assert dialog.destination == user_dir.resolve() / "project.json"
+
+
+def test_template_save_dialog_uses_selected_format(qapp, tmp_path):
+    user_dir = tmp_path / "user"
+    user_dir.mkdir()
+    dialog = TemplateSaveDialog(None, user_dir)
+    dialog.filename_input.setText("project")
+    dialog.format_selector.setCurrentIndex(2)
+
+    dialog._accept_if_valid()
+
+    assert dialog.destination == user_dir.resolve() / "project.md"
+
+
+def test_template_save_does_not_overwrite_without_confirmation(qapp, tmp_path, monkeypatch):
+    window = make_window(tmp_path)
+    destination = window.service.template_paths.user_dir / "project.json"
+    destination.write_text("original", encoding="utf-8")
+    window.service.template_service = SimpleNamespace(
+        save_json=lambda *_args: pytest.fail("save should not run")
+    )
+
+    def accept_dialog(self):
+        self.filename_input.setText("project")
+        self._accept_if_valid()
+        return self.result()
+
+    monkeypatch.setattr(TemplateSaveDialog, "exec", accept_dialog)
+    monkeypatch.setattr(
+        TemplateController, "_confirm_template_replacement", lambda *_args: False
+    )
+
+    TemplateController(window).user_template_save()
+
+    assert destination.read_text(encoding="utf-8") == "original"
 
 
 def test_templates_are_blocked_when_master_backup_path_is_unavailable(
@@ -375,10 +428,7 @@ def test_templates_are_blocked_when_master_backup_path_is_unavailable(
     window.service.templates_available = lambda: False
     window.service.template_paths = SimpleNamespace(user_dir=None, default_dir=None)
     opened = []
-    monkeypatch.setattr(
-        "folder_creator.ui.template_controller.QFileDialog.getSaveFileName",
-        lambda *_args: opened.append(True),
-    )
+    monkeypatch.setattr(TemplateSaveDialog, "exec", lambda *_args: opened.append(True))
 
     TemplateController(window).user_template_save()
 

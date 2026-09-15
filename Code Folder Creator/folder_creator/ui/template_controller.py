@@ -2,9 +2,11 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import QFileSystemWatcher, QTimer, Qt
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from folder_creator.features.tree.outline_parser import parse_indented_text
+from folder_creator.ui import styles
+from folder_creator.ui.template_save_dialog import TemplateSaveDialog
 
 
 class TemplateController:
@@ -181,16 +183,15 @@ class TemplateController:
         if not self._templates_available() or user_dir is None:
             self._show_master_backup_unavailable()
             return
-        file_path, _ = QFileDialog.getSaveFileName(
-            self.window,
-            "Save Template",
-            str(user_dir),
-            "Templates (*.json *.txt *.md);;JSON (*.json);;Text (*.txt);;Markdown (*.md)",
-        )
-        if not file_path:
+
+        dialog = TemplateSaveDialog(self.window, user_dir)
+        if dialog.exec() != dialog.DialogCode.Accepted or dialog.destination is None:
             return
 
-        destination = user_dir / Path(file_path).name
+        destination = dialog.destination
+        if destination.exists() and not self._confirm_template_replacement(destination):
+            return
+
         data = self.service.tree_controller.serialize_tree()
         if destination.suffix.lower() == ".json":
             status, message = self.service.template_service.save_json(str(destination), data)
@@ -206,6 +207,20 @@ class TemplateController:
             self.refresh_user_templates_dropdown()
         else:
             self.window.status.set(message, target="nested", status_type="error")
+
+    def _confirm_template_replacement(self, destination: Path) -> bool:
+        box = QMessageBox(self.window)
+        box.setWindowTitle("Replace Template?")
+        box.setText(f'"{destination.name}" already exists. Replace it?')
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes
+        )
+        replace_button = box.button(QMessageBox.StandardButton.Yes)
+        replace_button.setText("Replace")
+        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        box.setStyleSheet(styles.resurface_styles.message_box_style(radius=12))
+        return box.exec() == QMessageBox.StandardButton.Yes
 
     def load_default_template(self):
         if not self._templates_available():
