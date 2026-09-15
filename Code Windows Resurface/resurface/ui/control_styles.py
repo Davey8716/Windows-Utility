@@ -347,6 +347,28 @@ def _modern_combo_style(
     disabled_text = disabled_text or T.themed_button_disabled_text()
     disabled_border = disabled_border or T.themed_button_disabled_border()
     chevron_path = H.dropdown_chevron_path().as_posix()
+    folder_creator_file_dropdown_override = f"""
+        QComboBox#FolderCreatorAddBlankDropdown:disabled {{
+            color: {H.qcolor_css(T.button_text_color())};
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+            border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+        }}
+        QComboBox#FolderCreatorAddBlankDropdown::drop-down:disabled {{
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+            border: none;
+            border-left: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+        }}
+        QComboBox#FolderCreatorAddBlankDropdown:enabled {{
+            color: {H.qcolor_css(text)};
+            background-color: {H.qcolor_css(background)};
+            border: 1px solid {H.qcolor_css(border)};
+        }}
+        QComboBox#FolderCreatorAddBlankDropdown::drop-down:enabled {{
+            background-color: {H.qcolor_css(background)};
+            border: none;
+            border-left: 1px solid {H.qcolor_css(border)};
+        }}
+    """
     light_mode_disabled_content_override = ""
     if not T.THEME_IS_DARK:
         light_mode_disabled_content_override = f"""
@@ -474,6 +496,7 @@ def _modern_combo_style(
             background-color: {H.qcolor_css(hover)};
             color: {H.qcolor_css(popup_text)};
         }}
+        {folder_creator_file_dropdown_override}
         {light_mode_disabled_content_override}
     """
 

@@ -195,10 +195,11 @@ class TreeEditorPanel:
             ]
         )
         dropdown.setFixedSize(170, styles.DEFAULT_BUTTON_HEIGHT)
+        dropdown.setObjectName("FolderCreatorAddBlankDropdown")
         styles.apply_fluent_item_icon(dropdown, 0, "\ue8a5")
         dropdown.setProperty("styleFontSize", 14)
-        # Match the other active action selectors: blue field and arrow while
-        # a document can be added, with the normal disabled appearance otherwise.
+        # Keep the active blue treatment, but use the button palette across
+        # both disabled segments when no folder is available to receive a file.
         dropdown.setProperty("lightModeKeepEnabledBackground", True)
         dropdown.setStyleSheet(styles.organizing_combo_style(14))
         return dropdown
