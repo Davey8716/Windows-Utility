@@ -44,9 +44,9 @@ class OutputLocationController:
             self.window.base_path_line.setText(normalized)
             self.service.set_state("last_base_dir", normalized)
             self.window.ui_state.update_build_button_state()
-            self.window.status.show_action_result(
-                f"Base directory set: {normalized}",
-                status_type="info",
+            self.window.status.show_base_directory_set(
+                normalized,
+                on_link_activated=lambda _link: self.open_output_folder(normalized),
             )
             return
 

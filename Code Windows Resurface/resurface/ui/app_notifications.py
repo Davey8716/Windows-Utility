@@ -545,6 +545,7 @@ class WindowMessageMixin:
         replace_grouped_entries: bool = False,
         popup_corner_radius: int | None = None,
         timeout_verb: str = "close",
+        link_activated=None,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
         grouped_boxes = self._get_grouped_timed_message_boxes()
@@ -605,6 +606,9 @@ class WindowMessageMixin:
             return None
         self._apply_message_box_icon(message_box, icon)
         message_box.setWindowTitle(title)
+        message_box._link_activated = link_activated
+        if link_activated is not None:
+            message_box.setTextFormat(Qt.TextFormat.RichText)
         if merge_group:
             message_box._grouped_entries = [(title, text)]
             self._refresh_grouped_timed_message(

@@ -1,3 +1,5 @@
+from html import escape
+
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMessageBox, QPushButton
 
@@ -77,6 +79,23 @@ class StatusController:
     def show_action_result(self, message: str, *, status_type: str) -> None:
         """Show a themed, closeable result popup for a completed UI action."""
         self._show_timed_result(message, status_type=status_type)
+
+    def show_base_directory_set(self, path: str, *, on_link_activated) -> None:
+        """Show the selected output directory as an Explorer link."""
+        link_color = styles.resurface_styles.message_box_link_color().name()
+        self.w._show_timed_message(
+            self.w._message_box_icon("Information"),
+            "Folder Creator",
+            "Base directory set:<br>"
+            f'<a href="open-base-directory" style="color: {link_color}; '
+            f'text-decoration: underline;">{escape(path)}</a>',
+            timeout_ms=10_000,
+            center_text_block=True,
+            show_close_now_button=True,
+            popup_corner_radius=styles.resurface_styles.BUTTON_CORNER_RADIUS,
+            timeout_verb="disappear",
+            link_activated=on_link_activated,
+        )
 
     def confirm_action(
         self,

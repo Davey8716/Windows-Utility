@@ -71,6 +71,9 @@ class CallRecorder:
     def show_action_result(self, *args, **kwargs):
         self.calls.append((args, {**kwargs, "themed": True}))
 
+    def show_base_directory_set(self, *args, **kwargs):
+        self.calls.append((args, {**kwargs, "themed": True}))
+
 
 class UIStateStub:
     def __init__(self):
@@ -227,6 +230,33 @@ def test_find_result_dialog_matches_themed_timed_message_pattern(qapp):
         assert "This message will disappear in 10 seconds." in text_label.text()
         assert [button.text() for button in button_box.buttons()] == ["Close now"]
         assert button_box.centerButtons()
+    finally:
+        dialog.close()
+        host.deleteLater()
+
+
+def test_base_directory_popup_exposes_an_underlined_explorer_link(qapp, tmp_path):
+    class Host(WindowMessageMixin, QWidget):
+        pass
+
+    host = Host()
+    controller = StatusController(host, service=None)
+    activated = []
+    path = str(tmp_path)
+    controller.show_base_directory_set(
+        path,
+        on_link_activated=activated.append,
+    )
+
+    try:
+        dialog = host._active_message_boxes[-1]
+        text_label = dialog.findChild(QLabel, "qt_msgbox_label")
+
+        assert 'href="open-base-directory"' in text_label.text()
+        assert "text-decoration: underline" in text_label.text()
+        assert path in text_label.text()
+        text_label.linkActivated.emit("open-base-directory")
+        assert activated == ["open-base-directory"]
     finally:
         dialog.close()
         host.deleteLater()
@@ -649,6 +679,8 @@ def test_output_selection_persists_normalized_directory(qapp, tmp_path, monkeypa
 
     assert window.base_path_line.text() == str(selected.resolve())
     assert ("last_base_dir", str(selected.resolve())) in window.service.state_manager.updates
+    assert window.status.calls[-1][0] == (str(selected.resolve()),)
+    assert callable(window.status.calls[-1][1]["on_link_activated"])
 
 
 def test_cancelled_output_selection_reports_error_off_desktop(
