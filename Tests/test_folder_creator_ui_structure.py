@@ -340,6 +340,44 @@ def test_folder_creator_tree_toolbar_and_find_input_keep_12px_font_across_themes
     assert "FOLDER_CREATOR_TREE_TOOLBAR_FONTS_READY" in result.stdout
 
 
+def test_folder_creator_tree_toolbar_uses_title_case_labels(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow()\n"
+        "window.show()\n"
+        "app.processEvents()\n"
+        "assert window.expand_tree_btn.text() == 'Expand'\n"
+        "assert window.expand_folders_collapse_btn.text() == 'Collapse Folders'\n"
+        "assert window.sort_btn.text() == 'Sort A/Z'\n"
+        "assert window.find_btn.text() == 'Find'\n"
+        "window.tree_gui_stretch()\n"
+        "assert window.expand_tree_btn.text() == 'Collapse'\n"
+        "window.tree_gui_stretch()\n"
+        "assert window.expand_tree_btn.text() == 'Expand'\n"
+        "print('FOLDER_CREATOR_TREE_TOOLBAR_LABELS_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_TREE_TOOLBAR_LABELS_READY" in result.stdout
+
+
 def test_folder_creator_top_control_dropdowns_keep_12px_font_across_themes(
     tmp_path,
 ):

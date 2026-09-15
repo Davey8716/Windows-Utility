@@ -9,8 +9,6 @@ whilst light them is enabled.
 
 Folder to Do 
 
-ADD BLANK gets cut off in the  drop down fix the font size here and the white writing should be the muted grey etc
-
 Make sure all the Folder Creator fonts match for the buttons and use same font size etc relative to each other and the main app GUI
 
 All the folder dialogue pop up changes must respect the silence dialogues from the main gui

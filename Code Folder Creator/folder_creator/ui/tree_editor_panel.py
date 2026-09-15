@@ -127,10 +127,10 @@ class TreeEditorPanel:
         self.tree.setPlaceholderText(TREE_PLACEHOLDER, bold=True)
         tree_layout.addWidget(self.tree)
 
-        self.expand_tree_btn = QPushButton("EXPAND")
-        self.expand_folders_collapse_btn = QPushButton("EXPAND FOLDERS")
-        self.sort_btn = QPushButton("SORT A/Z")
-        self.find_btn = QPushButton("FIND")
+        self.expand_tree_btn = QPushButton("Expand")
+        self.expand_folders_collapse_btn = QPushButton("Expand Folders")
+        self.sort_btn = QPushButton("Sort A/Z")
+        self.find_btn = QPushButton("Find")
         styles.apply_fluent_icon(self.expand_tree_btn, "\ue740")
         styles.apply_fluent_icon(self.expand_folders_collapse_btn, "\ue70d")
         styles.apply_fluent_icon(self.sort_btn, "\ue8cb")
@@ -182,7 +182,7 @@ class TreeEditorPanel:
         dropdown = QComboBox()
         dropdown.addItems(
             [
-                "ADD BLANK 📑",
+                "Add Blank 📑",
                 "──────────",
                 "Python (.py)",
                 "JavaScript (.js)",

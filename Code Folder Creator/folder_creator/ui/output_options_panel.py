@@ -35,10 +35,10 @@ class OutputOptionsPanel:
 
     def __init__(self, frame_padding: int, control_gap: int, tight_gap: int):
         self.auto_enumerate_folders = QPushButton(
-            "AUTO NUMBER\nFOLDERS AND\n SUB FOLDERS\n(IF DUPLICATED)"
+            "Auto number\nFolders and\n Sub Folders\n(If Duplicated)"
         )
         self.nested_date_toggle = QPushButton(
-            "ADD DATE\n STAMP TO\nPARENT FOLDERS"
+            "Add Date\n Stamp To\nParent Folders"
         )
         for button in (self.auto_enumerate_folders, self.nested_date_toggle):
             button.setFixedSize(DATE_STAMP_CONTROL_WIDTH, 80)

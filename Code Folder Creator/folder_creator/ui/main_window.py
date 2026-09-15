@@ -613,19 +613,19 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             self.bottom_info_frame.hide()
             self.tree.setFixedHeight(self.tree_expanded_height)
             self._set_tree_frame_height(self.tree_expanded_height)
-            self.expand_tree_btn.setText("COLLAPSE")
+            self.expand_tree_btn.setText("Collapse")
         else:
             self.bottom_info_frame.show()
             self.tree.setFixedHeight(self.tree_default_height)
             self._set_tree_frame_height(self.tree_default_height)
-            self.expand_tree_btn.setText("EXPAND")
+            self.expand_tree_btn.setText("Expand")
         QTimer.singleShot(0, self.ui_state.update_build_button_state)
         self.tree.setVisible(True)
 
     def update_expand_button_text(self):
         if self.ui_state.tree_has_collapsed_nodes():
-            self.expand_folders_collapse_btn.setText("EXPAND FOLDERS")
+            self.expand_folders_collapse_btn.setText("Expand Folders")
             self.expand_folders_collapse_btn.setFixedWidth(160)
         else:
-            self.expand_folders_collapse_btn.setText("COLLAPSE FOLDERS")
+            self.expand_folders_collapse_btn.setText("Collapse Folders")
             self.expand_folders_collapse_btn.setFixedWidth(175)

@@ -21,9 +21,9 @@ class PostBuildPanel:
         self.post_build_frame.setFixedSize(200, 230)
         self.post_build_frame.setStyleSheet("border: none;")
 
-        self.open_folder_build_toggle = QPushButton("OPEN DIR AFTER BUILD")
-        self.minimize_after_build_toggle = QPushButton("MINIMIZE AFTER BUILD")
-        self.close_app_after_build_toggle = QPushButton("CLOSE AFTER BUILD")
+        self.open_folder_build_toggle = QPushButton("Open Dir After Build")
+        self.minimize_after_build_toggle = QPushButton("Minmize After Build")
+        self.close_app_after_build_toggle = QPushButton("Close After Build")
         styles.apply_window_action_icon(self.minimize_after_build_toggle, "minimize")
         styles.apply_window_action_icon(self.close_app_after_build_toggle, "close")
         self.minimize_after_build_toggle.setProperty("postBuildActionButton", True)
