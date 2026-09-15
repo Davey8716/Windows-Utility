@@ -37,10 +37,14 @@ class TemplatePanel:
 
     def __init__(self, frame_padding: int, control_gap: int, tight_gap: int):
         self.load_template_btn = QPushButton("Load Templates")
+        self.load_template_btn.setProperty("themeMutedDisabledAppearance", True)
         self.save_template_btn = QPushButton("Save Templates")
         self.delete_template_btn = QPushButton("Delete Template")
         self.delete_template_btn.setEnabled(False)
         self.load_user_template_dropdown = QComboBox()
+        self.load_user_template_dropdown.setObjectName(
+            "FolderCreatorUserTemplatesDropdown"
+        )
         self.load_user_template_dropdown.addItem("User Templates")
         self.load_user_template_dropdown.insertSeparator(
             self.load_user_template_dropdown.count()

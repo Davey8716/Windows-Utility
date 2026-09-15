@@ -309,9 +309,15 @@ def apply_standard_button_styles(widget, font_size: int = 14) -> None:
 def opt_in_light_mode_black_disabled_text(widget) -> None:
     """Keep disabled Folder Creator controls legible in the light theme."""
     for button in widget.findChildren(QPushButton):
-        button.setProperty("lightModeBlackDisabledText", True)
+        button.setProperty(
+            "lightModeBlackDisabledText",
+            not bool(button.property("themeMutedDisabledAppearance")),
+        )
     for combo in widget.findChildren(QComboBox):
-        combo.setProperty("lightModeBlackDisabledText", True)
+        combo.setProperty(
+            "lightModeBlackDisabledText",
+            not bool(combo.property("themeMutedDisabledAppearance")),
+        )
 
 
 def _application_stylesheet() -> str:

@@ -368,6 +368,26 @@ def _modern_combo_style(
             border: none;
             border-left: 1px solid {H.qcolor_css(border)};
         }}
+        QComboBox#FolderCreatorUserTemplatesDropdown:disabled {{
+            color: {H.qcolor_css(T.button_text_color())};
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+            border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+        }}
+        QComboBox#FolderCreatorUserTemplatesDropdown::drop-down:disabled {{
+            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+            border: none;
+            border-left: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
+        }}
+        QComboBox#FolderCreatorUserTemplatesDropdown:enabled {{
+            color: {H.qcolor_css(text)};
+            background-color: {H.qcolor_css(background)};
+            border: 1px solid {H.qcolor_css(border)};
+        }}
+        QComboBox#FolderCreatorUserTemplatesDropdown::drop-down:enabled {{
+            background-color: {H.qcolor_css(background)};
+            border: none;
+            border-left: 1px solid {H.qcolor_css(border)};
+        }}
         QComboBox#FolderCreatorDateStampDropdown:disabled {{
             color: {H.qcolor_css(T.button_text_color())};
             background-color: {H.qcolor_css(T.themed_button_disabled_bg())};

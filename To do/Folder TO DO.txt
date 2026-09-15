@@ -2,8 +2,6 @@ The expand buttons collpe folders sort and find and find search now need putting
 
 ADD BLANK gets cut off in the  drop down fix the font size here and the white writing should be the muted grey etc
 
-Load Templates should be greyed out if not user templates exist
-
 Default to desktop, output dir save templates delete templates delete all templates should have the same theme specific completion popup with the close now and 10 seconds closing logic
 
 Make sure all the Folder Creator fonts match for the buttons and use same font size etc relative to each other and the main app GUI

@@ -233,6 +233,9 @@ def test_find_result_dialog_matches_themed_timed_message_pattern(qapp):
 
 def test_template_loaded_uses_the_shared_timed_popup(qapp, tmp_path, monkeypatch):
     window = make_window(tmp_path)
+    (window.service.template_paths.user_dir / "project.json").write_text(
+        "[]", encoding="utf-8"
+    )
     controller = TemplateController(window)
     monkeypatch.setattr(
         controller,
@@ -287,6 +290,9 @@ def test_default_template_signal_loads_once_and_resets_user_selection(qapp, tmp_
 
 def test_load_templates_button_invokes_template_loader(qapp, tmp_path):
     window = make_window(tmp_path)
+    (window.service.template_paths.user_dir / "project.json").write_text(
+        "[]", encoding="utf-8"
+    )
     controller = NestedUIController(window)
     calls = []
     controller.template_controller.load_template = lambda: calls.append(True)
@@ -295,6 +301,43 @@ def test_load_templates_button_invokes_template_loader(qapp, tmp_path):
     window.load_template_btn.click()
 
     assert calls == [True]
+
+
+def test_user_template_loading_controls_track_template_files(qapp, tmp_path):
+    window = make_window(tmp_path)
+    controller = TemplateController(window)
+
+    controller.refresh_user_templates_dropdown()
+
+    assert not window.load_template_btn.isEnabled()
+    assert not window.load_user_template_dropdown.isEnabled()
+
+    template = window.service.template_paths.user_dir / "project.json"
+    template.write_text("[]", encoding="utf-8")
+    controller.refresh_user_templates_dropdown()
+
+    assert window.load_template_btn.isEnabled()
+    assert window.load_user_template_dropdown.isEnabled()
+
+    template.unlink()
+    controller.refresh_user_templates_dropdown()
+
+    assert not window.load_template_btn.isEnabled()
+    assert not window.load_user_template_dropdown.isEnabled()
+
+
+def test_load_template_shortcut_is_ignored_without_user_templates(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    controller = TemplateController(window)
+    monkeypatch.setattr(
+        controller,
+        "load_template_dialog",
+        lambda _parent: pytest.fail("loader should not open"),
+    )
+
+    controller.load_template()
 
 
 def test_template_load_dialog_is_themed_and_starts_in_user_templates(qapp, tmp_path):

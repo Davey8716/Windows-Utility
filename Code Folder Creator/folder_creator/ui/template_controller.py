@@ -38,6 +38,21 @@ class TemplateController:
         directory = getattr(self.service.template_paths, "user_dir", None)
         return Path(directory) if directory is not None else None
 
+    def _user_template_files(self) -> list[Path]:
+        """Return the files represented in the User Templates dropdown."""
+        user_dir = self._user_template_dir()
+        if user_dir is None:
+            return []
+        return sorted(file for file in user_dir.glob("*.*") if file.is_file())
+
+    def _user_templates_available(self) -> bool:
+        return self._templates_available() and bool(self._user_template_files())
+
+    def _update_user_template_load_controls_state(self) -> None:
+        enabled = self._user_templates_available()
+        self.window.load_template_btn.setEnabled(enabled)
+        self.window.load_user_template_dropdown.setEnabled(enabled)
+
     def _selected_user_template_path(self) -> Path | None:
         """Return the path stored on the selected dropdown item, if it is safe."""
         user_dir = self._user_template_dir()
@@ -94,6 +109,8 @@ class TemplateController:
             return "error", "Error loading template"
 
     def load_template(self):
+        if not self._user_templates_available():
+            return
         status, message = self.load_template_dialog(self.window)
         if status == "success":
             self.window.status.show_template_loaded()
@@ -166,13 +183,11 @@ class TemplateController:
         dropdown.addItem("User Templates")
         dropdown.insertSeparator(dropdown.count())
         user_dir = self._user_template_dir()
-        if user_dir is not None:
-            for file in sorted(user_dir.glob("*.*")):
-                if file.is_file():
-                    dropdown.addItem(
-                        file.stem.replace("_", " ").title(),
-                        str(file.resolve()),
-                    )
+        for file in self._user_template_files():
+            dropdown.addItem(
+                file.stem.replace("_", " ").title(),
+                str(file.resolve()),
+            )
         dropdown.blockSignals(False)
 
         if selected_path is not None:
@@ -188,7 +203,7 @@ class TemplateController:
         if current_loaded and user_dir is not None:
             names = [
                 file.stem.replace("_", " ").title()
-                for file in user_dir.glob("*.*")
+                for file in self._user_template_files()
             ]
             if current_loaded not in names:
                 self.reset_loaded_template()
@@ -196,6 +211,7 @@ class TemplateController:
                 self.tree.clear()
                 self.window.ui_state.update_build_button_state()
         self._update_delete_template_button_state()
+        self._update_user_template_load_controls_state()
 
     def delete_user_template(self):
         if not self._templates_available():
@@ -367,6 +383,7 @@ class TemplateController:
             lambda _position: self.open_user_templates_folder()
         )
         self._update_delete_template_button_state()
+        self._update_user_template_load_controls_state()
 
     def open_user_templates_folder(self) -> None:
         user_dir = self._user_template_dir()
