@@ -51,7 +51,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
         }}
         QPushButton[postBuildActionButton="true"] {{
             text-align: left;
-            padding-left: 30px;
+            padding-left: 18px;
         }}
         {placeholder_disabled_override}
         {black_disabled_text_override}
