@@ -123,6 +123,10 @@ def plain_theme_label_style(font_size: int) -> str:
     return resurface_styles.plain_theme_label_style(font_size)
 
 
+def surfaced_label_style(font_size: int = 14) -> str:
+    return resurface_styles.surfaced_label_style(font_size)
+
+
 def plain_display_line_edit_style(font_size: int) -> str:
     return f"""
         QLineEdit {{

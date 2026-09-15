@@ -111,8 +111,9 @@ class TemplatePanel:
             "OUTPUT LOCATION FOR USER MADE TEMPLATES."
         )
         self.template_path_line.setFixedSize(288, 40)
-        self.template_path_line.setProperty("plainThemeLabelStyle", True)
-        self.template_path_line.setStyleSheet(styles.plain_theme_label_style(15))
+        self.template_path_line.setProperty("surfaceLabelStyle", True)
+        self.template_path_line.setProperty("styleFontSize", 14)
+        self.template_path_line.setStyleSheet(styles.surfaced_label_style(14))
         self.template_path_line.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.template_path_line.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         path_layout.addWidget(self.template_path_title)

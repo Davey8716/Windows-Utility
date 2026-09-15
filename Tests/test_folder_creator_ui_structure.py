@@ -95,6 +95,42 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
     assert "FOLDER_CREATOR_CUSTOM_CHROME_READY" in result.stdout
 
 
+def test_folder_creator_path_displays_use_surfaced_labels_in_both_themes(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication; "
+        "from folder_creator.ui import styles; "
+        "from folder_creator.ui.main_window import MainWindow; "
+        "app = QApplication([]); window = MainWindow(); "
+        "paths = (window.template_path_line, window.base_path_line); "
+        "assert [path.size().toTuple() for path in paths] == [(288, 40), (300, 40)]; "
+        "assert all(path.property('surfaceLabelStyle') for path in paths); "
+        "assert not any(path.property('plainThemeLabelStyle') for path in paths); "
+        "assert all(path.property('styleFontSize') == 14 for path in paths)\n"
+        "for is_dark in (True, False):\n"
+        " window.apply_theme(is_dark)\n"
+        " app.processEvents()\n"
+        " assert all(path.styleSheet() == styles.surfaced_label_style(14) for path in paths)\n"
+        "print('FOLDER_CREATOR_SURFACED_PATHS_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_SURFACED_PATHS_READY" in result.stdout
+
+
 def test_folder_creator_requests_standard_dwm_rounded_corners(monkeypatch):
     calls = []
 

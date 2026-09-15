@@ -437,7 +437,12 @@ class MainWindow(QMainWindow):
         self.smart_status_icon.setStyleSheet(styles.status_label_style())
         self.smart_status_text.setStyleSheet(styles.status_label_style())
         for label in self.findChildren(QLabel):
-            if label.property("plainThemeLabelStyle"):
+            if label.property("surfaceLabelStyle"):
+                font_size = styles.resurface_styles.coerce_font_size(
+                    label.property("styleFontSize"), 14
+                ) or 14
+                label.setStyleSheet(styles.surfaced_label_style(font_size))
+            elif label.property("plainThemeLabelStyle"):
                 label.setStyleSheet(styles.plain_theme_label_style(15))
         for combo in self.findChildren(QComboBox):
             font_size = styles.resurface_styles.coerce_font_size(
