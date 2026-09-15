@@ -13,6 +13,7 @@ from folder_creator.ui.path_display_label import PathDisplayLabel
 
 
 PATH_DISPLAY_WIDTH = 450
+DATE_STAMP_CONTROL_WIDTH = 180
 
 
 class OutputOptionsPanel:
@@ -40,7 +41,7 @@ class OutputOptionsPanel:
             "ADD DATE\n STAMP TO\nPARENT FOLDERS"
         )
         for button in (self.auto_enumerate_folders, self.nested_date_toggle):
-            button.setFixedSize(145, 80)
+            button.setFixedSize(DATE_STAMP_CONTROL_WIDTH, 80)
             button.setCheckable(True)
 
         self.nested_date_config = QComboBox()
@@ -48,7 +49,9 @@ class OutputOptionsPanel:
             ["ISO YYYY-MM-DD", "UK DD-MM-YYYY", "US MM-DD-YYYY"]
         )
         self.nested_date_config.setEnabled(False)
-        self.nested_date_config.setFixedSize(180, styles.DEFAULT_BUTTON_HEIGHT)
+        self.nested_date_config.setFixedSize(
+            DATE_STAMP_CONTROL_WIDTH, styles.DEFAULT_BUTTON_HEIGHT
+        )
         self.nested_date_config.setProperty("styleFontSize", 14)
         self.nested_date_config.setStyleSheet(styles.organizing_combo_style(14))
         for index in range(self.nested_date_config.count()):
