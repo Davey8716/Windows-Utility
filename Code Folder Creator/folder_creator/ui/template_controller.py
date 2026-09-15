@@ -38,6 +38,27 @@ class TemplateController:
         directory = getattr(self.service.template_paths, "user_dir", None)
         return Path(directory) if directory is not None else None
 
+    def _selected_user_template_path(self) -> Path | None:
+        """Return the path stored on the selected dropdown item, if it is safe."""
+        user_dir = self._user_template_dir()
+        stored_path = self.window.load_user_template_dropdown.currentData(
+            Qt.ItemDataRole.UserRole
+        )
+        if user_dir is None or not stored_path:
+            return None
+        try:
+            path = Path(stored_path).resolve()
+            path.relative_to(user_dir.resolve())
+        except (OSError, ValueError):
+            return None
+        return path if path.is_file() else None
+
+    def _update_delete_template_button_state(self) -> None:
+        self.window.delete_template_btn.setEnabled(
+            self._templates_available()
+            and self._selected_user_template_path() is not None
+        )
+
     def _show_master_backup_unavailable(self) -> None:
         self.window.status.set(
             self.MASTER_BACKUP_UNAVAILABLE_MESSAGE,
@@ -130,29 +151,16 @@ class TemplateController:
         if self._loading_template:
             return
 
-        text = self.window.load_user_template_dropdown.currentText()
-        if text == "User Templates":
+        selected_path = self._selected_user_template_path()
+        if selected_path is None:
             self.tree.clear()
             self.window.ui_state.update_build_button_state()
             return
-
-        user_dir = self._user_template_dir()
-        if user_dir is None:
-            self._show_master_backup_unavailable()
-            return
-        matches = [
-            file
-            for file in user_dir.glob("*.*")
-            if file.stem.replace("_", " ").title() == text
-        ]
-        if not matches:
-            self.tree.clear()
-            self.window.ui_state.update_build_button_state()
-            return
-        self.load_template_from_path(str(matches[0]))
+        self.load_template_from_path(str(selected_path))
 
     def refresh_user_templates_dropdown(self):
         dropdown = self.window.load_user_template_dropdown
+        selected_path = self._selected_user_template_path()
         dropdown.blockSignals(True)
         dropdown.clear()
         dropdown.addItem("User Templates")
@@ -160,10 +168,18 @@ class TemplateController:
         user_dir = self._user_template_dir()
         if user_dir is not None:
             for file in sorted(user_dir.glob("*.*")):
-                dropdown.addItem(file.stem.replace("_", " ").title())
+                if file.is_file():
+                    dropdown.addItem(
+                        file.stem.replace("_", " ").title(),
+                        str(file.resolve()),
+                    )
         dropdown.blockSignals(False)
 
-        if self._current_loaded_template:
+        if selected_path is not None:
+            index = dropdown.findData(str(selected_path), Qt.ItemDataRole.UserRole)
+            if index != -1:
+                dropdown.setCurrentIndex(index)
+        elif self._current_loaded_template:
             index = dropdown.findText(self._current_loaded_template)
             if index != -1:
                 dropdown.setCurrentIndex(index)
@@ -179,6 +195,55 @@ class TemplateController:
                 dropdown.setCurrentIndex(0)
                 self.tree.clear()
                 self.window.ui_state.update_build_button_state()
+        self._update_delete_template_button_state()
+
+    def delete_user_template(self):
+        if not self._templates_available():
+            self._show_master_backup_unavailable()
+            return
+
+        template_path = self._selected_user_template_path()
+        if template_path is None:
+            self.window.status.set(
+                "Select a user template to delete.",
+                target="nested",
+                status_type="error",
+            )
+            self._update_delete_template_button_state()
+            return
+        if not self._confirm_template_deletion(template_path):
+            return
+
+        try:
+            template_path.unlink()
+        except OSError:
+            self.window.status.set(
+                "Error deleting template.", target="nested", status_type="error"
+            )
+            return
+
+        self.reset_loaded_template()
+        self.refresh_user_templates_dropdown()
+        self.window.load_user_template_dropdown.setCurrentIndex(0)
+        self.tree.clear()
+        self.window.ui_state.update_build_button_state()
+        self.window.status.set(
+            "Template deleted.", target="nested", status_type="success"
+        )
+
+    def _confirm_template_deletion(self, template_path: Path) -> bool:
+        box = QMessageBox(self.window)
+        box.setWindowTitle("Delete Template?")
+        box.setText(f'Permanently delete "{template_path.name}"?')
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Yes
+        )
+        delete_button = box.button(QMessageBox.StandardButton.Yes)
+        delete_button.setText("Delete")
+        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        box.setStyleSheet(styles.resurface_styles.message_box_style(radius=12))
+        return box.exec() == QMessageBox.StandardButton.Yes
 
     def user_template_save(self):
         user_dir = self._user_template_dir()
@@ -268,6 +333,7 @@ class TemplateController:
         return "\n".join(lines)
 
     def on_user_template_selected(self, index):
+        self._update_delete_template_button_state()
         if index == 0:
             self.reset_loaded_template()
             self.tree.clear()
@@ -295,10 +361,12 @@ class TemplateController:
         window.tree.loadTemplateShortcut.connect(self.load_template)
         window.load_template_btn.clicked.connect(self.load_template)
         window.save_template_btn.clicked.connect(self.create_template)
+        window.delete_template_btn.clicked.connect(self.delete_user_template)
         window.load_user_template_dropdown.setContextMenuPolicy(Qt.CustomContextMenu)
         window.load_user_template_dropdown.customContextMenuRequested.connect(
             lambda _position: self.open_user_templates_folder()
         )
+        self._update_delete_template_button_state()
 
     def open_user_templates_folder(self) -> None:
         user_dir = self._user_template_dir()

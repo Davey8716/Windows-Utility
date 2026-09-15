@@ -14,11 +14,16 @@ for path in (FOLDER_CREATOR_DIR, WINDOWS_RESURFACE_DIR):
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import folder_creator.ui.main_window as folder_creator_main_window  # noqa: E402
+from folder_creator.ui import styles  # noqa: E402
 from folder_creator.ui.main_window import MainWindow  # noqa: E402
 from folder_creator.ui.output_options_panel import OutputOptionsPanel  # noqa: E402
 from folder_creator.ui.post_build_panel import PostBuildPanel  # noqa: E402
-from folder_creator.ui.template_panel import TemplatePanel  # noqa: E402
+from folder_creator.ui.template_panel import (  # noqa: E402
+    TEMPLATE_TOP_ALIGNMENT_SPACER,
+    TemplatePanel,
+)
 from folder_creator.ui.tree_editor_panel import TreeEditorPanel  # noqa: E402
+from PySide6.QtWidgets import QApplication, QGridLayout, QWidget  # noqa: E402
 
 
 def test_folder_creator_initializes_from_its_own_directory(tmp_path):
@@ -441,3 +446,38 @@ def test_panels_export_unique_legacy_widget_bindings():
 
     assert len(exported) == len(set(exported))
     assert {"tree", "load_template_btn", "build_folders_btn"} <= set(exported)
+
+
+def test_template_panel_places_delete_between_save_and_user_templates():
+    app = QApplication.instance() or QApplication([])
+    panel = TemplatePanel(frame_padding=6, control_gap=8, tight_gap=4)
+    layout = panel.template_controls_frame.layout()
+
+    assert panel.delete_template_btn.text() == "Delete Template"
+    assert not panel.delete_template_btn.isEnabled()
+    assert layout.itemAt(0).spacerItem().sizeHint().height() == TEMPLATE_TOP_ALIGNMENT_SPACER
+    assert layout.indexOf(panel.delete_template_btn) == 3
+    assert layout.indexOf(panel.load_user_template_dropdown) == 4
+    assert panel.delete_template_btn.width() == styles.DEFAULT_BUTTON_WIDTH
+    assert panel.delete_template_btn.height() == styles.DEFAULT_BUTTON_HEIGHT
+
+
+def test_template_load_button_aligns_with_neighboring_toolbar_controls():
+    app = QApplication.instance() or QApplication([])
+    template_panel = TemplatePanel(frame_padding=6, control_gap=8, tight_gap=4)
+    post_build_panel = PostBuildPanel(frame_padding=6, control_gap=8)
+    container = QWidget()
+    layout = QGridLayout(container)
+    layout.addWidget(post_build_panel.post_build_frame, 0, 0)
+    layout.addWidget(template_panel.template_controls_frame, 0, 1)
+    container.show()
+    app.processEvents()
+
+    assert (
+        template_panel.load_template_btn.mapTo(container, template_panel.load_template_btn.rect().topLeft()).y()
+        == post_build_panel.open_folder_build_toggle.mapTo(
+            container, post_build_panel.open_folder_build_toggle.rect().topLeft()
+        ).y()
+    )
+
+    container.close()

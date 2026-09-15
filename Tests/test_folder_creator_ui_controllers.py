@@ -160,6 +160,7 @@ def make_window(tmp_path):
         close_app_after_build_toggle=QCheckBox(),
         load_template_btn=QPushButton(),
         save_template_btn=QPushButton(),
+        delete_template_btn=QPushButton(),
         add_folder_btn=QPushButton(),
         add_subfolder_btn=QPushButton(),
         remove_btn=QPushButton(),
@@ -619,6 +620,95 @@ def test_template_save_writes_to_master_backed_user_folder(qapp, tmp_path, monke
     TemplateController(window).user_template_save()
 
     assert (user_dir / "project.json").exists()
+
+
+def test_delete_selected_user_template_removes_its_file_and_resets_ui(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    template = window.service.template_paths.user_dir / "project.json"
+    template.write_text("[]", encoding="utf-8")
+    window.tree.addTopLevelItem(QTreeWidgetItem(["Project"]))
+    controller = TemplateController(window)
+    controller.refresh_user_templates_dropdown()
+    window.load_user_template_dropdown.setCurrentIndex(2)
+    monkeypatch.setattr(
+        TemplateController, "_confirm_template_deletion", lambda *_args: True
+    )
+
+    controller.delete_user_template()
+
+    assert not template.exists()
+    assert window.load_user_template_dropdown.currentIndex() == 0
+    assert window.load_user_template_dropdown.findText("Project") == -1
+    assert window.tree.topLevelItemCount() == 0
+    assert window.status.calls[-1][0] == ("Template deleted.",)
+
+
+def test_delete_selected_user_template_keeps_file_when_cancelled(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    template = window.service.template_paths.user_dir / "project.json"
+    template.write_text("[]", encoding="utf-8")
+    controller = TemplateController(window)
+    controller.refresh_user_templates_dropdown()
+    window.load_user_template_dropdown.setCurrentIndex(2)
+    monkeypatch.setattr(
+        TemplateController, "_confirm_template_deletion", lambda *_args: False
+    )
+
+    controller.delete_user_template()
+
+    assert template.exists()
+    assert window.load_user_template_dropdown.currentText() == "Project"
+
+
+def test_delete_template_uses_selected_path_when_display_names_match(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    json_template = window.service.template_paths.user_dir / "project.json"
+    text_template = window.service.template_paths.user_dir / "project.txt"
+    json_template.write_text("[]", encoding="utf-8")
+    text_template.write_text("Project", encoding="utf-8")
+    controller = TemplateController(window)
+    controller.refresh_user_templates_dropdown()
+    text_index = window.load_user_template_dropdown.findData(
+        str(text_template.resolve()), Qt.ItemDataRole.UserRole
+    )
+    window.load_user_template_dropdown.setCurrentIndex(text_index)
+    monkeypatch.setattr(
+        TemplateController, "_confirm_template_deletion", lambda *_args: True
+    )
+
+    controller.delete_user_template()
+
+    assert json_template.exists()
+    assert not text_template.exists()
+
+
+def test_delete_template_without_selection_reports_an_error(qapp, tmp_path):
+    window = make_window(tmp_path)
+    controller = TemplateController(window)
+
+    controller.delete_user_template()
+
+    assert window.status.calls[-1][0] == ("Select a user template to delete.",)
+
+
+def test_delete_template_is_blocked_when_template_storage_is_unavailable(
+    qapp, tmp_path
+):
+    window = make_window(tmp_path)
+    window.service.templates_available = lambda: False
+    controller = TemplateController(window)
+
+    controller.delete_user_template()
+
+    assert window.status.calls[-1][0] == (
+        "Set a valid Master Backup Path in Windows Resurface before working with templates.",
+    )
 
 
 def test_template_save_dialog_rejects_paths_and_keeps_destination_in_user_folder(qapp, tmp_path):

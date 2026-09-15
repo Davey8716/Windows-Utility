@@ -13,6 +13,11 @@ from folder_creator.ui.path_display_label import PathDisplayLabel
 
 
 PATH_DISPLAY_WIDTH = 450
+BASE_TOOLBAR_HEIGHT = 230
+TEMPLATE_CONTROLS_HEIGHT = 280
+TEMPLATE_TOP_ALIGNMENT_SPACER = (
+    TEMPLATE_CONTROLS_HEIGHT - BASE_TOOLBAR_HEIGHT
+) // 2
 
 
 class TemplatePanel:
@@ -22,6 +27,7 @@ class TemplatePanel:
         "template_controls_frame",
         "load_template_btn",
         "save_template_btn",
+        "delete_template_btn",
         "load_user_template_dropdown",
         "load_default_template_dropdown",
         "template_path_column",
@@ -32,6 +38,8 @@ class TemplatePanel:
     def __init__(self, frame_padding: int, control_gap: int, tight_gap: int):
         self.load_template_btn = QPushButton("Load Templates")
         self.save_template_btn = QPushButton("Save Templates")
+        self.delete_template_btn = QPushButton("Delete Template")
+        self.delete_template_btn.setEnabled(False)
         self.load_user_template_dropdown = QComboBox()
         self.load_user_template_dropdown.addItem("User Templates")
         self.load_user_template_dropdown.insertSeparator(
@@ -73,7 +81,7 @@ class TemplatePanel:
         self.template_controls_frame.setFixedWidth(
             styles.DEFAULT_BUTTON_WIDTH + (frame_padding * 2)
         )
-        self.template_controls_frame.setFixedHeight(230)
+        self.template_controls_frame.setFixedHeight(TEMPLATE_CONTROLS_HEIGHT)
         self.template_controls_frame.setStyleSheet("border: none;")
         template_layout = QVBoxLayout(self.template_controls_frame)
         template_layout.setContentsMargins(
@@ -81,12 +89,21 @@ class TemplatePanel:
         )
         template_layout.setSpacing(control_gap)
         template_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        # This frame is taller than its neighboring toolbar columns because it
+        # contains one extra control. Center the control stack vertically so
+        # its first button aligns with theirs.
+        template_layout.addSpacing(TEMPLATE_TOP_ALIGNMENT_SPACER)
         template_layout.addWidget(self.load_template_btn)
         template_layout.addWidget(self.save_template_btn)
+        template_layout.addWidget(self.delete_template_btn)
         template_layout.addWidget(self.load_user_template_dropdown)
         template_layout.addWidget(self.load_default_template_dropdown)
 
-        for button in (self.load_template_btn, self.save_template_btn):
+        for button in (
+            self.load_template_btn,
+            self.save_template_btn,
+            self.delete_template_btn,
+        ):
             styles.apply_default_button_size(button)
         for dropdown in (
             self.load_user_template_dropdown,
