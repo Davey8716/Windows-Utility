@@ -50,6 +50,8 @@ TREE_PLACEHOLDER = (
 class TreeEditorPanel:
     """Build the folder/file editing controls, tree surface, and tree toolbar."""
 
+    TREE_FRAME_BORDER_WIDTH = 1
+
     EXPORTED_WIDGETS = (
         "tree",
         "folder_buttons_frame",
@@ -95,7 +97,10 @@ class TreeEditorPanel:
 
         self.tree_frame = QFrame()
         self.tree_frame.setFrameShape(QFrame.NoFrame)
-        self.tree_frame.setFixedWidth(tree_width + (tree_frame_padding * 2))
+        self.tree_frame.setFixedWidth(
+            tree_width
+            + ((tree_frame_padding + self.TREE_FRAME_BORDER_WIDTH) * 2)
+        )
         self.tree_frame.setFixedHeight(tree_height + (tree_frame_padding * 2))
         self.tree_frame.setStyleSheet(styles.tree_outer_frame_style())
         tree_layout = QVBoxLayout(self.tree_frame)

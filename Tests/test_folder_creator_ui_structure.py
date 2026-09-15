@@ -25,6 +25,7 @@ def test_folder_creator_initializes_from_its_own_directory(tmp_path):
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)
     env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
     env["QT_QPA_PLATFORM"] = "offscreen"
     command = (
         "from PySide6.QtWidgets import QApplication; "
@@ -52,9 +53,10 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)
     env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
     env["QT_QPA_PLATFORM"] = "offscreen"
     command = (
-        "from PySide6.QtCore import Qt; "
+        "from PySide6.QtCore import QPoint, Qt; "
         "from PySide6.QtWidgets import QApplication; "
         "from folder_creator.ui.main_window import MainWindow; "
         "app = QApplication([]); "
@@ -74,6 +76,11 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
         "assert window.window_close_btn.x() > window.window_minimize_btn.x(); "
         "assert not window.window_minimize_btn.icon().isNull(); "
         "assert not window.window_close_btn.icon().isNull(); "
+        "tree_left = window.tree.mapTo(window, QPoint()).x(); "
+        "expand_left = window.expand_tree_btn.mapTo(window, QPoint()).x(); "
+        "find_right = window.find_output_line.mapTo(window, QPoint()).x() + window.find_output_line.width(); "
+        "assert tree_left == expand_left; "
+        "assert tree_left + window.tree.width() == find_right; "
         "window.window_minimize_btn.click(); window.window_close_btn.click(); "
         "assert minimize_calls == [window] and close_calls == [window]; "
         "window.apply_theme(False); "
@@ -100,6 +107,7 @@ def test_folder_creator_path_displays_use_surfaced_labels_in_both_themes(tmp_pat
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)
     env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
     env["QT_QPA_PLATFORM"] = "offscreen"
     command = (
         "from PySide6.QtCore import QPoint; "

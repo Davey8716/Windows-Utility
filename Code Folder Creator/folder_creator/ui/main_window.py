@@ -89,7 +89,6 @@ class MainWindow(QMainWindow):
         self.window_height = WINDOWS_RESURFACE_HEIGHT
         self.tree_default_height = 360
         self.tree_expanded_height = 485
-        self.tree_width = 925
         self.tree_frame_padding = 2
         self.setWindowTitle("Folder Generator")
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -111,6 +110,9 @@ class MainWindow(QMainWindow):
             "sort_width": 110,
             "find_width": 80,
         }
+        smart_frame_width = self.window_width - 25
+        toolbar_edge_inset = metrics["frame_padding"] * 2
+        self.tree_width = smart_frame_width - (toolbar_edge_inset * 2)
         self._create_panels(metrics)
         self._compose_window(metrics)
 
