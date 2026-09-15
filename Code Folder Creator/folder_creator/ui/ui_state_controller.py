@@ -107,11 +107,9 @@ class UIStateController:
 
         if validation_message is not None:
             if self._build_validation_key != validation_key:
-                self.w.status.set(
+                self.w.status.show_action_result(
                     validation_message,
-                    target="nested",
                     status_type="error",
-                    dedupe_key=f"build_validation:{validation_key}",
                 )
                 self._build_validation_key = validation_key
         else:
