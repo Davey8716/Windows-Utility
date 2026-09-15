@@ -269,6 +269,9 @@ class TemplateController:
 
     def on_user_template_selected(self, index):
         if index == 0:
+            self.reset_loaded_template()
+            self.tree.clear()
+            self.window.ui_state.update_build_button_state()
             return
         self.window.ui_state.update_build_button_state()
         self.window.load_default_template_dropdown.setCurrentIndex(0)

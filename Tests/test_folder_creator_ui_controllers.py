@@ -244,6 +244,30 @@ def test_template_loaded_uses_the_shared_timed_popup(qapp, tmp_path, monkeypatch
     assert window.status.calls == [(("Template loaded",), {"themed": True})]
 
 
+def test_selecting_user_templates_clears_tree_without_changing_saved_templates(
+    qapp, tmp_path
+):
+    window = make_window(tmp_path)
+    user_template = window.service.template_paths.user_dir / "project.json"
+    default_template = window.service.template_paths.default_dir / "sample.txt"
+    user_contents = b'{"name": "Project"}'
+    default_contents = b"Root\n    Child"
+    user_template.write_bytes(user_contents)
+    default_template.write_bytes(default_contents)
+    window.tree.addTopLevelItem(QTreeWidgetItem(["Project"]))
+    window.ui_state.build_updates = 0
+    controller = TemplateController(window)
+    controller._current_loaded_template = "Project"
+
+    controller.on_user_template_selected(0)
+
+    assert window.tree.topLevelItemCount() == 0
+    assert controller._current_loaded_template is None
+    assert window.ui_state.build_updates == 1
+    assert user_template.read_bytes() == user_contents
+    assert default_template.read_bytes() == default_contents
+
+
 def test_default_template_signal_loads_once_and_resets_user_selection(qapp, tmp_path):
     window = make_window(tmp_path)
     (window.service.template_paths.default_dir / "sample.txt").write_text(
