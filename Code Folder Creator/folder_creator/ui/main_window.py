@@ -96,8 +96,12 @@ class MainWindow(WindowMessageMixin, QMainWindow):
 
         self.window_width = WINDOWS_RESURFACE_EXPANDED_WIDTH
         self.window_height = WINDOWS_RESURFACE_HEIGHT
-        self.tree_default_height = 360
-        self.tree_expanded_height = 485
+        # Reserve room for the larger toolbar inset in the normal view.  The
+        # expanded editor keeps its full-height tree.
+        self.tree_default_height = 350
+        # This is the largest expanded height that leaves the toolbar and its
+        # top inset in the fixed-height window without overlap.
+        self.tree_expanded_height = 458
         self.tree_frame_padding = 2
         self.setWindowTitle("Folder Generator")
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -114,7 +118,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             # Keep the editor visually separated from both its top actions and
             # its toolbar, without stealing meaningful space from the tree.
             "controls_to_tree_gap": 8,
-            "tree_to_controls_gap": 8,
+            "tree_to_controls_gap": 16,
             "find_input_width": 230,
             "expand_width": 120,
             "collapse_width": 160,
@@ -229,7 +233,17 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.smart_layout.addLayout(controls_layout)
         self.smart_layout.addSpacing(metrics["controls_to_tree_gap"])
         self.smart_layout.addWidget(self.tree_frame, alignment=Qt.AlignHCenter)
-        self.smart_layout.addSpacing(metrics["tree_to_controls_gap"])
+        # Keep a visible, fixed gap between the tree surface and the toolbar
+        # in both normal and expanded-tree modes.
+        self.tree_toolbar_top_padding = QWidget()
+        self.tree_toolbar_top_padding.setObjectName("TreeToolbarTopPadding")
+        self.tree_toolbar_top_padding.setFixedHeight(
+            metrics["tree_to_controls_gap"]
+        )
+        self.tree_toolbar_top_padding.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Fixed
+        )
+        self.smart_layout.addWidget(self.tree_toolbar_top_padding)
         self.smart_layout.addLayout(self.tree_controls_layout)
         self.smart_layout.addSpacing(section_gap)
 
