@@ -52,11 +52,18 @@ class BuildController:
             if self.window.close_app_after_build_toggle.isChecked():
                 QTimer.singleShot(5000, self.close_after_build)
 
-        self.window.status.set(
-            message,
-            target="nested",
-            status_type="success" if status == "success" else "error",
-        )
+        if status == "success":
+            self.window.status.show_action_result(
+                message, status_type="success"
+            )
+        elif status == "exists":
+            self.window.status.show_action_result(
+                message, status_type="error"
+            )
+        else:
+            self.window.status.set(
+                message, target="nested", status_type="error"
+            )
 
     def minimize_after_build(self):
         self.window.showMinimized()
