@@ -384,5 +384,6 @@ def test_folder_creator_uses_shared_palette_and_modern_combo_rules():
         assert "width: 28px;" in stylesheet
         assert "padding: 6px 10px;" in stylesheet
         assert "qproperty-alignment: AlignCenter;" in stylesheet
+        assert stylesheet.count("QWidget {") == 1
     finally:
         folder_styles.set_theme(True)

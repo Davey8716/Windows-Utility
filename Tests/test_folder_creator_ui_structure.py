@@ -1,4 +1,5 @@
 import ast
+import ctypes
 import os
 import subprocess
 import sys
@@ -12,6 +13,7 @@ for path in (FOLDER_CREATOR_DIR, WINDOWS_RESURFACE_DIR):
     sys.path.insert(0, str(path))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+import folder_creator.ui.main_window as folder_creator_main_window  # noqa: E402
 from folder_creator.ui.main_window import MainWindow  # noqa: E402
 from folder_creator.ui.output_options_panel import OutputOptionsPanel  # noqa: E402
 from folder_creator.ui.post_build_panel import PostBuildPanel  # noqa: E402
@@ -91,6 +93,45 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
 
     assert result.returncode == 0, result.stderr
     assert "FOLDER_CREATOR_CUSTOM_CHROME_READY" in result.stdout
+
+
+def test_folder_creator_requests_standard_dwm_rounded_corners(monkeypatch):
+    calls = []
+
+    class FakeDwmApi:
+        def DwmSetWindowAttribute(self, hwnd, attribute, value, value_size):
+            preference = ctypes.cast(
+                value,
+                ctypes.POINTER(ctypes.c_int),
+            ).contents.value
+            calls.append((hwnd, attribute, preference, value_size))
+            return 0
+
+    class FakeWindll:
+        dwmapi = FakeDwmApi()
+
+    class Window:
+        def winId(self):
+            return 1234
+
+    monkeypatch.setattr(folder_creator_main_window.ctypes, "windll", FakeWindll())
+
+    MainWindow._apply_native_window_corner_preference(Window())
+
+    assert calls == [(1234, 33, 2, ctypes.sizeof(ctypes.c_int))]
+
+
+def test_folder_creator_ignores_unavailable_dwm_api(monkeypatch):
+    class FakeWindll:
+        pass
+
+    class Window:
+        def winId(self):
+            return 1234
+
+    monkeypatch.setattr(folder_creator_main_window.ctypes, "windll", FakeWindll())
+
+    MainWindow._apply_native_window_corner_preference(Window())
 
 
 def test_launcher_main_is_small_and_reexports_main_window():

@@ -1,3 +1,5 @@
+import ctypes
+
 from PySide6.QtCore import QSize, QTimer, Qt
 from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
@@ -447,6 +449,27 @@ class MainWindow(QMainWindow):
                 button.property("styleFontSize"), 14
             ) or 14
             button.setStyleSheet(styles.organizing_button_style(font_size))
+
+    def _apply_native_window_corner_preference(self):
+        """Request the standard Windows 11 rounding for this native window."""
+        hwnd = int(self.winId())
+        if not hwnd:
+            return
+
+        try:
+            corner_preference = ctypes.c_int(2)  # DWMWCP_ROUND
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                hwnd,
+                33,  # DWMWA_WINDOW_CORNER_PREFERENCE
+                ctypes.byref(corner_preference),
+                ctypes.sizeof(corner_preference),
+            )
+        except Exception:
+            return
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._apply_native_window_corner_preference()
 
     def resizeEvent(self, event):
         self._position_title_bar_controls()

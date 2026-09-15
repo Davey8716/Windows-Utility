@@ -215,11 +215,6 @@ def _application_stylesheet() -> str:
     return f"""
         {resurface_styles.window_style()}
 
-        QWidget {{
-            background-color: {qcolor_css(WINDOW_BG)};
-            color: {qcolor_css(TEXT_COLOR)};
-        }}
-
         QLineEdit {{
             {resurface_styles.label_style(font_size=15, bold=True, color=TEXT_COLOR, font_family="Segoe UI")}
             background-color: {qcolor_css(SURFACE_BG)};
