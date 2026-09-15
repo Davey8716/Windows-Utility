@@ -322,6 +322,32 @@ def test_folder_creator_add_blank_dropdown_style_matches_theme_when_disabled(
     assert f"border-left: 1px solid {disabled_border};" in stylesheet
 
 
+@pytest.mark.parametrize(("is_dark", "text_color"), [(True, "#ffffff"), (False, "#000000")])
+def test_folder_creator_date_stamp_dropdown_style_matches_theme_when_disabled(
+    is_dark,
+    text_color,
+):
+    styles.set_theme(is_dark)
+    stylesheet = styles.organizing_combo_style(14)
+    disabled_background = styles.qcolor_css(styles.themed_button_disabled_bg())
+    disabled_border = styles.qcolor_css(styles.themed_button_disabled_border())
+
+    assert 'QComboBox#FolderCreatorDateStampDropdown:disabled' in stylesheet
+    assert (
+        'QComboBox#FolderCreatorDateStampDropdown::drop-down:disabled'
+        in stylesheet
+    )
+    assert 'QComboBox#FolderCreatorDateStampDropdown:enabled' in stylesheet
+    assert (
+        'QComboBox#FolderCreatorDateStampDropdown::drop-down:enabled'
+        in stylesheet
+    )
+    assert f"color: {text_color};" in stylesheet
+    assert f"background-color: {disabled_background};" in stylesheet
+    assert f"border: 1px solid {disabled_border};" in stylesheet
+    assert f"border-left: 1px solid {disabled_border};" in stylesheet
+
+
 def test_contrasting_text_color_favors_readable_severity_foregrounds():
     assert styles.contrasting_text_color(QColor(196, 162, 32)) == styles.TEXT_DARK
     assert styles.contrasting_text_color(QColor(176, 38, 38)) == styles.TEXT_LIGHT

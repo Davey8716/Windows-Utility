@@ -310,6 +310,57 @@ def test_folder_creator_add_blank_dropdown_uses_theme_disabled_treatment(tmp_pat
     assert "FOLDER_CREATOR_FILE_DROPDOWN_THEME_DISABLED_READY" in result.stdout
 
 
+def test_folder_creator_date_stamp_dropdown_uses_theme_toggle_treatment(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui import styles\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow()\n"
+        "dropdown = window.nested_date_config\n"
+        "assert dropdown.objectName() == 'FolderCreatorDateStampDropdown'\n"
+        "for is_dark, text_color, chevron_name in ((True, '#ffffff', 'Dropdown Chevron.svg'), (False, '#000000', 'Dropdown Chevron Light.svg')):\n"
+        " window.apply_theme(is_dark)\n"
+        " window.nested_date_toggle.setChecked(False)\n"
+        " window.show()\n"
+        " app.processEvents()\n"
+        " assert not dropdown.isEnabled()\n"
+        " stylesheet = dropdown.styleSheet()\n"
+        " assert f'color: {text_color};' in stylesheet\n"
+        " assert chevron_name in stylesheet\n"
+        " disabled_background = styles.qcolor_css(styles.resurface_styles.themed_button_disabled_bg())\n"
+        " image = dropdown.grab().toImage()\n"
+        " assert image.pixelColor(135, 15).name() == disabled_background\n"
+        " assert image.pixelColor(158, 15).name() == disabled_background\n"
+        " window.nested_date_toggle.setChecked(True)\n"
+        " app.processEvents()\n"
+        " assert dropdown.isEnabled()\n"
+        " active_background = styles.qcolor_css(styles.resurface_styles.themed_button_bg())\n"
+        " image = dropdown.grab().toImage()\n"
+        " assert image.pixelColor(135, 15).name() == active_background\n"
+        " assert image.pixelColor(158, 15).name() == active_background\n"
+        "print('FOLDER_CREATOR_DATE_DROPDOWN_THEME_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_DATE_DROPDOWN_THEME_READY" in result.stdout
+
+
 def test_folder_creator_requests_standard_dwm_rounded_corners(monkeypatch):
     calls = []
 
