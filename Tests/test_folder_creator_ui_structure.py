@@ -171,6 +171,8 @@ def test_folder_creator_tab_controls_have_a_15px_top_left_inset(tmp_path):
         " (0, (window.add_folder_btn, window.file_dropdown, window.remove_btn)),\n"
         " (1, (window.auto_enumerate_folders, window.nested_date_toggle, window.nested_date_config)),\n"
         " (2, (window.open_folder_build_toggle, window.minimize_after_build_toggle, window.close_app_after_build_toggle)),\n"
+        " (3, (window.load_template_btn, window.save_template_btn, window.delete_template_btn, window.delete_all_templates_btn, window.load_user_template_dropdown, window.load_default_template_dropdown)),\n"
+        " (4, (window.default_to_desktop_btn, window.output_location_btn, window.build_folders_btn)),\n"
         ")\n"
         "for tab, controls in checks:\n"
         " window.section_navigation.setCurrentRow(tab); app.processEvents()\n"
@@ -182,6 +184,10 @@ def test_folder_creator_tab_controls_have_a_15px_top_left_inset(tmp_path):
         " assert first_control_origin.y() - page_origin.y() == 15\n"
         "assert window.add_subfolder_btn.mapTo(window, QPoint()).y() == window.add_folder_btn.mapTo(window, QPoint()).y()\n"
         "assert window.add_subfolder_btn.mapTo(window, QPoint()).x() - window.add_folder_btn.mapTo(window, QPoint()).x() == 88\n"
+        "window.section_navigation.setCurrentRow(3); app.processEvents()\n"
+        "assert window.tree_frame.mapTo(window, QPoint()).y() - (window.template_controls_frame.mapTo(window, QPoint()).y() + window.template_controls_frame.height()) == 11\n"
+        "window.section_navigation.setCurrentRow(4); app.processEvents()\n"
+        "assert window.tree_frame.mapTo(window, QPoint()).y() - (window.build_buttons_frame.mapTo(window, QPoint()).y() + window.build_buttons_frame.height()) == 21\n"
         "print('FOLDER_CREATOR_TAB_CONTROL_INSETS_READY')\n"
     )
 

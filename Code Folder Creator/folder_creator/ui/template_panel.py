@@ -16,7 +16,7 @@ PATH_DISPLAY_WIDTH = 450
 # The template stack needs a little more room than the neighboring 230 px
 # columns, but not the old 330 px height that created a large blank band
 # before the tree editor.
-TEMPLATE_CONTROLS_HEIGHT = 240
+TEMPLATE_CONTROLS_HEIGHT = 250
 # The grid vertically centers the shorter toolbar columns by 36 px in the
 # composed window. Match that offset so the template column's first button is
 # level with the other first-row actions.
@@ -89,26 +89,28 @@ class TemplatePanel:
 
         self.template_controls_frame = QFrame()
         self.template_controls_frame.setFrameShape(QFrame.NoFrame)
-        self.template_controls_frame.setFixedWidth(
-            styles.DEFAULT_BUTTON_WIDTH + (frame_padding * 2)
-        )
+        self.template_controls_frame.setFixedWidth(styles.DEFAULT_BUTTON_WIDTH + 30)
         self.template_controls_frame.setFixedHeight(TEMPLATE_CONTROLS_HEIGHT)
         self.template_controls_frame.setStyleSheet("border: none;")
         template_layout = QVBoxLayout(self.template_controls_frame)
-        template_layout.setContentsMargins(
-            frame_padding, frame_padding, frame_padding, frame_padding
-        )
+        template_layout.setContentsMargins(15, 15, 15, 15)
         template_layout.setSpacing(control_gap)
-        template_layout.setAlignment(Qt.AlignCenter | Qt.AlignTop)
+        template_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         # The composed grid top-aligns every control column, keeping the first
         # template action level with the adjacent action rows.
         template_layout.addSpacing(TEMPLATE_TOP_ALIGNMENT_SPACER)
-        template_layout.addWidget(self.load_template_btn)
-        template_layout.addWidget(self.save_template_btn)
-        template_layout.addWidget(self.delete_template_btn)
-        template_layout.addWidget(self.delete_all_templates_btn)
-        template_layout.addWidget(self.load_user_template_dropdown)
-        template_layout.addWidget(self.load_default_template_dropdown)
+        template_layout.addWidget(self.load_template_btn, alignment=Qt.AlignLeft)
+        template_layout.addWidget(self.save_template_btn, alignment=Qt.AlignLeft)
+        template_layout.addWidget(self.delete_template_btn, alignment=Qt.AlignLeft)
+        template_layout.addWidget(
+            self.delete_all_templates_btn, alignment=Qt.AlignLeft
+        )
+        template_layout.addWidget(
+            self.load_user_template_dropdown, alignment=Qt.AlignLeft
+        )
+        template_layout.addWidget(
+            self.load_default_template_dropdown, alignment=Qt.AlignLeft
+        )
 
         for button in (
             self.load_template_btn,

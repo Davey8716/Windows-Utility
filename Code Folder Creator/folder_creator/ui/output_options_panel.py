@@ -116,20 +116,16 @@ class OutputOptionsPanel:
 
         self.build_buttons_frame = QFrame()
         self.build_buttons_frame.setFrameShape(QFrame.NoFrame)
-        self.build_buttons_frame.setFixedWidth(
-            styles.DEFAULT_BUTTON_WIDTH + (frame_padding * 2)
-        )
+        self.build_buttons_frame.setFixedWidth(styles.DEFAULT_BUTTON_WIDTH + 30)
         self.build_buttons_frame.setFixedHeight(230)
         self.build_buttons_frame.setStyleSheet("border: none;")
         build_layout = QVBoxLayout(self.build_buttons_frame)
-        build_layout.setContentsMargins(
-            frame_padding, frame_padding, frame_padding, frame_padding
-        )
+        build_layout.setContentsMargins(15, 15, 15, 15)
         build_layout.setSpacing(control_gap)
-        build_layout.setAlignment(Qt.AlignTop)
-        build_layout.addWidget(self.default_to_desktop_btn)
-        build_layout.addWidget(self.output_location_btn)
-        build_layout.addWidget(self.build_folders_btn)
+        build_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        build_layout.addWidget(self.default_to_desktop_btn, alignment=Qt.AlignLeft)
+        build_layout.addWidget(self.output_location_btn, alignment=Qt.AlignLeft)
+        build_layout.addWidget(self.build_folders_btn, alignment=Qt.AlignLeft)
 
         self.base_path_column = QFrame()
         self.base_path_column.setFrameShape(QFrame.NoFrame)

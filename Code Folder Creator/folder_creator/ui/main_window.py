@@ -88,6 +88,9 @@ class MainWindow(WindowMessageMixin, QMainWindow):
     CONTROL_FONT_SIZE = 12
     NAVIGATION_WIDTH = 205
     CONTROL_STACK_HEIGHT = 244
+    TEMPLATE_CONTROL_STACK_HEIGHT = 250
+    CONTROL_STACK_TO_TREE_GAP = 8
+    TEMPLATE_STACK_TO_TREE_GAP = 12
 
     SECTION_DEFINITIONS = (
         ("folders", "Folders", "\ue8b7", "Create and edit folders and files."),
@@ -266,6 +269,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         right_layout.addWidget(self.controls_stack)
         self.controls_to_tree_spacer = QWidget()
         self.controls_to_tree_spacer.setFixedHeight(metrics["controls_to_tree_gap"])
+        self._update_control_stack_geometry(self.section_navigation.currentRow())
         right_layout.addWidget(self.controls_to_tree_spacer)
         right_layout.addWidget(self.tree_frame, alignment=Qt.AlignHCenter)
         # Keep a visible, fixed gap between the tree surface and the toolbar
@@ -375,8 +379,24 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         if row < 0 or row >= self.controls_stack.count():
             return
         self.controls_stack.setCurrentIndex(row)
+        self._update_control_stack_geometry(row)
         if self._tree_view_expanded:
             self._set_tree_view_expanded(False)
+
+    def _update_control_stack_geometry(self, row):
+        """Keep each tab's action frame at its established distance from the tree."""
+        is_templates_tab = row == 3
+        self.controls_stack.setFixedHeight(
+            self.TEMPLATE_CONTROL_STACK_HEIGHT
+            if is_templates_tab
+            else self.CONTROL_STACK_HEIGHT
+        )
+        if hasattr(self, "controls_to_tree_spacer"):
+            self.controls_to_tree_spacer.setFixedHeight(
+                self.TEMPLATE_STACK_TO_TREE_GAP
+                if is_templates_tab
+                else self.CONTROL_STACK_TO_TREE_GAP
+            )
 
     def _on_section_clicked(self, item):
         """Restore a hidden current page when its selected item is clicked."""
