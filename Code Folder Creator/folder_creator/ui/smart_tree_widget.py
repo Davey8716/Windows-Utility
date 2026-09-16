@@ -11,8 +11,8 @@ from folder_creator.features.tree.outline_parser import parse_indented_text
 
 class SmartTreeWidget(QTreeWidget):
 
-    EXPANDED_PLACEHOLDER_FONT_SIZE = 10
-    COMPACT_PLACEHOLDER_FONT_SIZE = 7.5
+    EXPANDED_PLACEHOLDER_FONT_SIZE = 9
+    COMPACT_PLACEHOLDER_FONT_SIZE = 9
 
     fileDropped = Signal(str)
     addFolderShortcut = Signal()
