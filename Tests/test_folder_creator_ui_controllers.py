@@ -88,11 +88,15 @@ class UIStateStub:
 
 
 class StateManagerStub:
-    def __init__(self):
+    def __init__(self, state=None):
         self.updates = []
+        self.state = dict(state or {})
 
     def update(self, key, value):
         self.updates.append((key, value))
+
+    def load_state(self):
+        return dict(self.state)
 
 
 class TreeControllerStub:
@@ -1060,6 +1064,62 @@ def test_template_save_dialog_uses_selected_format(qapp, tmp_path):
     dialog._accept_if_valid()
 
     assert dialog.destination == user_dir.resolve() / "project.md"
+
+
+def test_template_save_dialog_uses_the_explicit_host_theme(qapp, tmp_path):
+    user_dir = tmp_path / "user"
+    user_dir.mkdir()
+
+    dark_dialog = TemplateSaveDialog(None, user_dir, is_dark=True)
+    light_dialog = TemplateSaveDialog(None, user_dir, is_dark=False)
+
+    dark_style = dark_dialog.styleSheet()
+    light_style = light_dialog.styleSheet()
+    assert "background-color: #3a4860;" in dark_style
+    assert "QLabel#templateSaveTitle" in dark_style
+    assert "color: #ffffff;" in dark_style
+    assert "color: #ffffff;\n                background-color: #1c66c4;" in dark_style
+    assert "Dropdown Chevron.svg" in dark_style
+    assert "background-color: #eef2f6;" in light_style
+    assert "color: #111820;" in light_style
+    assert "color: #111820;\n                background-color: #2d73c8;" in light_style
+    assert "Dropdown Chevron Light.svg" in light_style
+
+
+@pytest.mark.parametrize(
+    ("cached_theme", "stored_theme"),
+    [(True, False), (False, True)],
+)
+def test_template_save_refreshes_a_stale_host_theme_before_opening(
+    qapp, tmp_path, monkeypatch, cached_theme, stored_theme
+):
+    window = make_window(tmp_path)
+    window._theme_dark = cached_theme
+    window.service.state_manager.state = {"theme_dark": stored_theme}
+    applied_themes = []
+
+    def apply_theme(is_dark):
+        applied_themes.append(is_dark)
+        window._theme_dark = is_dark
+
+    window.apply_theme = apply_theme
+    captured_themes = []
+    original_init = TemplateSaveDialog.__init__
+
+    def capture_theme(dialog, *args, **kwargs):
+        captured_themes.append(kwargs["is_dark"])
+        original_init(dialog, *args, **kwargs)
+
+    monkeypatch.setattr(TemplateSaveDialog, "__init__", capture_theme)
+    monkeypatch.setattr(
+        TemplateSaveDialog, "exec", lambda _dialog: QDialog.DialogCode.Rejected
+    )
+
+    TemplateController(window).user_template_save()
+
+    assert applied_themes == [stored_theme]
+    assert captured_themes == [stored_theme]
+    assert window.service.state == {"theme_dark": stored_theme}
 
 
 def test_template_save_does_not_overwrite_without_confirmation(qapp, tmp_path, monkeypatch):

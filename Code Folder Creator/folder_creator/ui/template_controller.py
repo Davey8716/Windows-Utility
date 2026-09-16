@@ -43,6 +43,31 @@ class TemplateController:
             return []
         return sorted(file for file in user_dir.glob("*.*") if file.is_file())
 
+    def _theme_for_save_dialog(self) -> bool:
+        """Synchronize the host theme before creating a themed save dialog."""
+        cached_theme = bool(getattr(self.window, "_theme_dark", True))
+        state_manager = getattr(self.service, "state_manager", None)
+        load_state = getattr(state_manager, "load_state", None)
+        if not callable(load_state):
+            return cached_theme
+
+        try:
+            state = load_state()
+        except Exception:
+            return cached_theme
+        if not isinstance(state, dict):
+            return cached_theme
+
+        self.service.state = state
+        is_dark = bool(state.get("theme_dark", cached_theme))
+        if is_dark != cached_theme:
+            apply_theme = getattr(self.window, "apply_theme", None)
+            if callable(apply_theme):
+                apply_theme(is_dark)
+            else:
+                self.window._theme_dark = is_dark
+        return is_dark
+
     def _user_templates_available(self) -> bool:
         return self._templates_available() and bool(self._user_template_files())
 
@@ -305,7 +330,11 @@ class TemplateController:
             self._show_master_backup_unavailable(action_result=True)
             return
 
-        dialog = TemplateSaveDialog(self.window, user_dir)
+        dialog = TemplateSaveDialog(
+            self.window,
+            user_dir,
+            is_dark=self._theme_for_save_dialog(),
+        )
         if dialog.exec() != dialog.DialogCode.Accepted or dialog.destination is None:
             self.window.status.show_action_result(
                 "Template save cancelled.", status_type="info"
