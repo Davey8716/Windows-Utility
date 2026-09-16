@@ -12,3 +12,13 @@ Folder to Do
 Make sure all the Folder Creator fonts match for the buttons and use same font size etc relative to each other and the main app GUI
 
 All the folder dialogue pop up changes must respect the silence dialogues from the main gui
+
+Ask wether the monitor rules should respect windows resurface as one app containing 2 processes (each can go to a seperarte monitor
+) or both go to same monitor
+
+Ask wether to keep the Folder Creator Templates and Saved Folder names parent folders within the master backup path to be 
+seperate or siblings
+
+Change the Save Template middle format bar to be theme specific and be white for the format wording and the > dropdown and opposite for the 
+other theme
+
