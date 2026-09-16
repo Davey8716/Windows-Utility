@@ -216,37 +216,34 @@ class TreeEditorPanel:
     def _create_folder_controls(self, frame_padding, control_gap):
         frame = QFrame()
         frame.setFrameShape(QFrame.NoFrame)
-        frame.setFixedSize(190, 230)
+        # Keep the controls 15 px inside every edge while preserving the
+        # existing two-button rows and their gap.
+        frame.setFixedSize(198, 230)
         frame.setStyleSheet("border: none;")
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(
-            frame_padding, frame_padding, frame_padding, frame_padding
-        )
+        layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(control_gap)
 
         top_row = QHBoxLayout()
+        top_row.setContentsMargins(0, 0, 0, 0)
         top_row.setSpacing(control_gap)
         self.add_folder_btn.setFixedSize(80, styles.DEFAULT_BUTTON_HEIGHT)
         self.add_subfolder_btn.setFixedSize(80, styles.DEFAULT_BUTTON_HEIGHT)
-        top_row.addStretch()
         top_row.addWidget(self.add_folder_btn)
         top_row.addWidget(self.add_subfolder_btn)
-        top_row.addStretch()
 
         file_row = QHBoxLayout()
+        file_row.setContentsMargins(0, 0, 0, 0)
         file_row.setSpacing(control_gap)
-        file_row.addStretch()
         file_row.addWidget(self.file_dropdown)
-        file_row.addStretch()
 
         bottom_row = QHBoxLayout()
+        bottom_row.setContentsMargins(0, 0, 0, 0)
         bottom_row.setSpacing(control_gap)
         self.remove_btn.setFixedSize(85, 50)
         self.remove_all_btn.setFixedSize(85, 50)
-        bottom_row.addStretch()
         bottom_row.addWidget(self.remove_btn)
         bottom_row.addWidget(self.remove_all_btn)
-        bottom_row.addStretch()
 
         layout.addLayout(top_row)
         layout.addLayout(file_row)

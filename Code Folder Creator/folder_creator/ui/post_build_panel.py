@@ -18,7 +18,7 @@ class PostBuildPanel:
     def __init__(self, frame_padding: int, control_gap: int):
         self.post_build_frame = QFrame()
         self.post_build_frame.setFrameShape(QFrame.NoFrame)
-        self.post_build_frame.setFixedSize(200, 230)
+        self.post_build_frame.setFixedSize(210, 230)
         self.post_build_frame.setStyleSheet("border: none;")
 
         self.open_folder_build_toggle = QPushButton("Open Dir After Build")
@@ -38,14 +38,18 @@ class PostBuildPanel:
             button.setProperty("styleFontSize", 12)
 
         self.post_build_layout = QVBoxLayout(self.post_build_frame)
-        self.post_build_layout.setContentsMargins(
-            frame_padding, frame_padding, frame_padding, frame_padding
-        )
+        self.post_build_layout.setContentsMargins(15, 15, 15, 15)
         self.post_build_layout.setSpacing(control_gap)
-        self.post_build_layout.setAlignment(Qt.AlignTop)
-        self.post_build_layout.addWidget(self.open_folder_build_toggle)
-        self.post_build_layout.addWidget(self.minimize_after_build_toggle)
-        self.post_build_layout.addWidget(self.close_app_after_build_toggle)
+        self.post_build_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.post_build_layout.addWidget(
+            self.open_folder_build_toggle, alignment=Qt.AlignLeft
+        )
+        self.post_build_layout.addWidget(
+            self.minimize_after_build_toggle, alignment=Qt.AlignLeft
+        )
+        self.post_build_layout.addWidget(
+            self.close_app_after_build_toggle, alignment=Qt.AlignLeft
+        )
 
     def bind_to(self, window):
         for name in self.EXPORTED_WIDGETS:

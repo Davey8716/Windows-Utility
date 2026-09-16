@@ -92,17 +92,15 @@ class OutputOptionsPanel:
         self.date_controls_frame.setSizePolicy(
             QSizePolicy.Expanding, QSizePolicy.Expanding
         )
-        self.date_controls_frame.setFixedSize(190, 230)
+        self.date_controls_frame.setFixedSize(210, 230)
         self.date_controls_frame.setStyleSheet("border: none;")
         date_layout = QVBoxLayout(self.date_controls_frame)
-        date_layout.setContentsMargins(
-            frame_padding, frame_padding, frame_padding, frame_padding
-        )
+        date_layout.setContentsMargins(15, 15, 15, 15)
         date_layout.setSpacing(control_gap)
-        date_layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        date_layout.addWidget(self.auto_enumerate_folders, alignment=Qt.AlignHCenter)
-        date_layout.addWidget(self.nested_date_toggle, alignment=Qt.AlignHCenter)
-        date_layout.addWidget(self.nested_date_config, alignment=Qt.AlignHCenter)
+        date_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        date_layout.addWidget(self.auto_enumerate_folders, alignment=Qt.AlignLeft)
+        date_layout.addWidget(self.nested_date_toggle, alignment=Qt.AlignLeft)
+        date_layout.addWidget(self.nested_date_config, alignment=Qt.AlignLeft)
 
         self.default_to_desktop_btn = QPushButton("Default To Desk")
         self.output_location_btn = QPushButton("Output Dir")

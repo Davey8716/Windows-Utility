@@ -155,6 +155,50 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
     assert "FOLDER_CREATOR_CUSTOM_CHROME_READY" in result.stdout
 
 
+def test_folder_creator_tab_controls_have_a_15px_top_left_inset(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtCore import QPoint\n"
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow(); window.show(); app.processEvents()\n"
+        "checks = (\n"
+        " (0, (window.add_folder_btn, window.file_dropdown, window.remove_btn)),\n"
+        " (1, (window.auto_enumerate_folders, window.nested_date_toggle, window.nested_date_config)),\n"
+        " (2, (window.open_folder_build_toggle, window.minimize_after_build_toggle, window.close_app_after_build_toggle)),\n"
+        ")\n"
+        "for tab, controls in checks:\n"
+        " window.section_navigation.setCurrentRow(tab); app.processEvents()\n"
+        " page_origin = window.controls_stack.currentWidget().viewport().mapTo(window, QPoint())\n"
+        " for control in controls:\n"
+        "  control_origin = control.mapTo(window, QPoint())\n"
+        "  assert control_origin.x() - page_origin.x() == 15\n"
+        " first_control_origin = controls[0].mapTo(window, QPoint())\n"
+        " assert first_control_origin.y() - page_origin.y() == 15\n"
+        "assert window.add_subfolder_btn.mapTo(window, QPoint()).y() == window.add_folder_btn.mapTo(window, QPoint()).y()\n"
+        "assert window.add_subfolder_btn.mapTo(window, QPoint()).x() - window.add_folder_btn.mapTo(window, QPoint()).x() == 88\n"
+        "print('FOLDER_CREATOR_TAB_CONTROL_INSETS_READY')\n"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_TAB_CONTROL_INSETS_READY" in result.stdout
+
+
 def test_folder_creator_navigation_preserves_page_and_tree_state(tmp_path):
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)

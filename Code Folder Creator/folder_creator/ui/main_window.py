@@ -363,11 +363,11 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         content.setMinimumHeight(max(widget.height() for widget in widgets))
         layout = QHBoxLayout(content)
         layout.setSizeConstraint(QLayout.SetMinimumSize)
-        layout.setContentsMargins(10, 0, 10, 0)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(16)
-        layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         for widget in widgets:
-            layout.addWidget(widget, alignment=Qt.AlignTop)
+            layout.addWidget(widget, alignment=Qt.AlignTop | Qt.AlignLeft)
         page.setWidget(content)
         return page
 
