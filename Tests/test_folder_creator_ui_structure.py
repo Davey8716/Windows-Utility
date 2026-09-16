@@ -34,9 +34,12 @@ def test_folder_creator_initializes_from_its_own_directory(tmp_path):
     env["QT_QPA_PLATFORM"] = "offscreen"
     command = (
         "from PySide6.QtWidgets import QApplication; "
-        "from folder_creator.ui.main_window import MainWindow; "
+        "from pathlib import Path; "
+        "import folder_creator.ui.main_window as main_window; "
+        "main_window.get_desktop_path = lambda: Path('C:/first-run-desktop'); "
         "app = QApplication([]); "
-        "window = MainWindow(); "
+        "window = main_window.MainWindow(); "
+        "assert window.base_path_line.text() == str(Path('C:/first-run-desktop')); "
         "print(f'FOLDER_CREATOR_READY={window.windowTitle()}')"
     )
 

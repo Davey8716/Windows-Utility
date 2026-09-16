@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from folder_creator.core.app_service import AppService
+from folder_creator.core.system_paths import get_desktop_path
 from folder_creator.ui import styles
 from folder_creator.ui.nested_ui_controller import NestedUIController
 from folder_creator.ui.output_options_panel import OutputOptionsPanel
@@ -418,7 +419,12 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.template_path_line.setText(
             str(user_dir) if user_dir is not None else "Master Backup Path unavailable"
         )
-        self.base_path_line.setText(state.get("last_base_dir", ""))
+        # A first-time build should have a useful, easy-to-find destination.
+        # Keep any location the user has explicitly chosen on later launches.
+        saved_base_dir = str(state.get("last_base_dir") or "").strip()
+        self.base_path_line.setText(
+            saved_base_dir or str(get_desktop_path())
+        )
         self.auto_enumerate_folders.setChecked(
             state.get("nested_auto_number_enabled", False)
         )
