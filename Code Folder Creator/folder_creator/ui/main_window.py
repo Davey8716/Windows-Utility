@@ -33,6 +33,10 @@ from folder_creator.ui.status_controller import StatusController
 from folder_creator.ui.template_panel import TemplatePanel
 from folder_creator.ui.tree_editor_panel import TreeEditorPanel
 from folder_creator.ui.ui_state_controller import UIStateController
+from folder_creator.resurface_dependency import ensure_resurface_importable
+
+ensure_resurface_importable()
+
 from resurface.ui.app_notifications import WindowMessageMixin
 from resurface.ui.tooltips import (
     install_tooltip_router,

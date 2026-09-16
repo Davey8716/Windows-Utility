@@ -5,12 +5,13 @@
 from pathlib import Path
 
 
-SOURCE_ROOT = Path(SPECPATH).resolve().parent
+SOURCE_ROOT = Path(SPEC).resolve().parent
 REPOSITORY_ROOT = SOURCE_ROOT.parent
+RESURFACE_SOURCE_ROOT = REPOSITORY_ROOT / "Code Windows Resurface"
 
 analysis = Analysis(
     [str(SOURCE_ROOT / "main.py")],
-    pathex=[str(SOURCE_ROOT), str(REPOSITORY_ROOT)],
+    pathex=[str(SOURCE_ROOT), str(REPOSITORY_ROOT), str(RESURFACE_SOURCE_ROOT)],
     binaries=[],
     datas=[],
     hiddenimports=[],

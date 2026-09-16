@@ -1,49 +1,14 @@
 from __future__ import annotations
 
-import importlib.util
-import sys
-from pathlib import Path
-
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QApplication, QComboBox, QPushButton
 
+from folder_creator.resurface_dependency import ensure_resurface_importable
 
-_RESURFACE_PACKAGE_ROOT = (
-    Path(__file__).resolve().parents[3] / "Code Windows Resurface"
-)
-_RESURFACE_STYLES_PATH = (
-    _RESURFACE_PACKAGE_ROOT
-    / "resurface"
-    / "ui"
-    / "styles.py"
-)
-_RESURFACE_MODULE_NAME = "_folder_creator_resurface_styles"
+ensure_resurface_importable()
 
-
-def _load_resurface_styles():
-    module = sys.modules.get(_RESURFACE_MODULE_NAME)
-    if module is not None:
-        return module
-
-    package_root = str(_RESURFACE_PACKAGE_ROOT)
-    if package_root not in sys.path:
-        sys.path.insert(0, package_root)
-
-    spec = importlib.util.spec_from_file_location(
-        _RESURFACE_MODULE_NAME,
-        _RESURFACE_STYLES_PATH,
-    )
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Could not load shared styles from {_RESURFACE_STYLES_PATH}")
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[_RESURFACE_MODULE_NAME] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-resurface_styles = _load_resurface_styles()
+from resurface.ui import styles as resurface_styles
 WINDOW_BG = QColor()
 SURFACE_BG = QColor()
 SURFACE_HOVER = QColor()

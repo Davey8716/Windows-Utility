@@ -83,6 +83,9 @@ def test_packaging_spec_defines_windowed_companion_release_contract():
     ).read_text(encoding="utf-8")
     assert 'name="Folder Creator"' in spec
     assert "console=False" in spec
+    assert "SOURCE_ROOT = Path(SPEC).resolve().parent" in spec
+    assert 'RESURFACE_SOURCE_ROOT = REPOSITORY_ROOT / "Code Windows Resurface"' in spec
+    assert "str(RESURFACE_SOURCE_ROOT)" in spec
 
 
 def make_checkout(tmp_path):

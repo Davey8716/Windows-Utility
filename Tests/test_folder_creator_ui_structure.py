@@ -27,6 +27,33 @@ from folder_creator.ui.tree_editor_panel import TreeEditorPanel  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 
+def test_folder_creator_bootstraps_resurface_imports_from_its_own_directory(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    command = (
+        "from folder_creator.resurface_dependency import ensure_resurface_importable; "
+        "ensure_resurface_importable(); "
+        "from resurface.ui.app_notifications import WindowMessageMixin; "
+        "from resurface.ui.tooltips import set_tooltip; "
+        "print(f'RESURFACE_READY={WindowMessageMixin.__name__}:{set_tooltip.__name__}')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "RESURFACE_READY=WindowMessageMixin:set_tooltip" in result.stdout
+
+
 def test_folder_creator_initializes_from_its_own_directory(tmp_path):
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)
