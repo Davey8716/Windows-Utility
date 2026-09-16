@@ -346,6 +346,58 @@ def test_confirmation_uses_themed_rounded_modal_popup(
         host.deleteLater()
 
 
+@pytest.mark.parametrize("affirmative_label", ["Delete", "Delete All", "Replace"])
+def test_confirmation_is_suppressed_when_shared_preference_is_enabled(
+    qapp, monkeypatch, affirmative_label
+):
+    class Host(WindowMessageMixin, QWidget):
+        pass
+
+    host = Host()
+    host.state = {"disable_all_confirmations_enabled": True}
+    controller = StatusController(host, service=None)
+
+    def fail_if_shown(_dialog):
+        raise AssertionError("suppressed confirmation should not be shown")
+
+    monkeypatch.setattr(QMessageBox, "exec", fail_if_shown)
+    try:
+        assert controller.confirm_action(
+            "Confirm action?",
+            "This action cannot be undone.",
+            affirmative_label=affirmative_label,
+        )
+    finally:
+        host.deleteLater()
+
+
+def test_confirmation_stays_cancellable_when_shared_preference_is_disabled(
+    qapp, monkeypatch
+):
+    class Host(WindowMessageMixin, QWidget):
+        pass
+
+    host = Host()
+    host.state = {"disable_all_confirmations_enabled": False}
+    controller = StatusController(host, service=None)
+    shown = []
+
+    def cancel_dialog(dialog):
+        shown.append(dialog)
+        return QMessageBox.StandardButton.Cancel
+
+    monkeypatch.setattr(QMessageBox, "exec", cancel_dialog)
+    try:
+        assert not controller.confirm_action(
+            "Confirm action?",
+            "This action cannot be undone.",
+            affirmative_label="Delete",
+        )
+        assert len(shown) == 1
+    finally:
+        host.deleteLater()
+
+
 def test_template_load_does_not_show_a_success_popup(qapp, tmp_path, monkeypatch):
     window = make_window(tmp_path)
     (window.service.template_paths.user_dir / "project.json").write_text(

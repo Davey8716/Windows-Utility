@@ -11,6 +11,3 @@ Folder to Do
 
 Make sure all the Folder Creator fonts match for the buttons and use same font size etc relative to each other and the main app GUI
 
-All the folder dialogue pop up changes must respect the silence dialogues from the main gui
-
-

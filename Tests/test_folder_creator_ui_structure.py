@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +41,7 @@ def test_folder_creator_initializes_from_its_own_directory(tmp_path):
         "app = QApplication([]); "
         "window = main_window.MainWindow(); "
         "assert window.base_path_line.text() == str(Path('C:/first-run-desktop')); "
+        "assert window.state is window.service.state; "
         "print(f'FOLDER_CREATOR_READY={window.windowTitle()}')"
     )
 
@@ -700,6 +702,39 @@ def test_folder_creator_ignores_unavailable_dwm_api(monkeypatch):
     monkeypatch.setattr(folder_creator_main_window.ctypes, "windll", FakeWindll())
 
     MainWindow._apply_native_window_corner_preference(Window())
+
+
+def test_folder_creator_shared_state_sync_refreshes_confirmation_preference():
+    class StateManager:
+        def load_state(self):
+            return {
+                "disable_all_confirmations_enabled": True,
+                "tooltips_enabled": False,
+                "theme_dark": True,
+            }
+
+    class Window:
+        def __init__(self):
+            self._shared_state_mtime_ns = 1
+            self.service = SimpleNamespace(
+                state={}, state_manager=StateManager()
+            )
+            self.state = {"disable_all_confirmations_enabled": False}
+            self.tooltips_enabled = True
+            self._theme_dark = True
+
+        def _get_shared_state_mtime_ns(self):
+            return 2
+
+        def apply_theme(self, _is_dark):
+            raise AssertionError("theme should not be reapplied when unchanged")
+
+    window = Window()
+    MainWindow._sync_theme_from_shared_state(window)
+
+    assert window.service.state is window.state
+    assert window.state["disable_all_confirmations_enabled"] is True
+    assert window.tooltips_enabled is False
 
 
 def test_launcher_main_is_small_and_reexports_main_window():

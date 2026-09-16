@@ -87,6 +87,10 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         super().__init__()
         self.tree = SmartTreeWidget()
         self.service = AppService(self.tree)
+        # WindowMessageMixin reads ``state`` from the window hierarchy for its
+        # confirmation-suppression policy. Keep it pointed at the shared state
+        # used by Windows Resurface so Folder Creator follows that preference.
+        self.state = self.service.state
         self._theme_dark = bool(self.service.state.get("theme_dark", True))
         # Folder Creator follows the same preference as its Windows Resurface
         # host, including when that preference changes while it is open.
@@ -503,6 +507,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self._shared_state_mtime_ns = current_mtime_ns
         state = self.service.state_manager.load_state()
         self.service.state = state
+        self.state = state
         self.tooltips_enabled = bool(state.get("tooltips_enabled", True))
         theme_dark = bool(state.get("theme_dark", True))
         if theme_dark != self._theme_dark:
