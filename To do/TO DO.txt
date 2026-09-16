@@ -13,8 +13,4 @@ Make sure all the Folder Creator fonts match for the buttons and use same font s
 
 All the folder dialogue pop up changes must respect the silence dialogues from the main gui
 
-Ask wether the monitor rules should respect windows resurface as one app containing 2 processes (each can go to a seperarte monitor
-) or both go to same monitor
-
-
 

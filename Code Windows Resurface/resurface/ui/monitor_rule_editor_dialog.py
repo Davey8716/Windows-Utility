@@ -27,11 +27,13 @@ from PySide6.QtWidgets import (
 )
 
 from resurface.features.monitor_rules import (
+    WINDOWS_RESURFACE_GROUP,
     capture_window_geometry,
     enumerate_eligible_windows,
     enumerate_monitors,
     normalize_monitor_rule,
 )
+from resurface.features.monitor_rules.application_groups import window_application_group
 from resurface.ui import styles
 from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 
@@ -180,6 +182,7 @@ class MonitorRuleEditorDialog(QDialog):
         self._enumerate_windows = window_enumerator or enumerate_eligible_windows
         self._capture_window_geometry = geometry_capturer or capture_window_geometry
         self._captured_geometry = copy.deepcopy((rule or {}).get("saved_geometry"))
+        self._is_group_rule = bool((rule or {}).get("app_group") == WINDOWS_RESURFACE_GROUP)
         self._running_windows = []
         self._monitors = []
 
@@ -198,16 +201,23 @@ class MonitorRuleEditorDialog(QDialog):
         self.window_combo.currentIndexChanged.connect(self._running_window_selected)
         refresh_button = QPushButton("Refresh windows", self)
         browse_button = QPushButton("Browse executable", self)
+        self.refresh_windows_button = refresh_button
+        self.browse_button = browse_button
+        self.group_button = QPushButton("Use Windows Resurface + Folder Creator", self)
         style_button(refresh_button)
         style_button(browse_button)
+        style_button(self.group_button)
         refresh_button.clicked.connect(self.refresh_running_windows)
         browse_button.clicked.connect(self._browse_executable)
+        self.group_button.clicked.connect(self._toggle_windows_resurface_group)
         selection_row.addWidget(self.window_combo, 1)
         selection_row.addWidget(refresh_button)
         selection_row.addWidget(browse_button)
+        selection_row.addWidget(self.group_button)
         root.addLayout(selection_row)
 
         form = QFormLayout()
+        self.form = form
         form.setHorizontalSpacing(16)
         form.setVerticalSpacing(10)
         self.name_edit = QLineEdit(self)
@@ -266,6 +276,31 @@ class MonitorRuleEditorDialog(QDialog):
         else:
             self.setFixedSize(self.sizeHint())
 
+    def _set_form_row_visible(self, field, visible: bool) -> None:
+        field.setVisible(visible)
+        label = self.form.labelForField(field)
+        if label is not None:
+            label.setVisible(visible)
+
+    def _toggle_windows_resurface_group(self) -> None:
+        self._is_group_rule = not self._is_group_rule
+        self._sync_group_state()
+
+    def _sync_group_state(self) -> None:
+        grouped = self._is_group_rule
+        self.group_button.setText(
+            "Use a different application" if grouped else "Use Windows Resurface + Folder Creator"
+        )
+        self.window_combo.setVisible(not grouped)
+        self.refresh_windows_button.setVisible(not grouped)
+        self.browse_button.setVisible(not grouped)
+        self.name_edit.setReadOnly(grouped)
+        self._set_form_row_visible(self.executable_edit, not grouped)
+        self._set_form_row_visible(self.exact_path_check, not grouped)
+        self._set_form_row_visible(self.placement_combo, not grouped)
+        self.capture_button.setVisible(not grouped and self.placement_combo.currentData() == "saved_geometry")
+        self.capture_status.setVisible(not grouped and self.placement_combo.currentData() == "saved_geometry")
+
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
         paint_opaque_rounded_frame(
@@ -298,6 +333,7 @@ class MonitorRuleEditorDialog(QDialog):
             target_index = self.monitor_combo.count() - 1
         if target_index >= 0:
             self.monitor_combo.setCurrentIndex(target_index)
+        self._sync_group_state()
 
     def refresh_monitors(self) -> None:
         current_device = self.monitor_combo.currentData()
@@ -347,6 +383,10 @@ class MonitorRuleEditorDialog(QDialog):
         self.exact_path_check.setChecked(bool(details["executable_path"]))
         if not self.name_edit.text().strip():
             self.name_edit.setText(os.path.splitext(details["executable_name"])[0])
+        if window_application_group(details, app_hwnd=self._app_hwnd) == WINDOWS_RESURFACE_GROUP:
+            self._is_group_rule = True
+            self._sync_group_state()
+            return
         self._sync_capture_state()
 
     def _browse_executable(self) -> None:
@@ -365,6 +405,10 @@ class MonitorRuleEditorDialog(QDialog):
             self.name_edit.setText(os.path.splitext(os.path.basename(path))[0])
 
     def _sync_capture_state(self) -> None:
+        if self._is_group_rule:
+            self.capture_button.setVisible(False)
+            self.capture_status.setVisible(False)
+            return
         saved_mode = self.placement_combo.currentData() == "saved_geometry"
         self.capture_button.setVisible(saved_mode)
         self.capture_status.setVisible(saved_mode)
@@ -386,10 +430,21 @@ class MonitorRuleEditorDialog(QDialog):
         self._sync_capture_state()
 
     def _draft_rule(self) -> dict | None:
+        monitor_index = self.monitor_combo.currentIndex()
+        if self._is_group_rule:
+            if monitor_index < 0:
+                return None
+            return normalize_monitor_rule({
+                "id": (self._original_rule or {}).get("id") or str(uuid.uuid4()),
+                "app_group": WINDOWS_RESURFACE_GROUP,
+                "enabled": self.enabled_check.isChecked(),
+                "reapply_if_moved": self.reapply_check.isChecked(),
+                "target_device": self.monitor_combo.currentData(),
+                "target_label": self.monitor_combo.currentText().replace(" (Unavailable)", ""),
+            })
         executable = self.executable_edit.text().strip()
         executable_path = executable if os.path.isabs(executable) else ""
         executable_name = os.path.basename(executable)
-        monitor_index = self.monitor_combo.currentIndex()
         raw = {
             "id": (self._original_rule or {}).get("id") or str(uuid.uuid4()),
             "name": self.name_edit.text().strip()
@@ -411,6 +466,8 @@ class MonitorRuleEditorDialog(QDialog):
         return normalize_monitor_rule(raw)
 
     def _validation_message(self) -> str:
+        if self._is_group_rule:
+            return "" if self._draft_rule() is not None else "Select a target monitor."
         if not self.executable_edit.text().strip():
             return "Select a running window or browse to an executable."
         if self.monitor_combo.currentIndex() < 0:

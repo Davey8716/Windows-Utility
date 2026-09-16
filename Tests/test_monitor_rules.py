@@ -64,6 +64,56 @@ def test_duplicate_rule_ids_are_ignored_but_duplicate_executables_are_allowed():
     assert [rule["id"] for rule in rules] == ["rule-1", "rule-2"]
 
 
+def test_windows_resurface_group_is_normalized_and_wins_over_executable_rules():
+    grouped = rule_schema.normalize_monitor_rule(
+        {
+            "id": "resurface",
+            "app_group": "windows_resurface",
+            "target_device": r"\\.\DISPLAY2",
+            "target_label": "Monitor 2",
+            "placement_mode": "maximize",
+            "saved_geometry": {"width": 1},
+        }
+    )
+    assert grouped["name"] == "Windows Resurface"
+    assert grouped["placement_mode"] == "keep_size"
+    assert grouped["saved_geometry"] is None
+
+    generic = make_rule(id="generic", match_exact_path=False)
+    details = {
+        "executable_name": "windows resurface.exe",
+        "executable_path": r"C:\Apps\Windows Resurface.exe",
+        "app_group": "windows_resurface",
+    }
+    assert rule_schema.first_matching_rule([generic, grouped], details)["id"] == "resurface"
+    assert rule_schema.first_matching_rule([generic], details) is None
+    assert rule_schema.normalize_monitor_rule(
+        make_rule(executable_name="Windows Resurface.exe")
+    ) is None
+
+
+def test_windows_resurface_group_recognizes_packaged_folder_creator(monkeypatch, tmp_path):
+    from resurface.features.monitor_rules import application_groups
+
+    target = tmp_path / "Code Folder Creator" / "Folder Creator.exe"
+
+    class PackagedLauncher:
+        def resolve_project_root(self):
+            return tmp_path
+
+        def resolve_launch_target(self, _project_dir):
+            return target
+
+        @staticmethod
+        def process_references_target(process_id, candidate):
+            return process_id == 42 and candidate == target
+
+    monkeypatch.setattr(application_groups, "FolderCreatorLauncher", PackagedLauncher)
+    assert application_groups.window_application_group({"hwnd": 2, "process_id": 42}) == (
+        "windows_resurface"
+    )
+
+
 def test_prune_missing_exact_path_rules_keeps_name_rules_and_existing_files(monkeypatch):
     existing = make_rule(id="existing")
     missing = make_rule(id="missing", executable_path=r"C:\\Removed\\Discord.exe")
@@ -496,6 +546,37 @@ def test_startup_initialization_uses_first_matching_rule(monkeypatch):
     watcher._scan_once()
 
     assert applied_rule_ids == ["first"]
+
+
+def test_grouped_rule_places_main_and_folder_creator_on_the_same_monitor(monkeypatch):
+    rule = rule_schema.normalize_monitor_rule(
+        {
+            "id": "resurface",
+            "app_group": "windows_resurface",
+            "target_device": r"\\.\DISPLAY2",
+            "target_label": "Monitor 2",
+        }
+    )
+    windows = [
+        {**_matching_window_details(1), "title": "Windows Resurface"},
+        {**_matching_window_details(2), "title": "Folder Creator", "process_id": 20},
+    ]
+    watcher = watcher_module.MonitorRuleWatcher()
+    placed = []
+    monkeypatch.setattr(watcher, "start", lambda: None)
+    monkeypatch.setattr(watcher_module, "enumerate_eligible_windows", lambda **_kwargs: windows)
+    monkeypatch.setattr(
+        watcher_module, "window_application_group", lambda _details, **_kwargs: "windows_resurface"
+    )
+    monkeypatch.setattr(watcher_module, "window_monitor_device", lambda _hwnd: r"\\.\DISPLAY1")
+    monkeypatch.setattr(
+        watcher_module, "apply_monitor_rule", lambda hwnd, applied: placed.append((hwnd, applied["placement_mode"])) or True
+    )
+
+    watcher.update_rules([rule], app_hwnd=1, apply_existing=True)
+    watcher._scan_once()
+
+    assert placed == [(1, "keep_size"), (2, "keep_size")]
 
 
 def test_watcher_reapplies_when_hidden_window_becomes_visible_again(monkeypatch):

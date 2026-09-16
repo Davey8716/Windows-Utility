@@ -49,6 +49,14 @@ python -m venv .venv
 pip install PySide6
 python main.py
 
+## Windows Resurface packaged release
+
+When bundled with Windows Resurface, Folder Creator must be built as the
+windowed `Folder Creator.exe` companion using `folder_creator.spec`, then placed
+at `Code Folder Creator\Folder Creator.exe` beside `Windows Resurface.exe`.
+The main application launches that executable directly; shipping `main.py` and
+starting it with a console Python interpreter is not supported for releases.
+
 
 ## Usage
 

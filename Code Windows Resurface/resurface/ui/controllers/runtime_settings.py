@@ -8,6 +8,11 @@ from resurface.features.monitor_rules import (
     normalize_monitor_rules,
     prune_missing_exact_path_rules,
 )
+from resurface.features.monitor_rules.application_groups import (
+    WINDOWS_RESURFACE_GROUP,
+    WINDOWS_RESURFACE_GROUP_NAME,
+    is_windows_resurface_component_rule,
+)
 from resurface.features.screen_mover.hotkeys import VALID_ACTIONS, active_hotkeys
 
 
@@ -86,6 +91,47 @@ class MonitorRulesController:
             return False
 
         rules = normalize_monitor_rules(raw_rules)
+        self.state["monitor_rules"] = rules
+        self._save_state(self.state)
+        page = self._rules_page()
+        if page is not None:
+            page.set_rules(rules)
+        self._sync_tray()
+        self._refresh_overview()
+        return True
+
+    def migrate_windows_resurface_group_rules(self) -> bool:
+        """Combine legacy bundled-component rules into the one supported group."""
+        raw_rules = self.state.get("monitor_rules", [])
+        if not isinstance(raw_rules, list):
+            return False
+        component_rules = [
+            rule for rule in raw_rules
+            if isinstance(rule, dict) and is_windows_resurface_component_rule(rule)
+        ]
+        if not component_rules:
+            return False
+        # The first rule wins, matching the documented top-to-bottom precedence.
+        winner = component_rules[0]
+        grouped = {
+            "id": winner.get("id"),
+            "name": WINDOWS_RESURFACE_GROUP_NAME,
+            "enabled": winner.get("enabled", True),
+            "reapply_if_moved": winner.get("reapply_if_moved", False),
+            "app_group": WINDOWS_RESURFACE_GROUP,
+            "target_device": winner.get("target_device"),
+            "target_label": winner.get("target_label"),
+        }
+        replacement = []
+        inserted = False
+        for rule in raw_rules:
+            if isinstance(rule, dict) and is_windows_resurface_component_rule(rule):
+                if not inserted:
+                    replacement.append(grouped)
+                    inserted = True
+                continue
+            replacement.append(rule)
+        rules = normalize_monitor_rules(replacement)
         self.state["monitor_rules"] = rules
         self._save_state(self.state)
         page = self._rules_page()

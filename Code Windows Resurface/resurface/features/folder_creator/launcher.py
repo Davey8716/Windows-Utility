@@ -49,10 +49,11 @@ class FolderCreatorLauncher:
             return FolderCreatorLaunchResult(FolderCreatorLaunchStatus.FOCUSED, project_dir, target)
         try:
             subprocess.Popen(
-                self.python_script_command(target),
+                self.launch_command(target),
                 cwd=str(project_dir),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
         except Exception as exc:
             print(f"[DEBUG] Folder Creator launch failed for {target}: {exc}")
@@ -93,12 +94,20 @@ class FolderCreatorLauncher:
     def window_process_references_script(self, hwnd: int, script_path: Path) -> bool:
         try:
             _thread_id, pid = win32process.GetWindowThreadProcessId(hwnd)
-            process = psutil.Process(pid)
+        except Exception:
+            return False
+        return self.process_references_target(pid, script_path)
+
+    @staticmethod
+    def process_references_target(process_id: int, target_path: Path) -> bool:
+        """Match either a bundled companion executable or its source launcher."""
+        try:
+            process = psutil.Process(process_id)
             cmdline = process.cmdline()
             cwd = process.cwd()
         except Exception:
             return False
-        normalized_script = str(script_path.resolve()).casefold()
+        normalized_target = str(target_path.resolve()).casefold()
         cwd_path = Path(cwd) if cwd else None
         for arg in cmdline:
             if not arg:
@@ -109,15 +118,19 @@ class FolderCreatorLauncher:
                 candidates.append(cwd_path / arg_path)
             for candidate in candidates:
                 try:
-                    if str(candidate.resolve()).casefold() == normalized_script:
+                    if str(candidate.resolve()).casefold() == normalized_target:
                         return True
                 except OSError:
                     continue
         return False
 
     def resolve_launch_target(self, project_dir: Path) -> Path | None:
-        target = project_dir.resolve() / "main.py"
-        return target if target.is_file() else None
+        project_dir = project_dir.resolve()
+        for name in ("Folder Creator.exe", "main.py"):
+            target = project_dir / name
+            if target.is_file():
+                return target
+        return None
 
     def resolve_project_root(self) -> Path:
         for candidate in self.project_root_candidates():
@@ -131,6 +144,7 @@ class FolderCreatorLauncher:
         env_path = os.environ.get(PROJECT_ROOT_ENV_VAR)
         if env_path:
             candidates.append(Path(env_path))
+        candidates.append(Path(sys.executable).resolve().parent)
         candidates.append(Path(__file__).resolve().parents[4])
         cwd = Path.cwd().resolve()
         candidates.extend((cwd, *cwd.parents))
@@ -139,13 +153,30 @@ class FolderCreatorLauncher:
 
     @staticmethod
     def is_project_root(path: Path) -> bool:
-        return (path / "Code Windows Resurface" / "main.py").is_file()
+        return (
+            (path / "Code Windows Resurface" / "main.py").is_file()
+            or (path / "Code Folder Creator" / "Folder Creator.exe").is_file()
+        )
+
+    @classmethod
+    def launch_command(cls, target: Path) -> list[str]:
+        if target.suffix.casefold() == ".exe":
+            return [str(target)]
+        return cls.python_script_command(target)
 
     @staticmethod
     def python_script_command(script_path: Path) -> list[str]:
         executable = Path(sys.executable)
-        if executable.name.lower().startswith("python"):
+        if executable.name.lower().startswith("pythonw"):
             return [str(executable), str(script_path)]
+        if executable.name.lower().startswith("python"):
+            windowless = executable.with_name("pythonw.exe")
+            if windowless.is_file():
+                return [str(windowless), str(script_path)]
+            return [str(executable), str(script_path)]
+        pythonw_path = shutil.which("pythonw")
+        if pythonw_path:
+            return [pythonw_path, str(script_path)]
         python_path = shutil.which("python")
         if python_path:
             return [python_path, str(script_path)]

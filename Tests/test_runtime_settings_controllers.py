@@ -166,3 +166,46 @@ def test_monitor_rules_controller_migrates_retired_filters_once():
     assert len(saved) == 1 and tray_syncs == [True]
     assert controller.migrate_retired_filters() is False
     assert len(saved) == 1
+
+
+def test_monitor_rules_controller_merges_component_rules_using_first_target():
+    component = {
+        "id": "main",
+        "name": "Windows Resurface",
+        "enabled": True,
+        "reapply_if_moved": True,
+        "executable_name": "Windows Resurface.exe",
+        "executable_path": r"C:\Apps\Windows Resurface.exe",
+        "match_exact_path": True,
+        "target_device": r"\\.\DISPLAY2",
+        "target_label": "Monitor 2",
+        "placement_mode": "maximize",
+        "saved_geometry": None,
+    }
+    later_component = {
+        **component,
+        "id": "folder",
+        "executable_name": "Folder Creator.exe",
+        "target_device": r"\\.\DISPLAY3",
+        "target_label": "Monitor 3",
+    }
+    unrelated = {**component, "id": "discord", "executable_name": "Discord.exe"}
+    state = {"monitor_rules": [unrelated, component, later_component]}
+    saved = []
+    controller = MonitorRulesController(
+        state=state,
+        watcher=FakeWatcher(),
+        save_state=lambda current: saved.append(current["monitor_rules"]),
+        window_handle=lambda: 99,
+        rules_page=lambda: None,
+        sync_tray=lambda: None,
+    )
+
+    assert controller.migrate_windows_resurface_group_rules() is True
+    assert [rule["id"] for rule in state["monitor_rules"]] == ["discord", "main"]
+    grouped = state["monitor_rules"][1]
+    assert grouped["app_group"] == "windows_resurface"
+    assert grouped["target_device"] == r"\\.\DISPLAY2"
+    assert grouped["reapply_if_moved"] is True
+    assert grouped["placement_mode"] == "keep_size"
+    assert len(saved) == 1

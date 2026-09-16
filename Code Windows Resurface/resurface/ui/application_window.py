@@ -268,6 +268,7 @@ class UtilityControlApp(
         self.hover_window_controls.start()
         self.clipboard_provenance.start()
         self.apply_screen_mover_settings()
+        self.monitor_rules_controller.migrate_windows_resurface_group_rules()
         self.monitor_rules_controller.migrate_retired_filters()
         self.monitor_rules_controller.prune_missing_exact_path_rules()
         self.apply_monitor_rule_settings(apply_existing=True)

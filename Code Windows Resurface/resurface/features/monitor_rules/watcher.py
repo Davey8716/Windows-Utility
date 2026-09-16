@@ -8,6 +8,7 @@ import threading
 import time
 
 from .rule_schema import first_matching_rule, normalize_monitor_rules
+from .application_groups import window_application_group
 from .win32_windows import (
     _left_mouse_pressed,
     apply_monitor_rule,
@@ -166,6 +167,10 @@ class MonitorRuleWatcher:
         should_wake = False
         with self._lock:
             details = window_details(hwnd, app_hwnd=self._app_hwnd)
+            if details is not None:
+                details["app_group"] = window_application_group(
+                    details, app_hwnd=self._app_hwnd
+                )
             rule = first_matching_rule(self._rules, details) if details else None
             if rule is None:
                 return
@@ -202,10 +207,11 @@ class MonitorRuleWatcher:
             if not self._rules:
                 return
             app_hwnd = self._app_hwnd
-        details_by_hwnd = {
-            details["hwnd"]: details
-            for details in enumerate_eligible_windows(app_hwnd=app_hwnd)
-        }
+        details_by_hwnd = {}
+        for details in enumerate_eligible_windows(app_hwnd=app_hwnd):
+            details = copy.deepcopy(details)
+            details["app_group"] = window_application_group(details, app_hwnd=app_hwnd)
+            details_by_hwnd[details["hwnd"]] = details
         now = time.monotonic()
         with self._lock:
             rules = self._rules
@@ -271,6 +277,10 @@ class MonitorRuleWatcher:
             if revision != self._revision:
                 return
             details = window_details(hwnd, app_hwnd=self._app_hwnd)
+            if details is not None:
+                details["app_group"] = window_application_group(
+                    details, app_hwnd=self._app_hwnd
+                )
             if details is None or _identity(details) != self._seen.get(hwnd):
                 self._seen.pop(hwnd, None)
                 self._pending.pop(hwnd, None)
@@ -316,6 +326,10 @@ class MonitorRuleWatcher:
             if revision != self._revision:
                 return
             fresh = window_details(hwnd, app_hwnd=self._app_hwnd)
+            if fresh is not None:
+                fresh["app_group"] = window_application_group(
+                    fresh, app_hwnd=self._app_hwnd
+                )
             if fresh is None or _identity(fresh) != self._seen.get(hwnd):
                 self._seen.pop(hwnd, None)
                 self._pending.pop(hwnd, None)

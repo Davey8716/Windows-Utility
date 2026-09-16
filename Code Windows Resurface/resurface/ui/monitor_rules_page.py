@@ -38,12 +38,16 @@ from resurface.ui.monitor_rule_editor_dialog import (
 )
 from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 from resurface.ui.tooltips import set_tooltip
+from resurface.features.monitor_rules import WINDOWS_RESURFACE_GROUP
 
 
 MONITOR_RULES_HELP_TEXT = (
     "• Rules are checked from top to bottom; the first complete match wins.\n\n"
     "• Enabled rules place matching windows when Windows Resurface starts and "
     "when applications open.\n\n"
+    "• The built-in Windows Resurface rule covers both Windows Resurface and "
+    "Folder Creator. They always share its target monitor while keeping their "
+    "own size and window state.\n\n"
     "• For 15 seconds after a window is detected or a rule is applied, placement "
     "can be retried if the application moves itself.\n\n"
     "• Changes made in Add Rule or Edit Rule take effect only after Save. Saved "
@@ -239,6 +243,14 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
 
     @staticmethod
     def _rule_detail_lines(rule: dict) -> list[str]:
+        if rule.get("app_group") == WINDOWS_RESURFACE_GROUP:
+            return [
+                "Application: Windows Resurface + Folder Creator",
+                f"Target: {rule['target_label']}",
+                "Placement: Keep each window's current size and state",
+                "Reapply if moved: "
+                + ("Enabled" if rule["reapply_if_moved"] else "Disabled"),
+            ]
         match_text = (
             rule["executable_path"]
             if rule["match_exact_path"]

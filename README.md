@@ -115,7 +115,7 @@ is active and resumes afterward when the feature is enabled.
 
 Monitor Rules are evaluated from top to bottom while Windows Resurface is open
 or hidden in the system tray. Rules can match an exact executable path or an
-executable name, with optional title and window-class filters. Matching windows
+executable name. Matching windows
 are placed when Windows Resurface starts and when applications open. Placement
 is checked for 15 seconds to handle delayed startup and applications restoring
 their own position. Adding, editing, enabling, deleting, or reordering rules also
@@ -131,6 +131,11 @@ rule: they immediately end recovery when Reapply is disabled, while an enforced
 rule returns the window to its assigned monitor after the normal settle delay.
 If the assigned display is disconnected, no other display is substituted; retries
 stop after recovery unless Reapply is enabled.
+
+The built-in `Windows Resurface` monitor rule treats Windows Resurface and its
+Folder Creator companion as one application. Both processes always use the same
+target monitor, while retaining their own window size and state; separate rules
+for those components are not available.
 
 The master backup path is configurable inside the app and defaults to your home folder. Depending on which tools you use, Windows Resurface can create files such as:
 

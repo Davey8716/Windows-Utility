@@ -6,6 +6,7 @@ from .rule_schema import (
     prune_missing_exact_path_rules,
     rule_matches_window,
 )
+from .application_groups import WINDOWS_RESURFACE_GROUP, WINDOWS_RESURFACE_GROUP_NAME
 from .repository import BackupDirectoryNotConfiguredError, MonitorRulesRepository
 from .watcher import MonitorRuleWatcher
 from .win32_windows import (
@@ -27,4 +28,6 @@ __all__ = [
     "normalize_monitor_rules",
     "prune_missing_exact_path_rules",
     "rule_matches_window",
+    "WINDOWS_RESURFACE_GROUP",
+    "WINDOWS_RESURFACE_GROUP_NAME",
 ]
