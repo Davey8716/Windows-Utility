@@ -162,7 +162,7 @@ def test_folder_creator_tab_controls_have_a_15px_top_left_inset(tmp_path):
     env["USERPROFILE"] = str(tmp_path)
     env["QT_QPA_PLATFORM"] = "offscreen"
     command = (
-        "from PySide6.QtCore import QPoint\n"
+        "from PySide6.QtCore import QPoint, Qt\n"
         "from PySide6.QtWidgets import QApplication\n"
         "from folder_creator.ui.main_window import MainWindow\n"
         "app = QApplication([])\n"
@@ -185,6 +185,9 @@ def test_folder_creator_tab_controls_have_a_15px_top_left_inset(tmp_path):
         "assert window.add_subfolder_btn.mapTo(window, QPoint()).y() == window.add_folder_btn.mapTo(window, QPoint()).y()\n"
         "assert window.add_subfolder_btn.mapTo(window, QPoint()).x() - window.add_folder_btn.mapTo(window, QPoint()).x() == 88\n"
         "window.section_navigation.setCurrentRow(3); app.processEvents()\n"
+        "template_page = window.controls_stack.currentWidget()\n"
+        "assert template_page.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff\n"
+        "assert not template_page.verticalScrollBar().isVisible()\n"
         "assert window.tree_frame.mapTo(window, QPoint()).y() - (window.template_controls_frame.mapTo(window, QPoint()).y() + window.template_controls_frame.height()) == 11\n"
         "window.section_navigation.setCurrentRow(4); app.processEvents()\n"
         "assert window.tree_frame.mapTo(window, QPoint()).y() - (window.build_buttons_frame.mapTo(window, QPoint()).y() + window.build_buttons_frame.height()) == 21\n"

@@ -387,7 +387,9 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             self._create_control_page(self.date_controls_frame),
             self._create_control_page(self.post_build_frame),
             self._create_control_page(
-                self.template_controls_frame, self.template_path_column
+                self.template_controls_frame,
+                self.template_path_column,
+                vertical_scrollbar_policy=Qt.ScrollBarPolicy.ScrollBarAlwaysOff,
             ),
             self._create_control_page(self.build_buttons_frame, self.base_path_column),
         )
@@ -407,13 +409,17 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.section_navigation.itemClicked.connect(self._on_section_clicked)
         self.section_navigation.setCurrentRow(0)
 
-    def _create_control_page(self, *widgets):
+    def _create_control_page(
+        self,
+        *widgets,
+        vertical_scrollbar_policy=Qt.ScrollBarPolicy.ScrollBarAsNeeded,
+    ):
         page = RoundedControlPage()
         page.setObjectName("FolderCreatorControlPage")
         page.setWidgetResizable(True)
         page.setFrameShape(QFrame.Shape.NoFrame)
         page.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        page.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        page.setVerticalScrollBarPolicy(vertical_scrollbar_policy)
 
         content = QWidget()
         content.setObjectName("FolderCreatorControlPageContent")
