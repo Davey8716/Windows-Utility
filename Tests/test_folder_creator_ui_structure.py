@@ -218,7 +218,7 @@ def test_folder_creator_tab_controls_have_a_15px_top_left_inset(tmp_path):
         "template_page = window.controls_stack.currentWidget()\n"
         "assert template_page.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff\n"
         "assert not template_page.verticalScrollBar().isVisible()\n"
-        "assert window.tree_frame.mapTo(window, QPoint()).y() - (window.template_controls_frame.mapTo(window, QPoint()).y() + window.template_controls_frame.height()) == 11\n"
+        "assert window.tree_frame.mapTo(window, QPoint()).y() - (window.template_controls_frame.mapTo(window, QPoint()).y() + window.template_controls_frame.height()) == 21\n"
         "window.section_navigation.setCurrentRow(4); app.processEvents()\n"
         "assert window.tree_frame.mapTo(window, QPoint()).y() - (window.build_buttons_frame.mapTo(window, QPoint()).y() + window.build_buttons_frame.height()) == 21\n"
         "print('FOLDER_CREATOR_TAB_CONTROL_INSETS_READY')\n"

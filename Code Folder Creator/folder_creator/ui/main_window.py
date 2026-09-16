@@ -148,7 +148,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
     CONTROL_STACK_HEIGHT = 244
     TEMPLATE_CONTROL_STACK_HEIGHT = 250
     CONTROL_STACK_TO_TREE_GAP = 8
-    TEMPLATE_STACK_TO_TREE_GAP = 12
+    TEMPLATE_STACK_TO_TREE_GAP = 8
 
     SECTION_DEFINITIONS = (
         ("folders", "Folders", "\ue8b7", "Create and edit folders and files."),
