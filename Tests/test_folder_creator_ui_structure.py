@@ -378,6 +378,48 @@ def test_folder_creator_tree_toolbar_uses_title_case_labels(tmp_path):
     assert "FOLDER_CREATOR_TREE_TOOLBAR_LABELS_READY" in result.stdout
 
 
+def test_folder_creator_compact_tree_placeholder_font_fits_and_restores_expanded_size(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtCore import QRect, Qt\n"
+        "from PySide6.QtGui import QFont, QFontMetrics\n"
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "from folder_creator.ui.tree_editor_panel import TREE_PLACEHOLDER\n"
+        "app = QApplication([])\n"
+        "window = MainWindow(); window.show(); app.processEvents()\n"
+        "assert window.tree.placeholderFontSize() == 7\n"
+        "font = QFont('Segoe UI', window.tree.placeholderFontSize()); font.setBold(True)\n"
+        "bounds = QFontMetrics(font).boundingRect(QRect(0, 0, window.tree.viewport().width(), 10000), Qt.AlignCenter | Qt.TextWordWrap, TREE_PLACEHOLDER)\n"
+        "assert bounds.height() <= window.tree.viewport().height()\n"
+        "normal_height = window.tree.height()\n"
+        "window.tree_gui_stretch(); app.processEvents()\n"
+        "assert window.tree.placeholderFontSize() == 10\n"
+        "assert window.tree.height() == window.tree_expanded_height\n"
+        "window.tree_gui_stretch(); app.processEvents()\n"
+        "assert window.tree.placeholderFontSize() == 7\n"
+        "assert window.tree.height() == normal_height\n"
+        "print('FOLDER_CREATOR_PLACEHOLDER_SIZING_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_PLACEHOLDER_SIZING_READY" in result.stdout
+
+
 def test_folder_creator_top_control_dropdowns_keep_12px_font_across_themes(
     tmp_path,
 ):

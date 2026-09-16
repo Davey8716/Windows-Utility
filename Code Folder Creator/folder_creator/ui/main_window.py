@@ -613,11 +613,17 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             self.bottom_info_frame.hide()
             self.tree.setFixedHeight(self.tree_expanded_height)
             self._set_tree_frame_height(self.tree_expanded_height)
+            self.tree.setPlaceholderFontSize(
+                self.tree.EXPANDED_PLACEHOLDER_FONT_SIZE
+            )
             self.expand_tree_btn.setText("Collapse")
         else:
             self.bottom_info_frame.show()
             self.tree.setFixedHeight(self.tree_default_height)
             self._set_tree_frame_height(self.tree_default_height)
+            self.tree.setPlaceholderFontSize(
+                self.tree.COMPACT_PLACEHOLDER_FONT_SIZE
+            )
             self.expand_tree_btn.setText("Expand")
         QTimer.singleShot(0, self.ui_state.update_build_button_state)
         self.tree.setVisible(True)

@@ -125,6 +125,8 @@ class TreeEditorPanel:
         self.tree.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.tree.setStyleSheet(styles.surfaced_tree_widget_style())
         self.tree.setPlaceholderText(TREE_PLACEHOLDER, bold=True)
+        # The compact tree must show the full instructional placeholder.
+        self.tree.setPlaceholderFontSize(self.tree.COMPACT_PLACEHOLDER_FONT_SIZE)
         tree_layout.addWidget(self.tree)
 
         self.expand_tree_btn = QPushButton("Expand")

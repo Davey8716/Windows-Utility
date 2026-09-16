@@ -11,6 +11,9 @@ from folder_creator.features.tree.outline_parser import parse_indented_text
 
 class SmartTreeWidget(QTreeWidget):
 
+    EXPANDED_PLACEHOLDER_FONT_SIZE = 10
+    COMPACT_PLACEHOLDER_FONT_SIZE = 7.5
+
     fileDropped = Signal(str)
     addFolderShortcut = Signal()
     addSubfolderShortcut = Signal()
@@ -33,11 +36,19 @@ class SmartTreeWidget(QTreeWidget):
         # ---- Placeholder state ----
         self._placeholder = ""
         self._placeholder_bold = False
+        self._placeholder_font_size = self.EXPANDED_PLACEHOLDER_FONT_SIZE
         
     def setPlaceholderText(self, text: str, bold: bool = False):
         self._placeholder = text
         self._placeholder_bold = bold
         self.viewport().update()
+
+    def setPlaceholderFontSize(self, size: int) -> None:
+        self._placeholder_font_size = size
+        self.viewport().update()
+
+    def placeholderFontSize(self) -> int:
+        return self._placeholder_font_size
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -50,8 +61,8 @@ class SmartTreeWidget(QTreeWidget):
         
         painter = QPainter(self.viewport())
 
-        font = QFont("Segoe UI", 10)
-        font.setBold(True)
+        font = QFont("Segoe UI", self._placeholder_font_size)
+        font.setBold(self._placeholder_bold)
         painter.setFont(font)
 
         painter.setPen(styles.tree_placeholder_color())
