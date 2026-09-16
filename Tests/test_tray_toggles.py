@@ -176,13 +176,13 @@ def test_tray_theme_action_switches_theme_through_user_interface_page() -> None:
     manager.create_tray_icon()
 
     assert manager.menu.actions()[2] is manager.theme_action
-    assert manager.theme_action.text() == "Switch to Light Mode"
+    assert manager.theme_action.text() == "Turn Light Mode On"
 
     manager.theme_action.trigger()
 
     assert window.pages.user_interface_page.enabled_calls == [False]
     assert window.state["theme_dark"] is False
-    assert manager.theme_action.text() == "Switch to Dark Mode"
+    assert manager.theme_action.text() == "Turn Light Mode Off"
 
 
 def test_application_icon_candidates_prioritize_env_var(monkeypatch, tmp_path) -> None:

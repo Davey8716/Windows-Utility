@@ -158,7 +158,7 @@ class TrayIconManager(QObject):
 
         is_dark = bool(getattr(self.app, "state", {}).get("theme_dark", True))
         self.theme_action.setText(
-            "Switch to Light Mode" if is_dark else "Switch to Dark Mode"
+            "Turn Light Mode On" if is_dark else "Turn Light Mode Off"
         )
 
     def sync_folder_creator_action(self):
