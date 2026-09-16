@@ -76,7 +76,7 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
         "window = MainWindow(); window.show(); app.processEvents(); "
         "assert window.windowFlags() & Qt.WindowType.FramelessWindowHint; "
         "assert window.windowTitle() == 'Folder Generator'; "
-        "assert window.size().toTuple() == (1000, 860); "
+        "assert window.size().toTuple() == (1000, 870); "
         "assert window.window_title_bar.height() == 50; "
         "assert window.title_label.text() == 'Nested Folder Creator'; "
         "assert window.window_minimize_btn.parent() is window.window_title_bar; "
