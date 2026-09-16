@@ -3,16 +3,20 @@ import ctypes
 from PySide6.QtCore import QSize, QTimer, Qt
 from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QComboBox,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLayout,
+    QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
+    QStackedWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -82,6 +86,36 @@ class MainWindow(WindowMessageMixin, QMainWindow):
     TITLE_TEXT_TOP_PADDING = 10
     TITLE_CONTROL_WIDTH = 42
     CONTROL_FONT_SIZE = 12
+    NAVIGATION_WIDTH = 205
+    CONTROL_STACK_HEIGHT = 244
+
+    SECTION_DEFINITIONS = (
+        ("folders", "Folders", "\ue8b7", "Create and edit folders and files."),
+        (
+            "date_numbering",
+            "Date & Numbering",
+            "\ue787",
+            "Configure automatic numbering and parent-folder dates.",
+        ),
+        (
+            "after_build",
+            "After Build",
+            "\ue945",
+            "Choose what Folder Creator does after a successful build.",
+        ),
+        (
+            "templates",
+            "Templates",
+            "\ue8a5",
+            "Load, save, and manage reusable folder templates.",
+        ),
+        (
+            "output_build",
+            "Output & Build",
+            "\ue896",
+            "Choose the output location and build the folder structure.",
+        ),
+    )
 
     def __init__(self):
         super().__init__()
@@ -102,13 +136,10 @@ class MainWindow(WindowMessageMixin, QMainWindow):
 
         self.window_width = WINDOWS_RESURFACE_EXPANDED_WIDTH
         self.window_height = WINDOWS_RESURFACE_HEIGHT
-        # Reserve room for the larger toolbar inset in the normal view.  The
-        # expanded editor keeps its full-height tree.
-        self.tree_default_height = 350
-        # This is the largest expanded height that leaves the toolbar and its
-        # top inset in the fixed-height window without overlap.
-        self.tree_expanded_height = 458
+        self.tree_default_height = 370
+        self.tree_expanded_height = 610
         self.tree_frame_padding = 2
+        self._tree_view_expanded = False
         self.setWindowTitle("Folder Generator")
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setFixedSize(self.window_width, self.window_height)
@@ -125,15 +156,18 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             # its toolbar, without stealing meaningful space from the tree.
             "controls_to_tree_gap": 8,
             "tree_to_controls_gap": 16,
-            "find_input_width": 230,
+            "find_input_width": 180,
             "expand_width": 120,
             "collapse_width": 160,
             "sort_width": 110,
             "find_width": 80,
         }
         smart_frame_width = self.window_width - 25
-        toolbar_edge_inset = metrics["frame_padding"] * 2
-        self.tree_width = smart_frame_width - (toolbar_edge_inset * 2)
+        smart_content_width = smart_frame_width - (metrics["frame_padding"] * 2)
+        self.right_pane_width = (
+            smart_content_width - self.NAVIGATION_WIDTH - metrics["section_gap"]
+        )
+        self.tree_width = self.right_pane_width - 6
         self._create_panels(metrics)
         self._compose_window(metrics)
         self._configure_tooltips()
@@ -211,9 +245,8 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.smart_folder_creator_frame.setFixedSize(
             self.window_width - 25, content_height
         )
-        self.smart_layout = QVBoxLayout(self.smart_folder_creator_frame)
-        self.smart_layout.setSpacing(0)
-        self.smart_layout.setAlignment(Qt.AlignTop)
+        self.smart_layout = QHBoxLayout(self.smart_folder_creator_frame)
+        self.smart_layout.setSpacing(section_gap)
         self.smart_layout.setContentsMargins(
             frame_padding,
             metrics["top_frame_inset"],
@@ -221,24 +254,21 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             frame_padding,
         )
 
-        controls_layout = QGridLayout()
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.setHorizontalSpacing(section_gap)
-        controls_layout.setVerticalSpacing(section_gap)
-        controls_layout.setSizeConstraint(QLayout.SetFixedSize)
-        top_frames = (
-            self.folder_buttons_frame,
-            self.date_controls_frame,
-            self.post_build_frame,
-            self.template_controls_frame,
-            self.build_buttons_frame,
-        )
-        for column, frame in enumerate(top_frames):
-            controls_layout.addWidget(frame, 0, column, alignment=Qt.AlignTop)
-            controls_layout.setColumnStretch(column, 1)
-        self.smart_layout.addLayout(controls_layout)
-        self.smart_layout.addSpacing(metrics["controls_to_tree_gap"])
-        self.smart_layout.addWidget(self.tree_frame, alignment=Qt.AlignHCenter)
+        self._create_section_navigation()
+        self.smart_layout.addWidget(self.section_navigation)
+
+        self.right_pane = QWidget()
+        self.right_pane.setObjectName("FolderCreatorRightPane")
+        self.right_pane.setFixedWidth(self.right_pane_width)
+        right_layout = QVBoxLayout(self.right_pane)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
+        right_layout.setAlignment(Qt.AlignTop)
+        right_layout.addWidget(self.controls_stack)
+        self.controls_to_tree_spacer = QWidget()
+        self.controls_to_tree_spacer.setFixedHeight(metrics["controls_to_tree_gap"])
+        right_layout.addWidget(self.controls_to_tree_spacer)
+        right_layout.addWidget(self.tree_frame, alignment=Qt.AlignHCenter)
         # Keep a visible, fixed gap between the tree surface and the toolbar
         # in both normal and expanded-tree modes.
         self.tree_toolbar_top_padding = QWidget()
@@ -249,13 +279,13 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.tree_toolbar_top_padding.setSizePolicy(
             QSizePolicy.Expanding, QSizePolicy.Fixed
         )
-        self.smart_layout.addWidget(self.tree_toolbar_top_padding)
-        self.smart_layout.addLayout(self.tree_controls_layout)
-        self.smart_layout.addSpacing(section_gap)
+        right_layout.addWidget(self.tree_toolbar_top_padding)
+        right_layout.addLayout(self.tree_controls_layout)
+        right_layout.addSpacing(section_gap)
 
         self.bottom_info_frame = QFrame()
         self.bottom_info_frame.setFrameShape(QFrame.NoFrame)
-        self.bottom_info_frame.setFixedWidth(self.smart_folder_creator_frame.width())
+        self.bottom_info_frame.setFixedWidth(self.right_pane_width)
         self.bottom_info_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.bottom_info_frame.setStyleSheet("border: none;")
         bottom_layout = QVBoxLayout(self.bottom_info_frame)
@@ -263,11 +293,101 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             frame_padding, frame_padding, frame_padding, frame_padding
         )
         bottom_layout.setSpacing(section_gap)
-        bottom_layout.addLayout(self._create_paths_layout(metrics))
         self._create_status_frame(frame_padding, control_gap)
         bottom_layout.addWidget(self.smart_status_frame, alignment=Qt.AlignLeft)
-        self.smart_layout.addWidget(self.bottom_info_frame, alignment=Qt.AlignLeft)
+        right_layout.addWidget(self.bottom_info_frame, alignment=Qt.AlignLeft)
+        self.smart_layout.addWidget(self.right_pane)
         main_layout.addWidget(self.smart_folder_creator_frame, alignment=Qt.AlignHCenter)
+
+    def _create_section_navigation(self):
+        self.section_navigation = QListWidget()
+        self.section_navigation.setObjectName("FolderCreatorNavigationList")
+        self.section_navigation.setFixedWidth(self.NAVIGATION_WIDTH)
+        self.section_navigation.setIconSize(QSize(22, 22))
+        self.section_navigation.setSpacing(2)
+        self.section_navigation.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.section_navigation.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.section_navigation.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
+        )
+        self.section_navigation.setAccessibleName("Folder Creator sections")
+
+        self.controls_stack = QStackedWidget()
+        self.controls_stack.setObjectName("FolderCreatorControlsStack")
+        self.controls_stack.setFixedSize(
+            self.right_pane_width, self.CONTROL_STACK_HEIGHT
+        )
+
+        pages = (
+            self._create_control_page(self.folder_buttons_frame),
+            self._create_control_page(self.date_controls_frame),
+            self._create_control_page(self.post_build_frame),
+            self._create_control_page(
+                self.template_controls_frame, self.template_path_column
+            ),
+            self._create_control_page(self.build_buttons_frame, self.base_path_column),
+        )
+        for definition, page in zip(self.SECTION_DEFINITIONS, pages):
+            section_id, label, _glyph, description = definition
+            item = QListWidgetItem(label)
+            item.setData(Qt.ItemDataRole.UserRole, section_id)
+            item.setSizeHint(QSize(self.NAVIGATION_WIDTH - 16, 48))
+            item.setToolTip(description)
+            self.section_navigation.addItem(item)
+            self.controls_stack.addWidget(page)
+
+        self._refresh_section_navigation_icons()
+        self.section_navigation.currentRowChanged.connect(
+            self._on_section_changed
+        )
+        self.section_navigation.itemClicked.connect(self._on_section_clicked)
+        self.section_navigation.setCurrentRow(0)
+
+    def _create_control_page(self, *widgets):
+        page = QScrollArea()
+        page.setObjectName("FolderCreatorControlPage")
+        page.setWidgetResizable(True)
+        page.setFrameShape(QFrame.Shape.NoFrame)
+        page.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        page.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        content = QWidget()
+        content.setObjectName("FolderCreatorControlPageContent")
+        content.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        content.setMinimumHeight(max(widget.height() for widget in widgets))
+        layout = QHBoxLayout(content)
+        layout.setSizeConstraint(QLayout.SetMinimumSize)
+        layout.setContentsMargins(10, 0, 10, 0)
+        layout.setSpacing(16)
+        layout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        for widget in widgets:
+            layout.addWidget(widget, alignment=Qt.AlignTop)
+        page.setWidget(content)
+        return page
+
+    def _on_section_changed(self, row):
+        if row < 0 or row >= self.controls_stack.count():
+            return
+        self.controls_stack.setCurrentIndex(row)
+        if self._tree_view_expanded:
+            self._set_tree_view_expanded(False)
+
+    def _on_section_clicked(self, item):
+        """Restore a hidden current page when its selected item is clicked."""
+        if self._tree_view_expanded:
+            self._on_section_changed(self.section_navigation.row(item))
+
+    def _refresh_section_navigation_icons(self):
+        for row, (_section_id, _label, glyph, _description) in enumerate(
+            self.SECTION_DEFINITIONS
+        ):
+            item = self.section_navigation.item(row)
+            if item is not None:
+                item.setIcon(styles.create_navigation_icon(glyph))
 
     def _create_title_bar(self):
         self.window_title_bar = QFrame()
@@ -369,22 +489,6 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             painter.drawLine(12, 4, 4, 12)
         painter.end()
         return QIcon(pixmap)
-
-    def _create_paths_layout(self, metrics):
-        paths_layout = QGridLayout()
-        paths_layout.setContentsMargins(0, metrics["frame_padding"], 0, metrics["frame_padding"])
-        paths_layout.setHorizontalSpacing(0)
-        paths_layout.setVerticalSpacing(metrics["tight_gap"])
-        paths_layout.setColumnMinimumWidth(0, self.template_path_column.width())
-        paths_layout.setColumnStretch(1, 1)
-        paths_layout.setColumnMinimumWidth(2, self.base_path_column.width())
-        paths_layout.addWidget(
-            self.template_path_column, 0, 0, alignment=Qt.AlignLeft
-        )
-        paths_layout.addWidget(
-            self.base_path_column, 0, 2, alignment=Qt.AlignLeft
-        )
-        return paths_layout
 
     def _create_status_frame(self, frame_padding, control_gap):
         self.smart_status_frame = QFrame()
@@ -527,6 +631,12 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.window_close_btn.setStyleSheet(
             styles.title_bar_control_style(close_button=True)
         )
+        self.section_navigation.setStyleSheet(styles.navigation_list_style())
+        for page_index in range(self.controls_stack.count()):
+            self.controls_stack.widget(page_index).setStyleSheet(
+                styles.control_page_style()
+            )
+        self._refresh_section_navigation_icons()
         self.window_close_btn.setIcon(self._title_bar_icon("close"))
         self.tree_frame.setStyleSheet(styles.tree_outer_frame_style())
         self.tree.setStyleSheet(styles.surfaced_tree_widget_style())
@@ -619,23 +729,27 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.tree_frame.setFixedHeight(tree_height + (self.tree_frame_padding * 2))
 
     def tree_gui_stretch(self):
-        is_visible = self.bottom_info_frame.isVisible()
-        if is_visible:
-            self.bottom_info_frame.hide()
-            self.tree.setFixedHeight(self.tree_expanded_height)
-            self._set_tree_frame_height(self.tree_expanded_height)
-            self.tree.setPlaceholderFontSize(
-                self.tree.EXPANDED_PLACEHOLDER_FONT_SIZE
-            )
-            self.expand_tree_btn.setText("Collapse")
-        else:
-            self.bottom_info_frame.show()
-            self.tree.setFixedHeight(self.tree_default_height)
-            self._set_tree_frame_height(self.tree_default_height)
-            self.tree.setPlaceholderFontSize(
-                self.tree.COMPACT_PLACEHOLDER_FONT_SIZE
-            )
-            self.expand_tree_btn.setText("Expand")
+        self._set_tree_view_expanded(not self._tree_view_expanded)
+
+    def _set_tree_view_expanded(self, expanded):
+        self._tree_view_expanded = bool(expanded)
+        self.controls_stack.setVisible(not self._tree_view_expanded)
+        self.controls_to_tree_spacer.setVisible(not self._tree_view_expanded)
+        tree_height = (
+            self.tree_expanded_height
+            if self._tree_view_expanded
+            else self.tree_default_height
+        )
+        self.tree.setFixedHeight(tree_height)
+        self._set_tree_frame_height(tree_height)
+        self.tree.setPlaceholderFontSize(
+            self.tree.EXPANDED_PLACEHOLDER_FONT_SIZE
+            if self._tree_view_expanded
+            else self.tree.COMPACT_PLACEHOLDER_FONT_SIZE
+        )
+        self.expand_tree_btn.setText(
+            "Collapse" if self._tree_view_expanded else "Expand"
+        )
         QTimer.singleShot(0, self.ui_state.update_build_button_state)
         self.tree.setVisible(True)
 

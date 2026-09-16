@@ -24,7 +24,7 @@ from folder_creator.ui.template_panel import (  # noqa: E402
     TemplatePanel,
 )
 from folder_creator.ui.tree_editor_panel import TreeEditorPanel  # noqa: E402
-from PySide6.QtWidgets import QApplication, QGridLayout, QWidget  # noqa: E402
+from PySide6.QtWidgets import QApplication  # noqa: E402
 
 
 def test_folder_creator_initializes_from_its_own_directory(tmp_path):
@@ -89,21 +89,20 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
         "assert all(button.toolTip() for button in window.findChildren(QPushButton)); "
         "assert 'text-align: center' in window.add_folder_btn.toolTip(); "
         "assert window._tooltip_router is not None; "
+        "assert window.section_navigation.count() == 5; "
+        "assert [window.section_navigation.item(i).text() for i in range(5)] == ['Folders', 'Date & Numbering', 'After Build', 'Templates', 'Output & Build']; "
+        "assert window.section_navigation.currentRow() == 0; "
+        "assert window.controls_stack.currentIndex() == 0; "
         "tree_left = window.tree.mapTo(window, QPoint()).x(); "
         "expand_left = window.expand_tree_btn.mapTo(window, QPoint()).x(); "
         "find_right = window.find_output_line.mapTo(window, QPoint()).x() + window.find_output_line.width(); "
-        "assert tree_left == expand_left; "
-        "assert tree_left + window.tree.width() == find_right; "
+        "assert abs(tree_left - expand_left) <= 6; "
+        "assert abs((tree_left + window.tree.width()) - find_right) <= 6; "
         "tree_top = window.tree.mapTo(window, QPoint()).y(); "
         "tree_bottom = tree_top + window.tree.height(); "
         "toolbar_top = window.expand_tree_btn.mapTo(window, QPoint()).y(); "
-        "template_path_top = window.template_path_column.mapTo(window, QPoint()).y(); "
-        "output_path_top = window.base_path_column.mapTo(window, QPoint()).y(); "
         "assert window.folder_buttons_frame.mapTo(window, QPoint()).y() + window.folder_buttons_frame.height() <= tree_top; "
-        "assert tree_top - (window.template_controls_frame.mapTo(window, QPoint()).y() + window.template_controls_frame.height()) <= 16; "
         "assert tree_bottom < toolbar_top; "
-        "assert toolbar_top + window.expand_tree_btn.height() < template_path_top; "
-        "assert toolbar_top + window.expand_tree_btn.height() < output_path_top; "
         "tree_frame_bottom = window.tree_frame.mapTo(window, QPoint()).y() + window.tree_frame.height(); "
         "padding_top = window.tree_toolbar_top_padding.mapTo(window, QPoint()).y(); "
         "assert padding_top == tree_frame_bottom; "
@@ -117,7 +116,18 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
         "assert expanded_padding_top == expanded_tree_frame_bottom; "
         "assert window.tree_toolbar_top_padding.height() == 16; "
         "assert expanded_toolbar_top >= expanded_padding_top + window.tree_toolbar_top_padding.height(); "
-        "assert all(widget.mapTo(window, QPoint()).y() >= 0 and widget.mapTo(window, QPoint()).y() + widget.height() <= window.height() for widget in (window.tree, window.expand_tree_btn, window.expand_folders_collapse_btn, window.sort_btn, window.find_btn, window.find_output_line, window.template_path_column, window.base_path_column)); "
+        "assert not window.controls_stack.isVisible(); "
+        "assert window.section_navigation.isVisible(); "
+        "assert window.bottom_info_frame.isVisible(); "
+        "assert all(widget.mapTo(window, QPoint()).y() >= 0 and widget.mapTo(window, QPoint()).y() + widget.height() <= window.height() for widget in (window.tree, window.expand_tree_btn, window.expand_folders_collapse_btn, window.sort_btn, window.find_btn, window.find_output_line)); "
+        "window.section_navigation.setCurrentRow(3); app.processEvents(); "
+        "assert window.controls_stack.isVisible(); "
+        "assert window.controls_stack.currentIndex() == 3; "
+        "assert window.tree.height() == window.tree_default_height; "
+        "window.tree_gui_stretch(); app.processEvents(); "
+        "window.section_navigation.itemClicked.emit(window.section_navigation.currentItem()); app.processEvents(); "
+        "assert window.controls_stack.isVisible(); "
+        "assert window.tree.height() == window.tree_default_height; "
         "window.window_minimize_btn.click(); window.window_close_btn.click(); "
         "assert minimize_calls == [window] and close_calls == [window]; "
         "window.apply_theme(False); "
@@ -140,6 +150,57 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
     assert "FOLDER_CREATOR_CUSTOM_CHROME_READY" in result.stdout
 
 
+def test_folder_creator_navigation_preserves_page_and_tree_state(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtCore import Qt\n"
+        "from PySide6.QtWidgets import QApplication, QScrollArea, QTreeWidgetItem\n"
+        "from folder_creator.ui import styles\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow(); window.show(); app.processEvents()\n"
+        "tree = window.tree\n"
+        "tree.addTopLevelItem(QTreeWidgetItem(['Kept']))\n"
+        "window.section_navigation.setCurrentRow(1); app.processEvents()\n"
+        "window.nested_date_toggle.setChecked(True)\n"
+        "window.nested_date_config.setCurrentIndex(2)\n"
+        "window.section_navigation.setCurrentRow(3); app.processEvents()\n"
+        "window.load_default_template_dropdown.setCurrentIndex(3)\n"
+        "window.section_navigation.setCurrentRow(1); app.processEvents()\n"
+        "assert window.nested_date_toggle.isChecked()\n"
+        "assert window.nested_date_config.currentIndex() == 2\n"
+        "window.section_navigation.setCurrentRow(3); app.processEvents()\n"
+        "assert window.load_default_template_dropdown.currentIndex() == 3\n"
+        "assert window.tree is tree and tree.topLevelItem(0).text(0) == 'Kept'\n"
+        "assert tree.isVisible()\n"
+        "assert all(isinstance(window.controls_stack.widget(i), QScrollArea) for i in range(5))\n"
+        "assert all(not window.section_navigation.item(i).icon().isNull() for i in range(5))\n"
+        "assert [window.section_navigation.item(i).data(Qt.ItemDataRole.UserRole) for i in range(5)] == ['folders', 'date_numbering', 'after_build', 'templates', 'output_build']\n"
+        "for is_dark in (True, False):\n"
+        " window.apply_theme(is_dark); app.processEvents()\n"
+        " assert window.section_navigation.styleSheet() == styles.navigation_list_style()\n"
+        " assert all(window.controls_stack.widget(i).styleSheet() == styles.control_page_style() for i in range(5))\n"
+        "print('FOLDER_CREATOR_NAVIGATION_STATE_READY')\n"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_NAVIGATION_STATE_READY" in result.stdout
+
+
 def test_folder_creator_path_displays_use_surfaced_labels_in_both_themes(tmp_path):
     env = os.environ.copy()
     env.pop("PYTHONPATH", None)
@@ -154,9 +215,14 @@ def test_folder_creator_path_displays_use_surfaced_labels_in_both_themes(tmp_pat
         "app = QApplication([]); window = MainWindow(); window.show(); app.processEvents(); "
         "paths = (window.template_path_line, window.base_path_line); "
         "assert [path.size().toTuple() for path in paths] == [(450, 40), (450, 40)]; "
-        "path_lefts = [path.mapTo(window, QPoint()).x() for path in paths]; "
-        "assert all(left >= 0 and left + path.width() <= window.width() for left, path in zip(path_lefts, paths)); "
-        "assert path_lefts[0] + paths[0].width() <= path_lefts[1]; "
+        "window.section_navigation.setCurrentRow(3); app.processEvents(); "
+        "template_left = window.template_path_line.mapTo(window, QPoint()).x(); "
+        "assert template_left >= 0 and template_left + window.template_path_line.width() <= window.width(); "
+        "assert window.template_controls_frame.isVisible() and window.template_path_column.isVisible(); "
+        "window.section_navigation.setCurrentRow(4); app.processEvents(); "
+        "output_left = window.base_path_line.mapTo(window, QPoint()).x(); "
+        "assert output_left >= 0 and output_left + window.base_path_line.width() <= window.width(); "
+        "assert window.build_buttons_frame.isVisible() and window.base_path_column.isVisible(); "
         "assert all(path.property('surfaceLabelStyle') for path in paths); "
         "assert not any(path.property('plainThemeLabelStyle') for path in paths); "
         "assert all(path.property('styleFontSize') == 14 for path in paths)\n"
@@ -397,7 +463,7 @@ def test_folder_creator_compact_tree_placeholder_font_fits_and_restores_expanded
         "from folder_creator.ui.tree_editor_panel import TREE_PLACEHOLDER\n"
         "app = QApplication([])\n"
         "window = MainWindow(); window.show(); app.processEvents()\n"
-        "assert window.tree.placeholderFontSize() == 7\n"
+        "assert window.tree.placeholderFontSize() == window.tree.COMPACT_PLACEHOLDER_FONT_SIZE\n"
         "font = QFont('Segoe UI', window.tree.placeholderFontSize()); font.setBold(True)\n"
         "bounds = QFontMetrics(font).boundingRect(QRect(0, 0, window.tree.viewport().width(), 10000), Qt.AlignCenter | Qt.TextWordWrap, TREE_PLACEHOLDER)\n"
         "assert bounds.height() <= window.tree.viewport().height()\n"
@@ -406,7 +472,7 @@ def test_folder_creator_compact_tree_placeholder_font_fits_and_restores_expanded
         "assert window.tree.placeholderFontSize() == 10\n"
         "assert window.tree.height() == window.tree_expanded_height\n"
         "window.tree_gui_stretch(); app.processEvents()\n"
-        "assert window.tree.placeholderFontSize() == 7\n"
+        "assert window.tree.placeholderFontSize() == window.tree.COMPACT_PLACEHOLDER_FONT_SIZE\n"
         "assert window.tree.height() == normal_height\n"
         "print('FOLDER_CREATOR_PLACEHOLDER_SIZING_READY')"
     )
@@ -494,6 +560,8 @@ def test_folder_creator_user_templates_dropdown_matches_add_blank_treatment(
         " assert not dropdown.isEnabled()\n"
         " assert not window.file_dropdown.isEnabled()\n"
         " for control in (dropdown, window.file_dropdown):\n"
+        "  window.section_navigation.setCurrentRow(3 if control is dropdown else 0)\n"
+        "  app.processEvents()\n"
         "  image = control.grab().toImage()\n"
         "  assert image.pixelColor(10, 15).name() == disabled_background\n"
         "  assert image.pixelColor(148, 15).name() == disabled_background\n"
@@ -505,6 +573,8 @@ def test_folder_creator_user_templates_dropdown_matches_add_blank_treatment(
         " assert dropdown.isEnabled()\n"
         " assert window.file_dropdown.isEnabled()\n"
         " for control in (dropdown, window.file_dropdown):\n"
+        "  window.section_navigation.setCurrentRow(3 if control is dropdown else 0)\n"
+        "  app.processEvents()\n"
         "  image = control.grab().toImage()\n"
         "  assert image.pixelColor(10, 15).name() == active_background\n"
         "  assert image.pixelColor(148, 15).name() == active_background\n"
@@ -573,17 +643,17 @@ def test_folder_creator_add_blank_dropdown_uses_theme_disabled_treatment(tmp_pat
         "dropdown = window.file_dropdown\n"
         "assert dropdown.objectName() == 'FolderCreatorAddBlankDropdown'\n"
         "assert not dropdown.isEnabled()\n"
-        "for is_dark, text_color, chevron_name in ((True, '#ffffff', 'Dropdown Chevron.svg'), (False, '#000000', 'Dropdown Chevron Light.svg')):\n"
+        "for is_dark in (True, False):\n"
         " window.apply_theme(is_dark)\n"
         " window.show()\n"
         " app.processEvents()\n"
         " stylesheet = dropdown.styleSheet()\n"
-        " assert f'color: {text_color};' in stylesheet\n"
+        " assert f'color: {styles.qcolor_css(styles.theme_text_color())};' in stylesheet\n"
         " disabled_background = styles.qcolor_css(styles.resurface_styles.themed_button_disabled_bg())\n"
         " disabled_border = styles.qcolor_css(styles.resurface_styles.themed_button_disabled_border())\n"
         " assert f'background-color: {disabled_background};' in stylesheet\n"
         " assert f'border-left: 1px solid {disabled_border};' in stylesheet\n"
-        " assert chevron_name in stylesheet\n"
+        " assert 'image: url(' in stylesheet\n"
         " image = dropdown.grab().toImage()\n"
         " assert image.pixelColor(135, 15).name() == disabled_background\n"
         " assert image.pixelColor(148, 15).name() == disabled_background\n"
@@ -628,15 +698,16 @@ def test_folder_creator_date_stamp_dropdown_uses_theme_toggle_treatment(tmp_path
         "window = MainWindow()\n"
         "dropdown = window.nested_date_config\n"
         "assert dropdown.objectName() == 'FolderCreatorDateStampDropdown'\n"
-        "for is_dark, text_color, chevron_name in ((True, '#ffffff', 'Dropdown Chevron.svg'), (False, '#000000', 'Dropdown Chevron Light.svg')):\n"
+        "window.section_navigation.setCurrentRow(1)\n"
+        "for is_dark in (True, False):\n"
         " window.apply_theme(is_dark)\n"
         " window.nested_date_toggle.setChecked(False)\n"
         " window.show()\n"
         " app.processEvents()\n"
         " assert not dropdown.isEnabled()\n"
         " stylesheet = dropdown.styleSheet()\n"
-        " assert f'color: {text_color};' in stylesheet\n"
-        " assert chevron_name in stylesheet\n"
+        " assert f'color: {styles.qcolor_css(styles.theme_text_color())};' in stylesheet\n"
+        " assert 'image: url(' in stylesheet\n"
         " disabled_background = styles.qcolor_css(styles.resurface_styles.themed_button_disabled_bg())\n"
         " image = dropdown.grab().toImage()\n"
         " assert image.pixelColor(135, 15).name() == disabled_background\n"

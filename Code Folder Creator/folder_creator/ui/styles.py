@@ -104,6 +104,83 @@ def create_fluent_icon(glyph: str, icon_size: int = 16) -> QIcon:
     return QIcon(pixmap)
 
 
+def create_navigation_icon(glyph: str, icon_size: int = 18) -> QIcon:
+    """Create normal and selected variants for a navigation-list glyph."""
+    icon = QIcon()
+    for mode, color in (
+        (QIcon.Mode.Normal, resurface_styles.theme_muted_text_color()),
+        (QIcon.Mode.Selected, resurface_styles.STATUS_ACCENT),
+    ):
+        pixmap = QPixmap(icon_size + 4, icon_size + 4)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        font = QFont("Segoe Fluent Icons")
+        font.setPixelSize(icon_size)
+        painter.setFont(font)
+        painter.setPen(color)
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
+        painter.end()
+        icon.addPixmap(pixmap, mode)
+    return icon
+
+
+def navigation_list_style() -> str:
+    """Return the main-shell navigation treatment for Folder Creator."""
+    selected = (
+        QColor(43, 68, 98)
+        if resurface_styles.THEME_IS_DARK
+        else QColor(202, 222, 244)
+    )
+    hover = (
+        QColor(38, 48, 63)
+        if resurface_styles.THEME_IS_DARK
+        else QColor(226, 234, 243)
+    )
+    return f"""
+        QListWidget#FolderCreatorNavigationList {{
+            background-color: {qcolor_css(SURFACE_BG)};
+            color: {qcolor_css(TEXT_COLOR)};
+            border: 1px solid {qcolor_css(SURFACE_BORDER)};
+            border-radius: {resurface_styles.BUTTON_CORNER_RADIUS}px;
+            outline: none;
+            padding: 8px 6px;
+            font-family: "Segoe UI";
+            font-size: 13px;
+            font-weight: 600;
+        }}
+        QListWidget#FolderCreatorNavigationList::item {{
+            border: none;
+            border-left: 3px solid transparent;
+            border-radius: 5px;
+            padding: 0px 8px;
+            margin: 1px 0px;
+        }}
+        QListWidget#FolderCreatorNavigationList::item:hover {{
+            background-color: {qcolor_css(hover)};
+        }}
+        QListWidget#FolderCreatorNavigationList::item:selected {{
+            background-color: {qcolor_css(selected)};
+            color: {qcolor_css(TEXT_COLOR)};
+            border-left: 3px solid {qcolor_css(resurface_styles.STATUS_ACCENT)};
+        }}
+    """
+
+
+def control_page_style() -> str:
+    return f"""
+        QScrollArea#FolderCreatorControlPage {{
+            background: transparent;
+            border: 1px solid {qcolor_css(SURFACE_BORDER)};
+            border-radius: {resurface_styles.BUTTON_CORNER_RADIUS}px;
+        }}
+        QWidget#FolderCreatorControlPageContent {{
+            background: transparent;
+            border: none;
+        }}
+    """
+
+
 def apply_fluent_icon(button: QPushButton, glyph: str, icon_size: int = 16) -> None:
     """Attach an icon and retain its metadata for theme refreshes."""
     button.setProperty("fluentIconGlyph", glyph)
