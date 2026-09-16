@@ -43,7 +43,7 @@ from resurface.ui.tooltips import (
 
 MAX_NESTED_FOLDER_NAME_LENGTH = 64
 WINDOWS_RESURFACE_EXPANDED_WIDTH = 1000
-WINDOWS_RESURFACE_HEIGHT = 870
+WINDOWS_RESURFACE_HEIGHT = 880
 
 
 class TitleBarDragRegion(QWidget):
@@ -193,8 +193,8 @@ class MainWindow(WindowMessageMixin, QMainWindow):
 
         self.window_width = WINDOWS_RESURFACE_EXPANDED_WIDTH
         self.window_height = WINDOWS_RESURFACE_HEIGHT
-        self.tree_default_height = 465
-        self.tree_expanded_height = 610
+        self.tree_default_height = 475
+        self.tree_expanded_height = 725
         self.tree_frame_padding = 2
         self._tree_view_expanded = False
         self.setWindowTitle("Folder Generator")
