@@ -434,6 +434,7 @@ class TemplateController:
 
     def on_default_template_selected(self, index):
         if index == 0:
+            self.load_default_template()
             return
         self.window.load_user_template_dropdown.setCurrentIndex(0)
         self.load_default_template()

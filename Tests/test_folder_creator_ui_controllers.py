@@ -394,6 +394,26 @@ def test_default_template_signal_loads_once_and_resets_user_selection(qapp, tmp_
     assert len(window.service.tree_controller.deserialize_calls) == 1
 
 
+def test_reset_default_templates_selection_clears_loaded_tree(qapp, tmp_path):
+    window = make_window(tmp_path)
+    (window.service.template_paths.default_dir / "sample.txt").write_text(
+        "Root\n    Child", encoding="utf-8"
+    )
+    controller = NestedUIController(window)
+    controller.connect_signals()
+
+    window.load_default_template_dropdown.setCurrentIndex(1)
+    assert len(window.service.tree_controller.deserialize_calls) == 1
+    window.tree.addTopLevelItem(QTreeWidgetItem(["Root"]))
+    assert window.tree.topLevelItemCount() > 0
+
+    window.ui_state.build_updates = 0
+    window.load_default_template_dropdown.setCurrentIndex(0)
+
+    assert window.tree.topLevelItemCount() == 0
+    assert window.ui_state.build_updates == 1
+
+
 def test_load_templates_button_invokes_template_loader(qapp, tmp_path):
     window = make_window(tmp_path)
     (window.service.template_paths.user_dir / "project.json").write_text(
