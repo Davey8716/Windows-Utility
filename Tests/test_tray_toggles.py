@@ -107,14 +107,14 @@ def test_tray_folder_creator_action_opens_or_closes_and_precedes_toggles(monkeyp
     manager.create_tray_icon()
 
     assert manager.menu.actions()[0] is manager.folder_creator_action
-    assert manager.folder_creator_action.text() == "Open Folder Creator"
+    assert manager.folder_creator_action.text() == "Turn Folder Creator On"
     assert not manager.folder_creator_action.isCheckable()
     manager.folder_creator_action.trigger()
     assert window.folder_actions.open_calls == 1
 
     window.folder_creator_launcher.handles = [42]
     manager.sync_folder_creator_action()
-    assert manager.folder_creator_action.text() == "Close Folder Creator"
+    assert manager.folder_creator_action.text() == "Turn Folder Creator Off"
     closed_handles = []
     monkeypatch.setattr(
         tray_toggles,
@@ -123,7 +123,7 @@ def test_tray_folder_creator_action_opens_or_closes_and_precedes_toggles(monkeyp
     )
     manager.folder_creator_action.trigger()
     assert closed_handles == [42]
-    assert manager.folder_creator_action.text() == "Open Folder Creator"
+    assert manager.folder_creator_action.text() == "Turn Folder Creator On"
 
 
 def test_tray_menu_restyles_with_live_theme_and_rounded_corners() -> None:

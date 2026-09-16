@@ -50,7 +50,7 @@ class TrayIconManager(QObject):
         self.menu = menu
         self.refresh_menu_style()
 
-        self.folder_creator_action = QAction("Open Folder Creator", self.app)
+        self.folder_creator_action = QAction("Turn Folder Creator On", self.app)
         self.folder_creator_action.triggered.connect(self.toggle_folder_creator)
         menu.addAction(self.folder_creator_action)
 
@@ -167,7 +167,7 @@ class TrayIconManager(QObject):
 
         is_open = bool(self._folder_creator_handles())
         self.folder_creator_action.setText(
-            "Close Folder Creator" if is_open else "Open Folder Creator"
+            "Turn Folder Creator Off" if is_open else "Turn Folder Creator On"
         )
 
     def _folder_creator_handles(self) -> list[int]:
