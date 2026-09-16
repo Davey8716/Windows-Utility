@@ -25,7 +25,7 @@ from folder_creator.ui import template_controller as template_controller_module 
 from folder_creator.ui.template_load_dialog import TemplateLoadDialog  # noqa: E402
 from folder_creator.ui.template_save_dialog import TemplateSaveDialog  # noqa: E402
 from folder_creator.ui.output_directory_dialog import OutputDirectoryDialog  # noqa: E402
-from PySide6.QtCore import Qt, Signal  # noqa: E402
+from PySide6.QtCore import QPoint, Qt, Signal  # noqa: E402
 from resurface.ui.app_notifications import WindowMessageMixin  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
@@ -1075,15 +1075,69 @@ def test_template_save_dialog_uses_the_explicit_host_theme(qapp, tmp_path):
 
     dark_style = dark_dialog.styleSheet()
     light_style = light_dialog.styleSheet()
-    assert "background-color: #3a4860;" in dark_style
+    assert dark_dialog._colors()["dialog_bg"] == "#3a4860"
+    assert "border: 1px solid #5d6b7d;" in dark_style
+    assert "border-radius: 12px;" in dark_style
+    assert dark_dialog._outer_frame_radius() == 12
+    assert dark_style.count("border-radius: 2px;") == 1
     assert "QLabel#templateSaveTitle" in dark_style
     assert "color: #ffffff;" in dark_style
     assert "color: #ffffff;\n                background-color: #1c66c4;" in dark_style
+    assert "border: 1px solid #8ac6f6;" in dark_style
     assert "Dropdown Chevron.svg" in dark_style
-    assert "background-color: #eef2f6;" in light_style
+    assert light_dialog._colors()["dialog_bg"] == "#eef2f6"
     assert "color: #111820;" in light_style
     assert "color: #111820;\n                background-color: #2d73c8;" in light_style
     assert "Dropdown Chevron Light.svg" in light_style
+
+
+def test_template_save_dialog_has_transparent_rounded_outer_corners(qapp, tmp_path):
+    user_dir = tmp_path / "user"
+    user_dir.mkdir()
+    dialog = TemplateSaveDialog(None, user_dir, is_dark=True)
+    dialog.show()
+    qapp.processEvents()
+
+    try:
+        assert dialog.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert not dialog.mask().isEmpty()
+        assert not dialog.mask().contains(QPoint(0, 0))
+        assert dialog.mask().contains(QPoint(dialog.width() // 2, 0))
+        assert dialog._outer_frame_radius() == 12
+        assert "border: 1px solid #5d6b7d;" in dialog.styleSheet()
+    finally:
+        dialog.close()
+
+
+def test_template_save_dialog_refreshes_while_open_and_preserves_values(qapp, tmp_path):
+    user_dir = tmp_path / "user"
+    user_dir.mkdir()
+    theme = {"is_dark": True}
+    dialog = TemplateSaveDialog(
+        None,
+        user_dir,
+        is_dark=True,
+        theme_resolver=lambda: theme["is_dark"],
+    )
+    dialog.filename_input.setText("Project")
+    dialog.format_selector.setCurrentIndex(2)
+
+    theme["is_dark"] = False
+    dialog._sync_theme()
+
+    assert dialog._colors()["dialog_bg"] == "#eef2f6"
+    assert "Dropdown Chevron Light.svg" in dialog.styleSheet()
+    assert dialog.filename_input.text() == "Project"
+    assert dialog.format_selector.currentIndex() == 2
+
+    theme["is_dark"] = True
+    dialog._sync_theme()
+
+    assert dialog._colors()["dialog_bg"] == "#3a4860"
+    assert "Dropdown Chevron.svg" in dialog.styleSheet()
+    assert dialog.filename_input.text() == "Project"
+    assert dialog.format_selector.currentIndex() == 2
+    dialog._theme_timer.stop()
 
 
 @pytest.mark.parametrize(

@@ -330,10 +330,12 @@ class TemplateController:
             self._show_master_backup_unavailable(action_result=True)
             return
 
+        theme = self._theme_for_save_dialog()
         dialog = TemplateSaveDialog(
             self.window,
             user_dir,
-            is_dark=self._theme_for_save_dialog(),
+            is_dark=theme,
+            theme_resolver=self._theme_for_save_dialog,
         )
         if dialog.exec() != dialog.DialogCode.Accepted or dialog.destination is None:
             self.window.status.show_action_result(

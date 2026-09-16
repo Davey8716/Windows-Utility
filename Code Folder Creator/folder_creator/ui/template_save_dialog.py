@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QRegion
 from PySide6.QtWidgets import (
     QComboBox,
@@ -37,7 +37,12 @@ class TemplateSaveDialog(QDialog):
     )
 
     def __init__(
-        self, parent, user_dir: Path, *, is_dark: bool | None = None
+        self,
+        parent,
+        user_dir: Path,
+        *,
+        is_dark: bool | None = None,
+        theme_resolver=None,
     ) -> None:
         super().__init__(parent if isinstance(parent, QWidget) else None)
         self.user_dir = Path(user_dir)
@@ -49,11 +54,13 @@ class TemplateSaveDialog(QDialog):
             if is_dark is not None
             else bool(styles.resurface_styles.THEME_IS_DARK)
         )
+        self._theme_resolver = theme_resolver
 
         self.setWindowTitle("Save Template")
         self.setObjectName("TemplateSaveDialog")
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setSizeGripEnabled(False)
         self.setStyleSheet(self._dialog_style())
 
@@ -95,6 +102,13 @@ class TemplateSaveDialog(QDialog):
 
         self.setFixedWidth(500)
         self.filename_input.setFocus()
+
+        self._theme_timer = QTimer(self)
+        self._theme_timer.setInterval(250)
+        self._theme_timer.timeout.connect(self._sync_theme)
+        self.finished.connect(self._theme_timer.stop)
+        if callable(self._theme_resolver):
+            self._theme_timer.start()
 
     @property
     def destination(self) -> Path | None:
@@ -138,11 +152,14 @@ class TemplateSaveDialog(QDialog):
     def _dialog_style(self) -> str:
         colors = self._colors()
         chevron_path = self._chevron_path().as_posix()
+        frame_radius = self._outer_frame_radius()
+        field_border_width = 1 if self._is_dark else 2
+        field_radius = 2 if self._is_dark else 6
         return f"""
             QDialog#TemplateSaveDialog {{
-                background-color: {colors['dialog_bg']};
-                border: {self.FRAME_WIDTH}px solid {colors['border']};
-                border-radius: {self.CORNER_RADIUS}px;
+                background: transparent;
+                border: none;
+                border-radius: {frame_radius}px;
             }}
             QDialog#TemplateSaveDialog QLabel {{
                 background: transparent;
@@ -160,8 +177,8 @@ class TemplateSaveDialog(QDialog):
             QDialog#TemplateSaveDialog QLineEdit {{
                 color: {colors['field_text']};
                 background-color: {colors['field_bg']};
-                border: 2px solid {colors['field_border']};
-                border-radius: 6px;
+                border: {field_border_width}px solid {colors['field_border']};
+                border-radius: {field_radius}px;
                 padding: 4px 8px;
                 selection-background-color: {colors['selection']};
             }}
@@ -223,9 +240,9 @@ class TemplateSaveDialog(QDialog):
         """Return an explicit, self-contained palette for this popup."""
         if self._is_dark:
             return {
-                "dialog_bg": "#3a4860", "border": "#ffffff", "text": "#ffffff",
+                "dialog_bg": "#3a4860", "border": "#5d6b7d", "text": "#ffffff",
                 "title": "#ffffff", "field_bg": "#171b24", "field_text": "#ffffff",
-                "field_border": "#ffffff", "selection": "#4a6fa8", "combo_bg": "#1c66c4",
+                "field_border": "#5d6b7d", "selection": "#4a6fa8", "combo_bg": "#1c66c4",
                 "combo_hover": "#2a78da", "combo_border": "#8ac6f6", "combo_text": "#ffffff",
                 "button_bg": "#1c66c4", "button_hover": "#2a78da", "button_pressed": "#144e9a",
                 "button_border": "#8ac6f6", "button_text": "#ffffff", "error": "#ffb4b4",
@@ -246,23 +263,51 @@ class TemplateSaveDialog(QDialog):
         name = "Dropdown Chevron.svg" if self._is_dark else "Dropdown Chevron Light.svg"
         return root / "App Icons" / "Light Theme" / name
 
+    def _outer_frame_width(self) -> int:
+        return 1 if self._is_dark else self.FRAME_WIDTH
+
+    def _outer_frame_radius(self) -> int:
+        return self.CORNER_RADIUS
+
+    def _sync_theme(self) -> None:
+        """Refresh this modal popup when the shared application theme changes."""
+        if not callable(self._theme_resolver):
+            return
+        try:
+            is_dark = bool(self._theme_resolver())
+        except Exception:
+            return
+        if is_dark == self._is_dark:
+            return
+        self._is_dark = is_dark
+        self.setStyleSheet(self._dialog_style())
+        self._apply_window_mask()
+        self.update()
+
+    def _apply_window_mask(self) -> None:
+        path = QPainterPath()
+        radius = self._outer_frame_radius()
+        path.addRoundedRect(self.rect(), radius, radius)
+        self.setMask(QRegion(path.toFillPolygon().toPolygon()))
+
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        pen = QPen(QColor(self._colors()["border"]))
-        pen.setWidth(self.FRAME_WIDTH)
+        colors = self._colors()
+        pen = QPen(QColor(colors["border"]))
+        frame_width = self._outer_frame_width()
+        radius = self._outer_frame_radius()
+        pen.setWidth(frame_width)
         painter.setPen(pen)
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        inset = self.FRAME_WIDTH / 2
+        painter.setBrush(QColor(colors["dialog_bg"]))
+        inset = frame_width / 2
         painter.drawRoundedRect(
             self.rect().adjusted(inset, inset, -inset, -inset),
-            self.CORNER_RADIUS - inset,
-            self.CORNER_RADIUS - inset,
+            radius - inset,
+            radius - inset,
         )
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        path = QPainterPath()
-        path.addRoundedRect(self.rect(), self.CORNER_RADIUS, self.CORNER_RADIUS)
-        self.setMask(QRegion(path.toFillPolygon().toPolygon()))
+        self._apply_window_mask()
