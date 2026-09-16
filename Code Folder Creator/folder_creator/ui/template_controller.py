@@ -287,9 +287,6 @@ class TemplateController:
             )
             return
         if not self._confirm_all_template_deletion(len(template_paths)):
-            self.window.status.show_action_result(
-                "Deleting all templates cancelled.", status_type="info"
-            )
             return
 
         failed = False
@@ -338,17 +335,11 @@ class TemplateController:
             theme_resolver=self._theme_for_save_dialog,
         )
         if dialog.exec() != dialog.DialogCode.Accepted or dialog.destination is None:
-            self.window.status.show_action_result(
-                "Template save cancelled.", status_type="info"
-            )
             return
 
         destination = dialog.destination
         replacing_template = destination.exists()
         if replacing_template and not self._confirm_template_replacement(destination):
-            self.window.status.show_action_result(
-                "Template save cancelled.", status_type="info"
-            )
             return
 
         data = self.service.tree_controller.serialize_tree()

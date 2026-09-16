@@ -777,7 +777,7 @@ def test_template_save_writes_to_master_backed_user_folder(qapp, tmp_path, monke
     ) == str(destination)
 
 
-def test_template_save_cancel_uses_themed_action_result(qapp, tmp_path, monkeypatch):
+def test_template_save_cancel_does_not_show_action_result(qapp, tmp_path, monkeypatch):
     window = make_window(tmp_path)
     monkeypatch.setattr(
         TemplateSaveDialog,
@@ -787,10 +787,7 @@ def test_template_save_cancel_uses_themed_action_result(qapp, tmp_path, monkeypa
 
     TemplateController(window).user_template_save()
 
-    assert window.status.calls[-1] == (
-        ("Template save cancelled.",),
-        {"status_type": "info", "themed": True},
-    )
+    assert window.status.calls == []
 
 
 def test_template_overwrite_reports_the_saved_template_name(qapp, tmp_path, monkeypatch):
@@ -916,10 +913,7 @@ def test_delete_all_user_templates_keeps_every_file_when_cancelled(
     assert json_template.exists()
     assert text_template.exists()
     assert window.load_user_template_dropdown.currentText() == "Notes"
-    assert window.status.calls[-1] == (
-        ("Deleting all templates cancelled.",),
-        {"status_type": "info", "themed": True},
-    )
+    assert window.status.calls == []
 
 
 def test_delete_all_user_templates_reports_when_there_are_none(qapp, tmp_path):
@@ -1197,6 +1191,7 @@ def test_template_save_does_not_overwrite_without_confirmation(qapp, tmp_path, m
     TemplateController(window).user_template_save()
 
     assert destination.read_text(encoding="utf-8") == "original"
+    assert window.status.calls == []
 
 
 def test_templates_are_blocked_when_master_backup_path_is_unavailable(
