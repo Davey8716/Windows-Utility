@@ -11,6 +11,7 @@ def title_bar_control_style(*, close_button: bool = False) -> str:
     pressed = H.qcolor_css(QColor(151, 42, 35) if close_button else T.SURFACE_BG)
     return f"""
         QToolButton {{
+            font-family: {T.FONT_FAMILY};
             color: {text};
             background: transparent;
             border: none;
@@ -24,17 +25,18 @@ def title_bar_control_style(*, close_button: bool = False) -> str:
     """
 
 def page_title_style() -> str:
-    return H.label_style(font_size=24, bold=True, color=T.theme_text_color())
+    return H.label_style(font_size=T.FONT_SIZE_DISPLAY, bold=True, color=T.theme_text_color())
 
 def page_description_style() -> str:
-    return H.label_style(font_size=14, bold=False, color=T.theme_muted_text_color())
+    return H.label_style(font_size=T.FONT_SIZE_STANDARD, bold=False, color=T.theme_muted_text_color())
 
 def page_section_heading_style() -> str:
-    return H.label_style(font_size=17, bold=True, color=T.theme_text_color())
+    return H.label_style(font_size=T.FONT_SIZE_SECTION, bold=True, color=T.theme_text_color())
 
 def monitor_rules_help_button_style() -> str:
     return f"""
         QToolButton#MonitorRulesHelpButton {{
+            font-family: {T.FONT_FAMILY};
             color: {H.qcolor_css(T.theme_text_color())};
             background-color: {H.qcolor_css(T.SURFACE_BG)};
             border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
@@ -53,10 +55,10 @@ def monitor_rules_help_button_style() -> str:
     """
 
 def summary_label_style() -> str:
-    return H.label_style(font_size=13, bold=False, color=T.theme_muted_text_color())
+    return H.label_style(font_size=T.FONT_SIZE_SUPPORTING, bold=False, color=T.theme_muted_text_color())
 
 def summary_value_style() -> str:
-    return H.label_style(font_size=13, bold=True, color=T.theme_text_color())
+    return H.label_style(font_size=T.FONT_SIZE_SUPPORTING, bold=True, color=T.theme_text_color())
 
 def summary_frame_style() -> str:
     return f"""
@@ -108,6 +110,7 @@ def monitor_rule_list_style() -> str:
 def monitor_rule_title_style() -> str:
     return f"""
         QCheckBox#MonitorRuleTitle {{
+            font-family: {T.FONT_FAMILY};
             background: transparent;
             color: {H.qcolor_css(T.theme_text_color())};
             font-size: 13px;
@@ -120,6 +123,7 @@ def navigation_list_style() -> str:
     hover = QColor(38, 48, 63) if T.THEME_IS_DARK else QColor(226, 234, 243)
     return f"""
         QListWidget#NavigationList {{
+            font-family: {T.FONT_FAMILY};
             background-color: {H.qcolor_css(T.SURFACE_BG)};
             color: {H.qcolor_css(T.theme_text_color())};
             border: none;
@@ -151,6 +155,7 @@ def navigation_list_style() -> str:
 def sidebar_version_label_style() -> str:
     return f"""
         QLabel#SidebarVersionLabel {{
+            font-family: {T.FONT_FAMILY};
             background-color: {H.qcolor_css(T.SURFACE_BG)};
             color: {H.qcolor_css(T.theme_muted_text_color())};
             border: none;
@@ -165,6 +170,7 @@ def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int =
     font_size = H.coerce_font_size(font_size, 18) or 18
     return f"""
         QPushButton, QToolButton {{
+            font-family: {T.FONT_FAMILY};
             color: {H.qcolor_css(text_color)};
             background: transparent;
             border: none;
@@ -194,17 +200,20 @@ def message_box_style(
     )
     return f"""
         QMessageBox {{
+            font-family: {T.FONT_FAMILY};
             background-color: {background};
             color: {text};
             {outer_border}
         }}
         QMessageBox QLabel {{
+            font-family: {T.FONT_FAMILY};
             background: transparent;
             color: {text};
             border: none;
             font-weight: bold;
         }}
         QMessageBox QPushButton {{
+            font-family: {T.FONT_FAMILY};
             background-color: {background};
             color: {text};
             border: 2px solid {border};
@@ -233,6 +242,7 @@ def message_popup_menu_style(radius: int = 10) -> str:
     text = H.qcolor_css(T.CURRENT_TEXT)
     return f"""
         QMenu {{
+            font-family: {T.FONT_FAMILY};
             background-color: {background};
             color: {text};
             border: {T.POPUP_BORDER_WIDTH}px solid {border};
@@ -240,6 +250,7 @@ def message_popup_menu_style(radius: int = 10) -> str:
             padding: 6px;
         }}
         QMenu::item {{
+            font-family: {T.FONT_FAMILY};
             background-color: transparent;
             color: {text};
             padding: 7px 12px;
@@ -269,6 +280,7 @@ def window_style() -> str:
         QWidget {{
             background-color: {H.qcolor_css(T.WINDOW_BG)};
             color: {H.qcolor_css(T.CURRENT_TEXT)};
+            font-family: {T.FONT_FAMILY};
         }}
         QScrollBar:vertical {{
             background-color: {H.qcolor_css(T.SURFACE_BG)};
@@ -312,14 +324,17 @@ def file_dialog_style() -> str:
         QFileDialog {{
             background-color: {background};
             color: {text};
+            font-family: {T.FONT_FAMILY};
         }}
         QFileDialog QLabel {{
+            font-family: {T.FONT_FAMILY};
             background: transparent;
             color: {text};
         }}
         QFileDialog QLineEdit,
         QFileDialog QComboBox,
         QFileDialog QAbstractItemView {{
+            font-family: {T.FONT_FAMILY};
             background-color: {surface};
             color: {text};
             border: 1px solid {border};
@@ -340,6 +355,7 @@ def file_dialog_style() -> str:
             color: {text};
         }}
         QFileDialog QPushButton {{
+            font-family: {T.FONT_FAMILY};
             color: {H.qcolor_css(T.button_text_color())};
             background-color: {H.qcolor_css(T.themed_button_bg())};
             border: 1px solid {H.qcolor_css(T.themed_button_border())};
@@ -355,6 +371,7 @@ def file_dialog_style() -> str:
             background-color: {H.qcolor_css(T.themed_button_pressed())};
         }}
         QFileDialog QToolButton {{
+            font-family: {T.FONT_FAMILY};
             color: {text};
             background-color: {surface};
             border: 1px solid {border};
@@ -366,6 +383,7 @@ def file_dialog_style() -> str:
             border-color: {accent};
         }}
         QFileDialog QHeaderView::section {{
+            font-family: {T.FONT_FAMILY};
             background-color: {surface};
             color: {text};
             border: none;
@@ -379,6 +397,7 @@ def file_dialog_style() -> str:
 def tooltip_style() -> str:
     return f"""
         QToolTip {{
+            font-family: {T.FONT_FAMILY};
             background-color: {H.qcolor_css(T.tooltip_bg())};
             color: {H.qcolor_css(T.tooltip_text_color())};
             border: {T.POPUP_BORDER_WIDTH}px solid {H.qcolor_css(T.tooltip_border())};

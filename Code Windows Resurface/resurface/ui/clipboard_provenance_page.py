@@ -176,7 +176,9 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         set_tooltip(delete_button, "Delete this provenance record")
         delete_button.setFixedSize(24, 24)
         delete_button.setStyleSheet(
-            "QToolButton { border: none; background: transparent; font-size: 20px; }"
+            "QToolButton { border: none; background: transparent; "
+            f"font-family: {styles.FONT_FAMILY}; "
+            f"font-size: {styles.FONT_SIZE_DIALOG_TITLE}px; }}"
         )
         delete_button.clicked.connect(lambda _checked=False, value=record: self._service.delete(value["id"]))
         header.addWidget(delete_button, 0, Qt.AlignmentFlag.AlignTop)

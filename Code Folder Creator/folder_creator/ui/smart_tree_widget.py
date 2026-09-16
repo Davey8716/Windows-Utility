@@ -61,7 +61,11 @@ class SmartTreeWidget(QTreeWidget):
         
         painter = QPainter(self.viewport())
 
-        font = QFont("Segoe UI", self._placeholder_font_size)
+        font = QFont(styles.resurface_styles.FONT_PRIMARY_FAMILY, self._placeholder_font_size)
+        font.setFamilies([
+            styles.resurface_styles.FONT_PRIMARY_FAMILY,
+            styles.resurface_styles.FONT_FALLBACK_FAMILY,
+        ])
         font.setBold(self._placeholder_bold)
         painter.setFont(font)
 

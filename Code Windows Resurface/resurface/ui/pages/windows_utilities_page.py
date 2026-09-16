@@ -84,9 +84,9 @@ class WindowsUtilitiesPage(QWidget):
         combo.addItems(sorted(tools_by_label))
         combo.setCurrentText(placeholder)
         combo.view().setRowHidden(0, True)
-        combo.setProperty("styleFontSize", 15)
-        combo.setStyleSheet(styles.organizing_combo_style(15))
-        styles.fit_page_combo_width(combo, placeholder=placeholder, font_size=15)
+        combo.setProperty("styleFontSize", styles.FONT_SIZE_STANDARD)
+        combo.setStyleSheet(styles.organizing_combo_style(styles.FONT_SIZE_STANDARD))
+        styles.fit_page_combo_width(combo, placeholder=placeholder, font_size=styles.FONT_SIZE_STANDARD)
         self.register_tooltip(combo, tooltip_text(group.tooltip_key))
 
         def selected(text: str):

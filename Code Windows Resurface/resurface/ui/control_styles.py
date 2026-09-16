@@ -25,6 +25,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
         QPushButton {{
             text-align: center;
             padding: 4px 8px;
+            font-family: {T.FONT_FAMILY};
             {font_rule}
             font-weight: bold;
             color: {H.qcolor_css(T.button_text_color())};
@@ -102,6 +103,7 @@ def power_action_button_style(
         QPushButton {{
             text-align: center;
             padding: 4px 8px;
+            font-family: {T.FONT_FAMILY};
             {font_rule}
             font-weight: bold;
             color: {H.qcolor_css(foreground)};
@@ -181,14 +183,14 @@ def hotkey_conflict_message_style(font_size: int = 9) -> str:
         }}
     """
 
-def text_edit_style(font_family: str, font_size: int) -> str:
+def text_edit_style(font_family: str | None = None, font_size: int = T.FONT_SIZE_STANDARD) -> str:
     return f"""
         QTextEdit {{
             {H.label_style(
                 font_size=font_size,
                 bold=True,
                 color=T.TEXT_LIGHT,
-                font_family=font_family,
+                font_family=font_family or T.FONT_FAMILY,
             )}
             background-color: {H.qcolor_css(T.PANEL_BG)};
             border: 2px solid {H.qcolor_css(T.PANEL_BORDER)};
@@ -197,14 +199,14 @@ def text_edit_style(font_family: str, font_size: int) -> str:
         }}
     """
 
-def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
+def surfaced_text_edit_style(font_family: str | None = None, font_size: int = T.FONT_SIZE_STANDARD) -> str:
     return f"""
         QTextEdit {{
             {H.label_style(
                 font_size=font_size,
                 bold=True,
                 color=T.themed_surface_field_text(),
-                font_family=font_family,
+                font_family=font_family or T.FONT_FAMILY,
             )}
             background-color: {H.qcolor_css(T.themed_surface_field_bg())};
             border: 1px solid {H.qcolor_css(T.themed_surface_field_border())};
@@ -213,7 +215,7 @@ def surfaced_text_edit_style(font_family: str, font_size: int) -> str:
         }}
     """
 
-def frame_text_edit_style(font_family: str, font_size: int) -> str:
+def frame_text_edit_style(font_family: str | None = None, font_size: int = T.FONT_SIZE_STANDARD) -> str:
     """Style read-only output as a standard theme surface frame."""
     return f"""
         QTextEdit {{
@@ -221,7 +223,7 @@ def frame_text_edit_style(font_family: str, font_size: int) -> str:
                 font_size=font_size,
                 bold=True,
                 color=T.theme_text_color(),
-                font_family=font_family,
+                font_family=font_family or T.FONT_FAMILY,
             )}
             background-color: {H.qcolor_css(T.SURFACE_BG)};
             border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
@@ -450,7 +452,7 @@ def _modern_combo_style(
                 font_size=None,
                 bold=True,
                 color=text,
-                font_family=font_family,
+                font_family=font_family or T.FONT_FAMILY,
             )}
             {font_point_rule}
             background-color: {H.qcolor_css(background)};
@@ -508,6 +510,7 @@ def _modern_combo_style(
             height: 6px;
         }}
         QComboBox QAbstractItemView {{
+            font-family: {font_family or T.FONT_FAMILY};
             {font_point_rule}
             background-color: {H.qcolor_css(popup_background)};
             color: {H.qcolor_css(popup_text)};
@@ -551,7 +554,9 @@ def surfaced_combo_style(font_size: int) -> str:
         text=T.dropdown_text_color(),
     )
 
-def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") -> str:
+def connected_drives_combo_style(
+    font_size: int, font_family: str | None = None
+) -> str:
     return _modern_combo_style(
         font_size,
         background=T.SURFACE_BG,
@@ -619,7 +624,9 @@ def combo_style(font_size: int) -> str:
         text=T.dropdown_text_color(),
     )
 
-def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
+def surfaced_list_widget_style(
+    font_family: str | None = None, font_size: int = T.FONT_SIZE_STANDARD
+) -> str:
     return (
         """
         QListWidget {
@@ -665,7 +672,7 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
                 font_size=font_size,
                 bold=True,
                 color=T.themed_surface_field_text(),
-                font_family=font_family,
+                font_family=font_family or T.FONT_FAMILY,
             ),
             H.qcolor_css(T.themed_surface_field_bg()),
             H.qcolor_css(T.themed_surface_field_text()),
@@ -677,7 +684,9 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
         )
     )
 
-def frame_list_widget_style(font_family: str, font_size: int) -> str:
+def frame_list_widget_style(
+    font_family: str | None = None, font_size: int = T.FONT_SIZE_STANDARD
+) -> str:
     """Style an interactive list as a standard theme surface frame."""
     return (
         """
@@ -724,7 +733,7 @@ def frame_list_widget_style(font_family: str, font_size: int) -> str:
                 font_size=font_size,
                 bold=True,
                 color=T.theme_text_color(),
-                font_family=font_family,
+                font_family=font_family or T.FONT_FAMILY,
             ),
             H.qcolor_css(T.SURFACE_BG),
             H.qcolor_css(T.theme_text_color()),

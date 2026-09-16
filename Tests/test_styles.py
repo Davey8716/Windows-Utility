@@ -325,6 +325,38 @@ def test_folder_creator_add_blank_dropdown_style_matches_theme_when_disabled(
     assert f"border-left: 1px solid {disabled_border};" in stylesheet
 
 
+def test_shared_typography_is_explicit_in_controls_and_popups():
+    family_rule = f"font-family: {styles.FONT_FAMILY};"
+
+    assert styles.FONT_PRIMARY_FAMILY == "Segoe UI Variable"
+    assert styles.FONT_FALLBACK_FAMILY == "Segoe UI"
+    assert styles.FONT_SIZE_DISPLAY == 24
+    assert styles.FONT_SIZE_DIALOG_TITLE == 20
+    assert styles.FONT_SIZE_SECTION == 17
+    assert styles.FONT_SIZE_STANDARD == 14
+    assert styles.FONT_SIZE_SUPPORTING == 13
+    assert styles.FONT_SIZE_COMPACT == 12
+
+    for stylesheet in (
+        styles.organizing_button_style(styles.FONT_SIZE_STANDARD),
+        styles.organizing_combo_style(styles.FONT_SIZE_STANDARD),
+        styles.line_edit_style(styles.FONT_SIZE_STANDARD),
+        styles.surfaced_list_widget_style(),
+        styles.message_box_style(),
+        styles.message_popup_menu_style(),
+        styles.file_dialog_style(),
+        styles.tooltip_style(),
+        styles.window_style(),
+    ):
+        assert family_rule in stylesheet
+
+    assert f"font-size: {styles.FONT_SIZE_DISPLAY}px;" in styles.page_title_style()
+    assert f"font-size: {styles.FONT_SIZE_SECTION}px;" in styles.page_section_heading_style()
+    assert f"font-size: {styles.FONT_SIZE_COMPACT}px;" in styles.organizing_button_style(
+        styles.FONT_SIZE_COMPACT
+    )
+
+
 @pytest.mark.parametrize(("is_dark", "text_color"), [(True, "#ffffff"), (False, "#000000")])
 def test_folder_creator_user_templates_dropdown_style_matches_add_blank_treatment(
     is_dark,
@@ -463,6 +495,11 @@ def test_folder_creator_uses_shared_palette_and_modern_combo_rules():
         assert "padding: 6px 10px;" in stylesheet
         assert "qproperty-alignment: AlignCenter;" in stylesheet
         assert stylesheet.count("QWidget {") == 1
+        assert f"font-family: {styles.FONT_FAMILY};" in stylesheet
+        assert (
+            f"font-family: {styles.FONT_FAMILY};"
+            in folder_styles.title_label_style()
+        )
     finally:
         folder_styles.set_theme(True)
 

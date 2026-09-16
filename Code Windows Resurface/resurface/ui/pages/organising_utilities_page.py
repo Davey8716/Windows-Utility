@@ -41,8 +41,8 @@ class OrganisingUtilitiesPage(PageControls):
         self._path_label = QLabel()
         self._path_label.setFixedHeight(styles.DEFAULT_BUTTON_HEIGHT)
         self._path_label.setProperty("surfaceLabelStyle", True)
-        self._path_label.setProperty("styleFontSize", 15)
-        self._path_label.setStyleSheet(styles.surfaced_label_style(15))
+        self._path_label.setProperty("styleFontSize", styles.FONT_SIZE_STANDARD)
+        self._path_label.setStyleSheet(styles.surfaced_label_style(styles.FONT_SIZE_STANDARD))
         self._path_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self.add_two_column_control_row(self.content_layout, choose, self._path_label)
         self.set_backup_path(backup_path)
@@ -51,7 +51,7 @@ class OrganisingUtilitiesPage(PageControls):
         self._path_label.setText(path)
         self._path_label.setToolTip("")
         self._path_label.setStyleSheet(
-            styles.surfaced_label_style(15)
+            styles.surfaced_label_style(styles.FONT_SIZE_STANDARD)
             + ("QLabel { color: #c53030; }" if unavailable else "")
         )
 

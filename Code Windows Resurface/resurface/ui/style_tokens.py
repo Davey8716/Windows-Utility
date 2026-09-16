@@ -45,6 +45,19 @@ POPUP_CORNER_RADIUS = 0
 POPUP_BORDER_WIDTH = 2
 BUTTON_CORNER_RADIUS = 6
 
+# Typography is deliberately shared by the main window and Folder Creator.
+# Segoe UI Variable is the Windows 11 face; Segoe UI remains available on
+# older Windows installations that do not ship the variable family.
+FONT_FAMILY = '"Segoe UI Variable", "Segoe UI"'
+FONT_PRIMARY_FAMILY = "Segoe UI Variable"
+FONT_FALLBACK_FAMILY = "Segoe UI"
+FONT_SIZE_DISPLAY = 24
+FONT_SIZE_DIALOG_TITLE = 20
+FONT_SIZE_SECTION = 17
+FONT_SIZE_STANDARD = 14
+FONT_SIZE_SUPPORTING = 13
+FONT_SIZE_COMPACT = 12
+
 def set_theme(is_dark: bool) -> None:
     global WINDOW_BG, SURFACE_BG, SURFACE_HOVER, PANEL_BG, PANEL_HOVER
     global SURFACE_BORDER, SURFACE_DARK, SURFACE_HOVER_DARK, SURFACE_HOVER_LIGHT

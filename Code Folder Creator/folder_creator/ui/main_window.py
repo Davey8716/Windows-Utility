@@ -531,8 +531,8 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.tree_frame.setStyleSheet(styles.tree_outer_frame_style())
         self.tree.setStyleSheet(styles.surfaced_tree_widget_style())
         find_font_size = styles.resurface_styles.coerce_font_size(
-            self.find_output_line.property("styleFontSize"), 15
-        ) or 15
+            self.find_output_line.property("styleFontSize"), styles.resurface_styles.FONT_SIZE_COMPACT
+        ) or styles.resurface_styles.FONT_SIZE_COMPACT
         self.find_output_line.setStyleSheet(
             styles.frameless_surfaced_line_edit_style(find_font_size)
         )
@@ -545,7 +545,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
                 ) or 14
                 label.setStyleSheet(styles.surfaced_label_style(font_size))
             elif label.property("plainThemeLabelStyle"):
-                label.setStyleSheet(styles.plain_theme_label_style(15))
+                label.setStyleSheet(styles.plain_theme_label_style(styles.resurface_styles.FONT_SIZE_STANDARD))
         for combo in self.findChildren(QComboBox):
             font_size = styles.resurface_styles.coerce_font_size(
                 combo.property("styleFontSize"), 14

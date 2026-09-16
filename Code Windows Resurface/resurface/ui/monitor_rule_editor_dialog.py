@@ -122,14 +122,18 @@ def monitor_rule_editor_dialog_style() -> str:
         QDialog#MonitorRuleEditorDialog {{
             background-color: {background};
             color: {text};
+            font-family: {styles.FONT_FAMILY};
         }}
         QDialog#MonitorRuleEditorDialog QLabel,
         QDialog#MonitorRuleEditorDialog QCheckBox {{
             background: transparent;
             color: {text};
+            font-family: {styles.FONT_FAMILY};
         }}
         QDialog#MonitorRuleEditorDialog QLineEdit,
         QDialog#MonitorRuleEditorDialog QComboBox {{
+            font-family: {styles.FONT_FAMILY};
+            font-size: {styles.FONT_SIZE_STANDARD}px;
             background-color: {surface};
             color: {field_text};
             border: 1px solid {border};
@@ -138,6 +142,8 @@ def monitor_rule_editor_dialog_style() -> str:
             padding: 2px 7px;
         }}
         QDialog#MonitorRuleEditorDialog QComboBox QAbstractItemView {{
+            font-family: {styles.FONT_FAMILY};
+            font-size: {styles.FONT_SIZE_STANDARD}px;
             background-color: {surface};
             color: {field_text};
             border: 1px solid {border};

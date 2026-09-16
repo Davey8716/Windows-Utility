@@ -144,7 +144,7 @@ class TreeEditorPanel:
         self.find_output_line.setFixedSize(find_input_width, 40)
         self.find_output_line.setProperty("framelessSurfaceFieldStyle", True)
         self.find_output_line.setStyleSheet(
-            styles.frameless_surfaced_line_edit_style(15)
+            styles.frameless_surfaced_line_edit_style(styles.resurface_styles.FONT_SIZE_COMPACT)
         )
         self.expand_tree_btn.setFixedSize(expand_width, styles.DEFAULT_BUTTON_HEIGHT)
         self.expand_folders_collapse_btn.setFixedSize(
