@@ -86,12 +86,12 @@ class TreeEditorPanel:
         self.tree = tree
         self._configure_tree()
 
-        self.add_folder_btn = QPushButton("Add")
-        self.add_subfolder_btn = QPushButton("Sub")
+        self.add_folder_btn = QPushButton("Add Folder")
+        self.add_subfolder_btn = QPushButton("Add Subfolder")
         styles.apply_fluent_icon(self.add_folder_btn, "\ue710")
         styles.apply_fluent_icon(self.add_subfolder_btn, "\ue8b7")
-        self.remove_btn = QPushButton("Remove\nSelected")
-        self.remove_all_btn = QPushButton("Remove\nAll")
+        self.remove_btn = QPushButton("Remove Selected")
+        self.remove_all_btn = QPushButton("Remove All")
         for button in (
             self.add_folder_btn,
             self.add_subfolder_btn,
@@ -218,38 +218,27 @@ class TreeEditorPanel:
     def _create_folder_controls(self, frame_padding, control_gap):
         frame = QFrame()
         frame.setFrameShape(QFrame.NoFrame)
-        # Keep the controls 15 px inside every edge while preserving the
-        # existing two-button rows and their gap.
-        frame.setFixedSize(198, 230)
+        # Match the other control frames: 180 px-wide actions with a 15 px
+        # inset on each side.
+        frame.setFixedSize(210, 230)
         frame.setStyleSheet("border: none;")
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(control_gap)
 
-        top_row = QHBoxLayout()
-        top_row.setContentsMargins(0, 0, 0, 0)
-        top_row.setSpacing(control_gap)
-        self.add_folder_btn.setFixedSize(80, styles.DEFAULT_BUTTON_HEIGHT)
-        self.add_subfolder_btn.setFixedSize(80, styles.DEFAULT_BUTTON_HEIGHT)
-        top_row.addWidget(self.add_folder_btn)
-        top_row.addWidget(self.add_subfolder_btn)
+        for button in (
+            self.add_folder_btn,
+            self.add_subfolder_btn,
+            self.remove_btn,
+            self.remove_all_btn,
+        ):
+            button.setFixedSize(180, styles.DEFAULT_BUTTON_HEIGHT)
 
-        file_row = QHBoxLayout()
-        file_row.setContentsMargins(0, 0, 0, 0)
-        file_row.setSpacing(control_gap)
-        file_row.addWidget(self.file_dropdown)
-
-        bottom_row = QHBoxLayout()
-        bottom_row.setContentsMargins(0, 0, 0, 0)
-        bottom_row.setSpacing(control_gap)
-        self.remove_btn.setFixedSize(85, 50)
-        self.remove_all_btn.setFixedSize(85, 50)
-        bottom_row.addWidget(self.remove_btn)
-        bottom_row.addWidget(self.remove_all_btn)
-
-        layout.addLayout(top_row)
-        layout.addLayout(file_row)
-        layout.addLayout(bottom_row)
+        layout.addWidget(self.add_folder_btn, alignment=Qt.AlignLeft)
+        layout.addWidget(self.add_subfolder_btn, alignment=Qt.AlignLeft)
+        layout.addWidget(self.file_dropdown, alignment=Qt.AlignLeft)
+        layout.addWidget(self.remove_btn, alignment=Qt.AlignLeft)
+        layout.addWidget(self.remove_all_btn, alignment=Qt.AlignLeft)
         layout.addStretch()
         return frame
 
