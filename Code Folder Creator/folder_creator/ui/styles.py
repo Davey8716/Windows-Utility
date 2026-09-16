@@ -171,8 +171,11 @@ def control_page_style() -> str:
     return f"""
         QScrollArea#FolderCreatorControlPage {{
             background: transparent;
-            border: 1px solid {qcolor_css(SURFACE_BORDER)};
-            border-radius: {resurface_styles.BUTTON_CORNER_RADIUS}px;
+            border: none;
+        }}
+        QScrollArea#FolderCreatorControlPage::viewport {{
+            background: transparent;
+            border: none;
         }}
         QWidget#FolderCreatorControlPageContent {{
             background: transparent;

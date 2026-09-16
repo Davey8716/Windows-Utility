@@ -1,6 +1,6 @@
 import ctypes
 
-from PySide6.QtCore import QSize, QTimer, Qt
+from PySide6.QtCore import QRectF, QSize, QTimer, Qt
 from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -76,6 +76,60 @@ class TitleBarDragRegion(QWidget):
     def mouseReleaseEvent(self, event):
         self._drag_offset = None
         super().mouseReleaseEvent(event)
+
+
+class RoundedControlPageBorder(QWidget):
+    """Paint the control-page outline above the scroll area viewport."""
+
+    BORDER_WIDTH = 1
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        pen = QPen(styles.SURFACE_BORDER)
+        pen.setWidthF(self.BORDER_WIDTH)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        border_rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        radius = styles.resurface_styles.BUTTON_CORNER_RADIUS
+        painter.drawRoundedRect(border_rect, radius, radius)
+
+
+class RoundedControlPage(QScrollArea):
+    """Scrollable control page with an unbroken, theme-aware outer border."""
+
+    BORDER_WIDTH = 1
+
+    def __init__(self):
+        super().__init__()
+        # Keep the viewport inside the painted outline.  A scroll area's
+        # viewport otherwise reaches the widget edge and can cover the
+        # anti-aliased pixels at the top-left rounded corner.
+        self.setViewportMargins(
+            self.BORDER_WIDTH,
+            self.BORDER_WIDTH,
+            self.BORDER_WIDTH,
+            self.BORDER_WIDTH,
+        )
+        self.viewport().setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.viewport().setAutoFillBackground(False)
+        self._border_overlay = RoundedControlPageBorder(self)
+        self._border_overlay.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents
+        )
+        self.setProperty("continuousRoundedBorder", True)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._border_overlay.setGeometry(self.rect())
+        self._border_overlay.raise_()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._border_overlay.raise_()
+
+    def refresh_rounded_border(self):
+        self._border_overlay.update()
 
 
 class MainWindow(WindowMessageMixin, QMainWindow):
@@ -354,7 +408,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.section_navigation.setCurrentRow(0)
 
     def _create_control_page(self, *widgets):
-        page = QScrollArea()
+        page = RoundedControlPage()
         page.setObjectName("FolderCreatorControlPage")
         page.setWidgetResizable(True)
         page.setFrameShape(QFrame.Shape.NoFrame)
@@ -631,9 +685,11 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         )
         self.section_navigation.setStyleSheet(styles.navigation_list_style())
         for page_index in range(self.controls_stack.count()):
-            self.controls_stack.widget(page_index).setStyleSheet(
+            page = self.controls_stack.widget(page_index)
+            page.setStyleSheet(
                 styles.control_page_style()
             )
+            page.refresh_rounded_border()
         self._refresh_section_navigation_icons()
         self.window_close_btn.setIcon(self._title_bar_icon("close"))
         self.tree_frame.setStyleSheet(styles.tree_outer_frame_style())

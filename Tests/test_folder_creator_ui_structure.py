@@ -233,6 +233,8 @@ def test_folder_creator_navigation_preserves_page_and_tree_state(tmp_path):
         "assert window.tree is tree and tree.topLevelItem(0).text(0) == 'Kept'\n"
         "assert tree.isVisible()\n"
         "assert all(isinstance(window.controls_stack.widget(i), QScrollArea) for i in range(5))\n"
+        "assert all(window.controls_stack.widget(i).property('continuousRoundedBorder') for i in range(5))\n"
+        "assert all(window.controls_stack.widget(i).viewportMargins().left() == 1 and window.controls_stack.widget(i).viewportMargins().top() == 1 for i in range(5))\n"
         "assert all(not window.section_navigation.item(i).icon().isNull() for i in range(5))\n"
         "assert [window.section_navigation.item(i).data(Qt.ItemDataRole.UserRole) for i in range(5)] == ['folders', 'date_numbering', 'after_build', 'templates', 'output_build']\n"
         "for is_dark in (True, False):\n"
