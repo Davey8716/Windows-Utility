@@ -398,9 +398,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             set_tooltip(delete_button, "Delete this monitor rule")
             delete_button.setFixedSize(24, 24)
             delete_button.setStyleSheet(
-                "QToolButton { border: none; background: transparent; "
-                f"font-family: {styles.FONT_FAMILY}; "
-                f"font-size: {styles.FONT_SIZE_DIALOG_TITLE}px; }}"
+                "QToolButton { border: none; background: transparent; font-size: 20px; }"
             )
             delete_button.clicked.connect(
                 lambda _checked=False, idx=index: self._delete_rule(idx)

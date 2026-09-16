@@ -60,10 +60,8 @@ def label_style(
 ) -> str:
     font_size = coerce_font_size(font_size)
     parts = []
-    # Keep every custom UI surface on the same Windows 11 typeface.  Callers
-    # may opt into a specialised face (for example, fixed-width diagnostics)
-    # by passing one explicitly.
-    parts.append(f"font-family: {font_family or T.FONT_FAMILY};")
+    if font_family:
+        parts.append(f"font-family: {font_family};")
     if font_size is not None:
         parts.append(f"font-size: {font_size}px;")
     if bold:
@@ -71,19 +69,6 @@ def label_style(
     if color is not None:
         parts.append(f"color: {qcolor_css(color)};")
     return " ".join(parts)
-
-
-def application_font() -> QFont:
-    """Return the application font with a reliable Windows fallback."""
-    font = QFont(T.FONT_PRIMARY_FAMILY)
-    font.setFamilies([T.FONT_PRIMARY_FAMILY, T.FONT_FALLBACK_FAMILY])
-    return font
-
-
-def apply_application_font(app) -> None:
-    """Apply the shared family to QApplication-owned custom widgets."""
-    if app is not None:
-        app.setFont(application_font())
 
 def apply_default_button_size(
     button,

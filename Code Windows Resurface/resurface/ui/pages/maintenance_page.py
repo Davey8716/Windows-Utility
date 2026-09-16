@@ -230,8 +230,7 @@ class MaintenancePage(QWidget):
 
     def apply_theme(self):
         self.sidebar_output.setStyleSheet(
-            styles.frame_text_edit_style(font_size=styles.FONT_SIZE_STANDARD)
-            + "QTextEdit { padding: 6px; }"
+            styles.frame_text_edit_style("Consolas", 15) + "QTextEdit { padding: 6px; }"
         )
 
     def _confirm_temp_elevation(self):

@@ -98,7 +98,6 @@ class UtilityControlApp(
         self._hover_storage_migrated = migrated
         self.saved_state = self.state
         styles.set_theme(bool(self.state.get("theme_dark", True)))
-        styles.apply_application_font(QApplication.instance())
         self.setWindowTitle("Windows Resurface")
         self.setStyleSheet(styles.window_style())
         self._tooltip_router = install_tooltip_router()

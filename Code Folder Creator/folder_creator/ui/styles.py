@@ -187,8 +187,8 @@ def title_label_style() -> str:
             background: transparent;
             border: none;
             color: {qcolor_css(TEXT_COLOR)};
-            font-family: {resurface_styles.FONT_FAMILY};
-            font-size: {resurface_styles.FONT_SIZE_DIALOG_TITLE}px;
+            font-family: "Segoe UI";
+            font-size: 20px;
             font-weight: 1000;
         }}
     """
@@ -201,9 +201,10 @@ def title_bar_control_style(*, close_button: bool = False) -> str:
 
 def status_label_style() -> str:
     return resurface_styles.label_style(
-        font_size=resurface_styles.FONT_SIZE_STANDARD,
+        font_size=14,
         bold=True,
         color=TEXT_COLOR,
+        font_family="Segoe UI",
     )
 
 
@@ -261,7 +262,7 @@ def surfaced_tree_widget_style(font_size: int = 14) -> str:
 
     return f"""
         QTreeWidget {{
-            {resurface_styles.label_style(font_size=font_size, bold=True, color=QColor(resurface_styles.theme_text_color()))}
+            {resurface_styles.label_style(font_size=font_size, bold=True, color=QColor(resurface_styles.theme_text_color()), font_family="Segoe UI")}
             background-color: {surface_bg};
             color: {surface_text};
             border: none;
@@ -324,7 +325,7 @@ def _application_stylesheet() -> str:
         {resurface_styles.window_style()}
 
         QLineEdit {{
-            {resurface_styles.label_style(font_size=resurface_styles.FONT_SIZE_STANDARD, bold=True, color=TEXT_COLOR)}
+            {resurface_styles.label_style(font_size=15, bold=True, color=TEXT_COLOR, font_family="Segoe UI")}
             background-color: {qcolor_css(SURFACE_BG)};
             border: 2px solid {qcolor_css(SURFACE_BORDER)};
             border-radius: 6px;
@@ -336,8 +337,8 @@ def _application_stylesheet() -> str:
             background: transparent;
             border: none;
             color: {qcolor_css(TEXT_COLOR)};
-            font-family: {resurface_styles.FONT_FAMILY};
-            font-size: {resurface_styles.FONT_SIZE_STANDARD}px;
+            font-family: "Segoe UI";
+            font-size: 14px;
             font-weight: 700;
         }}
 
@@ -353,7 +354,7 @@ def _application_stylesheet() -> str:
         }}
 
         QSpinBox {{
-            {resurface_styles.label_style(font_size=resurface_styles.FONT_SIZE_STANDARD, bold=True, color=TEXT_COLOR)}
+            {resurface_styles.label_style(font_size=14, bold=True, color=TEXT_COLOR, font_family="Segoe UI")}
             background-color: {qcolor_css(SURFACE_BG)};
             color: {qcolor_css(TEXT_COLOR)};
             border: 2px solid {qcolor_css(SURFACE_BORDER)};
@@ -374,7 +375,7 @@ def _application_stylesheet() -> str:
         }}
 
         QTreeWidget {{
-            {resurface_styles.label_style(font_size=resurface_styles.FONT_SIZE_STANDARD, bold=True, color=TEXT_COLOR)}
+            {resurface_styles.label_style(font_size=14, bold=True, color=TEXT_COLOR, font_family="Segoe UI")}
             background-color: {qcolor_css(SURFACE_BG)};
             color: {qcolor_css(TEXT_COLOR)};
             border: 2px solid {qcolor_css(SURFACE_BORDER)};
@@ -403,5 +404,4 @@ def _application_stylesheet() -> str:
 def apply_app_theme(app: QApplication | None) -> None:
     if app is None:
         raise RuntimeError("styles.apply_app_theme requires an active QApplication instance.")
-    resurface_styles.apply_application_font(app)
     app.setStyleSheet(_application_stylesheet())

@@ -165,18 +165,16 @@ class TemplateSaveDialog(QDialog):
                 background: transparent;
                 border: none;
                 color: {colors['text']};
-                font-family: {styles.resurface_styles.FONT_FAMILY};
-                font-size: {styles.resurface_styles.FONT_SIZE_STANDARD}px;
+                font-family: "Segoe UI";
+                font-size: 14px;
                 font-weight: 700;
             }}
             QDialog#TemplateSaveDialog QLabel#templateSaveTitle {{
                 color: {colors['title']};
-                font-size: {styles.resurface_styles.FONT_SIZE_DIALOG_TITLE}px;
+                font-size: 20px;
                 font-weight: 1000;
             }}
             QDialog#TemplateSaveDialog QLineEdit {{
-                font-family: {styles.resurface_styles.FONT_FAMILY};
-                font-size: {styles.resurface_styles.FONT_SIZE_STANDARD}px;
                 color: {colors['field_text']};
                 background-color: {colors['field_bg']};
                 border: {field_border_width}px solid {colors['field_border']};
@@ -190,8 +188,8 @@ class TemplateSaveDialog(QDialog):
                 border: 1px solid {colors['combo_border']};
                 border-radius: 6px;
                 padding: 6px 34px 6px 10px;
-                font-family: {styles.resurface_styles.FONT_FAMILY};
-                font-size: {styles.resurface_styles.FONT_SIZE_STANDARD}px;
+                font-family: "Segoe UI";
+                font-size: 14px;
                 font-weight: 700;
             }}
             QDialog#TemplateSaveDialog QComboBox:hover {{
@@ -211,8 +209,6 @@ class TemplateSaveDialog(QDialog):
                 height: 6px;
             }}
             QDialog#TemplateSaveDialog QComboBox QAbstractItemView {{
-                font-family: {styles.resurface_styles.FONT_FAMILY};
-                font-size: {styles.resurface_styles.FONT_SIZE_STANDARD}px;
                 color: {colors['field_text']};
                 background-color: {colors['field_bg']};
                 border: 1px solid {colors['field_border']};
@@ -225,8 +221,8 @@ class TemplateSaveDialog(QDialog):
                 border: 1px solid {colors['button_border']};
                 border-radius: 6px;
                 padding: 4px 8px;
-                font-family: {styles.resurface_styles.FONT_FAMILY};
-                font-size: {styles.resurface_styles.FONT_SIZE_STANDARD}px;
+                font-family: "Segoe UI";
+                font-size: 14px;
                 font-weight: bold;
             }}
             QDialog#TemplateSaveDialog QPushButton:hover {{

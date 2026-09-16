@@ -92,7 +92,6 @@ class WindowMessageMixin:
         danger_button.setObjectName("disableAllConfirmationsDangerButton")
         danger_button.setStyleSheet(
             "QPushButton { background-color: #c53030; color: white; "
-            f"font-family: {styles.FONT_FAMILY}; "
             "border: 2px solid #f06a6a; border-radius: 8px; padding: 8px 14px; "
             "font-weight: bold; } "
             "QPushButton:hover, QPushButton:pressed { background-color: #9f2020; }"

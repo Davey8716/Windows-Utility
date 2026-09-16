@@ -6,7 +6,6 @@ from collections.abc import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QApplication,
     QComboBox,
     QKeySequenceEdit,
     QLabel,
@@ -104,7 +103,6 @@ class ApplicationThemeController:
 
     def apply_theme(self, is_dark: bool) -> None:
         styles.set_theme(is_dark)
-        styles.apply_application_font(QApplication.instance())
         self.root.setStyleSheet(styles.window_style())
         refresh_visible_tooltip()
         self.window_chrome.apply_theme()
@@ -113,15 +111,15 @@ class ApplicationThemeController:
             if self._is_screen_mover_shortcut_internal_field(line_edit):
                 continue
             if line_edit.property("emphasizedSurfaceFieldStyle"):
-                line_edit.setStyleSheet(styles.emphasized_surface_line_edit_style(styles.FONT_SIZE_STANDARD))
+                line_edit.setStyleSheet(styles.emphasized_surface_line_edit_style(15))
             elif line_edit.property("framelessSurfaceFieldStyle"):
-                line_edit.setStyleSheet(styles.frameless_surfaced_line_edit_style(styles.FONT_SIZE_STANDARD))
+                line_edit.setStyleSheet(styles.frameless_surfaced_line_edit_style(15))
             elif line_edit.property("plainThemeFieldStyle"):
-                line_edit.setStyleSheet(styles.plain_theme_line_edit_style(styles.FONT_SIZE_STANDARD))
+                line_edit.setStyleSheet(styles.plain_theme_line_edit_style(15))
             elif line_edit.property("surfaceFieldStyle"):
-                line_edit.setStyleSheet(styles.surfaced_line_edit_style(styles.FONT_SIZE_STANDARD))
+                line_edit.setStyleSheet(styles.surfaced_line_edit_style(15))
             else:
-                line_edit.setStyleSheet(styles.line_edit_style(styles.FONT_SIZE_STANDARD))
+                line_edit.setStyleSheet(styles.line_edit_style(15))
 
         self.refresh_screen_mover_shortcut_styles()
 
