@@ -115,6 +115,22 @@ class TemplateController:
     def reset_loaded_template(self):
         self._current_loaded_template = None
 
+    def reset_template_selection(self):
+        """Clear template provenance without invoking dropdown load handlers."""
+        self.reset_loaded_template()
+        dropdowns = (
+            self.window.load_user_template_dropdown,
+            self.window.load_default_template_dropdown,
+        )
+        previous_signal_states = [dropdown.blockSignals(True) for dropdown in dropdowns]
+        try:
+            for dropdown in dropdowns:
+                dropdown.setCurrentIndex(0)
+        finally:
+            for dropdown, was_blocked in zip(dropdowns, previous_signal_states):
+                dropdown.blockSignals(was_blocked)
+        self._update_delete_template_button_state()
+
     def load_template_dialog(self, parent):
         if not self._templates_available():
             return "unavailable", self.MASTER_BACKUP_UNAVAILABLE_MESSAGE

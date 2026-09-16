@@ -73,9 +73,7 @@ class NestedUIController:
 
     def remove_all_folders(self):
         self.service.tree_controller.remove_all_folders()
-        self.template_controller.reset_loaded_template()
-        self.window.load_user_template_dropdown.setCurrentIndex(0)
-        self.window.load_default_template_dropdown.setCurrentIndex(0)
+        self.template_controller.reset_template_selection()
         self.window.ui_state.update_build_button_state()
         QTimer.singleShot(0, self.window.ui_state.update_nested_build_state)
 
@@ -104,7 +102,10 @@ class NestedUIController:
         self.window.ui_state.update_build_button_state()
 
     def remove_selected_folders(self):
+        if self.tree.currentItem() is None:
+            return
         self.service.tree_controller.remove_selected_folders()
+        self.template_controller.reset_template_selection()
         self.window.ui_state.update_build_button_state()
         QTimer.singleShot(0, self.window.ui_state.update_nested_build_state)
 

@@ -104,6 +104,7 @@ class TreeControllerStub:
         self.deserialize_calls = []
         self.remove_calls = 0
         self.auto_number_enabled = False
+        self.tree = None
 
     def deserialize_tree(self, data, **kwargs):
         self.deserialize_calls.append((data, kwargs))
@@ -130,7 +131,14 @@ class TreeControllerStub:
         pass
 
     def remove_selected_folders(self):
-        pass
+        selected = self.tree.currentItem()
+        if selected is None:
+            return
+        parent = selected.parent()
+        if parent is None:
+            self.tree.takeTopLevelItem(self.tree.indexOfTopLevelItem(selected))
+        else:
+            parent.removeChild(selected)
 
     def add_file(self, _filename):
         pass
@@ -193,6 +201,7 @@ def make_window(tmp_path):
         ["Default Templates", "Sample"]
     )
     window.nested_date_config.addItems(["ISO", "UK", "US"])
+    tree_controller.tree = window.tree
     return window
 
 
@@ -576,6 +585,82 @@ def test_remove_all_signal_cleans_all_selection_state_once(
     assert window.load_default_template_dropdown.currentIndex() == 0
     assert window.ui_state.build_updates == 1
     assert window.ui_state.nested_updates == 1
+
+
+def test_remove_selected_resets_default_template_selection_without_clearing_tree(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    controller = NestedUIController(window)
+    root = QTreeWidgetItem(["Root"])
+    child = QTreeWidgetItem(["Child"])
+    root.addChild(child)
+    window.tree.addTopLevelItem(root)
+    window.tree.setCurrentItem(child)
+    window.load_default_template_dropdown.setCurrentIndex(1)
+    window.load_default_template_dropdown.currentIndexChanged.connect(
+        lambda _index: window.tree.clear()
+    )
+    controller.template_controller._current_loaded_template = "Custom"
+    monkeypatch.setattr(
+        "folder_creator.ui.nested_ui_controller.QTimer.singleShot",
+        lambda _delay, callback: callback(),
+    )
+
+    controller.remove_selected_folders()
+
+    assert window.tree.topLevelItemCount() == 1
+    assert root.childCount() == 0
+    assert window.load_user_template_dropdown.currentIndex() == 0
+    assert window.load_default_template_dropdown.currentIndex() == 0
+    assert controller.template_controller._current_loaded_template is None
+    assert window.ui_state.build_updates == 1
+    assert window.ui_state.nested_updates == 1
+
+
+def test_remove_selected_root_resets_default_template_selection(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    controller = NestedUIController(window)
+    window.tree.addTopLevelItem(QTreeWidgetItem(["Root"]))
+    window.tree.setCurrentItem(window.tree.topLevelItem(0))
+    window.load_default_template_dropdown.setCurrentIndex(1)
+    monkeypatch.setattr(
+        "folder_creator.ui.nested_ui_controller.QTimer.singleShot",
+        lambda _delay, callback: callback(),
+    )
+
+    controller.remove_selected_folders()
+
+    assert window.tree.topLevelItemCount() == 0
+    assert window.load_user_template_dropdown.currentIndex() == 0
+    assert window.load_default_template_dropdown.currentIndex() == 0
+
+
+def test_remove_selected_clears_template_selection_but_not_user_template_file(
+    qapp, tmp_path, monkeypatch
+):
+    window = make_window(tmp_path)
+    user_template = window.service.template_paths.user_dir / "custom.json"
+    user_template.write_text("[]", encoding="utf-8")
+    controller = NestedUIController(window)
+    window.tree.addTopLevelItem(QTreeWidgetItem(["Root"]))
+    window.tree.setCurrentItem(window.tree.topLevelItem(0))
+    window.load_user_template_dropdown.setCurrentIndex(1)
+    controller.template_controller._current_loaded_template = "Custom"
+    monkeypatch.setattr(
+        "folder_creator.ui.nested_ui_controller.QTimer.singleShot",
+        lambda _delay, callback: callback(),
+    )
+
+    controller.remove_selected_folders()
+
+    assert window.tree.topLevelItemCount() == 0
+    assert user_template.exists()
+    assert window.load_user_template_dropdown.currentIndex() == 0
+    assert window.load_default_template_dropdown.currentIndex() == 0
+    assert controller.template_controller._current_loaded_template is None
 
 
 def test_successful_build_opens_output_and_persists_date_mode(qapp, tmp_path):
