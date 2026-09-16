@@ -156,6 +156,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             # its toolbar, without stealing meaningful space from the tree.
             "controls_to_tree_gap": 8,
             "tree_to_controls_gap": 16,
+            "tree_toolbar_bottom_inset": 25,
             "find_input_width": 180,
             "expand_width": 120,
             "collapse_width": 160,
@@ -215,7 +216,6 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         outer_margin = metrics["outer_margin"]
         section_gap = metrics["section_gap"]
         frame_padding = metrics["frame_padding"]
-        control_gap = metrics["control_gap"]
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -263,7 +263,6 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         right_layout = QVBoxLayout(self.right_pane)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
-        right_layout.setAlignment(Qt.AlignTop)
         right_layout.addWidget(self.controls_stack)
         self.controls_to_tree_spacer = QWidget()
         self.controls_to_tree_spacer.setFixedHeight(metrics["controls_to_tree_gap"])
@@ -280,22 +279,25 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             QSizePolicy.Expanding, QSizePolicy.Fixed
         )
         right_layout.addWidget(self.tree_toolbar_top_padding)
+        # Let the tree use the available vertical space above the toolbar while
+        # keeping the toolbar fixed near the application edge in either tree
+        # view mode.
+        right_layout.addStretch()
         right_layout.addLayout(self.tree_controls_layout)
-        right_layout.addSpacing(section_gap)
-
-        self.bottom_info_frame = QFrame()
-        self.bottom_info_frame.setFrameShape(QFrame.NoFrame)
-        self.bottom_info_frame.setFixedWidth(self.right_pane_width)
-        self.bottom_info_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.bottom_info_frame.setStyleSheet("border: none;")
-        bottom_layout = QVBoxLayout(self.bottom_info_frame)
-        bottom_layout.setContentsMargins(
-            frame_padding, frame_padding, frame_padding, frame_padding
+        # The app's outer and frame margins, plus the toolbar layout's own
+        # bottom margin, already account for 20 px. Reserve the remaining
+        # space so the search field ends exactly 25 px above the window edge.
+        toolbar_bottom_spacer_height = max(
+            0,
+            metrics["tree_toolbar_bottom_inset"]
+            - outer_margin
+            - frame_padding
+            - self.tree_controls_layout.contentsMargins().bottom(),
         )
-        bottom_layout.setSpacing(section_gap)
-        self._create_status_frame(frame_padding, control_gap)
-        bottom_layout.addWidget(self.smart_status_frame, alignment=Qt.AlignLeft)
-        right_layout.addWidget(self.bottom_info_frame, alignment=Qt.AlignLeft)
+        self.tree_toolbar_bottom_spacer = QWidget()
+        self.tree_toolbar_bottom_spacer.setObjectName("TreeToolbarBottomSpacer")
+        self.tree_toolbar_bottom_spacer.setFixedHeight(toolbar_bottom_spacer_height)
+        right_layout.addWidget(self.tree_toolbar_bottom_spacer)
         self.smart_layout.addWidget(self.right_pane)
         main_layout.addWidget(self.smart_folder_creator_frame, alignment=Qt.AlignHCenter)
 
@@ -490,33 +492,9 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         painter.end()
         return QIcon(pixmap)
 
-    def _create_status_frame(self, frame_padding, control_gap):
-        self.smart_status_frame = QFrame()
-        self.smart_status_frame.setObjectName("statusFrame")
-        self.smart_status_frame.setFrameShape(QFrame.NoFrame)
-        self.smart_status_frame.setFixedHeight(50)
-        self.smart_status_frame.setFixedWidth(
-            self.bottom_info_frame.width() - (frame_padding * 2)
-        )
-        self.smart_status_frame.setStyleSheet("border: none;")
-        layout = QHBoxLayout(self.smart_status_frame)
-        layout.setContentsMargins(
-            frame_padding, frame_padding, frame_padding, frame_padding
-        )
-        layout.setSpacing(control_gap)
-        self.smart_status_icon = QLabel(">")
-        self.smart_status_text = QLabel("")
-        self.smart_status_text.setMaximumWidth(700)
-        layout.addWidget(self.smart_status_icon)
-        layout.addWidget(self.smart_status_text)
-        layout.addStretch()
-        self.smart_status_frame.hide()
-
     def _restore_ui_state(self):
         state = self.service.state
         styles.apply_app_theme(QApplication.instance())
-        self.smart_status_icon.setStyleSheet(styles.status_label_style())
-        self.smart_status_text.setStyleSheet(styles.status_label_style())
         self.restore_timestamp_state(
             self.nested_date_toggle,
             self.nested_date_config,
@@ -646,8 +624,6 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.find_output_line.setStyleSheet(
             styles.frameless_surfaced_line_edit_style(find_font_size)
         )
-        self.smart_status_icon.setStyleSheet(styles.status_label_style())
-        self.smart_status_text.setStyleSheet(styles.status_label_style())
         for label in self.findChildren(QLabel):
             if label.property("surfaceLabelStyle"):
                 font_size = styles.resurface_styles.coerce_font_size(
