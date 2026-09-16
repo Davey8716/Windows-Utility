@@ -328,7 +328,7 @@ def tree_outer_frame_style() -> str:
         QFrame {{
             background-color: {qcolor_css(SURFACE_BG)};
             border: 1px solid {qcolor_css(SURFACE_BORDER)};
-            border-radius: 2px;
+            border-radius: 6px;
         }}
     """
 
@@ -346,7 +346,7 @@ def surfaced_tree_widget_style(font_size: int = 14) -> str:
             background-color: {surface_bg};
             color: {surface_text};
             border: none;
-            border-radius: 0px;
+            border-radius: 6px;
             padding: 6px;
             selection-background-color: {selection_bg};
         }}

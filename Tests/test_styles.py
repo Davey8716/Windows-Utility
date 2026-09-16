@@ -489,5 +489,7 @@ def test_folder_creator_tree_uses_the_maintenance_output_surface(is_dark):
 
         assert f"background-color: {surface_background};" in tree_stylesheet
         assert f"background-color: {surface_background};" in maintenance_stylesheet
+        assert "border-radius: 6px;" in tree_stylesheet
+        assert "border-radius: 6px;" in folder_styles.tree_outer_frame_style()
     finally:
         folder_styles.set_theme(True)
