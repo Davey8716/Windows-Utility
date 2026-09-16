@@ -50,6 +50,13 @@ class OutputLocationController:
             )
             return
 
+        if current_path_text and current_path.resolve() == desktop_path:
+            self.window.status.show_action_result(
+                "No directory selected. Desktop remains the active output location.",
+                status_type="info",
+            )
+            return
+
         self.window.status.show_action_result(
             "No directory selected.", status_type="error"
         )

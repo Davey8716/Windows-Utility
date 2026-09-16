@@ -16,6 +16,5 @@ All the folder dialogue pop up changes must respect the silence dialogues from t
 Ask wether the monitor rules should respect windows resurface as one app containing 2 processes (each can go to a seperarte monitor
 ) or both go to same monitor
 
-Change the Save Template middle format bar to be theme specific and be white for the format wording and the > dropdown and opposite for the 
-other theme
+
 

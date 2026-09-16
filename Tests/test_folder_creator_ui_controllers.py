@@ -815,6 +815,34 @@ def test_cancelled_output_selection_reports_error_off_desktop(
     assert window.status.calls[-1][1]["status_type"] == "error"
 
 
+def test_cancelled_output_selection_keeps_desktop_active(qapp, tmp_path, monkeypatch):
+    window = make_window(tmp_path)
+    desktop = tmp_path / "desktop"
+    desktop.mkdir()
+
+    class RejectedDialog:
+        def __init__(self, *_args):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(output_module, "OutputDirectoryDialog", RejectedDialog)
+    monkeypatch.setattr(output_module, "get_desktop_path", lambda: desktop)
+    controller = OutputLocationController(window)
+
+    controller.default_to_desktop()
+    updates_before_cancel = list(window.service.state_manager.updates)
+    controller.select_base_directory()
+
+    assert window.base_path_line.text() == str(desktop)
+    assert window.service.state_manager.updates == updates_before_cancel
+    assert window.status.calls[-1][0] == (
+        "No directory selected. Desktop remains the active output location.",
+    )
+    assert window.status.calls[-1][1]["status_type"] == "info"
+
+
 def test_output_directory_dialog_starts_at_current_valid_output_path(
     qapp, tmp_path, monkeypatch
 ):
