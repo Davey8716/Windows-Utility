@@ -92,7 +92,9 @@ class OutputOptionsPanel:
         self.date_controls_frame.setSizePolicy(
             QSizePolicy.Expanding, QSizePolicy.Expanding
         )
-        self.date_controls_frame.setFixedSize(210, 230)
+        # The three controls total 192 px tall.  Leave room for both
+        # ``control_gap`` intervals so Qt does not compress them.
+        self.date_controls_frame.setFixedSize(210, 238)
         self.date_controls_frame.setStyleSheet("border: none;")
         date_layout = QVBoxLayout(self.date_controls_frame)
         date_layout.setContentsMargins(15, 15, 15, 15)

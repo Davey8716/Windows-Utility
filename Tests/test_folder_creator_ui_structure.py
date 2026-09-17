@@ -702,7 +702,7 @@ def test_folder_creator_add_blank_dropdown_matches_user_templates_height(tmp_pat
         "from folder_creator.ui.main_window import MainWindow\n"
         "app = QApplication([])\n"
         "window = MainWindow()\n"
-        "assert window.file_dropdown.width() == 170\n"
+        "assert window.file_dropdown.width() == 180\n"
         "assert window.file_dropdown.height() == window.load_user_template_dropdown.height()\n"
         "assert window.file_dropdown.height() == styles.DEFAULT_BUTTON_HEIGHT\n"
         "print('FOLDER_CREATOR_FILE_DROPDOWN_SIZE_READY')"
