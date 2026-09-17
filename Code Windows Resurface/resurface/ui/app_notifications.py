@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 from typing import Callable
 
 from resurface.ui import styles
@@ -149,7 +150,12 @@ class WindowMessageMixin:
         timeout_seconds: int,
         timeout_verb: str = "close",
     ) -> str:
-        return f"{text}\n\nThis message will {timeout_verb} in {timeout_seconds} seconds."
+        is_rich_text = bool(re.search(r"</?[a-zA-Z][^>]*>", text))
+        separator = "<br><br>" if is_rich_text else "\n\n"
+        return (
+            f"{text}{separator}"
+            f"This message will {timeout_verb} in {timeout_seconds} seconds."
+        )
 
     def _refresh_grouped_timed_message(
         self,

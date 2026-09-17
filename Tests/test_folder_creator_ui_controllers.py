@@ -268,6 +268,12 @@ def test_base_directory_popup_exposes_an_underlined_explorer_link(qapp, tmp_path
         assert 'href="open-base-directory"' in text_label.text()
         assert "text-decoration: underline" in text_label.text()
         assert path in text_label.text()
+        assert (
+            "<br><br>This message will disappear in 10 seconds."
+            in text_label.text()
+        )
+        assert text_label.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert dialog._close_timer.interval() == 10_000
         text_label.linkActivated.emit("open-base-directory")
         assert activated == ["open-base-directory"]
     finally:
