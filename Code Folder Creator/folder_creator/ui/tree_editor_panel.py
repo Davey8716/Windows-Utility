@@ -186,7 +186,7 @@ class TreeEditorPanel:
         dropdown = QComboBox()
         dropdown.addItems(
             [
-                "Add Blank 📑",
+                "Add File",
                 "──────────",
                 "Python (.py)",
                 "JavaScript (.js)",

@@ -348,6 +348,11 @@ def _modern_combo_style(
     disabled_border = disabled_border or T.themed_button_disabled_border()
     chevron_path = H.dropdown_chevron_path().as_posix()
     folder_creator_file_dropdown_override = f"""
+        /* Centre the selected Add Blank title within its button; the popup
+           item padding remains deliberately unchanged. */
+        QComboBox#FolderCreatorAddBlankDropdown {{
+            padding: 4px 34px 4px 38px;
+        }}
         QComboBox#FolderCreatorAddBlankDropdown:disabled {{
             color: {H.qcolor_css(T.button_text_color())};
             background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
