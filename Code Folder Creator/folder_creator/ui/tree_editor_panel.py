@@ -205,7 +205,7 @@ class TreeEditorPanel:
                 "PowerShell (.ps1)",
             ]
         )
-        dropdown.setFixedSize(170, styles.DEFAULT_BUTTON_HEIGHT)
+        dropdown.setFixedSize(180, styles.DEFAULT_BUTTON_HEIGHT)
         dropdown.setObjectName("FolderCreatorAddBlankDropdown")
         styles.apply_fluent_item_icon(dropdown, 0, "\ue8a5")
         dropdown.setProperty("styleFontSize", 12)
