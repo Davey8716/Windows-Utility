@@ -416,7 +416,11 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             self.section_navigation.addItem(item)
             self.controls_stack.addWidget(page)
 
-        navigation_height = (len(self.SECTION_DEFINITIONS) * 50) + 16
+        # The navigation is intentionally a fixed five-item tab rail.  Account
+        # for the list viewport's frame so all items fit without even a
+        # one-pixel scroll range (the hidden scrollbar otherwise still accepts
+        # mouse-wheel scrolling).
+        navigation_height = (len(self.SECTION_DEFINITIONS) * 50) + 24
         self.section_navigation.setFixedHeight(navigation_height)
         sidebar_layout.addStretch()
 

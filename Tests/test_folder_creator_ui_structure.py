@@ -118,6 +118,7 @@ def test_folder_creator_uses_frameless_theme_aware_title_bar(tmp_path):
         "assert 'text-align: center' in window.add_folder_btn.toolTip(); "
         "assert window._tooltip_router is not None; "
         "assert window.section_navigation.count() == 5; "
+        "assert window.section_navigation.verticalScrollBar().maximum() == 0; "
         "assert [window.section_navigation.item(i).text() for i in range(5)] == ['Folders', 'Date & Numbering', 'After Build', 'Templates', 'Output & Build']; "
         "assert window.section_navigation.currentRow() == 0; "
         "assert window.controls_stack.currentIndex() == 0; "
