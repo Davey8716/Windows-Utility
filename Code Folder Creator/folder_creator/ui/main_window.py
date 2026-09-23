@@ -150,6 +150,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
     TEMPLATE_CONTROL_STACK_HEIGHT = 250
     CONTROL_STACK_TO_TREE_GAP = 8
     TEMPLATE_STACK_TO_TREE_GAP = 8
+    TEMPLATES_SECTION_INDEX = 3
 
     SECTION_DEFINITIONS = (
         ("folders", "Folders", "\ue8b7", "Create and edit folders and files."),
@@ -199,6 +200,9 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.window_width = WINDOWS_RESURFACE_EXPANDED_WIDTH
         self.window_height = WINDOWS_RESURFACE_HEIGHT
         self.tree_default_height = 495
+        # Templates has a 6 px taller controls stack, so its compact tree is
+        # 6 px shorter. This keeps the tree frame's lower border in view.
+        self.template_tree_default_height = 489
         self.tree_expanded_height = 745
         self.tree_frame_padding = 2
         self._tree_view_expanded = False
@@ -487,10 +491,12 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self._update_control_stack_geometry(row)
         if self._tree_view_expanded:
             self._set_tree_view_expanded(False)
+        else:
+            self._set_tree_height(self._collapsed_tree_height())
 
     def _update_control_stack_geometry(self, row):
         """Keep each tab's action frame at its established distance from the tree."""
-        is_templates_tab = row == 3
+        is_templates_tab = row == self.TEMPLATES_SECTION_INDEX
         self.controls_stack.setFixedHeight(
             self.TEMPLATE_CONTROL_STACK_HEIGHT
             if is_templates_tab
@@ -502,6 +508,15 @@ class MainWindow(WindowMessageMixin, QMainWindow):
                 if is_templates_tab
                 else self.CONTROL_STACK_TO_TREE_GAP
             )
+
+    def _collapsed_tree_height(self):
+        if self.section_navigation.currentRow() == self.TEMPLATES_SECTION_INDEX:
+            return self.template_tree_default_height
+        return self.tree_default_height
+
+    def _set_tree_height(self, tree_height):
+        self.tree.setFixedHeight(tree_height)
+        self._set_tree_frame_height(tree_height)
 
     def _on_section_clicked(self, item):
         """Restore a hidden current page when its selected item is clicked."""
@@ -844,10 +859,9 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         tree_height = (
             self.tree_expanded_height
             if self._tree_view_expanded
-            else self.tree_default_height
+            else self._collapsed_tree_height()
         )
-        self.tree.setFixedHeight(tree_height)
-        self._set_tree_frame_height(tree_height)
+        self._set_tree_height(tree_height)
         self.tree.setPlaceholderFontSize(
             self.tree.EXPANDED_PLACEHOLDER_FONT_SIZE
             if self._tree_view_expanded
