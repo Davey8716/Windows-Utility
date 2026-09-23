@@ -142,7 +142,6 @@ class MainWindow(WindowMessageMixin, QMainWindow):
 
     TITLE_BAR_HEIGHT = 50
     TITLE_TEXT_ROW_HEIGHT = 40
-    TITLE_TEXT_TOP_PADDING = 10
     TITLE_CONTROL_WIDTH = 42
     CONTROL_FONT_SIZE = 12
     NAVIGATION_WIDTH = 205
@@ -607,9 +606,9 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         )
         self.title_label.setGeometry(
             0,
-            self.TITLE_TEXT_TOP_PADDING,
+            0,
             self.width(),
-            self.TITLE_TEXT_ROW_HEIGHT - self.TITLE_TEXT_TOP_PADDING,
+            self.TITLE_BAR_HEIGHT,
         )
         close_x = self.width() - self.window_close_btn.width()
         self.window_minimize_btn.move(close_x - self.window_minimize_btn.width(), 0)
