@@ -65,6 +65,7 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
+        self._fill_internal_field()
         self._position_duplicate_message()
 
     def focusInEvent(self, event) -> None:
@@ -96,6 +97,11 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
             max(0, self.width() - 6),
             max(0, self.height() - 6),
         )
+
+    def _fill_internal_field(self) -> None:
+        """Keep the visible shortcut field flush with the control's bounds."""
+        for field in self.findChildren(QLineEdit):
+            field.setGeometry(self.rect().adjusted(-1, -1, 1, 1))
 
     def _refresh_style(self) -> None:
         self.style().unpolish(self)
@@ -134,12 +140,12 @@ class ScreenMoverSettingsPage(PageControls):
         self.shortcuts_container.setFixedWidth(shortcuts_width)
         shortcuts_layout = QVBoxLayout(self.shortcuts_container)
         shortcuts_layout.setContentsMargins(0, 0, 0, 0)
-        shortcuts_layout.setSpacing(6)
+        shortcuts_layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
         self.content_layout.addWidget(self.shortcuts_container, 0, Qt.AlignmentFlag.AlignHCenter)
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(self.CONTROL_COLUMN_GAP)
-        grid.setVerticalSpacing(6)
+        grid.setVerticalSpacing(styles.PAGE_CONTROL_ROW_GAP)
         grid.setColumnStretch(1, 1)
         shortcuts_layout.addLayout(grid)
 

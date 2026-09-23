@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QLineEdit
 
 from resurface.features.system.command_runner import CommandRunner
 from resurface.features.system.maintenance_actions import MaintenanceActions
@@ -10,6 +10,7 @@ from resurface.ui.pages.hover_window_controls_page import HoverWindowControlsPag
 from resurface.ui.pages.maintenance_page import MaintenancePage
 from resurface.ui.pages.organising_utilities_page import OrganisingUtilitiesPage
 from resurface.ui.pages.recycle_bin_page import RecycleBinPage
+from resurface.ui.pages.screen_mover_settings_page import ScreenMoverSettingsPage
 from resurface.ui.pages.user_interface_page import UserInterfacePage
 from resurface.ui.pages.windows_utilities_page import WindowsUtilitiesPage
 from resurface.ui.quick_actions import QuickActionRegistry, QuickActionSpec
@@ -38,6 +39,7 @@ def test_named_pages_use_the_shared_control_gap():
         RecycleBinPage({}, _tooltip),
         MaintenancePage(actions, runner, _tooltip, lambda action: action(), lambda *_args: None),
         HoverWindowControlsPage({}, _tooltip),
+        ScreenMoverSettingsPage({}, _tooltip),
     ]
     windows_utilities = WindowsUtilitiesPage(
         WindowsToolCatalog(), object(), object(), object(), actions, _tooltip,
@@ -76,6 +78,23 @@ def test_named_pages_use_the_shared_control_gap():
             windows_row.itemAt(index).widget().layout().spacing() == expected
             for index in range(windows_row.count())
         )
+
+        screen_mover = pages[7]
+        screen_mover.show()
+        _app().processEvents()
+        shortcuts_layout = screen_mover.shortcuts_container.layout()
+        shortcut_grid = shortcuts_layout.itemAt(0).layout()
+        assert shortcuts_layout.spacing() == expected
+        assert shortcut_grid.horizontalSpacing() == styles.PAGE_CONTROL_GAP
+        assert shortcut_grid.verticalSpacing() == expected
+        for action, edit in screen_mover._hotkey_edits.items():
+            fields = edit.findChildren(QLineEdit)
+            assert len(fields) == 1
+            field = fields[0]
+            clear = screen_mover._clear_hotkey_buttons[action]
+            assert field.x() == field.y() == -1
+            assert field.width() == edit.width() + 2
+            assert field.height() == clear.height() + 2
     finally:
         for page in pages:
             page.deleteLater()
