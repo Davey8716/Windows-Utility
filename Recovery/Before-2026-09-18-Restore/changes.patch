@@ -1,0 +1,113 @@
+diff --git a/Code Windows Resurface/resurface/ui/monitor_rules_page.py b/Code Windows Resurface/resurface/ui/monitor_rules_page.py
+index 9b33382..c43d187 100644
+--- a/Code Windows Resurface/resurface/ui/monitor_rules_page.py	
++++ b/Code Windows Resurface/resurface/ui/monitor_rules_page.py	
+@@ -595,14 +595,15 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
+ 
+         source_rules = copy.deepcopy(imported)
+         if self.rules:
+-            choice = QMessageBox.question(
+-                self,
++            choice = self._show_modal_message(
++                QMessageBox.Icon.Question,
+                 "Import Monitor Rules",
+                 "Replace the current rules? Choose No to merge the backup instead.",
+                 QMessageBox.StandardButton.Yes
+                 | QMessageBox.StandardButton.No
+                 | QMessageBox.StandardButton.Cancel,
+                 QMessageBox.StandardButton.Cancel,
++                popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
+             )
+             if choice == QMessageBox.StandardButton.Cancel:
+                 return
+diff --git a/Shared/__pycache__/app_state_defaults.cpython-314.pyc b/Shared/__pycache__/app_state_defaults.cpython-314.pyc
+index 0c4d8815fefa97c0cfbdb9fcedd366458199bb47..fb1194083528e1e8f67250b15d0e452fbaff109e 100644
+GIT binary patch
+delta 23
+dcmcaCd|8-Jn~#@^0SKxWugPNL+Q@g5697en1^fU2
+
+delta 23
+dcmcaCd|8-Jn~#@^0SGt+7H4hY+{ky7697M}1)Bf>
+
+diff --git a/Tests/test_monitor_rules_ui.py b/Tests/test_monitor_rules_ui.py
+index 027b3b4..8a7bff9 100644
+--- a/Tests/test_monitor_rules_ui.py
++++ b/Tests/test_monitor_rules_ui.py
+@@ -999,7 +999,7 @@ def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_pa
+     monkeypatch.setattr(QFileDialog, "exec", lambda _dialog: QDialog.DialogCode.Accepted)
+     monkeypatch.setattr(QFileDialog, "selectedFiles", lambda _dialog: [str(source)])
+     choice = {"merge": QMessageBox.StandardButton.No, "cancel": QMessageBox.StandardButton.Cancel}
+-    monkeypatch.setattr(QMessageBox, "question", lambda *args: choice.get(mode, QMessageBox.StandardButton.Yes))
++    monkeypatch.setattr(QMessageBox, "exec", lambda _dialog: choice.get(mode, QMessageBox.StandardButton.Yes))
+     monkeypatch.setattr(QMessageBox, "warning", lambda *args: None)
+     try:
+         if mode in {"cancel", "invalid"}:
+@@ -1021,11 +1021,14 @@ def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_pa
+         if mode in {"cancel", "invalid"}:
+             assert commits == []
+             assert state["baseline"] == baseline_before
++            assert page.rules == monitor_rules_ui.normalize_monitor_rules(initial)
+         else:
+             assert commits
+             assert page.export_rules_button.isEnabled() == (mode == "merge")
+             assert state["baseline"]["source_path"] == str(source.resolve())
+-            if mode != "merge":
++            if mode == "merge":
++                assert page.rules == monitor_rules_ui.normalize_monitor_rules(initial + imported)
++            else:
+                 assert page.rules == monitor_rules_ui.normalize_monitor_rules(imported)
+                 assert page._export_rules() is None
+         assert set(tmp_path.rglob("*.json")) == before_files
+@@ -1034,6 +1037,52 @@ def test_import_updates_saved_baseline_only_after_acceptance(monkeypatch, tmp_pa
+         app.processEvents()
+ 
+ 
++def test_import_confirmation_matches_monitor_rules_dialog_style(monkeypatch, tmp_path):
++    app = QApplication.instance() or QApplication([])
++    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
++    source = tmp_path / "import.json"
++    source.write_text(json.dumps({"rules": [make_rule("imported", "Imported")]}), encoding="utf-8")
++    page = monitor_rules_ui.MonitorRulesPage(
++        None,
++        rules=[make_rule()],
++        app_hwnd=999,
++        on_rules_changed=lambda _rules: None,
++        get_master_backup_dir=lambda: str(tmp_path),
++    )
++    captured = []
++    monkeypatch.setattr(QFileDialog, "exec", lambda _dialog: QDialog.DialogCode.Accepted)
++    monkeypatch.setattr(QFileDialog, "selectedFiles", lambda _dialog: [str(source)])
++
++    def cancel_and_capture(dialog):
++        captured.append(dialog)
++        return QMessageBox.StandardButton.Cancel
++
++    monkeypatch.setattr(QMessageBox, "exec", cancel_and_capture)
++    try:
++        for is_dark in (True, False):
++            monitor_rules_ui.styles.set_theme(is_dark)
++            page._import_rules()
++            dialog = captured[-1]
++            assert dialog.parent() is page
++            assert dialog.windowTitle() == "Import Monitor Rules"
++            assert dialog.text() == "Replace the current rules? Choose No to merge the backup instead."
++            assert dialog.standardButtons() == (
++                QMessageBox.StandardButton.Yes
++                | QMessageBox.StandardButton.No
++                | QMessageBox.StandardButton.Cancel
++            )
++            assert dialog.standardButton(dialog.defaultButton()) == QMessageBox.StandardButton.Cancel
++            assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
++            assert dialog._popup_corner_radius == monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS
++            assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style(
++                radius=monitor_rules_ui.MONITOR_RULES_POPUP_CORNER_RADIUS
++            )
++    finally:
++        monitor_rules_ui.styles.set_theme(True)
++        page.deleteLater()
++        app.processEvents()
++
++
+ def test_export_rules_cancel_does_not_write_file(monkeypatch, tmp_path):
+     app = QApplication.instance() or QApplication([])
+     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)

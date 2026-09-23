@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from folder_creator.core.app_service import AppService
 from folder_creator.core.system_paths import get_desktop_path
+from folder_creator.core.windows_resurface_window import focus_windows_resurface
 from folder_creator.ui import styles
 from folder_creator.ui.nested_ui_controller import NestedUIController
 from folder_creator.ui.output_options_panel import OutputOptionsPanel
@@ -316,7 +317,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         )
 
         self._create_section_navigation()
-        self.smart_layout.addWidget(self.section_navigation)
+        self.smart_layout.addWidget(self.sidebar)
 
         self.right_pane = QWidget()
         self.right_pane.setObjectName("FolderCreatorRightPane")
@@ -364,9 +365,16 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         main_layout.addWidget(self.smart_folder_creator_frame, alignment=Qt.AlignHCenter)
 
     def _create_section_navigation(self):
+        self.sidebar = QFrame()
+        self.sidebar.setObjectName("FolderCreatorSidebar")
+        self.sidebar.setFixedWidth(self.NAVIGATION_WIDTH)
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(6, 6, 6, 6)
+        sidebar_layout.setSpacing(8)
+
         self.section_navigation = QListWidget()
         self.section_navigation.setObjectName("FolderCreatorNavigationList")
-        self.section_navigation.setFixedWidth(self.NAVIGATION_WIDTH)
+        self.section_navigation.setFixedWidth(self.NAVIGATION_WIDTH - 12)
         self.section_navigation.setIconSize(QSize(22, 22))
         self.section_navigation.setSpacing(2)
         self.section_navigation.setHorizontalScrollBarPolicy(
@@ -379,6 +387,8 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             QAbstractItemView.SelectionMode.SingleSelection
         )
         self.section_navigation.setAccessibleName("Folder Creator sections")
+
+        sidebar_layout.addWidget(self.section_navigation)
 
         self.controls_stack = QStackedWidget()
         self.controls_stack.setObjectName("FolderCreatorControlsStack")
@@ -406,12 +416,39 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             self.section_navigation.addItem(item)
             self.controls_stack.addWidget(page)
 
+        navigation_height = (len(self.SECTION_DEFINITIONS) * 50) + 16
+        self.section_navigation.setFixedHeight(navigation_height)
+        sidebar_layout.addStretch()
+
+        self.sidebar_separator = QFrame()
+        self.sidebar_separator.setObjectName("FolderCreatorSidebarSeparator")
+        self.sidebar_separator.setFrameShape(QFrame.Shape.HLine)
+        self.sidebar_separator.setFixedHeight(1)
+        sidebar_layout.addWidget(self.sidebar_separator)
+
+        self.return_to_resurface_btn = QPushButton("Windows Resurface")
+        self.return_to_resurface_btn.setAccessibleName("Return to Windows Resurface")
+        self.return_to_resurface_btn.setProperty("styleFontSize", self.CONTROL_FONT_SIZE)
+        self.return_to_resurface_btn.setFixedHeight(40)
+        styles.apply_fluent_icon(self.return_to_resurface_btn, "\ue72b")
+        self.return_to_resurface_btn.clicked.connect(self._return_to_windows_resurface)
+        sidebar_layout.addWidget(self.return_to_resurface_btn)
+
         self._refresh_section_navigation_icons()
         self.section_navigation.currentRowChanged.connect(
             self._on_section_changed
         )
         self.section_navigation.itemClicked.connect(self._on_section_clicked)
         self.section_navigation.setCurrentRow(0)
+
+    def _return_to_windows_resurface(self):
+        """Restore the host application before hiding this companion window."""
+        if focus_windows_resurface():
+            self.showMinimized()
+            return
+        self.status.show_action_result(
+            "Windows Resurface is not currently open.", status_type="error"
+        )
 
     def _create_control_page(
         self,
@@ -510,6 +547,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         tooltips = {
             self.window_minimize_btn: "Minimize Nested Folder Creator.",
             self.window_close_btn: "Close Nested Folder Creator.",
+            self.return_to_resurface_btn: "Return to the Windows Resurface main window.",
             self.add_folder_btn: "Add a top-level folder to the structure.",
             self.add_subfolder_btn: "Add a subfolder beneath the selected folder.",
             self.remove_btn: "Remove the selected folder and its contents from the structure.",
@@ -694,6 +732,8 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             styles.title_bar_control_style(close_button=True)
         )
         self.section_navigation.setStyleSheet(styles.navigation_list_style())
+        self.sidebar.setStyleSheet(styles.sidebar_style())
+        self.sidebar_separator.setStyleSheet(styles.sidebar_separator_style())
         for page_index in range(self.controls_stack.count()):
             page = self.controls_stack.widget(page_index)
             page.setStyleSheet(

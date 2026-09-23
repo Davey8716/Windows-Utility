@@ -104,10 +104,9 @@ def navigation_list_style() -> str:
     )
     return f"""
         QListWidget#FolderCreatorNavigationList {{
-            background-color: {qcolor_css(SURFACE_BG)};
+            background: transparent;
             color: {qcolor_css(TEXT_COLOR)};
-            border: 1px solid {qcolor_css(SURFACE_BORDER)};
-            border-radius: {resurface_styles.BUTTON_CORNER_RADIUS}px;
+            border: none;
             outline: none;
             padding: 8px 6px;
             font-family: "Segoe UI";
@@ -130,6 +129,24 @@ def navigation_list_style() -> str:
             border-left: 3px solid {qcolor_css(resurface_styles.STATUS_ACCENT)};
         }}
     """
+
+
+def sidebar_style() -> str:
+    """Return the enclosing navigation surface treatment for the active theme."""
+    return f"""
+        QFrame#FolderCreatorSidebar {{
+            background-color: {qcolor_css(SURFACE_BG)};
+            border: 1px solid {qcolor_css(SURFACE_BORDER)};
+            border-radius: {resurface_styles.BUTTON_CORNER_RADIUS}px;
+        }}
+    """
+
+
+def sidebar_separator_style() -> str:
+    return (
+        "QFrame#FolderCreatorSidebarSeparator "
+        f"{{ background-color: {qcolor_css(SURFACE_BORDER)}; border: none; }}"
+    )
 
 
 def control_page_style() -> str:
