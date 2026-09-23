@@ -198,8 +198,8 @@ class MainWindow(WindowMessageMixin, QMainWindow):
 
         self.window_width = WINDOWS_RESURFACE_EXPANDED_WIDTH
         self.window_height = WINDOWS_RESURFACE_HEIGHT
-        self.tree_default_height = 475
-        self.tree_expanded_height = 725
+        self.tree_default_height = 495
+        self.tree_expanded_height = 745
         self.tree_frame_padding = 2
         self._tree_view_expanded = False
         self.setWindowTitle("Folder Generator")
@@ -217,7 +217,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
             # Keep the editor visually separated from both its top actions and
             # its toolbar, without stealing meaningful space from the tree.
             "controls_to_tree_gap": 8,
-            "tree_to_controls_gap": 16,
+            "tree_to_controls_gap": 9,
             "tree_toolbar_bottom_inset": 25,
             "find_input_width": 180,
             "expand_width": 120,
