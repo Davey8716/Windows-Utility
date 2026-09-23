@@ -17,7 +17,7 @@ class RecycleBinPage(PageControls):
         controls = QWidget(); controls.setProperty("centeredControlGrid", True)
         controls.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         layout = QGridLayout(controls); layout.setContentsMargins(0, 0, 0, 0)
-        layout.setHorizontalSpacing(self.CONTROL_COLUMN_GAP); layout.setVerticalSpacing(10)
+        layout.setHorizontalSpacing(self.CONTROL_COLUMN_GAP); layout.setVerticalSpacing(styles.PAGE_CONTROL_ROW_GAP)
         actions = self.make_action_dropdown(
             " Cleanup Actions ", ["Open Recycle Bin", "Run Auto-Clean Now", "Empty Recycle Bin"],
             lambda name: self.action_requested.emit({"Open Recycle Bin": "open", "Run Auto-Clean Now": "run", "Empty Recycle Bin": "empty"}[name]),

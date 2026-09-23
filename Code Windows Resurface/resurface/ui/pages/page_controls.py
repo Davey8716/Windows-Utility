@@ -33,6 +33,7 @@ class PageControls(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.content_layout = QVBoxLayout(self)
         self.content_layout.setContentsMargins(10, 10, 10, 10)
+        self.content_layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
 
     def register_tooltip(self, widget, text: str) -> None:
         self._register_tooltip(widget, text)

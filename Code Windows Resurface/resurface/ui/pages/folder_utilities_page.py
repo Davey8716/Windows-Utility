@@ -17,7 +17,7 @@ class FolderUtilitiesPage(PageControls):
     def __init__(self, register_tooltip, parent=None, *, saved_names_path=None):
         super().__init__("folder_utilities", register_tooltip, parent)
         self._saved_names_path = saved_names_path
-        self.content_layout.setSpacing(16)
+        self.content_layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
         creator = self.style_action_button(QPushButton("Folder Creator"))
         creator.clicked.connect(self.folder_creator_requested.emit)
         self.folder_creator_button = creator

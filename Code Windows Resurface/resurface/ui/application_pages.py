@@ -148,7 +148,7 @@ class QuickActionsGrid(WindowMessageMixin, QWidget):
         self.layout = QGridLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
-        self.layout.setVerticalSpacing(12)
+        self.layout.setVerticalSpacing(styles.PAGE_CONTROL_ROW_GAP)
         compact_width = (
             styles.PAGE_CONTROL_WIDTH - styles.PAGE_CONTROL_GAP
         ) // 2

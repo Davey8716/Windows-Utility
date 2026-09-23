@@ -58,7 +58,7 @@ class WindowsUtilitiesPage(QWidget):
             column.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             layout = QVBoxLayout(column)
             layout.setContentsMargins(0, 0, 0, 0)
-            layout.setSpacing(10)
+            layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
             row_layout.addWidget(column)
             row_layout.setAlignment(column, Qt.AlignmentFlag.AlignTop)
             columns.append((column, layout))

@@ -89,7 +89,7 @@ class MaintenancePage(QWidget):
         layout = QGridLayout(grid)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
-        layout.setVerticalSpacing(10)
+        layout.setVerticalSpacing(styles.PAGE_CONTROL_ROW_GAP)
         layout.setColumnMinimumWidth(0, self.CONTROL_WIDTH)
         layout.setColumnMinimumWidth(1, self.CONTROL_WIDTH)
         self.page_layout.addWidget(grid, 0, Qt.AlignmentFlag.AlignHCenter)

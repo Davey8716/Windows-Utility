@@ -37,7 +37,7 @@ class HoverWindowControlsPage(PageControls):
     ) -> None:
         super().__init__("hover_window_controls", register_tooltip, parent)
         self._has_export_changes = has_export_changes
-        self.content_layout.setSpacing(8)
+        self.content_layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
         enabled = bool(enabled)
         taskbar_restore_enabled = bool(taskbar_restore_enabled)
         dwell_ms = normalized_dwell_ms(dwell_ms)
