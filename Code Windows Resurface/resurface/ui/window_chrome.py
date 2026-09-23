@@ -142,7 +142,7 @@ class WindowChrome:
             return
         title_control_width = app.window_minimize_btn.width() + app.window_close_btn.width()
         app.window_drag_region.setGeometry(0, 0, max(0, app.width() - title_control_width), app.TITLE_TEXT_ROW_HEIGHT)
-        app.window_title_label.setGeometry(app.SIDEBAR_WIDTH, app.TITLE_TEXT_TOP_PADDING, max(0, app.width() - app.SIDEBAR_WIDTH), app.TITLE_TEXT_ROW_HEIGHT - app.TITLE_TEXT_TOP_PADDING)
+        app.window_title_label.setGeometry(0, 0, app.width(), app.TITLE_BAR_HEIGHT)
         close_x = app.width() - app.window_close_btn.width()
         app.window_minimize_btn.move(close_x - app.window_minimize_btn.width(), 0)
         app.window_close_btn.move(close_x, 0)

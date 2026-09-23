@@ -939,17 +939,11 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         window.show()
         qt_app.processEvents()
 
-        def window_center_x(widget):
-            position = widget.mapTo(window, QPoint(0, 0))
-            return position.x() + (widget.width() // 2)
-
         def window_y(widget):
             return widget.mapTo(window, QPoint(0, 0)).y()
 
         assert window.windowFlags() & Qt.WindowType.FramelessWindowHint
-        assert window.TITLE_BAR_HEIGHT == (
-            window.TITLE_TEXT_ROW_HEIGHT + window.TITLE_CONTROL_ROW_HEIGHT
-        )
+        assert window.TITLE_BAR_HEIGHT == 50
         assert window.window_title_label.text() == "Windows Resurface"
         assert "font-size: 25px" in window.window_title_label.styleSheet()
         assert window.window_minimize_btn.parent() is window.window_title_bar
@@ -957,14 +951,16 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         assert not window.window_minimize_btn.icon().isNull()
         assert not window.window_close_btn.icon().isNull()
 
-        assert window_center_x(window.window_title_label) == (
-            window.navigation_shell.page_stack.mapTo(window, QPoint(0, 0)).x()
-            + (window.navigation_shell.page_stack.width() // 2)
+        assert window.window_title_label.geometry() == window.window_title_bar.rect()
+        assert (
+            window.window_title_label.geometry().center()
+            == window.window_title_bar.rect().center()
         )
-        assert window_y(window.window_title_label) == window.TITLE_TEXT_TOP_PADDING
-        assert window.window_title_label.height() == (
-            window.TITLE_TEXT_ROW_HEIGHT - window.TITLE_TEXT_TOP_PADDING
+        title_bar_bottom = (
+            window.window_title_bar.mapTo(window, QPoint()).y()
+            + window.window_title_bar.height()
         )
+        assert window.navigation_shell.mapTo(window, QPoint()).y() >= title_bar_bottom
         assert window_y(window.window_minimize_btn) == 0
         assert window_y(window.window_close_btn) == 0
         assert window.window_minimize_btn.height() == window.TITLE_TEXT_ROW_HEIGHT
