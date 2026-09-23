@@ -63,8 +63,10 @@ MONITOR_RULES_HELP_TEXT = (
 
 MONITOR_RULES_POPUP_CORNER_RADIUS = 12
 RULES_FRAME_WIDTH = 685
-RULES_FRAME_LAYOUT_MARGIN = 15
-RULES_FRAME_VISIBLE_INSET = 16
+# The styled rules frame has a 1 px border, so an 11 px layout margin renders
+# the shared 12 px visible border-to-content inset.
+RULES_FRAME_LAYOUT_MARGIN = styles.PAGE_CONTROL_GAP - 1
+RULES_FRAME_VISIBLE_INSET = styles.PAGE_CONTROL_GAP
 
 
 class ImportRulesDialog(QFileDialog):
@@ -143,7 +145,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         # (rather than changing its columns) preserves the existing alignment
         # and spacing of both rows of buttons.
         action_grid.setContentsMargins(0, 0, 0, 0)
-        action_grid.setHorizontalSpacing(6)
+        action_grid.setHorizontalSpacing(styles.PAGE_CONTROL_GAP)
         action_grid.setVerticalSpacing(panel_layout.spacing())
 
         self.add_button = QPushButton("Add Rule", self.rules_frame)
@@ -220,7 +222,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self.rule_list.setObjectName("MonitorRuleList")
         self.rule_list_layout = QVBoxLayout(self.rule_list)
         self.rule_list_layout.setContentsMargins(0, 0, 0, 0)
-        self.rule_list_layout.setSpacing(10)
+        self.rule_list_layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
         panel_layout.addWidget(self.rule_list)
         self.apply_theme()
         self._render_rules()
@@ -424,6 +426,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             card_layout.addWidget(detail_label)
 
             actions = QHBoxLayout()
+            actions.setSpacing(styles.PAGE_CONTROL_GAP)
             for text, callback in (
                 ("Edit", lambda _checked=False, idx=index: self._edit_rule(idx)),
                 ("Move Up", lambda _checked=False, idx=index: self._move_rule(idx, -1)),

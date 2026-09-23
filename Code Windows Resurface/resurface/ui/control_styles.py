@@ -149,17 +149,12 @@ def hotkey_edit_style(font_size: int = 13) -> str:
             )}
             padding: 4px 8px;
             background-color: {H.qcolor_css(T.themed_surface_field_bg())};
-            border: 2px solid {H.qcolor_css(border)};
-            border-radius: 6px;
+            border: none;
+            border-radius: 4px;
             selection-background-color: {H.qcolor_css(T.PANEL_HOVER)};
         }}
         QKeySequenceEdit#ScreenMoverShortcutEdit:hover,
         QKeySequenceEdit#ScreenMoverShortcutEdit:focus {{
-            border-color: {H.qcolor_css(border)};
-            background-color: {H.qcolor_css(T.themed_surface_field_bg())};
-        }}
-        QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit:hover,
-        QKeySequenceEdit#ScreenMoverShortcutEdit QLineEdit:focus {{
             border-color: {H.qcolor_css(border)};
             background-color: {H.qcolor_css(T.themed_surface_field_bg())};
         }}

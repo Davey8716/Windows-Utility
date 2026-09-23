@@ -19,6 +19,7 @@ from resurface.ui.tooltips import set_tooltip, tooltip_text
 
 
 PANEL_WIDTH = 685
+PANEL_CONTENT_INSET = styles.PAGE_CONTROL_GAP
 
 
 class ClipboardClearConfirmationDialog(QMessageBox):
@@ -90,10 +91,16 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         self.panel.setObjectName("MonitorRulesEmptyState")
         self.panel.setFixedWidth(PANEL_WIDTH)
         layout = QVBoxLayout(self.panel)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
+        layout.setContentsMargins(
+            PANEL_CONTENT_INSET,
+            PANEL_CONTENT_INSET,
+            PANEL_CONTENT_INSET,
+            PANEL_CONTENT_INSET,
+        )
+        layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
 
         controls = QHBoxLayout()
+        controls.setSpacing(styles.PAGE_CONTROL_GAP)
         self.recording_button = QPushButton(self.panel)
         self.export_button = QPushButton("Export History", self.panel)
         self.clear_button = QPushButton("Clear All", self.panel)
@@ -113,7 +120,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.status_label)
         self.history_layout = QVBoxLayout()
-        self.history_layout.setSpacing(8)
+        self.history_layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
         layout.addLayout(self.history_layout)
         root.addWidget(self.panel, 0, Qt.AlignmentFlag.AlignHCenter)
 

@@ -44,6 +44,30 @@ def make_service(state=None, clipboard=None, source=None):
     return service, saves
 
 
+def test_clipboard_provenance_uses_shared_control_and_card_spacing():
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    service._append({"content_type": "text", "text": "record"})
+    page = ClipboardProvenancePage(
+        None, service=service, get_master_backup_dir=lambda: ""
+    )
+    try:
+        page.show()
+        app.processEvents()
+        panel_layout = page.panel.layout()
+        controls = panel_layout.itemAt(0).layout()
+        assert page.layout().spacing() == styles.PAGE_CONTROL_ROW_GAP
+        assert panel_layout.spacing() == styles.PAGE_CONTROL_ROW_GAP
+        assert controls.spacing() == styles.PAGE_CONTROL_GAP
+        assert page.history_layout.spacing() == styles.PAGE_CONTROL_ROW_GAP
+        assert page.recording_button.x() == styles.PAGE_CONTROL_GAP
+        assert page.panel.width() - page.clear_button.geometry().right() - 1 == (
+            styles.PAGE_CONTROL_GAP
+        )
+    finally:
+        page.deleteLater()
+
+
 def test_records_text_only_while_enabled():
     clipboard = FakeClipboard()
     service, saves = make_service(clipboard=clipboard)

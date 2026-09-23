@@ -66,6 +66,9 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._fill_internal_field()
+        # QKeySequenceEdit may update its private editor after this event.
+        # Reapply the full-height geometry on the next event-loop turn.
+        QTimer.singleShot(0, self._fill_internal_field)
         self._position_duplicate_message()
 
     def focusInEvent(self, event) -> None:
@@ -99,9 +102,9 @@ class ScreenMoverShortcutEdit(QKeySequenceEdit):
         )
 
     def _fill_internal_field(self) -> None:
-        """Keep the visible shortcut field flush with the control's bounds."""
+        """Keep the visible shortcut surface the full control height."""
         for field in self.findChildren(QLineEdit):
-            field.setGeometry(self.rect().adjusted(-1, -1, 1, 1))
+            field.setGeometry(self.rect())
 
     def _refresh_style(self) -> None:
         self.style().unpolish(self)
@@ -250,6 +253,8 @@ class ScreenMoverSettingsPage(PageControls):
                 widget.style().polish(widget)
                 widget.update()
             edit.setFixedHeight(styles.PAGE_CONTROL_HEIGHT)
+            edit._fill_internal_field()
+            QTimer.singleShot(0, edit._fill_internal_field)
 
     def _save_hotkey(self, action: str, edit: QKeySequenceEdit) -> None:
         portable = edit.keySequence().toString(QKeySequence.SequenceFormat.PortableText)

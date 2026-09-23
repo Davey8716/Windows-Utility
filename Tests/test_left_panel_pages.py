@@ -605,3 +605,15 @@ def test_external_drives_page_updates_status_through_its_api():
         assert combo.itemData(1) == "F:\\"
     finally:
         page.deleteLater()
+
+
+def test_external_drives_page_uses_shared_control_spacing():
+    _app()
+    page = ExternalDrivesPage({}, lambda _widget, _text: None)
+    try:
+        assert page.content_layout.spacing() == styles.PAGE_CONTROL_ROW_GAP
+        assert page._status_row.layout().spacing() == styles.PAGE_CONTROL_GAP
+        notify_row = page.content_layout.itemAt(1).widget()
+        assert notify_row.layout().spacing() == styles.PAGE_CONTROL_GAP
+    finally:
+        page.deleteLater()

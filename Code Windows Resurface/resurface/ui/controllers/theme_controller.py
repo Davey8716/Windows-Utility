@@ -100,6 +100,8 @@ class ApplicationThemeController:
                 widget.style().polish(widget)
                 widget.update()
             hotkey_edit.setFixedHeight(styles.PAGE_CONTROL_HEIGHT)
+            if hasattr(hotkey_edit, "_fill_internal_field"):
+                hotkey_edit._fill_internal_field()
 
     def apply_theme(self, is_dark: bool) -> None:
         styles.set_theme(is_dark)

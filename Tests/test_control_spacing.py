@@ -92,9 +92,9 @@ def test_named_pages_use_the_shared_control_gap():
             assert len(fields) == 1
             field = fields[0]
             clear = screen_mover._clear_hotkey_buttons[action]
-            assert field.x() == field.y() == -1
-            assert field.width() == edit.width() + 2
-            assert field.height() == clear.height() + 2
+            assert field.x() == field.y() == 0
+            assert field.width() == edit.width()
+            assert field.height() == edit.height() == clear.height()
     finally:
         for page in pages:
             page.deleteLater()

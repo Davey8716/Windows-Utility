@@ -148,13 +148,17 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             0,
         )
         assert page.layout().spacing() == 12
+        action_grid = page.rules_frame.layout().itemAt(0).layout()
+        assert action_grid.horizontalSpacing() == monitor_rules_ui.styles.PAGE_CONTROL_GAP
+        assert action_grid.verticalSpacing() == monitor_rules_ui.styles.PAGE_CONTROL_ROW_GAP
+        assert page.rule_list_layout.spacing() == monitor_rules_ui.styles.PAGE_CONTROL_ROW_GAP
         panel_margins = page.rules_frame.layout().contentsMargins()
         assert (
             panel_margins.left(),
             panel_margins.top(),
             panel_margins.right(),
             panel_margins.bottom(),
-        ) == (15, 15, 15, 15)
+        ) == (11, 11, 11, 11)
         assert isinstance(page.help_button, QToolButton)
         assert page.help_button.text() == "?"
         assert page.help_button.size().width() == page.help_button.size().height() == 28
@@ -180,9 +184,9 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         delete_button_right = page.delete_all_button.mapTo(
             page.rules_frame, page.delete_all_button.rect().topRight()
         ).x()
-        assert first_button_position.x() == 16
-        assert first_button_position.y() == 16
-        assert page.rules_frame.width() - delete_button_right - 1 == 16
+        assert first_button_position.x() == 12
+        assert first_button_position.y() == 12
+        assert page.rules_frame.width() - delete_button_right - 1 == 12
         assert page.export_rules_button.width() == page.turn_off_all_button.width()
         assert page.export_rules_button.x() == page.turn_off_all_button.x()
         assert page.import_rules_button.width() == page.delete_all_button.width()
@@ -226,6 +230,7 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
             assert f"background-color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.WINDOW_BG)}" in card.styleSheet()
             assert "border: 1px solid" in card.styleSheet()
             assert "border-radius: 8px" in card.styleSheet()
+            assert card.layout().itemAt(2).layout().spacing() == monitor_rules_ui.styles.PAGE_CONTROL_GAP
         expected_actions = {"Edit", "Move Up", "Move Down"}
         assert all(
             {button.text() for button in card.findChildren(QPushButton)}

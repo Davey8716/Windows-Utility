@@ -2001,7 +2001,8 @@ def test_screen_mover_shortcut_fields_keep_surface_style_after_restart_and_theme
             else styles.themed_surface_field_border()
         )
 
-        for edit in window.pages.screen_mover_settings_page._hotkey_edits.values():
+        page = window.pages.screen_mover_settings_page
+        for action, edit in page._hotkey_edits.items():
             assert edit.objectName() == "ScreenMoverShortcutEdit"
             assert "QKeySequenceEdit#ScreenMoverShortcutEdit" in edit.styleSheet()
             assert (
@@ -2010,15 +2011,43 @@ def test_screen_mover_shortcut_fields_keep_surface_style_after_restart_and_theme
             )
             assert f"background-color: {expected_background};" in edit.styleSheet()
             assert f"border: 2px solid {expected_border};" in edit.styleSheet()
+            assert "background-clip: padding;" not in edit.styleSheet()
+            assert "border: none;" in edit.styleSheet()
+            assert "border-radius: 4px;" in edit.styleSheet()
             internal_edits = edit.findChildren(QLineEdit)
             assert len(internal_edits) == 1
             assert internal_edits[0].objectName() == "qt_keysequenceedit_lineedit"
             assert internal_edits[0].styleSheet() == ""
+            assert edit.height() == styles.PAGE_CONTROL_HEIGHT == 34
+            assert page._clear_hotkey_buttons[action].height() == 34
+            assert internal_edits[0].geometry().getRect() == (
+                0,
+                0,
+                edit.width(),
+                edit.height(),
+            )
             image = edit.grab().toImage()
             assert image.pixelColor(
                 image.width() // 2,
                 image.height() // 2,
             ).name() == expected_background
+            assert image.pixelColor(
+                image.width() - 10,
+                image.height() // 2,
+            ).name() == expected_background
+
+            # Exercise both render states so the stylesheet remains valid
+            # before capture starts as well as while the field has focus.
+            edit.setFocus()
+            qt_app.processEvents()
+            assert edit.hasFocus()
+            focused_image = edit.grab().toImage()
+            assert focused_image.pixelColor(
+                focused_image.width() - 10,
+                focused_image.height() // 2,
+            ).name() == expected_background
+            edit.clearFocus()
+            qt_app.processEvents()
 
         assert styles.THEME_IS_DARK is is_dark
 
