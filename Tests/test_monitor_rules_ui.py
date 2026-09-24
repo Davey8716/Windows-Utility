@@ -6,8 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QThread, Qt
 from PySide6.QtGui import QPalette
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -52,6 +53,15 @@ def make_rule(
         "placement_mode": placement_mode,
         "saved_geometry": None,
     }
+
+
+def wait_for_window_choices(dialog, expected_count, timeout_ms=1500):
+    """Process queued worker results until the running-window list is ready."""
+    elapsed = 0
+    while dialog.window_combo.count() != expected_count and elapsed < timeout_ms:
+        QTest.qWait(25)
+        elapsed += 25
+    assert dialog.window_combo.count() == expected_count
 
 
 def test_monitor_rules_help_button_opens_reviewed_theme_aware_dialog(
@@ -555,6 +565,8 @@ def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypa
     )
     dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(None, app_hwnd=999)
     try:
+        dialog.show()
+        wait_for_window_choices(dialog, 2)
         dialog.window_combo.setCurrentIndex(1)
         dialog.placement_combo.setCurrentIndex(
             dialog.placement_combo.findData("saved_geometry")
@@ -704,7 +716,8 @@ def test_rule_editor_matches_import_rules_popup_width(monkeypatch, tmp_path):
         assert editor.layout().spacing() == 14
         assert editor.window_combo.minimumWidth() == 0
         assert not hasattr(editor, "group_button")
-        assert editor.window_combo.width() > editor.refresh_windows_button.width()
+        assert not hasattr(editor, "refresh_windows_button")
+        assert not hasattr(editor, "browse_button")
     finally:
         import_dialog.deleteLater()
         page.deleteLater()
@@ -746,10 +759,13 @@ def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
 
     dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(None, app_hwnd=999)
     try:
-        assert calls == [{"app_hwnd": 999}]
+        dialog.show()
+        wait_for_window_choices(dialog, 2)
+        assert calls
+        assert all(call == {"app_hwnd": 999} for call in calls)
         assert not dialog.window_combo.isHidden()
-        assert not dialog.refresh_windows_button.isHidden()
-        assert not dialog.browse_button.isHidden()
+        assert not hasattr(dialog, "refresh_windows_button")
+        assert not hasattr(dialog, "browse_button")
         assert not hasattr(dialog, "group_button")
         assert not hasattr(dialog, "exact_path_check")
         assert dialog.window_combo.count() == 2
@@ -760,6 +776,55 @@ def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
         assert dialog.executable_edit.text() == r"C:\Apps\Windows Resurface.exe"
         assert dialog.name_edit.text() == "windows resurface"
         assert dialog.result_rule()["app_group"] == "windows_resurface"
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        app.processEvents()
+
+
+def test_rule_editor_polls_running_windows_and_stops_when_closed(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
+    windows = [
+        {
+            "hwnd": 101,
+            "title": "Discord - Friends",
+            "class_name": "Chrome_WidgetWin_1",
+            "executable_name": "discord.exe",
+            "executable_path": r"C:\Apps\Discord.exe",
+        }
+    ]
+    enumeration_threads = []
+
+    def enumerate_windows(**_kwargs):
+        enumeration_threads.append(QThread.currentThread())
+        return list(windows)
+
+    dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(
+        None,
+        app_hwnd=999,
+        window_enumerator=enumerate_windows,
+    )
+    try:
+        dialog.show()
+        wait_for_window_choices(dialog, 2)
+        assert enumeration_threads
+        assert enumeration_threads[0] is not app.thread()
+
+        dialog.window_combo.setCurrentIndex(1)
+        assert dialog.executable_edit.text() == r"C:\Apps\Discord.exe"
+        windows.clear()
+        wait_for_window_choices(dialog, 1, timeout_ms=2000)
+
+        assert dialog.window_combo.currentData() is None
+        assert dialog.executable_edit.text() == ""
+        assert dialog._validation_message() == "Select a running window."
+
+        thread = dialog._window_poll_thread
+        assert thread is not None and thread.isRunning()
+        dialog.reject()
+        assert not thread.isRunning()
+        assert dialog._window_poll_thread is None
     finally:
         dialog.close()
         dialog.deleteLater()

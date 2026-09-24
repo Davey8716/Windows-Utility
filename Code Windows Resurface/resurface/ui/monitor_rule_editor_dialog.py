@@ -6,14 +6,13 @@ import copy
 import os
 import uuid
 
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import QObject, QPoint, QThread, QTimer, Qt, Signal, Slot
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -43,6 +42,42 @@ PLACEMENT_LABELS = {
     "maximize": "Maximize",
     "saved_geometry": "Use captured size and position",
 }
+
+WINDOW_POLL_INTERVAL_MS = 500
+
+
+class _RunningWindowsWorker(QObject):
+    """Enumerate running windows without blocking the dialog's GUI thread."""
+
+    windows_ready = Signal(object)
+
+    def __init__(self, window_enumerator, app_hwnd) -> None:
+        super().__init__()
+        self._window_enumerator = window_enumerator
+        self._app_hwnd = app_hwnd
+        self._timer: QTimer | None = None
+
+    @Slot()
+    def start(self) -> None:
+        if self._timer is None:
+            self._timer = QTimer(self)
+            self._timer.setInterval(WINDOW_POLL_INTERVAL_MS)
+            self._timer.timeout.connect(self.poll)
+        self.poll()
+        self._timer.start()
+
+    @Slot()
+    def stop(self) -> None:
+        if self._timer is not None:
+            self._timer.stop()
+
+    @Slot()
+    def poll(self) -> None:
+        try:
+            windows = self._window_enumerator(app_hwnd=self._app_hwnd)
+        except Exception:
+            windows = []
+        self.windows_ready.emit(windows)
 
 
 class StateIndicatorCheckBox(QCheckBox):
@@ -152,6 +187,7 @@ def monitor_rule_editor_dialog_style() -> str:
 
 class MonitorRuleEditorDialog(QDialog):
     FRAME_WIDTH = 2
+    _stop_window_polling_requested = Signal()
 
     def __init__(
         self,
@@ -187,6 +223,8 @@ class MonitorRuleEditorDialog(QDialog):
         self._running_windows = []
         self._monitors = []
         self._match_exact_path = False
+        self._window_poll_thread: QThread | None = None
+        self._window_poll_worker: _RunningWindowsWorker | None = None
 
         root = QVBoxLayout(self)
         root.setContentsMargins(22, 20, 22, 20)
@@ -202,17 +240,7 @@ class MonitorRuleEditorDialog(QDialog):
             self.window_combo = QComboBox(self)
             self.window_combo.setMinimumWidth(0 if popup_width is not None else 410)
             self.window_combo.currentIndexChanged.connect(self._running_window_selected)
-            refresh_button = QPushButton("Refresh windows", self)
-            browse_button = QPushButton("Browse executable", self)
-            self.refresh_windows_button = refresh_button
-            self.browse_button = browse_button
-            style_button(refresh_button)
-            style_button(browse_button)
-            refresh_button.clicked.connect(self.refresh_running_windows)
-            browse_button.clicked.connect(self._browse_executable)
             selection_row.addWidget(self.window_combo, 1)
-            selection_row.addWidget(refresh_button)
-            selection_row.addWidget(browse_button)
             root.addLayout(selection_row)
 
         form = QFormLayout()
@@ -262,8 +290,6 @@ class MonitorRuleEditorDialog(QDialog):
         root.addWidget(self.button_box)
 
         self.refresh_monitors()
-        if not self._is_edit_mode:
-            self.refresh_running_windows()
         self._load_rule(rule or {})
         self._sync_capture_state()
         if popup_width is not None:
@@ -282,8 +308,6 @@ class MonitorRuleEditorDialog(QDialog):
         grouped = self._is_group_rule
         if not self._is_edit_mode:
             self.window_combo.setVisible(not grouped)
-            self.refresh_windows_button.setVisible(not grouped)
-            self.browse_button.setVisible(not grouped)
         self.name_edit.setReadOnly(grouped)
         self._set_form_row_visible(self.executable_edit, not grouped)
         self._set_form_row_visible(self.placement_combo, not grouped)
@@ -341,14 +365,12 @@ class MonitorRuleEditorDialog(QDialog):
         if index >= 0:
             self.monitor_combo.setCurrentIndex(index)
 
-    def refresh_running_windows(self) -> None:
+    def _update_running_windows(self, windows) -> None:
+        """Apply a worker-produced window snapshot on the GUI thread."""
         if self._is_edit_mode:
             return
         current_hwnd = self.window_combo.currentData()
-        try:
-            self._running_windows = self._enumerate_windows(app_hwnd=self._app_hwnd)
-        except Exception:
-            self._running_windows = []
+        self._running_windows = list(windows)
         self.window_combo.blockSignals(True)
         self.window_combo.clear()
         self.window_combo.addItem("Select a running window...", None)
@@ -358,7 +380,50 @@ class MonitorRuleEditorDialog(QDialog):
         index = self.window_combo.findData(current_hwnd)
         self.window_combo.setCurrentIndex(max(0, index))
         self.window_combo.blockSignals(False)
+        if current_hwnd is not None and index < 0:
+            self.executable_edit.clear()
+            self._match_exact_path = False
         self._sync_capture_state()
+
+    def _start_window_polling(self) -> None:
+        if self._is_edit_mode or self._window_poll_thread is not None:
+            return
+        thread = QThread(self)
+        worker = _RunningWindowsWorker(self._enumerate_windows, self._app_hwnd)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.start)
+        self._stop_window_polling_requested.connect(worker.stop)
+        worker.windows_ready.connect(self._update_running_windows)
+        thread.finished.connect(worker.deleteLater)
+        self._window_poll_thread = thread
+        self._window_poll_worker = worker
+        thread.start()
+
+    def _stop_window_polling(self) -> None:
+        thread = self._window_poll_thread
+        if thread is None:
+            return
+        self._stop_window_polling_requested.emit()
+        thread.quit()
+        thread.wait(1500)
+        self._window_poll_thread = None
+        self._window_poll_worker = None
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._start_window_polling()
+
+    def closeEvent(self, event) -> None:
+        self._stop_window_polling()
+        super().closeEvent(event)
+
+    def hideEvent(self, event) -> None:
+        self._stop_window_polling()
+        super().hideEvent(event)
+
+    def done(self, result: int) -> None:
+        self._stop_window_polling()
+        super().done(result)
 
     def _selected_window(self) -> dict | None:
         if self._is_edit_mode:
@@ -384,20 +449,6 @@ class MonitorRuleEditorDialog(QDialog):
             self._sync_group_state()
             return
         self._sync_capture_state()
-
-    def _browse_executable(self) -> None:
-        path, _selected_filter = QFileDialog.getOpenFileName(
-            self,
-            "Select application executable",
-            "",
-            "Applications (*.exe);;All files (*)",
-        )
-        if not path:
-            return
-        self.executable_edit.setText(os.path.normpath(path))
-        self._match_exact_path = True
-        if not self.name_edit.text().strip():
-            self.name_edit.setText(os.path.splitext(os.path.basename(path))[0])
 
     def _sync_capture_state(self) -> None:
         if self._is_edit_mode or self._is_group_rule:
@@ -464,7 +515,7 @@ class MonitorRuleEditorDialog(QDialog):
         if self._is_group_rule:
             return "" if self._draft_rule() is not None else "Select a target monitor."
         if not self.executable_edit.text().strip():
-            return "Select a running window or browse to an executable."
+            return "Select a running window."
         if self.monitor_combo.currentIndex() < 0:
             return "Select a target monitor."
         if (
