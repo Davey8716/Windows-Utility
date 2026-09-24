@@ -463,13 +463,14 @@ class OverviewPage(QWidget):
             )
         )
         backup_path = str(state.get("master_backup_output_path", "")).strip()
+        backup_path_display = backup_path.replace("\\", "/")
         backup_label = self.status_labels["backup_path"]
         if backup_path:
             link_color = styles.message_box_link_color().name()
             backup_label.setText(
                 f'<a href="open-master-backup" '
                 f'style="color: {link_color}; text-decoration: underline;">'
-                f"{escape(backup_path)}</a>"
+                f"{escape(backup_path_display)}</a>"
             )
             set_tooltip(backup_label, "Open the Master Backup Path in Explorer")
         else:

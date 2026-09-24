@@ -33,6 +33,8 @@ def test_master_backup_path_is_theme_aware_clickable_explorer_link():
         )
         assert 'href="open-master-backup"' in backup_label.text()
         assert 'href="open-app-data"' in app_data_label.text()
+        assert "C:/Backups &amp; Exports" in backup_label.text()
+        assert r"C:\Backups &amp; Exports" not in backup_label.text()
         assert "C:/Users/Example/AppData/Local/Windows Resurface" in app_data_label.text()
         assert r"C:\Users\Example\AppData\Local\Windows Resurface" not in app_data_label.text()
         assert "color: #ffffff" in backup_label.text()
