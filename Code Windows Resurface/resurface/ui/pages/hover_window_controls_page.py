@@ -33,6 +33,7 @@ class HoverWindowControlsPage(PageControls):
         taskbar_restore_enabled: bool = True,
         dwell_ms: int = 750,
         has_export_changes=None,
+        clear_available: bool = True,
         parent=None,
     ) -> None:
         super().__init__("hover_window_controls", register_tooltip, parent)
@@ -91,6 +92,7 @@ class HoverWindowControlsPage(PageControls):
         self.clear_button = self.style_action_button(
             QPushButton("Clear Learned Buttons", self)
         )
+        self.set_clear_available(clear_available)
         self.add_two_column_control_row(
             self.content_layout,
             self.calibrate_button,
@@ -141,6 +143,9 @@ class HoverWindowControlsPage(PageControls):
             self.export_button.setEnabled(bool(self._has_export_changes()))
         except Exception:
             self.export_button.setEnabled(True)
+
+    def set_clear_available(self, available: bool) -> None:
+        self.clear_button.setEnabled(bool(available))
 
     def showEvent(self, event) -> None:
         super().showEvent(event)

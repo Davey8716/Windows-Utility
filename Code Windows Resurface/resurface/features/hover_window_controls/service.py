@@ -7,7 +7,7 @@ import shutil
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from resurface.core.instance_runtime import current_instance_scope
 from resurface.features.hover_window_controls.app.identity import (
@@ -30,6 +30,7 @@ from resurface.features.hover_window_controls.platform.win32 import Win32WindowA
 from resurface.features.hover_window_controls.ui.calibration import CalibrationDialog
 from resurface.features.hover_window_controls.vision.detection import (
     CaptionVisionDetector,
+    TrackedApplication,
     VisionCache,
 )
 
@@ -46,6 +47,7 @@ def normalized_dwell_ms(value: object) -> int:
 
 class HoverWindowControlsService(QObject):
     settings_changed = Signal(bool, bool, int)
+    clear_learned_buttons_availability_changed = Signal(bool)
 
     def __init__(
         self,
@@ -65,6 +67,9 @@ class HoverWindowControlsService(QObject):
         self.taskbar_restore_enabled = bool(hover.get("taskbar_restore_enabled", state.get("hover_taskbar_restore_enabled", True)))
         self.dwell_ms = normalized_dwell_ms(hover.get("dwell_ms", state.get("hover_window_controls_dwell_ms", DEFAULT_DWELL_MS)))
         self._pending_export = bool(hover.get("pending_export", False))
+        # This is deliberately not persisted.  A clear must be followed by a
+        # fresh calibration scan during this application session.
+        self.clear_learned_buttons_available = True
 
         cache = VisionCache(
             base_dir=self.data_root / "vision-cache",
@@ -85,6 +90,15 @@ class HoverWindowControlsService(QObject):
         self.taskbar_restore_available = InstalledAutoHotkeyRunner().available()
         self._started = False
         self._busy = False
+        self._discovery_queue = []
+        self._discovered_calibration_apps: list[TrackedApplication] = []
+        self._discovery_candidate_count = 0
+        self._discovery_processed_count = 0
+        self._discovery_started_vision = False
+        self._discovery_finished_callback = None
+        self._discovery_timer = QTimer(self)
+        self._discovery_timer.setInterval(50)
+        self._discovery_timer.timeout.connect(self._advance_tracked_discovery)
         self._write_data_settings()
 
     def _allowed_self_window_handle(self) -> int | None:
@@ -118,6 +132,7 @@ class HoverWindowControlsService(QObject):
             self.taskbar_monitor.start()
 
     def stop(self) -> None:
+        self.cancel_tracked_calibration_refresh()
         if not self._started:
             return
         self.controller.stop()
@@ -167,25 +182,151 @@ class HoverWindowControlsService(QObject):
         self._suspend_for_operation()
         try:
             dialog = CalibrationDialog(
-                self.window_api.list_tracked_calibration_apps,
+                self.list_calibration_applications,
                 self.window_api.list_tracked_calibration_assets,
                 self._save_tracked_calibration,
-                refresh_provider=self._reload_tracked_calibration_apps,
+                refresh_provider=self.refresh_tracked_calibration_apps,
                 clear_provider=self.clear_learned_buttons,
+                clear_available=self.clear_learned_buttons_available,
                 parent=parent,
             )
-            dialog.exec()
+            clear_available_setter = getattr(
+                dialog, "set_clear_available", None
+            )
+            if clear_available_setter is not None:
+                self.clear_learned_buttons_availability_changed.connect(
+                    clear_available_setter
+                )
+            try:
+                dialog.exec()
+            finally:
+                if clear_available_setter is not None:
+                    self.clear_learned_buttons_availability_changed.disconnect(
+                        clear_available_setter
+                    )
+            self.cancel_tracked_calibration_refresh()
             self._write_data_settings()
         finally:
             self._finish_operation()
 
     def clear_learned_buttons(self) -> None:
         self.window_api.clear_vision_cache()
+        self._set_clear_learned_buttons_available(False)
         self._mark_export_pending()
 
-    def _reload_tracked_calibration_apps(self):
-        """Read the current tracked application records for the dialog."""
-        return self.window_api.list_tracked_calibration_apps()
+    def _set_clear_learned_buttons_available(self, available: bool) -> None:
+        available = bool(available)
+        if available == self.clear_learned_buttons_available:
+            return
+        self.clear_learned_buttons_available = available
+        self.clear_learned_buttons_availability_changed.emit(available)
+
+    def refresh_tracked_calibration_apps(
+        self,
+        completed: Callable[[int, list[TrackedApplication], int, str], None],
+    ) -> bool:
+        """Discover open windows sequentially and report when their cache settles."""
+        if self._discovery_timer.isActive() or self._discovery_finished_callback:
+            return False
+
+        def refresh_completed(
+            scanned_count: int,
+            applications: list[TrackedApplication],
+            tracked_count: int,
+            error: str,
+        ) -> None:
+            completed(scanned_count, applications, tracked_count, error)
+            if not error:
+                self._set_clear_learned_buttons_available(True)
+
+        try:
+            candidates = self.window_api.list_open_discovery_applications()
+        except Exception as error:
+            refresh_completed(
+                0,
+                [],
+                0,
+                f"Could not scan open applications: {error}",
+            )
+            return False
+        self._discovery_queue = list(candidates)
+        discovered = {
+            candidate.application.key: candidate.application
+            for candidate in candidates
+        }
+        self._discovered_calibration_apps = list(discovered.values())
+        self._discovery_candidate_count = len(candidates)
+        self._discovery_processed_count = 0
+        self._discovery_finished_callback = refresh_completed
+        self._discovery_started_vision = not (self._started and self.enabled)
+        if self._discovery_started_vision:
+            self.window_api.start_vision_discovery()
+        if not candidates:
+            self._finish_tracked_discovery()
+            return True
+        self._discovery_timer.start()
+        self._advance_tracked_discovery()
+        return True
+
+    def cancel_tracked_calibration_refresh(self) -> None:
+        """Stop an in-flight calibration refresh when its dialog closes."""
+        if not self._discovery_finished_callback:
+            return
+        self._discovery_timer.stop()
+        self._discovery_queue = []
+        self._finish_tracked_discovery(cancelled=True)
+
+    def _advance_tracked_discovery(self) -> None:
+        if self.window_api.discovery_observation_pending():
+            return
+        if not self._discovery_queue:
+            self._finish_tracked_discovery()
+            return
+        candidate = self._discovery_queue.pop(0)
+        self._discovery_processed_count += 1
+        try:
+            self.window_api.observe_discovery_window(candidate.hwnd)
+        except Exception:
+            # A window can disappear or deny access while it is being scanned.
+            pass
+
+    def _finish_tracked_discovery(self, *, cancelled: bool = False) -> None:
+        self._discovery_timer.stop()
+        callback = self._discovery_finished_callback
+        self._discovery_finished_callback = None
+        if self._discovery_started_vision:
+            self.window_api.stop_vision_discovery()
+        self._discovery_started_vision = False
+        if callback is None or cancelled:
+            return
+        try:
+            tracked_count = len(self.window_api.list_tracked_calibration_apps())
+            callback(
+                self._discovery_processed_count,
+                self.list_calibration_applications(),
+                tracked_count,
+                "",
+            )
+        except Exception as error:
+            callback(
+                self._discovery_processed_count,
+                [],
+                0,
+                f"Could not read tracked applications: {error}",
+            )
+
+    def list_calibration_applications(self) -> list[TrackedApplication]:
+        """Merge persisted profiles with apps found during the latest refresh."""
+        applications = {
+            application.key: application
+            for application in self.window_api.list_tracked_calibration_apps()
+        }
+        for application in self._discovered_calibration_apps:
+            applications.setdefault(application.key, application)
+        return sorted(
+            applications.values(),
+            key=lambda item: (item.friendly_name.casefold(), item.key),
+        )
 
     def _save_tracked_calibration(self, asset, rect):
         updated = self.window_api.update_tracked_calibration(asset, rect)

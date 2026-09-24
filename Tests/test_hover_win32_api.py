@@ -1,4 +1,5 @@
 import os
+import ctypes
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -36,6 +37,7 @@ from resurface.features.hover_window_controls.platform.win32 import (
     is_fullscreen_layout,
     is_point_within_caption_buttons,
     is_within_caption_buttons,
+    hwnd_value,
     probe_for_hit_test_result,
     resolve_caption_probe,
     sort_calibration_targets,
@@ -49,6 +51,11 @@ from resurface.features.hover_window_controls.vision.detection import (
 
 
 class Win32MappingTests(unittest.TestCase):
+    def test_hwnd_value_accepts_ctypes_pointer_handles(self):
+        self.assertEqual(hwnd_value(ctypes.c_void_p(0x170)), 0x170)
+        self.assertEqual(hwnd_value(ctypes.c_void_p()), 0)
+        self.assertEqual(hwnd_value(0x170), 0x170)
+
     def test_same_process_window_requires_explicit_matching_handle(self):
         api = Win32WindowApi.__new__(Win32WindowApi)
         api._allowed_self_hwnd_provider = None
@@ -94,6 +101,31 @@ class Win32MappingTests(unittest.TestCase):
         targets = api.list_calibration_targets()
 
         self.assertEqual([target.hwnd for target in targets], [100, 200])
+
+    def test_discovery_lists_only_eligible_visible_top_level_windows(self):
+        api = Win32WindowApi.__new__(Win32WindowApi)
+        api._user32 = MagicMock()
+        api._user32.IsWindowVisible.return_value = True
+        api._user32.IsIconic.return_value = False
+        api._user32.EnumWindows.side_effect = lambda callback, _data: [
+            callback(hwnd, 0) for hwnd in (100, 200, 300)
+        ]
+        api._enum_windows_callback_type = lambda callback: callback
+        api._get_window_long = MagicMock(return_value=0)
+        api._window_class = MagicMock(
+            side_effect=lambda hwnd: "Shell_TrayWnd" if hwnd == 200 else "App"
+        )
+        api._window_title = MagicMock(
+            side_effect=lambda hwnd: "" if hwnd == 300 else f"Window {hwnd}"
+        )
+        api._window_process_id = MagicMock(return_value=900)
+        api._is_window_eligible = MagicMock(return_value=True)
+        api._process_metadata = MagicMock(
+            return_value=(r"c:\\apps\\example.exe", "1", "Example")
+        )
+        api._window_bounds = MagicMock(return_value=(0, 0, 600, 400))
+
+        assert api.list_open_discovery_windows() == [100]
 
     def test_live_probe_rejects_unapproved_same_process_window_early(self):
         api = Win32WindowApi.__new__(Win32WindowApi)

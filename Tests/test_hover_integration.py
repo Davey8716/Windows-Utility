@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 from resurface.features.hover_window_controls import service as service_module
@@ -6,6 +7,9 @@ from resurface.features.hover_window_controls.migration import import_standalone
 from resurface.features.hover_window_controls.service import (
     HoverWindowControlsService,
     normalized_dwell_ms,
+)
+from resurface.features.hover_window_controls.vision.detection import (
+    TrackedApplication,
 )
 
 
@@ -64,6 +68,24 @@ class FakeWindowApi:
             },
         )
 
+    def list_open_discovery_windows(self):
+        return []
+
+    def list_open_discovery_applications(self):
+        return []
+
+    def start_vision_discovery(self):
+        pass
+
+    def stop_vision_discovery(self):
+        pass
+
+    def discovery_observation_pending(self):
+        return False
+
+    def observe_discovery_window(self, _hwnd):
+        return False
+
 
 def _service(monkeypatch, tmp_path, state):
     monkeypatch.setattr(service_module, "VisionCache", lambda **_kwargs: object())
@@ -97,6 +119,62 @@ def test_dwell_normalization_clamps_and_steps():
     assert normalized_dwell_ms(200) == 500
     assert normalized_dwell_ms(1126) == 1250
     assert normalized_dwell_ms(5000) == 2000
+
+
+def test_tracked_refresh_scans_open_windows_sequentially(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+    observed = []
+    lifecycle = []
+    first = TrackedApplication("first", "First")
+    persisted_first = TrackedApplication(
+        "first", "First", Path("manifest_first.json")
+    )
+    second = TrackedApplication("second", "Second")
+    service.window_api.list_open_discovery_applications = lambda: [
+        SimpleNamespace(hwnd=20, application=first),
+        SimpleNamespace(hwnd=10, application=second),
+    ]
+    service.window_api.start_vision_discovery = lambda: lifecycle.append("start")
+    service.window_api.stop_vision_discovery = lambda: lifecycle.append("stop")
+    service.window_api.discovery_observation_pending = lambda: False
+    service.window_api.observe_discovery_window = observed.append
+    service.window_api.list_tracked_calibration_apps = lambda: [persisted_first]
+    service._discovery_timer = SimpleNamespace(
+        isActive=lambda: False,
+        start=lambda: lifecycle.append("timer-start"),
+        stop=lambda: lifecycle.append("timer-stop"),
+    )
+    completed = []
+
+    assert service.refresh_tracked_calibration_apps(
+        lambda scanned, applications, tracked, error: completed.append(
+            (scanned, applications, tracked, error)
+        )
+    )
+    assert observed == [20]
+
+    service._advance_tracked_discovery()
+    service._advance_tracked_discovery()
+
+    assert observed == [20, 10]
+    assert completed == [(2, [persisted_first, second], 1, "")]
+    assert lifecycle == ["start", "timer-start", "timer-stop", "stop"]
+
+
+def test_tracked_refresh_reports_scan_failure_with_full_callback(monkeypatch, tmp_path):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+    service.window_api.list_open_discovery_applications = lambda: (
+        (_ for _ in ()).throw(OSError("access denied"))
+    )
+    completed = []
+
+    assert not service.refresh_tracked_calibration_apps(
+        lambda scanned, applications, tracked, error: completed.append(
+            (scanned, applications, tracked, error)
+        )
+    )
+
+    assert completed == [(0, [], 0, "Could not scan open applications: access denied")]
 
 
 def test_self_window_provider_is_packaged_only(monkeypatch):
@@ -233,6 +311,7 @@ def test_calibration_uses_tracked_profiles_and_resumes(monkeypatch, tmp_path):
 
     assert len(dialogs) == 1
     assert set(dialogs[0]) == {
+        "clear_available",
         "clear_provider",
         "parent",
         "refresh_provider",
@@ -364,12 +443,42 @@ def test_service_runs_taskbar_restoration_independently(monkeypatch, tmp_path):
 
 def test_clear_learned_buttons_is_forwarded(monkeypatch, tmp_path):
     service, _saves = _service(monkeypatch, tmp_path, {})
+    availability = []
+    service.clear_learned_buttons_availability_changed.connect(
+        availability.append
+    )
 
     service.clear_learned_buttons()
 
     assert service.window_api.cleared is True
     assert service.taskbar_restore_available is False
     assert service.has_export_changes() is True
+    assert service.clear_learned_buttons_available is False
+    assert availability == [False]
+
+
+def test_successful_calibration_refresh_restores_clear_availability(
+    monkeypatch, tmp_path
+):
+    service, _saves = _service(monkeypatch, tmp_path, {})
+    service.window_api.list_open_discovery_applications = lambda: []
+    service.window_api.list_tracked_calibration_apps = lambda: []
+    availability = []
+    service.clear_learned_buttons_availability_changed.connect(
+        availability.append
+    )
+
+    service.clear_learned_buttons()
+    completed = []
+    assert service.refresh_tracked_calibration_apps(
+        lambda scanned, applications, tracked, error: completed.append(
+            (scanned, applications, tracked, error)
+        )
+    )
+
+    assert completed == [(0, [], 0, "")]
+    assert service.clear_learned_buttons_available is True
+    assert availability == [False, True]
 
 
 def test_export_pending_state_ignores_automatic_learning(monkeypatch, tmp_path):

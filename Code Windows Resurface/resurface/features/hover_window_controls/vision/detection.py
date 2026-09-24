@@ -134,7 +134,7 @@ class ObservationResult:
 class TrackedApplication:
     executable_hash: str
     friendly_name: str
-    manifest_path: Path
+    manifest_path: Optional[Path] = None
 
     @property
     def key(self) -> str:
@@ -142,7 +142,11 @@ class TrackedApplication:
 
     @property
     def label(self) -> str:
-        return self.friendly_name
+        return (
+            self.friendly_name
+            if self.manifest_path is not None
+            else f"{self.friendly_name} (not yet learned)"
+        )
 
 
 @dataclass(frozen=True)
@@ -619,6 +623,8 @@ class VisionCache:
         self,
         application: TrackedApplication,
     ) -> list[TrackedAsset]:
+        if application.manifest_path is None:
+            return []
         data = self._read_tracked_manifest(application.manifest_path)
         if (
             data is None
@@ -1902,7 +1908,7 @@ class CaptionVisionDetector:
         assignments: dict[CaptionAction, tuple[int, int, int, int]],
         statuses: dict[CaptionAction, str],
         visuals: dict[CaptionAction, str],
-    ) -> None:
+    ) -> bool:
         key = context.identity.fingerprint
         requested = {
             (
@@ -1920,13 +1926,13 @@ class CaptionVisionDetector:
                 requested.issubset(self._observed_assets)
                 or key in self._pending_observations
             ):
-                return
+                return False
             self._pending_observations.add(key)
         image = self.capture(context)
         if image is None:
             with self._lock:
                 self._pending_observations.discard(key)
-            return
+            return False
         bgr = qimage_to_bgr(image)
 
         def completed(result) -> None:
@@ -1955,6 +1961,12 @@ class CaptionVisionDetector:
         if not queued:
             with self._lock:
                 self._pending_observations.discard(key)
+        return queued
+
+    def has_pending_observation(self) -> bool:
+        """Whether an asynchronous caption observation is still running."""
+        with self._lock:
+            return bool(self._pending_observations)
 
     def _save_observation(
         self,

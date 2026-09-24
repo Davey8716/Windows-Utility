@@ -53,6 +53,16 @@ def test_hover_page_export_button_follows_explicit_pending_state():
     assert page.export_button.isEnabled() is True
 
 
+def test_hover_page_clear_button_follows_explicit_availability_state():
+    page = HoverWindowControlsPage(
+        {}, lambda *_args: None, clear_available=False
+    )
+
+    assert page.clear_button.isEnabled() is False
+    page.set_clear_available(True)
+    assert page.clear_button.isEnabled() is True
+
+
 def test_hover_import_dialog_is_opaque_frameless_and_unmasked():
     app = QApplication.instance() or QApplication([])
     dialog = HoverDataImportDialog(None, "")

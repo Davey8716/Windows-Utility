@@ -737,6 +737,9 @@ class ApplicationPageComposer:
             taskbar_restore_enabled=hover_service.taskbar_restore_enabled,
             dwell_ms=hover_service.dwell_ms,
             has_export_changes=hover_service.has_export_changes,
+            clear_available=getattr(
+                hover_service, "clear_learned_buttons_available", True
+            ),
             parent=shell.content_parent("hover_window_controls"),
         )
         hover_page.enabled_changed.connect(hover_service.set_enabled)
@@ -749,6 +752,13 @@ class ApplicationPageComposer:
         hover_page.import_requested.connect(self._import_hover_controls)
         hover_page.clear_requested.connect(self._clear_hover_controls_cache)
         hover_service.settings_changed.connect(hover_page.sync_settings)
+        clear_availability_changed = getattr(
+            hover_service,
+            "clear_learned_buttons_availability_changed",
+            None,
+        )
+        if clear_availability_changed is not None:
+            clear_availability_changed.connect(hover_page.set_clear_available)
         shell.mount_content("hover_window_controls", hover_page)
         shell.finish_page_layouts()
 

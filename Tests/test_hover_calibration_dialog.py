@@ -298,6 +298,88 @@ class CalibrationDialogTests(unittest.TestCase):
             selected_identity.fingerprint,
         )
 
+    def test_refresh_scans_then_reloads_tracked_applications(self):
+        applications = [self.example]
+        completed = []
+
+        def refresh(callback):
+            completed.append(callback)
+            return True
+
+        dialog = CalibrationDialog(
+            lambda: list(applications),
+            lambda application: self.assets[application.key],
+            lambda asset, rect: asset,
+            refresh_provider=refresh,
+        )
+        self.addCleanup(dialog.close)
+
+        dialog.refresh_button.click()
+
+        self.assertEqual(len(completed), 1)
+        self.assertFalse(dialog.refresh_button.isEnabled())
+        applications.append(self.other)
+        completed[0](2, list(applications), 2, "")
+
+        self.assertTrue(dialog.refresh_button.isEnabled())
+        self.assertEqual(dialog.application_selector.count(), 2)
+        self.assertEqual(
+            dialog.application_selector.currentData().key,
+            self.example.key,
+        )
+        self.assertIn("Scanned 2", dialog.status_label.text())
+
+    def test_clear_availability_can_be_controlled_externally(self):
+        dialog = CalibrationDialog(
+            lambda: [self.example],
+            lambda application: self.assets[application.key],
+            MagicMock(),
+            clear_provider=MagicMock(),
+            clear_available=False,
+        )
+        self.addCleanup(dialog.close)
+
+        self.assertFalse(dialog.clear_button.isEnabled())
+        dialog.set_clear_available(True)
+        self.assertTrue(dialog.clear_button.isEnabled())
+
+    def test_successful_refresh_restores_clear_availability(self):
+        dialog = CalibrationDialog(
+            lambda: [self.example],
+            lambda application: self.assets[application.key],
+            MagicMock(),
+            clear_provider=MagicMock(),
+            clear_available=False,
+        )
+        self.addCleanup(dialog.close)
+
+        dialog._tracked_refresh_completed(0, [self.example], 1, "")
+
+        self.assertTrue(dialog.clear_button.isEnabled())
+
+    def test_refresh_shows_untracked_scanned_application(self):
+        untracked = TrackedApplication("new-hash", "New App")
+        dialog = CalibrationDialog(
+            lambda: [self.example],
+            lambda application: self.assets.get(application.key, []),
+            lambda asset, rect: asset,
+        )
+        self.addCleanup(dialog.close)
+
+        dialog._tracked_refresh_completed(1, [self.example, untracked], 1, "")
+        dialog.application_selector.setCurrentIndex(1)
+
+        self.assertEqual(
+            dialog.application_selector.currentData(),
+            untracked,
+        )
+        self.assertIn("not yet learned", dialog.application_selector.currentText())
+        self.assertFalse(dialog.profile_selector.isEnabled())
+        self.assertFalse(dialog.action_selector.isEnabled())
+        self.assertFalse(dialog.variant_selector.isEnabled())
+        self.assertFalse(dialog.save_button.isEnabled())
+        self.assertIn("No tracked JPEGs yet", dialog.status_label.text())
+
     def test_selects_first_enabled_action_for_application(self):
         dialog = self.make_dialog()
         dialog.application_selector.setCurrentIndex(1)
@@ -502,11 +584,12 @@ class CalibrationDialogTests(unittest.TestCase):
         )
         apply_appearance.assert_called_once_with(dialog)
 
-    def test_clear_learned_buttons_confirms_and_refreshes(self):
+    def test_clear_learned_buttons_confirms_then_requires_refresh(self):
         applications = [self.example]
         clear = MagicMock(side_effect=applications.clear)
+        application_provider = MagicMock(side_effect=lambda: list(applications))
         dialog = CalibrationDialog(
-            lambda: list(applications),
+            application_provider,
             lambda application: self.assets[application.key],
             MagicMock(),
             clear_provider=clear,
@@ -540,11 +623,21 @@ class CalibrationDialogTests(unittest.TestCase):
             dialog.clear_button.click()
 
         clear.assert_called_once_with()
-        self.assertEqual(dialog.application_selector.count(), 0)
+        self.assertEqual(application_provider.call_count, 1)
+        self.assertEqual(dialog.application_selector.count(), 1)
+        self.assertFalse(dialog.clear_button.isEnabled())
         self.assertEqual(
             dialog.status_label.text(),
-            "All learned buttons were cleared.",
+            "All learned buttons were cleared. Click Refresh to scan open "
+            "applications.",
         )
+
+    def test_dialog_has_visible_calibration_explorer_title(self):
+        dialog = self.make_dialog()
+
+        title = dialog.findChild(QLabel, "calibrationTitle")
+        self.assertIsNotNone(title)
+        self.assertEqual(title.text(), "Calibration Explorer")
 
     def test_semantic_glyph_geometry_has_no_generic_plus(self):
         target = QRect(10, 10, 30, 30)

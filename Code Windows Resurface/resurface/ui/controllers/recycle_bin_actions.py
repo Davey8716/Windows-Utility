@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from resurface.core.state_manager import save_state
+from resurface.ui import styles
 
 
 class RecycleBinActionsController:
@@ -97,6 +98,7 @@ class RecycleBinActionsController:
                             self.app._message_box_icon("Information"), title,
                             f"Deleted {deleted} Recycle Bin item(s) older than {days} days.",
                             show_close_now_button=True,
+                            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
                         )
                 elif automatic:
                     if show_auto_popup:
@@ -104,6 +106,7 @@ class RecycleBinActionsController:
                             self.app._message_box_icon("Information"), "Recycle Bin Auto-Clean",
                             f"No Recycle Bin items older than {days} days were found.",
                             show_close_now_button=True,
+                            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
                         )
                 else:
                     self.app._show_timed_message(

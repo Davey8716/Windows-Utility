@@ -78,6 +78,12 @@ TASKBAR_CLASSES = frozenset({"Shell_TrayWnd", "Shell_SecondaryTrayWnd"})
 _UINT_ERROR = 0xFFFFFFFF
 
 
+def hwnd_value(hwnd: object) -> int:
+    """Return a numeric HWND from either ctypes' pointer or integer form."""
+    value = getattr(hwnd, "value", hwnd)
+    return int(value or 0)
+
+
 @dataclass(frozen=True)
 class CalibrationTarget:
     hwnd: int
@@ -97,6 +103,14 @@ class CalibrationCaptureResult:
     @property
     def succeeded(self) -> bool:
         return self.snapshot is not None
+
+
+@dataclass(frozen=True)
+class DiscoveredApplication:
+    """An eligible open window and the app entry it contributes to refresh."""
+
+    hwnd: int
+    application: TrackedApplication
 
 
 def sort_calibration_targets(
@@ -681,12 +695,145 @@ class Win32WindowApi:
             allowed_hwnd = self._allowed_self_hwnd_provider()
         except Exception:
             return False
-        hwnd_value = getattr(hwnd, "value", hwnd)
-        return bool(allowed_hwnd) and int(hwnd_value or 0) == int(allowed_hwnd)
+        return bool(allowed_hwnd) and hwnd_value(hwnd) == int(allowed_hwnd)
 
     def stop(self) -> None:
         self._vision.stop()
         self._accessibility.stop()
+
+    def start_vision_discovery(self) -> None:
+        """Ensure the cache writer is available for an explicit UI scan."""
+        self._vision.start()
+
+    def stop_vision_discovery(self) -> None:
+        """Release a discovery-only vision worker when hover controls are off."""
+        self._vision.stop()
+
+    def discovery_observation_pending(self) -> bool:
+        return self._vision.has_pending_observation()
+
+    def list_open_discovery_windows(self) -> list[int]:
+        """Return eligible top-level windows whose caption strips may be learned."""
+        candidates: list[int] = []
+
+        def collect(hwnd, _lparam) -> bool:
+            if (
+                not self._user32.IsWindowVisible(hwnd)
+                or self._user32.IsIconic(hwnd)
+                or int(self._get_window_long(hwnd, GWL_STYLE)) & WS_CHILD
+                or self._window_class(hwnd) in TASKBAR_CLASSES
+                or not self._window_title(hwnd)
+            ):
+                return True
+            process_id = self._window_process_id(hwnd)
+            if not process_id or not self._is_window_eligible(hwnd, process_id):
+                return True
+            path, _version, friendly_name = self._process_metadata(process_id)
+            if not path or not friendly_name or self._window_bounds(hwnd) is None:
+                return True
+            candidates.append(hwnd_value(hwnd))
+            return True
+
+        callback = self._enum_windows_callback_type(collect)
+        self._user32.EnumWindows(callback, 0)
+        return sorted(set(candidates))
+
+    def list_open_discovery_applications(
+        self,
+    ) -> list[DiscoveredApplication]:
+        """Return scan candidates with transient application identities."""
+        applications = []
+        for hwnd_value in self.list_open_discovery_windows():
+            hwnd = wintypes.HWND(hwnd_value)
+            bounds = self._window_bounds(hwnd)
+            if bounds is None:
+                continue
+            process_id = self._window_process_id(hwnd)
+            context = self._vision_context(
+                hwnd,
+                bounds,
+                self._window_dpi(hwnd),
+                process_id,
+                self._window_class(hwnd),
+                int(self._get_window_long(hwnd, GWL_EXSTYLE)),
+            )
+            if context is None:
+                continue
+            applications.append(
+                DiscoveredApplication(
+                    hwnd_value,
+                    TrackedApplication(
+                        context.identity.executable_hash,
+                        context.identity.friendly_name,
+                    ),
+                )
+            )
+        return sorted(
+            applications,
+            key=lambda item: (
+                item.application.friendly_name.casefold(),
+                item.application.key,
+                item.hwnd,
+            ),
+        )
+
+    def observe_discovery_window(self, hwnd_value: int) -> bool:
+        """Queue one currently eligible window for caption-strip observation."""
+        hwnd = wintypes.HWND(hwnd_value)
+        if (
+            not self._user32.IsWindow(hwnd)
+            or not self._user32.IsWindowVisible(hwnd)
+            or self._user32.IsIconic(hwnd)
+            or int(self._get_window_long(hwnd, GWL_STYLE)) & WS_CHILD
+            or self._window_class(hwnd) in TASKBAR_CLASSES
+            or not self._window_title(hwnd)
+        ):
+            return False
+        process_id = self._window_process_id(hwnd)
+        if not process_id or not self._is_window_eligible(hwnd, process_id):
+            return False
+        return self._observe_application_window(hwnd)
+
+    def _observe_application_window(self, hwnd: wintypes.HWND) -> bool:
+        """Capture standard caption metadata and queue its cache observation."""
+        bounds = self._window_bounds(hwnd)
+        if bounds is None:
+            return False
+        class_name = self._window_class(hwnd)
+        process_id = self._window_process_id(hwnd)
+        style = int(self._get_window_long(hwnd, GWL_STYLE))
+        ex_style = int(self._get_window_long(hwnd, GWL_EXSTYLE))
+        dpi = self._window_dpi(hwnd)
+        context = self._vision_context(
+            hwnd, bounds, dpi, process_id, class_name, ex_style
+        )
+        if context is None or self._is_fullscreen(hwnd, bounds):
+            return False
+        button_width, button_height = self._caption_metrics(dpi)
+        close_enabled = self._close_is_available(hwnd)
+        caption_bounds = caption_button_region(
+            bounds=bounds,
+            button_width=button_width,
+            button_height=button_height,
+            style=style,
+            ex_style=ex_style,
+            close_enabled=close_enabled,
+            fullscreen=False,
+            native_bounds=self._caption_button_bounds(hwnd, bounds),
+        )
+        assignments, statuses, visuals = caption_asset_layout(
+            context=context,
+            button_width=button_width,
+            button_height=button_height,
+            style=style,
+            ex_style=ex_style,
+            close_enabled=close_enabled,
+            fullscreen=False,
+            caption_bounds=caption_bounds,
+        )
+        return self._vision.observe_caption_assets(
+            context, assignments, statuses, visuals
+        )
 
     @staticmethod
     def _point_lparam(point: wintypes.POINT) -> int:
@@ -705,19 +852,19 @@ class Win32WindowApi:
         hwnd = self._user32.GetAncestor(child_hwnd, GA_ROOT)
         if not hwnd:
             return HoverProbe.no_target()
-        hwnd_value = int(hwnd)
+        handle = hwnd_value(hwnd)
 
         class_name = self._window_class(hwnd)
         if class_name in TASKBAR_CLASSES:
-            return HoverProbe.no_target(hwnd_value)
+            return HoverProbe.no_target(handle)
 
         process_id = self._window_process_id(hwnd)
         if not self._is_window_eligible(hwnd, process_id):
-            return HoverProbe.no_target(hwnd_value)
+            return HoverProbe.no_target(handle)
 
         bounds = self._window_bounds(hwnd)
         if bounds is None:
-            return HoverProbe.transient(hwnd_value)
+            return HoverProbe.transient(handle)
         caption_bounds = self._caption_button_bounds(hwnd, bounds)
         dpi = self._window_dpi(hwnd)
         button_width, button_height = self._caption_metrics(dpi)
@@ -735,7 +882,7 @@ class Win32WindowApi:
             ctypes.byref(result),
         )
         native_probe = probe_for_hit_test_result(
-            hwnd=hwnd_value,
+            hwnd=handle,
             sent=bool(sent),
             hit_test=int(result.value),
             error=ctypes.get_last_error(),
@@ -760,7 +907,7 @@ class Win32WindowApi:
             caption_bounds,
             native_probe,
         ):
-            return HoverProbe.no_target(hwnd_value)
+            return HoverProbe.no_target(handle)
 
         accessible_target = None
         if (
@@ -776,7 +923,7 @@ class Win32WindowApi:
             )
             accessible = self._accessibility.probe(
                 point=(point.x, point.y),
-                root_hwnd=hwnd_value,
+                root_hwnd=handle,
                 process_id=process_id,
                 root_bounds=bounds,
                 caption_band_height=caption_band_height,
@@ -890,7 +1037,7 @@ class Win32WindowApi:
             if calibrated is not None:
                 return observe(
                     resolve_caption_probe(
-                        hwnd=hwnd_value,
+                        hwnd=handle,
                         accessible=accessible_target,
                         vision=calibrated,
                         native_probe=native_probe,
@@ -902,7 +1049,7 @@ class Win32WindowApi:
         if accessible_target is not None:
             return observe(
                 resolve_caption_probe(
-                    hwnd=hwnd_value,
+                    hwnd=handle,
                     accessible=accessible_target,
                     vision=None,
                     native_probe=native_probe,
@@ -922,7 +1069,7 @@ class Win32WindowApi:
             if automatic is not None:
                 return observe(
                     resolve_caption_probe(
-                        hwnd=hwnd_value,
+                        hwnd=handle,
                         accessible=None,
                         vision=automatic,
                         native_probe=native_probe,
@@ -942,7 +1089,7 @@ class Win32WindowApi:
         )
         return observe(
             resolve_caption_probe(
-                hwnd=hwnd_value,
+                hwnd=handle,
                 accessible=accessible_target,
                 vision=None,
                 native_probe=native_probe,
@@ -1117,7 +1264,7 @@ class Win32WindowApi:
                 else "normal"
             ),
         )
-        return VisionContext(int(hwnd), bounds, dpi, identity)
+        return VisionContext(hwnd_value(hwnd), bounds, dpi, identity)
 
     def list_calibration_targets(self) -> list[CalibrationTarget]:
         targets: list[CalibrationTarget] = []
@@ -1142,7 +1289,7 @@ class Win32WindowApi:
             if not application_name or self._window_bounds(hwnd) is None:
                 return True
             targets.append(
-                CalibrationTarget(int(hwnd), application_name, title)
+                CalibrationTarget(hwnd_value(hwnd), application_name, title)
             )
             return True
 

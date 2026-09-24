@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QMessageBox
 
+from resurface.ui import styles
 from resurface.ui.controllers import recycle_bin_actions
 from resurface.ui.controllers.recycle_bin_actions import RecycleBinActionsController
 
@@ -87,5 +88,21 @@ def test_auto_cleanup_persists_popup_day_once(monkeypatch):
     controller.run_auto_cleanup()
     controller.run_auto_cleanup()
     assert len(app.messages) == 1
+    assert app.messages[0][1]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
     assert app.state["recycle_bin_last_auto_clean_popup_days"] == 14
     assert len(saved) == 1
+
+
+def test_auto_cleanup_no_matches_uses_rounded_popup(monkeypatch):
+    app = App({
+        "recycle_bin_auto_clean_enabled": True,
+        "recycle_bin_age_rule_days": 14,
+        "recycle_bin_last_auto_clean_popup_days": None,
+    })
+    service = Service(deleted=0)
+    monkeypatch.setattr(recycle_bin_actions, "save_state", lambda _state: None)
+
+    RecycleBinActionsController(app, service, immediate).run_auto_cleanup()
+
+    assert len(app.messages) == 1
+    assert app.messages[0][1]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS

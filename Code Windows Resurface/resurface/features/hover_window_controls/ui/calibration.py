@@ -141,6 +141,10 @@ QDialog#CalibrationDialog QScrollBar::handle:horizontal {{
 QDialog#CalibrationDialog QLabel#calibrationStatus {{
     color: {muted};
 }}
+QDialog#CalibrationDialog QLabel#calibrationTitle {{
+    font-size: 18px;
+    font-weight: bold;
+}}
 """
 
 
@@ -443,9 +447,13 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         ],
         *,
         refresh_provider: Optional[
-            Callable[[], list[TrackedApplication]]
+            Callable[
+                [Callable[[int, list[TrackedApplication], int, str], None]],
+                bool,
+            ]
         ] = None,
         clear_provider: Optional[Callable[[], None]] = None,
+        clear_available: bool = True,
         parent=None,
     ) -> None:
         super().__init__(parent)
@@ -458,10 +466,11 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         self.setWindowTitle("Calibration Explorer")
         self.setModal(True)
         self._application_provider = application_provider
-        self._refresh_provider = refresh_provider or application_provider
+        self._refresh_provider = refresh_provider
         self._asset_provider = asset_provider
         self._update_provider = update_provider
         self._clear_provider = clear_provider
+        self._clear_available = bool(clear_available)
         self._selected_application: Optional[TrackedApplication] = None
         self._selected_asset: Optional[TrackedAsset] = None
         self._assets_for_application: list[TrackedAsset] = []
@@ -471,8 +480,12 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         ] = {}
         self._updating = False
         self._dirty = False
+        self._refresh_in_progress = False
 
         layout = QVBoxLayout(self)
+        title = QLabel("Calibration Explorer")
+        title.setObjectName("calibrationTitle")
+        layout.addWidget(title)
         instruction = QLabel(
             "Select a tracked application and action. Align the red target "
             "with the fixed JPEG using the labelled position fields or drag "
@@ -534,6 +547,7 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         if self._clear_provider is not None:
             self.clear_button = QPushButton("Clear Learned Buttons")
             self.clear_button.setObjectName("clearLearnedButtonsButton")
+            self.clear_button.setEnabled(self._clear_available)
             self.clear_button.clicked.connect(self._clear_learned_buttons)
             footer.addWidget(self.clear_button)
         footer.addStretch()
@@ -565,10 +579,10 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             self._variant_changed
         )
         self.refresh_button.clicked.connect(
-            lambda: self.refresh_applications(reload=True)
+            self._refresh_tracked_applications
         )
         self.canvas.rectChanged.connect(self._canvas_changed)
-        self.refresh_applications(prompt=False, reload=True)
+        self.refresh_applications(prompt=False)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -600,8 +614,16 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             )
             return
         self._dirty = False
-        self.refresh_applications(prompt=False, reload=True)
-        self.status_label.setText("All learned buttons were cleared.")
+        self.set_clear_available(False)
+        self.status_label.setText(
+            "All learned buttons were cleared. Click Refresh to scan open "
+            "applications."
+        )
+
+    def set_clear_available(self, available: bool) -> None:
+        self._clear_available = bool(available)
+        if self.clear_button is not None:
+            self.clear_button.setEnabled(self._clear_available)
 
     @staticmethod
     def _find_key(combo: QComboBox, key) -> int:
@@ -710,7 +732,7 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         self,
         *,
         prompt: bool = True,
-        reload: bool = False,
+        applications: Optional[list[TrackedApplication]] = None,
     ) -> None:
         if prompt and not self._confirm_transition():
             return
@@ -725,12 +747,8 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             else None
         )
         try:
-            provider = (
-                self._refresh_provider
-                if reload
-                else self._application_provider
-            )
-            applications = provider()
+            if applications is None:
+                applications = self._application_provider()
         except Exception as error:
             self._clear_editor(
                 f"Could not read tracked applications: {error}"
@@ -753,11 +771,63 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         if not applications:
             self._selected_application = None
             self._assets_for_application = []
-            self.profile_selector.clear()
-            self._set_profile_path(None)
+            self._set_empty_tracking_controls()
             self._clear_editor("No tracked application JPEGs are available.")
             return
         self._load_application(asset_key)
+
+    def _refresh_tracked_applications(self) -> None:
+        if self._refresh_in_progress or not self._confirm_transition():
+            return
+        if self._refresh_provider is None:
+            self.refresh_applications(prompt=False)
+            self.status_label.setText("Tracked applications refreshed.")
+            return
+        self._refresh_in_progress = True
+        self.refresh_button.setEnabled(False)
+        self.status_label.setText("Scanning open applications…")
+        try:
+            started = self._refresh_provider(self._tracked_refresh_completed)
+        except Exception as error:
+            self._tracked_refresh_completed(
+                0,
+                [],
+                0,
+                f"Could not scan open applications: {error}",
+            )
+            return
+        if not started and self._refresh_in_progress:
+            self._tracked_refresh_completed(
+                0,
+                [],
+                0,
+                "A tracked application refresh is already in progress.",
+            )
+
+    def _tracked_refresh_completed(
+        self,
+        scanned_count: int,
+        applications: list[TrackedApplication],
+        tracked_count: int,
+        error: str,
+    ) -> None:
+        self._refresh_in_progress = False
+        self.refresh_button.setEnabled(True)
+        if error:
+            self.status_label.setText(error)
+            return
+        self.refresh_applications(prompt=False, applications=applications)
+        self.set_clear_available(True)
+        if scanned_count:
+            self.status_label.setText(
+                f"Scanned {scanned_count} open application(s); "
+                f"{len(applications)} application(s) shown, "
+                f"{tracked_count} with tracked JPEGs."
+            )
+        else:
+            self.status_label.setText(
+                "No eligible open applications were found."
+            )
 
     def _application_changed(self, _index: int) -> None:
         if self._updating:
@@ -791,6 +861,9 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         )
         self._updating = True
         try:
+            self.profile_selector.setEnabled(True)
+            self.action_selector.setEnabled(True)
+            self.variant_selector.setEnabled(True)
             self.profile_selector.clear()
             profiles = {
                 asset.identity.fingerprint: asset.identity
@@ -828,11 +901,28 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         finally:
             self._updating = False
         if not assets:
+            self._set_empty_tracking_controls()
             self._clear_editor(
-                "This application has no available tracked JPEGs."
+                "No tracked JPEGs yet. Use Hover Window Controls on this "
+                "application, then Refresh."
+                if application.manifest_path is None
+                else "This application has no available tracked JPEGs."
             )
             return
         self._load_profile(preferred_asset_key)
+
+    def _set_empty_tracking_controls(self) -> None:
+        self._updating = True
+        try:
+            self.profile_selector.clear()
+            self.action_selector.clear()
+            self.variant_selector.clear()
+            self.profile_selector.setEnabled(False)
+            self.action_selector.setEnabled(False)
+            self.variant_selector.setEnabled(False)
+            self._set_profile_path(None)
+        finally:
+            self._updating = False
 
     def _profile_changed(self, _index: int) -> None:
         if self._updating:
