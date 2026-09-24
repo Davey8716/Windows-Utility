@@ -645,6 +645,11 @@ class ApplicationPageComposer:
             app._show_timed_message,
             app.organising_actions.run_with_optional_minimize,
             shell.content_parent("external_drives"),
+            background_refresh=app.background_refresh,
+        )
+        app.background_refresh.drives_ready.connect(drive_space_page._render_drives)
+        app.background_refresh.title_states_ready.connect(
+            drive_space_page.apply_tracked_window_states
         )
         shell.mount_content("external_drives", drive_space_page)
 
@@ -866,7 +871,7 @@ class ApplicationPageComposer:
                     callback,
                     available=(
                         (lambda: (
-                            self.app.recycle_bin_service.has_items(),
+                            bool(getattr(self.app, "_recycle_bin_has_items_cache", False)),
                             "Recycle Bin is empty.",
                         ))
                         if label == "Empty Recycle Bin"
@@ -1245,10 +1250,13 @@ class ApplicationPageComposer:
         }
         page.action_requested.connect(lambda name: actions[name]())
         page.settings_changed.connect(self._recycle_settings_changed)
-        page.set_empty_action_availability_checker(app.recycle_bin_service.has_items)
-        page.set_cleanup_age_availability_checker(
-            app.recycle_bin_service.cleanup_age_rule_availability
-        )
+        app._recycle_bin_has_items_cache = False
+        page.availability_changed.connect(self._set_recycle_bin_availability)
+        page.set_background_refresh(app.background_refresh)
+
+    def _set_recycle_bin_availability(self, has_items: bool) -> None:
+        self.app._recycle_bin_has_items_cache = bool(has_items)
+        self.quick_actions.action_changed.emit("recycle.empty")
 
     def _recycle_settings_changed(self, settings: dict) -> None:
         old_days = self.state.get("recycle_bin_age_rule_days")

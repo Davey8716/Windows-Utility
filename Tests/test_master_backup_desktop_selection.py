@@ -1,6 +1,10 @@
 from pathlib import Path
 from types import SimpleNamespace
+import time
 
+from PySide6.QtCore import QCoreApplication, QObject
+
+from resurface.core import app_paths
 from resurface.core.app_paths import MasterBackupPathsMixin
 
 
@@ -27,6 +31,34 @@ class _Owner(MasterBackupPathsMixin):
 
     def _show_modal_message(self, *args, **kwargs):
         self.messages.append((args, kwargs))
+
+
+class _QtOwner(QObject, MasterBackupPathsMixin):
+    def __init__(self, path: Path):
+        super().__init__()
+        self.state = {"master_backup_output_path": str(path)}
+        self.pages = SimpleNamespace(
+            monitor_rules_page=None,
+            organising_utilities_page=None,
+        )
+        self.messages = []
+
+    def _get_app_module_attr(self, name, default):
+        if name == "save_state":
+            return lambda _state: None
+        return default
+
+    def _message_box_icon(self, name):
+        return name
+
+    def _message_box_button(self, name):
+        return name
+
+    def _show_modal_message(self, *args, **kwargs):
+        self.messages.append((args, kwargs))
+
+    def _refresh_master_backup_path_display(self):
+        pass
 
 
 def test_selecting_desktop_creates_dedicated_folder_and_moves_managed_data(
@@ -146,3 +178,26 @@ def test_master_backup_relocation_error_uses_sized_rounded_theme_popup(tmp_path)
         "text_block_width": 460,
         "popup_corner_radius": 6,
     }
+
+
+def test_master_backup_path_probe_does_not_block_the_qt_timer(tmp_path, monkeypatch):
+    app = QCoreApplication.instance() or QCoreApplication([])
+    owner = _QtOwner(tmp_path / "unavailable")
+    owner._start_master_backup_path_monitor()
+
+    def delayed_is_dir(_path):
+        time.sleep(0.15)
+        return False
+
+    monkeypatch.setattr(app_paths.Path, "is_dir", delayed_is_dir)
+    started = time.monotonic()
+    owner._request_master_backup_path_check()
+    assert time.monotonic() - started < 0.05
+
+    deadline = time.monotonic() + 1.0
+    while not owner.messages and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    owner._master_backup_path_check_timer.stop()
+
+    assert owner.messages

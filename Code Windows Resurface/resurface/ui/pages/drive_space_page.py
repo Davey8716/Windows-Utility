@@ -36,6 +36,7 @@ class DriveSpacePage(QWidget):
         show_timed_message: Callable,
         run_with_optional_minimize: Callable,
         parent: QWidget | None = None,
+        background_refresh=None,
     ):
         super().__init__(parent)
         self.drive_service = drive_service
@@ -44,6 +45,7 @@ class DriveSpacePage(QWidget):
         self.show_timed_message = show_timed_message
         self.run_with_optional_minimize = run_with_optional_minimize
         self._tracked_window_buttons: dict[str, dict[str, object]] = {}
+        self.background_refresh = background_refresh
         self._tracked_window_button_refresh_timer = QTimer(self)
         self._tracked_window_button_refresh_timer.timeout.connect(self._refresh_tracked_window_button_labels)
 
@@ -154,18 +156,26 @@ class DriveSpacePage(QWidget):
         )
 
     def refresh_drives(self):
+        if self.background_refresh is not None:
+            self.background_refresh.request_drive_scan()
+            return
+        self._render_drives(self.drive_service.list_drives())
+
+    def _render_drives(self, drives):
         self.drive_space_list.clear()
-        for drive in self.drive_service.list_drives():
-            used_gb = drive.used_bytes / (1024 ** 3)
-            total_gb = drive.total_bytes / (1024 ** 3)
-            free_gb = drive.free_bytes / (1024 ** 3)
+        for drive in drives:
+            value = drive.get if isinstance(drive, dict) else lambda name: getattr(drive, name)
+            path = value("path")
+            used_gb = value("used_bytes") / (1024 ** 3)
+            total_gb = value("total_bytes") / (1024 ** 3)
+            free_gb = value("free_bytes") / (1024 ** 3)
             item = QListWidgetItem(
-                f"{drive.path}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  Total: {total_gb:.1f} GB"
+                f"{path}  Used: {used_gb:.1f} GB  Free: {free_gb:.1f} GB  Total: {total_gb:.1f} GB"
             )
-            item.setData(Qt.ItemDataRole.UserRole, drive.path)
-            item.setData(Qt.ItemDataRole.UserRole + 1, drive.ejectable)
-            tooltip = f"Open {drive.path} in File Explorer"
-            if drive.ejectable:
+            item.setData(Qt.ItemDataRole.UserRole, path)
+            item.setData(Qt.ItemDataRole.UserRole + 1, value("ejectable"))
+            tooltip = f"Open {path} in File Explorer"
+            if value("ejectable"):
                 tooltip += "\nRight-click to safely remove this drive."
             item.setToolTip(format_tooltip_text(tooltip))
             item.setSizeHint(QSize(0, 20))
@@ -211,8 +221,22 @@ class DriveSpacePage(QWidget):
         QTimer.singleShot(1600, self.refresh_drives)
 
     def _refresh_tracked_window_button_labels(self):
+        if self.background_refresh is not None:
+            self.background_refresh.request_title_state_check({
+                key: spec["title_candidates"]
+                for key, spec in self._tracked_window_buttons.items()
+            })
+            return
         for key in self._tracked_window_buttons:
             self._refresh_tracked_window_button_label(key)
+
+    def apply_tracked_window_states(self, states):
+        for key, state in states.items():
+            spec = self._tracked_window_buttons.get(key)
+            if spec is not None:
+                text = spec["labels"].get(state, spec["labels"]["closed"])
+                if spec["button"].text() != text:
+                    spec["button"].setText(text)
 
     def _refresh_tracked_window_button_label(self, key: str):
         spec = self._tracked_window_buttons.get(key)

@@ -1,8 +1,16 @@
 import shutil
 import sys
 from pathlib import Path
+import threading
 
-from PySide6.QtCore import QFileSystemWatcher, QStandardPaths, Qt, QTimer
+from PySide6.QtCore import (
+    QFileSystemWatcher,
+    QObject,
+    QStandardPaths,
+    Qt,
+    QTimer,
+    Signal,
+)
 from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QDialog, QFileDialog
 
@@ -13,6 +21,12 @@ from resurface.core.saved_folder_names import (
     save_saved_folder_names,
 )
 from resurface.ui import styles
+
+
+class _MasterBackupPathAvailabilityRelay(QObject):
+    """Deliver filesystem probe results back to the application's Qt thread."""
+
+    availability_checked = Signal(str, bool)
 from resurface.ui.opaque_rounded_frame import paint_opaque_rounded_frame
 
 
@@ -234,9 +248,17 @@ class MasterBackupPathsMixin:
 
         timer = QTimer(self)
         timer.setInterval(2000)
-        timer.timeout.connect(self._check_master_backup_path_availability)
+        timer.timeout.connect(self._request_master_backup_path_check)
         timer.start()
         self._master_backup_path_check_timer = timer
+        self._master_backup_path_probe_lock = threading.Lock()
+        self._master_backup_path_probe_in_flight = False
+        self._master_backup_path_probe_pending = ""
+        relay = _MasterBackupPathAvailabilityRelay(self)
+        relay.availability_checked.connect(
+            self._handle_master_backup_path_check
+        )
+        self._master_backup_path_probe_relay = relay
         self._watch_master_backup_path()
 
     def _watch_master_backup_path(self) -> None:
@@ -260,9 +282,50 @@ class MasterBackupPathsMixin:
             watcher.addPaths(list(dict.fromkeys(watched_paths)))
 
     def _queue_master_backup_path_check(self, _changed_path: str = "") -> None:
-        QTimer.singleShot(0, self._check_master_backup_path_availability)
+        QTimer.singleShot(0, self._request_master_backup_path_check)
+
+    def _request_master_backup_path_check(self) -> None:
+        """Check path availability without blocking the GUI event loop."""
+        path = self._get_master_backup_dir().strip()
+        if not path:
+            return
+        with self._master_backup_path_probe_lock:
+            if self._master_backup_path_probe_in_flight:
+                self._master_backup_path_probe_pending = path
+                return
+            self._master_backup_path_probe_in_flight = True
+        threading.Thread(
+            target=self._probe_master_backup_path_availability,
+            args=(path,),
+            name="MasterBackupPathProbe",
+            daemon=True,
+        ).start()
+
+    def _probe_master_backup_path_availability(self, path: str) -> None:
+        try:
+            available = Path(path).is_dir()
+        except OSError:
+            available = False
+        self._master_backup_path_probe_relay.availability_checked.emit(
+            path, available
+        )
+
+    def _handle_master_backup_path_check(
+        self, checked_path: str, available: bool
+    ) -> None:
+        with self._master_backup_path_probe_lock:
+            self._master_backup_path_probe_in_flight = False
+            pending_path = self._master_backup_path_probe_pending
+            self._master_backup_path_probe_pending = ""
+
+        # Ignore a result for a path the user has since replaced.
+        if self._get_master_backup_dir().strip() == checked_path and not available:
+            self._clear_unavailable_master_backup_path(checked_path)
+        if pending_path and pending_path != checked_path:
+            self._request_master_backup_path_check()
 
     def _check_master_backup_path_availability(self) -> None:
+        """Compatibility entry point for direct callers and older tests."""
         path = self._get_master_backup_dir().strip()
         if not path:
             return
@@ -534,5 +597,12 @@ class MasterBackupPathsMixin:
 
     def _refresh_taskbar_backup_folder_button(self):
         backup_dir = self.get_default_taskbar_backup_dir()
-        is_open = bool(backup_dir) and self.explorer_windows.is_folder_open(backup_dir)
-        self._taskbar_backup_folder_open = is_open
+        refresh = getattr(self, "background_refresh", None)
+        if refresh is not None:
+            refresh.request_folder_open_check(backup_dir)
+            return
+        self._taskbar_backup_folder_open = bool(backup_dir) and self.explorer_windows.is_folder_open(backup_dir)
+
+    def _apply_taskbar_backup_folder_open(self, path: str, is_open: bool) -> None:
+        if path == self.get_default_taskbar_backup_dir():
+            self._taskbar_backup_folder_open = bool(is_open)

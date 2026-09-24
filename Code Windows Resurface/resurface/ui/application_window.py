@@ -53,6 +53,7 @@ from resurface.ui.tooltips import QtTooltipManager, install_tooltip_router
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.window_chrome import WindowChrome
+from resurface.ui.background_refresh import BackgroundRefreshService
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
@@ -153,6 +154,14 @@ class UtilityControlApp(
             router=self.router_service,
         )
         self.drive_service = DriveService()
+        self.background_refresh = BackgroundRefreshService(
+            self.drive_service, self.recycle_bin_service, self.explorer_windows,
+            self.window_management, parent=self,
+        )
+        self.background_refresh.folder_open_ready.connect(
+            self._apply_taskbar_backup_folder_open
+        )
+        self.background_refresh.start()
         self.drive_reminder_policy = DriveReminderPolicy()
         self.drive_monitor = DriveMonitor(self.drive_service, parent=self)
         self.command_runner = CommandRunner(self)
@@ -447,6 +456,7 @@ class UtilityControlApp(
             pass
 
         self.command_runner.reset()
+        self.background_refresh.stop()
 
         tray = getattr(getattr(self, "tray_manager", None), "tray", None)
         if tray:

@@ -102,9 +102,20 @@ class HoverWindowControlsService(QObject):
     def start(self) -> None:
         if self._started:
             return
-        self.controller.start()
         self._started = True
-        self._apply_runtime_settings()
+        if self.enabled:
+            # Starting the controller also starts its native caption detector
+            # and vision/accessibility workers.  Do not create that runtime
+            # infrastructure merely to keep a disabled preference on standby.
+            self.controller.start()
+            self._apply_runtime_settings()
+            return
+
+        # Taskbar restoration is intentionally independent of caption hover
+        # controls, so retain it when explicitly enabled without bringing up
+        # the caption-control infrastructure.
+        if self.taskbar_restore_enabled and self.taskbar_restore_available:
+            self.taskbar_monitor.start()
 
     def stop(self) -> None:
         if not self._started:
@@ -119,6 +130,8 @@ class HoverWindowControlsService(QObject):
             return
         self.enabled = enabled
         if self._started and not self._busy:
+            if enabled:
+                self.controller.start()
             self.controller.set_caption_controls_enabled(enabled)
         self._persist(mark_export_pending=True)
 
@@ -129,6 +142,12 @@ class HoverWindowControlsService(QObject):
             return
         self.taskbar_restore_enabled = enabled
         if self._started and not self._busy:
+            if (
+                enabled
+                and not self.enabled
+                and self.taskbar_restore_available
+            ):
+                self.taskbar_monitor.start()
             self._set_taskbar_monitor_enabled(enabled)
         self._persist(mark_export_pending=True)
 

@@ -11,6 +11,7 @@ from resurface.ui.tooltips import tooltip_text
 class RecycleBinPage(PageControls):
     action_requested = Signal(str)
     settings_changed = Signal(dict)
+    availability_changed = Signal(bool)
 
     def __init__(self, settings: dict, register_tooltip, parent=None):
         super().__init__("recycle_bin_actions", register_tooltip, parent)
@@ -29,6 +30,7 @@ class RecycleBinPage(PageControls):
         actions.setStyleSheet(styles.organizing_combo_style(14))
         self._has_items_checker: Callable[[], bool] | None = None
         self._cleanup_age_availability_checker: Callable[[], dict[int, bool]] | None = None
+        self._background_refresh = None
         self._empty_action_timer = QTimer(self)
         self._empty_action_timer.setInterval(2_000)
         self._empty_action_timer.timeout.connect(self.refresh_empty_action_availability)
@@ -76,6 +78,21 @@ class RecycleBinPage(PageControls):
         self._cleanup_age_availability_checker = availability
         self.refresh_cleanup_age_availability()
 
+    def set_background_refresh(self, refresh) -> None:
+        self._background_refresh = refresh
+        refresh.recycle_ready.connect(self.apply_availability_snapshot)
+        self._empty_action_timer.timeout.disconnect(self.refresh_empty_action_availability)
+        self._empty_action_timer.timeout.connect(refresh.request_recycle_scan)
+        refresh.request_recycle_scan()
+
+    def apply_availability_snapshot(self, has_items: bool, available: dict[int, bool]) -> None:
+        index = self.actions_combo.findText("Empty Recycle Bin")
+        item = self.actions_combo.model().item(index)
+        if item is not None:
+            item.setEnabled(bool(has_items))
+        self.availability_changed.emit(bool(has_items))
+        self.apply_cleanup_age_availability(available)
+
     def refresh_empty_action_availability(self) -> None:
         if self._has_items_checker is None:
             return
@@ -90,6 +107,9 @@ class RecycleBinPage(PageControls):
         self.refresh_cleanup_age_availability()
 
     def refresh_cleanup_age_availability(self) -> None:
+        if self._background_refresh is not None:
+            self._background_refresh.request_recycle_scan()
+            return
         if self._cleanup_age_availability_checker is None:
             return
         try:
@@ -97,6 +117,9 @@ class RecycleBinPage(PageControls):
         except Exception:
             available = {}
 
+        self.apply_cleanup_age_availability(available)
+
+    def apply_cleanup_age_availability(self, available: dict[int, bool]) -> None:
         has_eligible_items = False
         for days in (7, 14, 30):
             is_available = bool(available.get(days, False))
