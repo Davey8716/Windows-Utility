@@ -273,7 +273,10 @@ class UtilityControlApp(
         self.external_drive_controller.start()
         self.tray_manager.create_tray_icon()
         self.hover_window_controls.settings_changed.connect(
-            lambda _enabled, _dwell: self.tray_manager.sync_hover_controls_action()
+            lambda *_settings: self.tray_manager.sync_hover_controls_action()
+        )
+        self.hover_window_controls.settings_changed.connect(
+            lambda *_settings: self.refresh_overview()
         )
         self.hover_window_controls.start()
         self.clipboard_provenance.start()
@@ -523,7 +526,13 @@ class UtilityControlApp(
         if pages is None:
             return
         pages.overview_page.refresh(
-            self.state, getattr(self, "_overview_connected_drives", set())
+            self.state,
+            getattr(self, "_overview_connected_drives", set()),
+            hover_settings=(
+                self.hover_window_controls.enabled,
+                self.hover_window_controls.taskbar_restore_enabled,
+                self.hover_window_controls.dwell_ms,
+            ),
         )
 
     def _title_bar_icon(self, action: str) -> QIcon:

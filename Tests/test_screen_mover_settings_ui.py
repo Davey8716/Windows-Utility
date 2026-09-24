@@ -1415,6 +1415,44 @@ def test_folder_utilities_places_creator_below_quick_folder_action(monkeypatch):
         qt_app.processEvents()
 
 
+def test_overview_hover_controls_status_uses_live_service_settings(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    state.update(
+        {
+            "hover_window_controls_enabled": False,
+            "hover_taskbar_restore_enabled": True,
+            "hover_window_controls_dwell_ms": 1_250,
+        }
+    )
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        status = window.pages.overview_page.status_labels["hover_controls"]
+        window.refresh_overview()
+
+        assert status.text() == "Off · 1,250 ms dwell · Taskbar restoration On"
+
+        window.state.update(
+            {
+                "hover_window_controls_enabled": False,
+                "hover_taskbar_restore_enabled": True,
+                "hover_window_controls_dwell_ms": 750,
+            }
+        )
+        window.hover_window_controls.set_enabled(True)
+        window.hover_window_controls.set_taskbar_restore_enabled(False)
+        window.hover_window_controls.set_dwell_ms(500)
+        qt_app.processEvents()
+
+        assert status.text() == "On · 500 ms dwell · Taskbar restoration Off"
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
 def test_folder_creator_button_icon_tracks_theme(monkeypatch):
     qt_app = QApplication.instance() or QApplication([])
     state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)

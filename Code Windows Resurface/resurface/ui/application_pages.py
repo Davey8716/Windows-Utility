@@ -397,7 +397,13 @@ class OverviewPage(QWidget):
         summary_layout.setColumnStretch(1, 1)
         layout.addWidget(summary, 0, Qt.AlignmentFlag.AlignHCenter)
 
-    def refresh(self, state: dict, connected_drives) -> None:
+    def refresh(
+        self,
+        state: dict,
+        connected_drives,
+        *,
+        hover_settings: tuple[bool, bool, int] | None = None,
+    ) -> None:
         quick_action_ids = state.get("quick_action_ids", [])
         self.status_labels["quick_actions"].setText(
             f"{len(quick_action_ids) if isinstance(quick_action_ids, list) else 0} pinned"
@@ -490,13 +496,19 @@ class OverviewPage(QWidget):
             if recycle_enabled
             else "Auto-clean Off"
         )
-        hover_enabled = bool(state.get("hover_window_controls_enabled", True))
-        taskbar_restore_enabled = bool(
-            state.get("hover_taskbar_restore_enabled", True)
-        )
-        dwell_ms = normalized_dwell_ms(
-            state.get("hover_window_controls_dwell_ms", 750)
-        )
+        if hover_settings is None:
+            hover_enabled = bool(state.get("hover_window_controls_enabled", True))
+            taskbar_restore_enabled = bool(
+                state.get("hover_taskbar_restore_enabled", True)
+            )
+            dwell_ms = normalized_dwell_ms(
+                state.get("hover_window_controls_dwell_ms", 750)
+            )
+        else:
+            hover_enabled, taskbar_restore_enabled, dwell_ms = hover_settings
+            hover_enabled = bool(hover_enabled)
+            taskbar_restore_enabled = bool(taskbar_restore_enabled)
+            dwell_ms = normalized_dwell_ms(dwell_ms)
         self.status_labels["hover_controls"].setText(
             " · ".join(
                 (
@@ -759,7 +771,15 @@ class ApplicationPageComposer:
         self._register_quick_actions(pages)
         self.quick_actions.finalize()
         app.quick_actions = self.quick_actions
-        overview_page.refresh(self.state, getattr(app, "_overview_connected_drives", set()))
+        overview_page.refresh(
+            self.state,
+            getattr(app, "_overview_connected_drives", set()),
+            hover_settings=(
+                app.hover_window_controls.enabled,
+                app.hover_window_controls.taskbar_restore_enabled,
+                app.hover_window_controls.dwell_ms,
+            ),
+        )
         return pages
 
     def _register_quick_actions(self, pages: ApplicationPages) -> None:
