@@ -952,6 +952,37 @@ def test_alphabet_button_sorts_rules_in_both_directions(monkeypatch):
         app.processEvents()
 
 
+def test_export_button_disables_after_sort_round_trip(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    exported_rules = [
+        make_rule("zulu", "Zulu"),
+        make_rule("middle", "Middle"),
+        make_rule("alpha", "alpha"),
+    ]
+    MonitorRulesRepository(lambda: str(tmp_path)).export_rules(exported_rules)
+    page = monitor_rules_ui.MonitorRulesPage(
+        None,
+        rules=copy.deepcopy(exported_rules),
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+        get_master_backup_dir=lambda: str(tmp_path),
+    )
+    try:
+        assert not page.export_rules_button.isEnabled()
+
+        page.alphabet_sort_button.click()
+        assert [rule["name"] for rule in page.rules] == ["alpha", "Middle", "Zulu"]
+        assert page.export_rules_button.isEnabled()
+
+        page.alphabet_sort_button.click()
+        assert page.rules == monitor_rules_ui.normalize_monitor_rules(exported_rules)
+        assert not page.export_rules_button.isEnabled()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
 def test_monitor_rules_export_and_import_use_master_backup_path(monkeypatch, tmp_path):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
