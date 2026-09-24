@@ -186,6 +186,7 @@ class MonitorRuleEditorDialog(QDialog):
         self._is_group_rule = bool((rule or {}).get("app_group") == WINDOWS_RESURFACE_GROUP)
         self._running_windows = []
         self._monitors = []
+        self._match_exact_path = False
 
         root = QVBoxLayout(self)
         root.setContentsMargins(22, 20, 22, 20)
@@ -221,9 +222,6 @@ class MonitorRuleEditorDialog(QDialog):
         self.name_edit = QLineEdit(self)
         self.executable_edit = QLineEdit(self)
         self.executable_edit.setReadOnly(True)
-        self.exact_path_check = StateIndicatorCheckBox(
-            "Match this exact executable path", self
-        )
         self.monitor_combo = QComboBox(self)
         self.placement_combo = QComboBox(self)
         for mode, label in PLACEMENT_LABELS.items():
@@ -236,7 +234,6 @@ class MonitorRuleEditorDialog(QDialog):
 
         form.addRow("Rule name", self.name_edit)
         form.addRow("Executable", self.executable_edit)
-        form.addRow("Matching", self.exact_path_check)
         form.addRow("Target monitor", self.monitor_combo)
         form.addRow("Placement", self.placement_combo)
         form.addRow("Status", self.enabled_check)
@@ -289,7 +286,6 @@ class MonitorRuleEditorDialog(QDialog):
             self.browse_button.setVisible(not grouped)
         self.name_edit.setReadOnly(grouped)
         self._set_form_row_visible(self.executable_edit, not grouped)
-        self._set_form_row_visible(self.exact_path_check, not grouped)
         self._set_form_row_visible(self.placement_combo, not grouped)
         capture_visible = (
             not self._is_edit_mode
@@ -312,10 +308,9 @@ class MonitorRuleEditorDialog(QDialog):
         executable_path = str(rule.get("executable_path", ""))
         executable_name = str(rule.get("executable_name", ""))
         self.executable_edit.setText(executable_path or executable_name)
-        self.exact_path_check.setChecked(
-            bool(rule.get("match_exact_path", executable_path))
-        )
-        self.exact_path_check.setEnabled(bool(executable_path))
+        self._match_exact_path = bool(
+            rule.get("match_exact_path", executable_path)
+        ) and bool(executable_path)
         self.enabled_check.setChecked(bool(rule.get("enabled", True)))
         self.reapply_check.setChecked(bool(rule.get("reapply_if_moved", False)))
 
@@ -381,8 +376,7 @@ class MonitorRuleEditorDialog(QDialog):
         self.executable_edit.setText(
             details["executable_path"] or details["executable_name"]
         )
-        self.exact_path_check.setEnabled(bool(details["executable_path"]))
-        self.exact_path_check.setChecked(bool(details["executable_path"]))
+        self._match_exact_path = bool(details["executable_path"])
         if not self.name_edit.text().strip():
             self.name_edit.setText(os.path.splitext(details["executable_name"])[0])
         if window_application_group(details, app_hwnd=self._app_hwnd) == WINDOWS_RESURFACE_GROUP:
@@ -401,8 +395,7 @@ class MonitorRuleEditorDialog(QDialog):
         if not path:
             return
         self.executable_edit.setText(os.path.normpath(path))
-        self.exact_path_check.setEnabled(True)
-        self.exact_path_check.setChecked(True)
+        self._match_exact_path = True
         if not self.name_edit.text().strip():
             self.name_edit.setText(os.path.splitext(os.path.basename(path))[0])
 
@@ -455,7 +448,7 @@ class MonitorRuleEditorDialog(QDialog):
             "reapply_if_moved": self.reapply_check.isChecked(),
             "executable_name": executable_name,
             "executable_path": executable_path,
-            "match_exact_path": self.exact_path_check.isChecked(),
+            "match_exact_path": self._match_exact_path,
             "target_device": self.monitor_combo.currentData(),
             "target_label": self.monitor_combo.currentText().replace(
                 " (Unavailable)", ""

@@ -562,6 +562,7 @@ def test_rule_editor_captures_selected_window_and_builds_saved_geometry(monkeypa
         dialog._capture_geometry()
         rule = dialog.result_rule()
         assert rule["executable_name"] == "discord.exe"
+        assert rule["match_exact_path"]
         assert rule["target_device"] == r"\\.\DISPLAY2"
         assert rule["saved_geometry"]["width"] == 900
         assert not hasattr(dialog, "title_edit")
@@ -643,6 +644,7 @@ def test_rule_editor_uses_edit_heading_for_existing_rule(monkeypatch):
         assert not hasattr(dialog, "refresh_windows_button")
         assert not hasattr(dialog, "browse_button")
         assert not hasattr(dialog, "group_button")
+        assert not hasattr(dialog, "exact_path_check")
         assert dialog.executable_edit.isReadOnly()
         assert dialog.executable_edit.text() == rule["executable_path"]
         assert not dialog.capture_button.isVisible()
@@ -709,6 +711,21 @@ def test_rule_editor_matches_import_rules_popup_width(monkeypatch, tmp_path):
         app.processEvents()
 
 
+def test_rule_editor_preserves_filename_only_matching_when_editing(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
+    rule = make_rule()
+    rule["match_exact_path"] = False
+    dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(None, rule=rule)
+    try:
+        assert not hasattr(dialog, "exact_path_check")
+        assert not dialog.result_rule()["match_exact_path"]
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        app.processEvents()
+
+
 def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
@@ -734,6 +751,7 @@ def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
         assert not dialog.refresh_windows_button.isHidden()
         assert not dialog.browse_button.isHidden()
         assert not hasattr(dialog, "group_button")
+        assert not hasattr(dialog, "exact_path_check")
         assert dialog.window_combo.count() == 2
         assert "Windows Resurface" in dialog.window_combo.itemText(1)
 
@@ -741,7 +759,6 @@ def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
 
         assert dialog.executable_edit.text() == r"C:\Apps\Windows Resurface.exe"
         assert dialog.name_edit.text() == "windows resurface"
-        assert dialog.exact_path_check.isChecked()
         assert dialog.result_rule()["app_group"] == "windows_resurface"
     finally:
         dialog.close()
