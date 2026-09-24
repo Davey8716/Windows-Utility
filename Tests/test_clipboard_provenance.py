@@ -247,6 +247,33 @@ def test_page_registers_export_and_clear_history_tooltips():
         app.processEvents()
 
 
+def test_empty_history_actions_use_black_disabled_text_in_light_mode():
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    styles.set_theme(False)
+    page = ClipboardProvenancePage(
+        None, service=service, get_master_backup_dir=lambda: ""
+    )
+    try:
+        assert not service.enabled
+        for button in (page.export_button, page.clear_button):
+            assert not button.isEnabled()
+            assert button.property("lightModeBlackDisabledText") is True
+            assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' in (
+                button.styleSheet()
+            )
+            assert "color: #000000;" in button.styleSheet()
+
+        styles.set_theme(True)
+        assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' not in (
+            styles.organizing_button_style(12)
+        )
+    finally:
+        styles.set_theme(True)
+        page.deleteLater()
+        app.processEvents()
+
+
 def test_export_success_text_wraps_a_long_path_without_clipping_it():
     app = QApplication.instance() or QApplication([])
     service, _saves = make_service()

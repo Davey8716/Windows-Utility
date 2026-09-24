@@ -104,6 +104,8 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         self.recording_button = QPushButton(self.panel)
         self.export_button = QPushButton("Export History", self.panel)
         self.clear_button = QPushButton("Clear All", self.panel)
+        for button in (self.export_button, self.clear_button):
+            button.setProperty("lightModeBlackDisabledText", True)
         for button in (self.recording_button, self.export_button, self.clear_button):
             style_button(button)
             controls.addWidget(button)
