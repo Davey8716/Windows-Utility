@@ -286,7 +286,9 @@ class UtilityControlApp(
         self.monitor_rules_controller.prune_missing_exact_path_rules()
         self.apply_monitor_rule_settings(apply_existing=True)
         
-        self._set_main_window_topmost_state(True)
+        self._set_main_window_topmost_state(
+            bool(self.state.get("main_always_on_top_enabled", True))
+        )
         self._apply_fixed_window_style()
         self.session_event_adapter.register()
         QTimer.singleShot(0, self.recycle_bin_actions.run_auto_cleanup)
