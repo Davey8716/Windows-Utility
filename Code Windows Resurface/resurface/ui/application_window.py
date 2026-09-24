@@ -107,7 +107,7 @@ class UtilityControlApp(
         self.EXPANDED_WIDTH = self.WINDOW_WIDTH
         self.ADVANCED_PANEL_WIDTH = 0
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        self.setFixedSize(self.WINDOW_WIDTH, self.WINDOW_HEIGHT)
+        self.setFixedSize(self.WINDOW_WIDTH, self._resolve_window_height())
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, False)
         
         self.tooltips_enabled = bool(self.state.get("tooltips_enabled", True))
