@@ -205,17 +205,13 @@ class MonitorRuleEditorDialog(QDialog):
             browse_button = QPushButton("Browse executable", self)
             self.refresh_windows_button = refresh_button
             self.browse_button = browse_button
-            self.group_button = QPushButton("Use Windows Resurface + Folder Creator", self)
             style_button(refresh_button)
             style_button(browse_button)
-            style_button(self.group_button)
             refresh_button.clicked.connect(self.refresh_running_windows)
             browse_button.clicked.connect(self._browse_executable)
-            self.group_button.clicked.connect(self._toggle_windows_resurface_group)
             selection_row.addWidget(self.window_combo, 1)
             selection_row.addWidget(refresh_button)
             selection_row.addWidget(browse_button)
-            selection_row.addWidget(self.group_button)
             root.addLayout(selection_row)
 
         form = QFormLayout()
@@ -285,16 +281,9 @@ class MonitorRuleEditorDialog(QDialog):
         if label is not None:
             label.setVisible(visible)
 
-    def _toggle_windows_resurface_group(self) -> None:
-        self._is_group_rule = not self._is_group_rule
-        self._sync_group_state()
-
     def _sync_group_state(self) -> None:
         grouped = self._is_group_rule
         if not self._is_edit_mode:
-            self.group_button.setText(
-                "Use a different application" if grouped else "Use Windows Resurface + Folder Creator"
-            )
             self.window_combo.setVisible(not grouped)
             self.refresh_windows_button.setVisible(not grouped)
             self.browse_button.setVisible(not grouped)

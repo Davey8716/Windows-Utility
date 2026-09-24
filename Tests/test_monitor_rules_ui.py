@@ -694,11 +694,15 @@ def test_rule_editor_matches_import_rules_popup_width(monkeypatch, tmp_path):
     try:
         page._add_rule()
         editor = captured[0]
+        editor.show()
+        app.processEvents()
         assert editor.width() == import_dialog.width()
         assert editor.minimumSize() == editor.maximumSize()
         assert editor.layout().contentsMargins().left() == 22
         assert editor.layout().spacing() == 14
         assert editor.window_combo.minimumWidth() == 0
+        assert not hasattr(editor, "group_button")
+        assert editor.window_combo.width() > editor.refresh_windows_button.width()
     finally:
         import_dialog.deleteLater()
         page.deleteLater()
@@ -729,7 +733,7 @@ def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
         assert not dialog.window_combo.isHidden()
         assert not dialog.refresh_windows_button.isHidden()
         assert not dialog.browse_button.isHidden()
-        assert not dialog.group_button.isHidden()
+        assert not hasattr(dialog, "group_button")
         assert dialog.window_combo.count() == 2
         assert "Windows Resurface" in dialog.window_combo.itemText(1)
 
@@ -738,6 +742,7 @@ def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
         assert dialog.executable_edit.text() == r"C:\Apps\Windows Resurface.exe"
         assert dialog.name_edit.text() == "windows resurface"
         assert dialog.exact_path_check.isChecked()
+        assert dialog.result_rule()["app_group"] == "windows_resurface"
     finally:
         dialog.close()
         dialog.deleteLater()
