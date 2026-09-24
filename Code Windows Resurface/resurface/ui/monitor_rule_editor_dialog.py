@@ -165,7 +165,8 @@ class MonitorRuleEditorDialog(QDialog):
         popup_width: int | None = None,
     ):
         super().__init__(parent)
-        dialog_title = "Edit Monitor Rule" if rule else "Add Monitor Rule"
+        self._is_edit_mode = rule is not None
+        dialog_title = "Edit Monitor Rule" if self._is_edit_mode else "Add Monitor Rule"
         self.setObjectName("MonitorRuleEditorDialog")
         self.setWindowTitle(dialog_title)
         self.setModal(True)
@@ -176,7 +177,7 @@ class MonitorRuleEditorDialog(QDialog):
         self._popup_width = popup_width
         if popup_width is None:
             self.setMinimumWidth(640)
-        self._original_rule = copy.deepcopy(rule) if rule else None
+        self._original_rule = copy.deepcopy(rule) if self._is_edit_mode else None
         self._app_hwnd = app_hwnd
         self._enumerate_monitors = monitor_enumerator or enumerate_monitors
         self._enumerate_windows = window_enumerator or enumerate_eligible_windows
@@ -195,26 +196,27 @@ class MonitorRuleEditorDialog(QDialog):
         self.heading_label.setStyleSheet(styles.page_title_style())
         root.addWidget(self.heading_label)
 
-        selection_row = QHBoxLayout()
-        self.window_combo = QComboBox(self)
-        self.window_combo.setMinimumWidth(0 if popup_width is not None else 410)
-        self.window_combo.currentIndexChanged.connect(self._running_window_selected)
-        refresh_button = QPushButton("Refresh windows", self)
-        browse_button = QPushButton("Browse executable", self)
-        self.refresh_windows_button = refresh_button
-        self.browse_button = browse_button
-        self.group_button = QPushButton("Use Windows Resurface + Folder Creator", self)
-        style_button(refresh_button)
-        style_button(browse_button)
-        style_button(self.group_button)
-        refresh_button.clicked.connect(self.refresh_running_windows)
-        browse_button.clicked.connect(self._browse_executable)
-        self.group_button.clicked.connect(self._toggle_windows_resurface_group)
-        selection_row.addWidget(self.window_combo, 1)
-        selection_row.addWidget(refresh_button)
-        selection_row.addWidget(browse_button)
-        selection_row.addWidget(self.group_button)
-        root.addLayout(selection_row)
+        if not self._is_edit_mode:
+            selection_row = QHBoxLayout()
+            self.window_combo = QComboBox(self)
+            self.window_combo.setMinimumWidth(0 if popup_width is not None else 410)
+            self.window_combo.currentIndexChanged.connect(self._running_window_selected)
+            refresh_button = QPushButton("Refresh windows", self)
+            browse_button = QPushButton("Browse executable", self)
+            self.refresh_windows_button = refresh_button
+            self.browse_button = browse_button
+            self.group_button = QPushButton("Use Windows Resurface + Folder Creator", self)
+            style_button(refresh_button)
+            style_button(browse_button)
+            style_button(self.group_button)
+            refresh_button.clicked.connect(self.refresh_running_windows)
+            browse_button.clicked.connect(self._browse_executable)
+            self.group_button.clicked.connect(self._toggle_windows_resurface_group)
+            selection_row.addWidget(self.window_combo, 1)
+            selection_row.addWidget(refresh_button)
+            selection_row.addWidget(browse_button)
+            selection_row.addWidget(self.group_button)
+            root.addLayout(selection_row)
 
         form = QFormLayout()
         self.form = form
@@ -267,7 +269,8 @@ class MonitorRuleEditorDialog(QDialog):
         root.addWidget(self.button_box)
 
         self.refresh_monitors()
-        self.refresh_running_windows()
+        if not self._is_edit_mode:
+            self.refresh_running_windows()
         self._load_rule(rule or {})
         self._sync_capture_state()
         if popup_width is not None:
@@ -288,18 +291,24 @@ class MonitorRuleEditorDialog(QDialog):
 
     def _sync_group_state(self) -> None:
         grouped = self._is_group_rule
-        self.group_button.setText(
-            "Use a different application" if grouped else "Use Windows Resurface + Folder Creator"
-        )
-        self.window_combo.setVisible(not grouped)
-        self.refresh_windows_button.setVisible(not grouped)
-        self.browse_button.setVisible(not grouped)
+        if not self._is_edit_mode:
+            self.group_button.setText(
+                "Use a different application" if grouped else "Use Windows Resurface + Folder Creator"
+            )
+            self.window_combo.setVisible(not grouped)
+            self.refresh_windows_button.setVisible(not grouped)
+            self.browse_button.setVisible(not grouped)
         self.name_edit.setReadOnly(grouped)
         self._set_form_row_visible(self.executable_edit, not grouped)
         self._set_form_row_visible(self.exact_path_check, not grouped)
         self._set_form_row_visible(self.placement_combo, not grouped)
-        self.capture_button.setVisible(not grouped and self.placement_combo.currentData() == "saved_geometry")
-        self.capture_status.setVisible(not grouped and self.placement_combo.currentData() == "saved_geometry")
+        capture_visible = (
+            not self._is_edit_mode
+            and not grouped
+            and self.placement_combo.currentData() == "saved_geometry"
+        )
+        self.capture_button.setVisible(capture_visible)
+        self.capture_status.setVisible(capture_visible)
 
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
@@ -349,6 +358,8 @@ class MonitorRuleEditorDialog(QDialog):
             self.monitor_combo.setCurrentIndex(index)
 
     def refresh_running_windows(self) -> None:
+        if self._is_edit_mode:
+            return
         current_hwnd = self.window_combo.currentData()
         try:
             self._running_windows = self._enumerate_windows(app_hwnd=self._app_hwnd)
@@ -366,6 +377,8 @@ class MonitorRuleEditorDialog(QDialog):
         self._sync_capture_state()
 
     def _selected_window(self) -> dict | None:
+        if self._is_edit_mode:
+            return None
         hwnd = self.window_combo.currentData()
         return next(
             (item for item in self._running_windows if item["hwnd"] == hwnd), None
@@ -405,7 +418,7 @@ class MonitorRuleEditorDialog(QDialog):
             self.name_edit.setText(os.path.splitext(os.path.basename(path))[0])
 
     def _sync_capture_state(self) -> None:
-        if self._is_group_rule:
+        if self._is_edit_mode or self._is_group_rule:
             self.capture_button.setVisible(False)
             self.capture_status.setVisible(False)
             return
@@ -476,6 +489,8 @@ class MonitorRuleEditorDialog(QDialog):
             self.placement_combo.currentData() == "saved_geometry"
             and not self._captured_geometry
         ):
+            if self._is_edit_mode:
+                return "This rule has no captured size and position."
             return "Capture a running window's size and position first."
         if self._draft_rule() is None:
             return "The rule contains invalid or incomplete settings."

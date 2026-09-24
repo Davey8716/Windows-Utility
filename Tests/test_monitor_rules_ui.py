@@ -619,17 +619,46 @@ def test_rule_editor_is_frameless_fixed_size_and_uses_active_theme(is_dark, monk
 def test_rule_editor_uses_edit_heading_for_existing_rule(monkeypatch):
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
+    window_calls = []
     monkeypatch.setattr(
         monitor_rule_editor_dialog,
         "enumerate_eligible_windows",
-        lambda **_kwargs: [],
+        lambda **kwargs: window_calls.append(kwargs) or [],
     )
+    rule = make_rule(placement_mode="saved_geometry")
+    rule["saved_geometry"] = {
+        "x_offset": 10,
+        "y_offset": 20,
+        "width": 900,
+        "height": 700,
+    }
     dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(
         None,
-        rule=make_rule(),
+        rule=rule,
     )
     try:
         assert dialog.heading_label.text() == "Edit Monitor Rule"
+        assert window_calls == []
+        assert not hasattr(dialog, "window_combo")
+        assert not hasattr(dialog, "refresh_windows_button")
+        assert not hasattr(dialog, "browse_button")
+        assert not hasattr(dialog, "group_button")
+        assert dialog.executable_edit.isReadOnly()
+        assert dialog.executable_edit.text() == rule["executable_path"]
+        assert not dialog.capture_button.isVisible()
+
+        dialog.monitor_combo.setCurrentIndex(0)
+        dialog.enabled_check.setChecked(False)
+        edited = dialog.result_rule()
+
+        assert edited["id"] == rule["id"]
+        assert edited["executable_name"] == rule["executable_name"]
+        assert edited["executable_path"] == rule_schema._normalize_path(
+            rule["executable_path"]
+        )
+        assert edited["match_exact_path"] == rule["match_exact_path"]
+        assert edited["saved_geometry"] == rule["saved_geometry"]
+        assert not edited["enabled"]
     finally:
         dialog.close()
         dialog.deleteLater()
@@ -697,6 +726,10 @@ def test_rule_editor_lists_and_selects_windows_resurface(monkeypatch):
     dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(None, app_hwnd=999)
     try:
         assert calls == [{"app_hwnd": 999}]
+        assert not dialog.window_combo.isHidden()
+        assert not dialog.refresh_windows_button.isHidden()
+        assert not dialog.browse_button.isHidden()
+        assert not dialog.group_button.isHidden()
         assert dialog.window_combo.count() == 2
         assert "Windows Resurface" in dialog.window_combo.itemText(1)
 

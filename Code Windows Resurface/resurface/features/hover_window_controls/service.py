@@ -170,9 +170,7 @@ class HoverWindowControlsService(QObject):
                 self.window_api.list_tracked_calibration_apps,
                 self.window_api.list_tracked_calibration_assets,
                 self._save_tracked_calibration,
-                target_provider=self.window_api.list_calibration_targets,
-                capture_provider=self.window_api.capture_vision_calibration,
-                save_provider=self._save_vision_calibration,
+                refresh_provider=self._reload_tracked_calibration_apps,
                 clear_provider=self.clear_learned_buttons,
                 parent=parent,
             )
@@ -185,15 +183,14 @@ class HoverWindowControlsService(QObject):
         self.window_api.clear_vision_cache()
         self._mark_export_pending()
 
+    def _reload_tracked_calibration_apps(self):
+        """Read the current tracked application records for the dialog."""
+        return self.window_api.list_tracked_calibration_apps()
+
     def _save_tracked_calibration(self, asset, rect):
         updated = self.window_api.update_tracked_calibration(asset, rect)
         self._mark_export_pending()
         return updated
-
-    def _save_vision_calibration(self, snapshot, assignments):
-        profile = self.window_api.save_vision_calibration(snapshot, assignments)
-        self._mark_export_pending()
-        return profile
 
     def relocate_data_root(self, destination: Path) -> None:
         """Move the active cache to a new master backup folder safely."""

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QLabel,
     QMessageBox,
+    QPushButton,
     QSpinBox,
 )
 
@@ -22,7 +23,6 @@ from resurface.features.hover_window_controls.ui.calibration import (
     CALIBRATION_DIALOG_SIZE,
     CalibrationDialog,
     HOVER_CONTROLS_PROMPT_CORNER_RADIUS,
-    LiveCalibrationDialog,
     _apply_frameless_window_style,
     action_glyph_geometry,
 )
@@ -31,25 +31,28 @@ from resurface.features.hover_window_controls.vision.detection import (
     ApplicationIdentity,
     TrackedApplication,
     TrackedAsset,
-    VisionContext,
-    VisionSnapshot,
-)
-from resurface.features.hover_window_controls.platform.win32 import (
-    CalibrationCaptureResult,
-    CalibrationTarget,
 )
 from resurface.ui import styles
 
 
-def identity(name: str, *, state: str = "normal") -> ApplicationIdentity:
+def identity(
+    name: str,
+    *,
+    version: str = "1.0",
+    state: str = "normal",
+    dpi: int = 96,
+    theme: str = "dark",
+    caption_side: str = "right",
+    window_class: str | None = None,
+) -> ApplicationIdentity:
     return ApplicationIdentity(
         executable_path=rf"c:\apps\{name}.exe",
-        executable_version="1.0",
+        executable_version=version,
         friendly_name=name,
-        window_class=f"{name}Window",
-        dpi=96,
-        theme="dark",
-        caption_side="right",
+        window_class=window_class or f"{name}Window",
+        dpi=dpi,
+        theme=theme,
+        caption_side=caption_side,
         window_state=state,
     )
 
@@ -161,7 +164,24 @@ class CalibrationDialogTests(unittest.TestCase):
 
     def test_loads_tracked_jpeg_and_switches_action_variant(self):
         dialog = self.make_dialog()
+        self.assertIsNone(dialog.findChild(QLabel, "liveCalibrationStatus"))
+        self.assertIsNone(
+            dialog.findChild(QPushButton, "captureLiveApplicationButton")
+        )
         self.assertEqual(dialog.application_selector.count(), 2)
+        self.assertEqual(dialog.profile_selector.count(), 2)
+        self.assertIn(
+            "v1.0 · Normal · 96 DPI · Dark",
+            dialog.profile_selector.itemText(0),
+        )
+        self.assertEqual(
+            dialog.profile_path_label.text(),
+            "Executable: c:\\apps\\Example.exe",
+        )
+        self.assertEqual(
+            dialog.profile_selector.toolTip(),
+            r"c:\apps\Example.exe",
+        )
         self.assertEqual(dialog.action_selector.count(), 3)
         self.assertEqual(dialog.action_selector.itemText(0), "Minimize")
         self.assertEqual(
@@ -186,22 +206,96 @@ class CalibrationDialogTests(unittest.TestCase):
 
         dialog.action_selector.setCurrentIndex(1)
 
-        self.assertEqual(dialog.variant_selector.count(), 2)
+        self.assertEqual(dialog.variant_selector.count(), 1)
         self.assertIn(
             "Maximize — normal",
             dialog.variant_selector.itemText(0),
         )
+
+        dialog.profile_selector.setCurrentIndex(1)
+
+        self.assertIn("Maximized", dialog.profile_selector.currentText())
+        self.assertIn("(No JPEG)", dialog.action_selector.itemText(0))
+        self.assertEqual(dialog.action_selector.itemText(1), "Maximize / Restore")
         self.assertIn(
             "Restore — maximized",
-            dialog.variant_selector.itemText(1),
+            dialog.variant_selector.itemText(0),
         )
         self.assertEqual(dialog.current_rect(), (70, 5, 100, 35))
         self.assertEqual(dialog.canvas.reference_rect, (70, 5, 100, 35))
-
-        dialog.variant_selector.setCurrentIndex(1)
         self.assertEqual(
             dialog.canvas._action,
             CaptionAction.MAXIMIZE_RESTORE,
+        )
+
+    def test_build_profiles_identify_versions_contexts_and_paths(self):
+        newer_identity = identity(
+            "Example",
+            version="2.4.1",
+            dpi=144,
+            theme="light",
+            caption_side="left",
+            window_class="ExampleNewWindow",
+        )
+        newer_asset = replace(
+            self.assets[self.example.key][0],
+            identity=newer_identity,
+            profile_id="profile-new-build",
+            action=CaptionAction.CLOSE,
+            visual="close",
+        )
+        self.assets[self.example.key].append(newer_asset)
+        dialog = self.make_dialog()
+
+        profile_index = dialog._find_profile(
+            dialog.profile_selector,
+            newer_identity.fingerprint,
+        )
+        self.assertGreaterEqual(profile_index, 0)
+        self.assertEqual(
+            dialog.profile_selector.itemText(profile_index),
+            "v2.4.1 · Normal · 144 DPI · Light · Left captions · "
+            "ExampleNewWindow",
+        )
+
+        dialog.profile_selector.setCurrentIndex(profile_index)
+
+        self.assertEqual(
+            dialog.profile_path_label.text(),
+            "Executable: c:\\apps\\Example.exe",
+        )
+        self.assertEqual(
+            dialog.profile_selector.toolTip(),
+            r"c:\apps\Example.exe",
+        )
+        self.assertIn("(No JPEG)", dialog.action_selector.itemText(0))
+        self.assertIn("(No JPEG)", dialog.action_selector.itemText(1))
+        self.assertEqual(dialog.action_selector.itemText(2), "Close")
+        self.assertEqual(dialog.variant_selector.count(), 1)
+        self.assertEqual(
+            dialog.variant_selector.currentData().identity,
+            newer_identity,
+        )
+        dialog.canvas.rectChanged.emit((90, 5, 120, 35))
+        dialog.save_button.click()
+        self.assertEqual(self.updates[-1][0].identity, newer_identity)
+
+        self.assertTrue(
+            dialog._profile_label(identity("Unknown", version="")).startswith(
+                "Version unavailable"
+            )
+        )
+
+    def test_refresh_preserves_selected_build_profile(self):
+        dialog = self.make_dialog()
+        dialog.profile_selector.setCurrentIndex(1)
+        selected_identity = dialog.profile_selector.currentData()
+
+        dialog.refresh_applications(prompt=False)
+
+        self.assertEqual(
+            dialog.profile_selector.currentData().fingerprint,
+            selected_identity.fingerprint,
         )
 
     def test_selects_first_enabled_action_for_application(self):
@@ -247,7 +341,7 @@ class CalibrationDialogTests(unittest.TestCase):
         self.assertEqual(dialog.canvas.reference_rect, grouped_rect)
         self.assertEqual(dialog.canvas.working_rect, (90, 5, 120, 35))
 
-    def test_dirty_switch_can_cancel_or_discard(self):
+    def test_dirty_profile_switch_can_cancel_or_discard(self):
         dialog = self.make_dialog()
         dialog.canvas.rectChanged.emit((90, 5, 120, 35))
         with patch.object(
@@ -255,8 +349,8 @@ class CalibrationDialogTests(unittest.TestCase):
             "_show_modal_message",
             return_value=QMessageBox.StandardButton.Cancel,
         ) as show_modal:
-            dialog.action_selector.setCurrentIndex(1)
-        self.assertEqual(dialog.action_selector.currentIndex(), 0)
+            dialog.profile_selector.setCurrentIndex(1)
+        self.assertEqual(dialog.profile_selector.currentIndex(), 0)
         self.assertEqual(dialog.current_rect(), (90, 5, 120, 35))
         show_modal.assert_called_once_with(
             QMessageBox.Icon.NoIcon,
@@ -274,11 +368,19 @@ class CalibrationDialogTests(unittest.TestCase):
             "_show_modal_message",
             return_value=QMessageBox.StandardButton.Discard,
         ):
-            dialog.action_selector.setCurrentIndex(1)
+            dialog.profile_selector.setCurrentIndex(1)
+        self.assertEqual(dialog.profile_selector.currentIndex(), 1)
         self.assertEqual(dialog.action_selector.currentIndex(), 1)
         self.assertEqual(dialog.current_rect(), (70, 5, 100, 35))
 
     def test_dirty_variant_switch_can_cancel_then_discard(self):
+        self.assets[self.example.key].append(
+            replace(
+                self.assets[self.example.key][1],
+                profile_id="profile-maximize-alternate",
+                visual="restore",
+            )
+        )
         dialog = self.make_dialog()
         dialog.action_selector.setCurrentIndex(1)
         dialog.canvas.rectChanged.emit((80, 5, 110, 35))
@@ -470,173 +572,6 @@ class CalibrationDialogTests(unittest.TestCase):
         self.assertEqual(len(close_lines), 2)
         self.assertNotEqual(close_lines[0][1], close_lines[0][3])
         self.assertNotEqual(close_lines[1][1], close_lines[1][3])
-
-
-class LiveCalibrationDialogTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.app = QApplication.instance() or QApplication([])
-
-    def make_snapshot(self, proposals=None) -> VisionSnapshot:
-        image = QImage(200, 60, QImage.Format.Format_RGB32)
-        image.fill(QColor("#303030"))
-        return VisionSnapshot(
-            VisionContext(
-                100,
-                (0, 0, 444, 300),
-                96,
-                identity("Live"),
-            ),
-            image,
-            proposals
-            or {
-                CaptionAction.CLOSE: (160, 5, 195, 40),
-            },
-        )
-
-    def test_requires_explicit_inclusion_and_allows_drawing_missing_box(self):
-        saved = []
-        dialog = LiveCalibrationDialog(
-            self.make_snapshot(),
-            lambda snapshot, assignments: saved.append(
-                (snapshot, assignments)
-            )
-            or MagicMock(identity=snapshot.context.identity),
-        )
-        self.addCleanup(dialog.close)
-
-        self.assertFalse(dialog.include_checkbox.isChecked())
-        dialog.action_selector.setCurrentIndex(2)
-        dialog.include_checkbox.setChecked(True)
-        dialog.action_selector.setCurrentIndex(0)
-        dialog.canvas.rectChanged.emit((20, 5, 60, 40))
-        dialog._save()
-
-        self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
-        self.assertEqual(
-            saved[0][1],
-            {
-                CaptionAction.CLOSE: (160, 5, 195, 40),
-                CaptionAction.MINIMIZE: (20, 5, 60, 40),
-            },
-        )
-
-    def test_has_close_only_native_chrome(self):
-        dialog = LiveCalibrationDialog(self.make_snapshot(), MagicMock())
-        self.addCleanup(dialog.close)
-
-        flags = dialog.windowFlags()
-        self.assertTrue(flags & Qt.WindowType.WindowCloseButtonHint)
-        self.assertFalse(flags & Qt.WindowType.WindowMinimizeButtonHint)
-        self.assertFalse(flags & Qt.WindowType.WindowMaximizeButtonHint)
-
-    def test_unchecked_proposals_are_not_saved(self):
-        saved = []
-        dialog = LiveCalibrationDialog(
-            self.make_snapshot(),
-            lambda snapshot, assignments: saved.append(assignments)
-            or MagicMock(identity=snapshot.context.identity),
-        )
-        self.addCleanup(dialog.close)
-        dialog.action_selector.setCurrentIndex(0)
-        dialog.canvas.rectChanged.emit((20, 5, 60, 40))
-
-        dialog._save()
-
-        self.assertEqual(
-            saved,
-            [{CaptionAction.MINIMIZE: (20, 5, 60, 40)}],
-        )
-
-    def test_overlap_and_save_failure_are_reported_without_accepting(self):
-        save = MagicMock(side_effect=OSError("disk unavailable"))
-        dialog = LiveCalibrationDialog(self.make_snapshot(), save)
-        self.addCleanup(dialog.close)
-        dialog.action_selector.setCurrentIndex(2)
-        dialog.include_checkbox.setChecked(True)
-        dialog.action_selector.setCurrentIndex(0)
-        dialog.canvas.rectChanged.emit((170, 10, 199, 45))
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.warning"
-        ) as warning:
-            dialog._save()
-        warning.assert_called_once()
-        save.assert_not_called()
-        self.assertEqual(dialog.result(), 0)
-
-        dialog.canvas.rectChanged.emit((20, 5, 60, 40))
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.QMessageBox.warning"
-        ) as warning:
-            dialog._save()
-        warning.assert_called_once_with(
-            dialog,
-            "Could not save calibration",
-            "disk unavailable",
-        )
-        self.assertEqual(dialog.result(), 0)
-
-    def test_parent_lists_live_targets_and_surfaces_capture_failure(self):
-        target = CalibrationTarget(100, "Acrobat", "Document.pdf")
-        result = CalibrationCaptureResult(error="Protected capture")
-        dialog = CalibrationDialog(
-            lambda: [],
-            lambda _application: [],
-            MagicMock(),
-            target_provider=lambda: [target],
-            capture_provider=lambda _hwnd: result,
-            save_provider=MagicMock(),
-        )
-        self.addCleanup(dialog.close)
-
-        self.assertEqual(dialog.live_target_selector.count(), 1)
-        self.assertIn(
-            "Acrobat",
-            dialog.live_target_selector.itemText(0),
-        )
-        dialog._capture_live_target()
-        self.assertEqual(
-            dialog.live_status_label.text(),
-            "Protected capture",
-        )
-
-    def test_successful_live_capture_refreshes_and_selects_saved_profile(self):
-        target = CalibrationTarget(100, "Acrobat", "Document.pdf")
-        snapshot = self.make_snapshot()
-        application = TrackedApplication(
-            snapshot.context.identity.executable_hash,
-            "Live",
-            Path("manifest_live.json"),
-        )
-        applications = []
-        profile = MagicMock(identity=snapshot.context.identity)
-        child = MagicMock()
-        child.exec.return_value = QDialog.DialogCode.Accepted
-        child.saved_profile = profile
-        dialog = CalibrationDialog(
-            lambda: list(applications),
-            lambda _application: [],
-            MagicMock(),
-            target_provider=lambda: [target],
-            capture_provider=lambda _hwnd: CalibrationCaptureResult(
-                snapshot=snapshot
-            ),
-            save_provider=MagicMock(),
-        )
-        self.addCleanup(dialog.close)
-        applications.append(application)
-
-        with patch(
-            "resurface.features.hover_window_controls.ui.calibration.LiveCalibrationDialog",
-            return_value=child,
-        ):
-            dialog._capture_live_target()
-
-        self.assertEqual(
-            dialog.application_selector.currentData(),
-            application,
-        )
-        self.assertIn("saved", dialog.live_status_label.text().lower())
 
 
 if __name__ == "__main__":

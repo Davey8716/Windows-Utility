@@ -205,7 +205,7 @@ def test_taskbar_restoration_can_start_after_disabled_caption_startup(
     assert monitor_calls == ["start", "resume"]
 
 
-def test_calibration_uses_live_capture_and_resumes(monkeypatch, tmp_path):
+def test_calibration_uses_tracked_profiles_and_resumes(monkeypatch, tmp_path):
     state = {
         "hover_window_controls_enabled": True,
         "hover_window_controls_dwell_ms": 750,
@@ -225,9 +225,6 @@ def test_calibration_uses_live_capture_and_resumes(monkeypatch, tmp_path):
         "list_tracked_calibration_apps",
         "list_tracked_calibration_assets",
         "update_tracked_calibration",
-        "list_calibration_targets",
-        "capture_vision_calibration",
-        "save_vision_calibration",
     ):
         setattr(service.window_api, name, lambda *_args: [])
 
@@ -235,11 +232,10 @@ def test_calibration_uses_live_capture_and_resumes(monkeypatch, tmp_path):
     service.calibrate()
 
     assert len(dialogs) == 1
-    assert set(dialogs[0]) >= {
-        "target_provider",
-        "capture_provider",
-        "save_provider",
+    assert set(dialogs[0]) == {
         "clear_provider",
+        "parent",
+        "refresh_provider",
     }
     assert service.controller.calls[-3:] == [
         "suspend",
@@ -402,23 +398,14 @@ def test_noop_hover_setting_change_does_not_mark_export_pending(monkeypatch, tmp
     assert service.has_export_changes() is False
 
 
-def test_calibration_saves_mark_export_pending(monkeypatch, tmp_path):
+def test_tracked_calibration_saves_mark_export_pending(monkeypatch, tmp_path):
     service, _saves = _service(monkeypatch, tmp_path, {})
     service.window_api.update_tracked_calibration = lambda asset, rect: (asset, rect)
-    service.window_api.save_vision_calibration = lambda snapshot, assignments: (
-        snapshot,
-        assignments,
-    )
 
     assert service._save_tracked_calibration("asset", (1, 2, 3, 4)) == (
         "asset",
         (1, 2, 3, 4),
     )
-    assert service.has_export_changes() is True
-
-    service._pending_export = False
-    service._save_vision_calibration("snapshot", {})
-
     assert service.has_export_changes() is True
 
 

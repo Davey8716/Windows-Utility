@@ -1,4 +1,4 @@
-"""Live and cached caption-button calibration dialogs."""
+"""Tracked caption-button calibration dialog."""
 
 from __future__ import annotations
 
@@ -16,11 +16,9 @@ from PySide6.QtGui import (
     QPixmap,
 )
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -31,10 +29,9 @@ from PySide6.QtWidgets import (
 
 from resurface.features.hover_window_controls.core.hover_controller import CaptionAction
 from resurface.features.hover_window_controls.vision.detection import (
+    ApplicationIdentity,
     TrackedApplication,
     TrackedAsset,
-    VisionProfile,
-    VisionSnapshot,
     rects_overlap,
 )
 from resurface.ui import styles
@@ -51,13 +48,7 @@ _ACTION_ORDER = (
     CaptionAction.CLOSE,
 )
 _TARGET_COLOR = QColor("#ff4050")
-CALIBRATION_DIALOG_SIZE = (650, 438)
-_CLOSE_ONLY_DIALOG_FLAGS = (
-    Qt.WindowType.Dialog
-    | Qt.WindowType.CustomizeWindowHint
-    | Qt.WindowType.WindowTitleHint
-    | Qt.WindowType.WindowCloseButtonHint
-)
+CALIBRATION_DIALOG_SIZE = (650, 478)
 HOVER_CONTROLS_PROMPT_CORNER_RADIUS = 12
 
 
@@ -88,22 +79,8 @@ QDialog#CalibrationDialog {{
     color: {text};
     border-radius: 10px;
 }}
-QDialog#CalibrationDialog QLabel,
-QDialog#CalibrationDialog QGroupBox,
-QDialog#CalibrationDialog QCheckBox {{
+QDialog#CalibrationDialog QLabel {{
     color: {text};
-}}
-QDialog#CalibrationDialog QGroupBox {{
-    background-color: {surface_bg};
-    border: 1px solid {surface_border};
-    border-radius: 6px;
-    margin-top: 10px;
-    padding-top: 8px;
-}}
-QDialog#CalibrationDialog QGroupBox::title {{
-    subcontrol-origin: margin;
-    left: 8px;
-    padding: 0 4px;
 }}
 QDialog#CalibrationDialog QComboBox {{
     background-color: {field_bg};
@@ -161,8 +138,7 @@ QDialog#CalibrationDialog QScrollBar::handle:horizontal {{
     min-height: 20px;
     min-width: 20px;
 }}
-QDialog#CalibrationDialog QLabel#calibrationStatus,
-QDialog#CalibrationDialog QLabel#liveCalibrationStatus {{
+QDialog#CalibrationDialog QLabel#calibrationStatus {{
     color: {muted};
 }}
 """
@@ -453,172 +429,6 @@ def action_glyph_geometry(
     ), None
 
 
-class LiveCalibrationDialog(QDialog):
-    def __init__(
-        self,
-        snapshot: VisionSnapshot,
-        save_provider: Callable[
-            [
-                VisionSnapshot,
-                dict[CaptionAction, tuple[int, int, int, int]],
-            ],
-            VisionProfile,
-        ],
-        parent=None,
-    ) -> None:
-        super().__init__(parent)
-        self.setObjectName("CalibrationDialog")
-        self.setWindowFlags(_CLOSE_ONLY_DIALOG_FLAGS)
-        _apply_native_window_appearance(self)
-        self.setStyleSheet(_calibration_stylesheet())
-        self.setWindowTitle("Calibrate open application")
-        self.setModal(True)
-        self.snapshot = snapshot
-        self._save_provider = save_provider
-        self._rects = dict(snapshot.proposals)
-        self._included: set[CaptionAction] = set()
-        self._updating = False
-        self.saved_profile: Optional[VisionProfile] = None
-
-        layout = QVBoxLayout(self)
-        instruction = QLabel(
-            "Choose an action, then explicitly include its suggested box "
-            "or draw a missing box on the in-memory caption preview. "
-            "Unchecked actions are skipped."
-        )
-        instruction.setWordWrap(True)
-        layout.addWidget(instruction)
-
-        action_row = QHBoxLayout()
-        action_row.addWidget(QLabel("Button action:"))
-        self.action_selector = QComboBox()
-        for action in _ACTION_ORDER:
-            self.action_selector.addItem(_ACTION_LABELS[action], action)
-        action_row.addWidget(self.action_selector, 1)
-        self.include_checkbox = QCheckBox("Include this action")
-        action_row.addWidget(self.include_checkbox)
-        layout.addLayout(action_row)
-
-        self.status_label = QLabel()
-        self.status_label.setObjectName("liveCalibrationStatus")
-        self.status_label.setWordWrap(True)
-        layout.addWidget(self.status_label)
-
-        self.canvas = CalibrationCanvas()
-        scroll = QScrollArea()
-        scroll.setWidget(self.canvas)
-        scroll.setWidgetResizable(False)
-        layout.addWidget(scroll)
-
-        button_box = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save
-            | QDialogButtonBox.StandardButton.Cancel
-        )
-        button_box.button(
-            QDialogButtonBox.StandardButton.Save
-        ).clicked.connect(self._save)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-        self.action_selector.currentIndexChanged.connect(
-            self._action_changed
-        )
-        self.include_checkbox.toggled.connect(self._include_changed)
-        self.canvas.rectChanged.connect(self._canvas_changed)
-        self._load_action()
-
-    def showEvent(self, event) -> None:
-        super().showEvent(event)
-        _apply_native_window_appearance(self)
-
-    @property
-    def current_action(self) -> CaptionAction:
-        return self.action_selector.currentData()
-
-    @property
-    def assignments(
-        self,
-    ) -> dict[CaptionAction, tuple[int, int, int, int]]:
-        return {
-            action: self._rects[action]
-            for action in self._included
-            if action in self._rects
-        }
-
-    def _action_changed(self, _index: int) -> None:
-        if not self._updating:
-            self._load_action()
-
-    def _load_action(self) -> None:
-        action = self.current_action
-        rect = self._rects.get(action)
-        self._updating = True
-        try:
-            self.include_checkbox.setChecked(action in self._included)
-            self.include_checkbox.setEnabled(rect is not None)
-            self.canvas.set_live_image(
-                self.snapshot.image,
-                action,
-                rect,
-            )
-        finally:
-            self._updating = False
-        self.status_label.setText(
-            (
-                "Suggested box available. Check Include or adjust/draw it."
-                if rect is not None
-                else "No suggestion is available. Draw the button box."
-            )
-        )
-
-    def _include_changed(self, checked: bool) -> None:
-        if self._updating:
-            return
-        action = self.current_action
-        if checked and action in self._rects:
-            self._included.add(action)
-        else:
-            self._included.discard(action)
-
-    def _canvas_changed(
-        self,
-        rect: tuple[int, int, int, int],
-    ) -> None:
-        self._rects[self.current_action] = rect
-        self.canvas.set_working_rect(rect)
-        self._included.add(self.current_action)
-        self._updating = True
-        try:
-            self.include_checkbox.setEnabled(True)
-            self.include_checkbox.setChecked(True)
-        finally:
-            self._updating = False
-        self.status_label.setText("Manual box included.")
-
-    def _save(self) -> None:
-        assignments = self.assignments
-        error = validate_assignments(
-            assignments,
-            (self.snapshot.image.width(), self.snapshot.image.height()),
-        )
-        if error is not None:
-            QMessageBox.warning(self, "Invalid calibration", error)
-            return
-        try:
-            self.saved_profile = self._save_provider(
-                self.snapshot,
-                assignments,
-            )
-        except Exception as error:
-            QMessageBox.warning(
-                self,
-                "Could not save calibration",
-                str(error),
-            )
-            return
-        self.accept()
-
-
 class CalibrationDialog(WindowMessageMixin, QDialog):
     def __init__(
         self,
@@ -632,16 +442,8 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             TrackedAsset,
         ],
         *,
-        target_provider: Optional[Callable[[], list[object]]] = None,
-        capture_provider: Optional[Callable[[int], object]] = None,
-        save_provider: Optional[
-            Callable[
-                [
-                    VisionSnapshot,
-                    dict[CaptionAction, tuple[int, int, int, int]],
-                ],
-                VisionProfile,
-            ]
+        refresh_provider: Optional[
+            Callable[[], list[TrackedApplication]]
         ] = None,
         clear_provider: Optional[Callable[[], None]] = None,
         parent=None,
@@ -656,14 +458,13 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         self.setWindowTitle("Calibration Explorer")
         self.setModal(True)
         self._application_provider = application_provider
+        self._refresh_provider = refresh_provider or application_provider
         self._asset_provider = asset_provider
         self._update_provider = update_provider
-        self._target_provider = target_provider
-        self._capture_provider = capture_provider
-        self._save_provider = save_provider
         self._clear_provider = clear_provider
         self._selected_application: Optional[TrackedApplication] = None
         self._selected_asset: Optional[TrackedAsset] = None
+        self._assets_for_application: list[TrackedAsset] = []
         self._assets_by_action: dict[
             CaptionAction,
             list[TrackedAsset],
@@ -680,40 +481,6 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         instruction.setWordWrap(True)
         layout.addWidget(instruction)
 
-        self.live_group: Optional[QGroupBox] = None
-        self.live_target_selector: Optional[QComboBox] = None
-        self.live_status_label: Optional[QLabel] = None
-        if (
-            target_provider is not None
-            and capture_provider is not None
-            and save_provider is not None
-        ):
-            self.live_group = QGroupBox("Open windows")
-            live_layout = QVBoxLayout(self.live_group)
-            live_row = QHBoxLayout()
-            self.live_target_selector = QComboBox()
-            self.live_target_selector.setObjectName(
-                "liveCalibrationTargetSelector"
-            )
-            self.live_target_selector.setMinimumContentsLength(28)
-            live_row.addWidget(self.live_target_selector, 1)
-            refresh_live_button = QPushButton("Refresh windows")
-            refresh_live_button.clicked.connect(
-                self.refresh_live_targets
-            )
-            live_row.addWidget(refresh_live_button)
-            capture_button = QPushButton("Capture and calibrate")
-            capture_button.setObjectName("captureLiveApplicationButton")
-            capture_button.clicked.connect(self._capture_live_target)
-            live_row.addWidget(capture_button)
-            live_layout.addLayout(live_row)
-            self.live_status_label = QLabel(
-                "Select an open application to bootstrap a calibration."
-            )
-            self.live_status_label.setWordWrap(True)
-            live_layout.addWidget(self.live_status_label)
-            layout.addWidget(self.live_group)
-
         app_row = QHBoxLayout()
         app_row.addWidget(QLabel("Tracked application:"))
         self.application_selector = QComboBox()
@@ -724,6 +491,18 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         self.refresh_button.setObjectName("refreshTrackedApplicationsButton")
         app_row.addWidget(self.refresh_button)
         layout.addLayout(app_row)
+
+        profile_row = QHBoxLayout()
+        profile_row.addWidget(QLabel("Build & window profile:"))
+        self.profile_selector = QComboBox()
+        self.profile_selector.setObjectName("trackedProfileSelector")
+        self.profile_selector.setMinimumContentsLength(28)
+        profile_row.addWidget(self.profile_selector, 1)
+        layout.addLayout(profile_row)
+        self.profile_path_label = QLabel()
+        self.profile_path_label.setObjectName("trackedProfilePath")
+        self.profile_path_label.setWordWrap(True)
+        layout.addWidget(self.profile_path_label)
 
         action_row = QHBoxLayout()
         action_row.addWidget(QLabel("Button action:"))
@@ -776,6 +555,9 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         self.application_selector.currentIndexChanged.connect(
             self._application_changed
         )
+        self.profile_selector.currentIndexChanged.connect(
+            self._profile_changed
+        )
         self.action_selector.currentIndexChanged.connect(
             self._action_changed
         )
@@ -783,11 +565,10 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             self._variant_changed
         )
         self.refresh_button.clicked.connect(
-            lambda: self.refresh_applications()
+            lambda: self.refresh_applications(reload=True)
         )
         self.canvas.rectChanged.connect(self._canvas_changed)
-        self.refresh_live_targets()
-        self.refresh_applications(prompt=False)
+        self.refresh_applications(prompt=False, reload=True)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -799,7 +580,7 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
         answer = self._show_modal_message(
             QMessageBox.Icon.NoIcon,
             "Clear all learned buttons?",
-            "This permanently \n caption-button images and\n "
+            "This permanently removes all learned caption-button images and "
             "calibration data.\nHover preferences are kept.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
@@ -819,97 +600,8 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             )
             return
         self._dirty = False
-        self.refresh_applications(prompt=False)
+        self.refresh_applications(prompt=False, reload=True)
         self.status_label.setText("All learned buttons were cleared.")
-
-    def refresh_live_targets(self) -> None:
-        if self.live_target_selector is None or self._target_provider is None:
-            return
-        current = self.live_target_selector.currentData()
-        current_hwnd = getattr(current, "hwnd", None)
-        try:
-            targets = self._target_provider()
-        except Exception as error:
-            self.live_target_selector.clear()
-            if self.live_status_label is not None:
-                self.live_status_label.setText(
-                    f"Could not list open windows: {error}"
-                )
-            return
-        self.live_target_selector.clear()
-        selected_index = -1
-        for index, target in enumerate(targets):
-            self.live_target_selector.addItem(target.label, target)
-            if target.hwnd == current_hwnd:
-                selected_index = index
-        if targets:
-            self.live_target_selector.setCurrentIndex(
-                selected_index if selected_index >= 0 else 0
-            )
-            if self.live_status_label is not None:
-                self.live_status_label.setText(
-                    "Select an open application to bootstrap a calibration."
-                )
-        elif self.live_status_label is not None:
-            self.live_status_label.setText(
-                "No eligible open application windows were found."
-            )
-
-    def _capture_live_target(self) -> None:
-        if (
-            self.live_target_selector is None
-            or self._capture_provider is None
-            or self._save_provider is None
-        ):
-            return
-        target = self.live_target_selector.currentData()
-        if target is None:
-            if self.live_status_label is not None:
-                self.live_status_label.setText(
-                    "Select an open application first."
-                )
-            return
-        try:
-            result = self._capture_provider(target.hwnd)
-        except Exception as error:
-            if self.live_status_label is not None:
-                self.live_status_label.setText(
-                    f"Could not capture the selected window: {error}"
-                )
-            return
-        snapshot = getattr(result, "snapshot", None)
-        if snapshot is None:
-            if self.live_status_label is not None:
-                self.live_status_label.setText(
-                    getattr(
-                        result,
-                        "error",
-                        "The selected window could not be captured.",
-                    )
-                )
-            return
-        dialog = LiveCalibrationDialog(
-            snapshot,
-            self._save_provider,
-            self,
-        )
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
-        profile = dialog.saved_profile
-        self.refresh_applications(prompt=False)
-        if profile is not None:
-            application_key = profile.identity.executable_hash
-            index = self._find_key(
-                self.application_selector,
-                application_key,
-            )
-            if index >= 0:
-                self.application_selector.setCurrentIndex(index)
-                self._load_application(None)
-        if self.live_status_label is not None:
-            self.live_status_label.setText(
-                "Calibration saved. The learned profile is selected below."
-            )
 
     @staticmethod
     def _find_key(combo: QComboBox, key) -> int:
@@ -926,6 +618,46 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
                 return index
         return -1
 
+    @staticmethod
+    def _find_profile(
+        combo: QComboBox,
+        fingerprint: str,
+    ) -> int:
+        for index in range(combo.count()):
+            identity = combo.itemData(index)
+            if (
+                identity is not None
+                and identity.fingerprint == fingerprint
+            ):
+                return index
+        return -1
+
+    @staticmethod
+    def _profile_label(identity: ApplicationIdentity) -> str:
+        version = identity.executable_version.strip() or "Version unavailable"
+        if (
+            version != "Version unavailable"
+            and not version.casefold().startswith("v")
+        ):
+            version = f"v{version}"
+        return " · ".join(
+            (
+                version,
+                identity.window_state.title(),
+                f"{identity.dpi} DPI",
+                identity.theme.title(),
+                f"{identity.caption_side.title()} captions",
+                identity.window_class,
+            )
+        )
+
+    def _set_profile_path(self, identity: Optional[ApplicationIdentity]) -> None:
+        path = identity.executable_path if identity is not None else ""
+        self.profile_selector.setToolTip(path)
+        self.profile_path_label.setText(
+            f"Executable: {path}" if path else ""
+        )
+
     def _restore_selection(self) -> None:
         self._updating = True
         try:
@@ -936,6 +668,11 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
                 )
                 self.application_selector.setCurrentIndex(index)
             if self._selected_asset is not None:
+                profile_index = self._find_profile(
+                    self.profile_selector,
+                    self._selected_asset.identity.fingerprint,
+                )
+                self.profile_selector.setCurrentIndex(profile_index)
                 action_index = self._find_action(
                     self.action_selector,
                     self._selected_asset.action,
@@ -969,7 +706,12 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             return True
         return False
 
-    def refresh_applications(self, *, prompt: bool = True) -> None:
+    def refresh_applications(
+        self,
+        *,
+        prompt: bool = True,
+        reload: bool = False,
+    ) -> None:
         if prompt and not self._confirm_transition():
             return
         app_key = (
@@ -983,7 +725,12 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             else None
         )
         try:
-            applications = self._application_provider()
+            provider = (
+                self._refresh_provider
+                if reload
+                else self._application_provider
+            )
+            applications = provider()
         except Exception as error:
             self._clear_editor(
                 f"Could not read tracked applications: {error}"
@@ -1005,6 +752,9 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             self._updating = False
         if not applications:
             self._selected_application = None
+            self._assets_for_application = []
+            self.profile_selector.clear()
+            self._set_profile_path(None)
             self._clear_editor("No tracked application JPEGs are available.")
             return
         self._load_application(asset_key)
@@ -1030,16 +780,87 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             self._clear_editor(f"Could not read tracked actions: {error}")
             return
         self._selected_application = application
+        self._assets_for_application = assets
+        preferred_asset = next(
+            (
+                asset
+                for asset in assets
+                if asset.key == preferred_asset_key
+            ),
+            None,
+        )
+        self._updating = True
+        try:
+            self.profile_selector.clear()
+            profiles = {
+                asset.identity.fingerprint: asset.identity
+                for asset in assets
+            }
+            for identity in sorted(
+                profiles.values(),
+                key=lambda item: (
+                    item.executable_version,
+                    item.executable_path.casefold(),
+                    0 if item.window_state == "normal" else 1,
+                    item.window_state,
+                    item.dpi,
+                    item.theme,
+                    item.caption_side,
+                    item.window_class,
+                ),
+            ):
+                self.profile_selector.addItem(
+                    self._profile_label(identity),
+                    identity,
+                )
+            preferred_profile = (
+                preferred_asset.identity.fingerprint
+                if preferred_asset is not None
+                else None
+            )
+            profile_index = self._find_profile(
+                self.profile_selector,
+                preferred_profile,
+            ) if preferred_profile is not None else -1
+            self.profile_selector.setCurrentIndex(
+                profile_index if profile_index >= 0 else (0 if profiles else -1)
+            )
+        finally:
+            self._updating = False
+        if not assets:
+            self._clear_editor(
+                "This application has no available tracked JPEGs."
+            )
+            return
+        self._load_profile(preferred_asset_key)
+
+    def _profile_changed(self, _index: int) -> None:
+        if self._updating:
+            return
+        if not self._confirm_transition():
+            self._restore_selection()
+            return
+        self._load_profile(None)
+
+    def _load_profile(self, preferred_asset_key) -> None:
+        identity = self.profile_selector.currentData()
+        self._set_profile_path(identity)
+        profile_assets = [
+            asset
+            for asset in self._assets_for_application
+            if identity is not None
+            and asset.identity.fingerprint == identity.fingerprint
+        ]
         self._assets_by_action = {
             action: [
-                asset for asset in assets if asset.action is action
+                asset for asset in profile_assets if asset.action is action
             ]
             for action in _ACTION_ORDER
         }
         preferred_asset = next(
             (
                 asset
-                for asset in assets
+                for asset in profile_assets
                 if asset.key == preferred_asset_key
             ),
             None,
@@ -1079,10 +900,8 @@ class CalibrationDialog(WindowMessageMixin, QDialog):
             )
         finally:
             self._updating = False
-        if not assets:
-            self._clear_editor(
-                "This application has no available tracked JPEGs."
-            )
+        if not profile_assets:
+            self._clear_editor("Select a build and window profile.")
             return
         self._load_action(preferred_asset_key)
 
