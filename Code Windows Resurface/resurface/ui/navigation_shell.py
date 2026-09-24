@@ -35,6 +35,7 @@ class NavigationShell(QWidget):
     """Own the main navigation controls and the final hosts for page content."""
 
     page_changed = Signal(str)
+    _RESERVED_SCROLLBAR_GUTTER_PAGES = frozenset({"monitor_rules"})
 
     PAGE_DEFINITIONS = (
         PageDefinition("overview", "Overview", "\ue80f", "Quick view of Windows Resurface."),
@@ -155,7 +156,23 @@ class NavigationShell(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        reserves_scrollbar_gutter = (
+            definition.page_id in self._RESERVED_SCROLLBAR_GUTTER_PAGES
+        )
+        scroll.setProperty("reserveVerticalScrollbarGutter", reserves_scrollbar_gutter)
+        scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+            if reserves_scrollbar_gutter
+            else Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        if reserves_scrollbar_gutter:
+            scrollbar = scroll.verticalScrollBar()
+
+            def refresh_scrollbar_enabled(minimum, maximum):
+                scrollbar.setEnabled(maximum > minimum)
+
+            scrollbar.rangeChanged.connect(refresh_scrollbar_enabled)
+            refresh_scrollbar_enabled(scrollbar.minimum(), scrollbar.maximum())
         page_layout.addWidget(scroll)
 
         content = QWidget()

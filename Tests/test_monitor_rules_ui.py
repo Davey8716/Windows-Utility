@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from PySide6.QtCore import QThread, Qt
+from PySide6.QtCore import QCoreApplication, QEvent, QPoint, QThread, Qt
 from PySide6.QtGui import QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
@@ -31,6 +31,7 @@ from resurface.features.monitor_rules import MonitorRulesRepository, rule_schema
 from resurface.ui import application_window as main
 from resurface.ui import monitor_rule_editor_dialog
 from resurface.ui import monitor_rules_page as monitor_rules_ui
+from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.tooltips import format_tooltip_text
 from test_screen_mover_settings_ui import _build_offscreen_window
 
@@ -981,6 +982,63 @@ def test_export_button_disables_after_sort_round_trip(monkeypatch, tmp_path):
         assert not page.export_rules_button.isEnabled()
     finally:
         page.deleteLater()
+        app.processEvents()
+
+
+def test_delete_all_keeps_monitor_rules_page_geometry_stable(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(monitor_rules_ui, "enumerate_monitors", monitors)
+    shell = NavigationShell(
+        app_version="test",
+        sidebar_width=220,
+        page_title_top_inset=43,
+    )
+    page = monitor_rules_ui.MonitorRulesPage(
+        shell.content_parent("monitor_rules"),
+        rules=[make_rule(str(index), f"Rule {index}") for index in range(20)],
+        app_hwnd=999,
+        on_rules_changed=lambda _rules: None,
+    )
+    shell.mount_content("monitor_rules", page)
+
+    try:
+        shell.resize(1000, 800)
+        shell.show()
+        shell.navigate_to("monitor_rules")
+        app.processEvents()
+
+        scroll = shell.page_scroll_areas["monitor_rules"]
+        title = shell.content_parent("monitor_rules").findChild(
+            QLabel, "PageTitle"
+        )
+        assert title is not None
+        assert scroll.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+        assert scroll.verticalScrollBar().isEnabled()
+        before = {
+            "title": title.mapTo(shell, QPoint()).x(),
+            "help": page.help_button.mapTo(shell, QPoint()).x(),
+            "frame": page.rules_frame.mapTo(shell, QPoint()).x(),
+        }
+
+        monkeypatch.setattr(
+            page,
+            "_show_modal_message",
+            lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+        )
+        page.delete_all_button.click()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        app.processEvents()
+        QTest.qWait(25)
+
+        assert page.rules == []
+        assert not scroll.verticalScrollBar().isEnabled()
+        assert {
+            "title": title.mapTo(shell, QPoint()).x(),
+            "help": page.help_button.mapTo(shell, QPoint()).x(),
+            "frame": page.rules_frame.mapTo(shell, QPoint()).x(),
+        } == before
+    finally:
+        shell.deleteLater()
         app.processEvents()
 
 

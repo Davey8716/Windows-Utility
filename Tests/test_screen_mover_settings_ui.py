@@ -351,9 +351,15 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
         assert len(shell.page_scroll_areas) == 12
         assert all(
             isinstance(scroll, QScrollArea)
-            and scroll.verticalScrollBarPolicy()
-            == Qt.ScrollBarPolicy.ScrollBarAsNeeded
             for scroll in shell.page_scroll_areas.values()
+        )
+        assert shell.page_scroll_areas["monitor_rules"].verticalScrollBarPolicy() == (
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+        )
+        assert all(
+            scroll.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAsNeeded
+            for page_id, scroll in shell.page_scroll_areas.items()
+            if page_id != "monitor_rules"
         )
         assert not hasattr(window, "advanced_settings_toggle")
         # assert not hasattr(window, "master_collapse_btn_left")

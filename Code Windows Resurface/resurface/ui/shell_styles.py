@@ -314,6 +314,14 @@ def window_style() -> str:
             border: none;
             height: 0px;
         }}
+        QScrollArea[reserveVerticalScrollbarGutter="true"] QScrollBar:vertical:disabled {{
+            background: transparent;
+            border: none;
+        }}
+        QScrollArea[reserveVerticalScrollbarGutter="true"] QScrollBar::handle:vertical:disabled {{
+            background: transparent;
+            border: none;
+        }}
     """
 
 def file_dialog_style() -> str:
