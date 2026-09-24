@@ -1430,7 +1430,12 @@ def test_folder_creator_button_icon_tracks_theme(monkeypatch):
         assert creator.text() == "Folder Creator"
         assert creator.width() == 512
         assert not creator.icon().isNull()
-        assert creator.iconSize().width() == 18
+        assert creator.iconSize().width() == 30
+        assert creator.iconSize().height() == 18
+        assert (
+            window.pages.folder_utilities_page.FOLDER_CREATOR_ICON_TRAILING_PADDING
+            == 12
+        )
 
         window.apply_theme(False)
         qt_app.processEvents()

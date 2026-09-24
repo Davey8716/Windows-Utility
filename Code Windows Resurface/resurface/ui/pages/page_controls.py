@@ -111,8 +111,10 @@ class PageControls(QWidget):
         button.toggled.connect(update)
 
     @staticmethod
-    def create_fluent_icon(glyph: str, icon_size: int = 16) -> QIcon:
-        pixmap = QPixmap(icon_size, icon_size)
+    def create_fluent_icon(
+        glyph: str, icon_size: int = 16, *, trailing_padding: int = 0
+    ) -> QIcon:
+        pixmap = QPixmap(icon_size + trailing_padding, icon_size)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
@@ -120,7 +122,8 @@ class PageControls(QWidget):
         font.setPixelSize(icon_size)
         painter.setFont(font)
         painter.setPen(styles.button_text_color())
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
+        glyph_rect = pixmap.rect().adjusted(0, 0, -trailing_padding, 0)
+        painter.drawText(glyph_rect, Qt.AlignmentFlag.AlignCenter, glyph)
         painter.end()
         return QIcon(pixmap)
 

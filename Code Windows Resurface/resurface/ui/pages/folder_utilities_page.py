@@ -9,6 +9,8 @@ from resurface.ui.tooltips import tooltip_text
 
 class FolderUtilitiesPage(PageControls):
     FOLDER_UTILITIES_GLYPH = "\ue8b7"
+    FOLDER_CREATOR_ICON_SIZE = 18
+    FOLDER_CREATOR_ICON_TRAILING_PADDING = 12
 
     create_folder_requested = Signal(str)
     save_name_requested = Signal(str)
@@ -91,9 +93,19 @@ class FolderUtilitiesPage(PageControls):
 
     def refresh_icons(self) -> None:
         self.folder_creator_button.setIcon(
-            self.create_fluent_icon(self.FOLDER_UTILITIES_GLYPH, 18)
+            self.create_fluent_icon(
+                self.FOLDER_UTILITIES_GLYPH,
+                self.FOLDER_CREATOR_ICON_SIZE,
+                trailing_padding=self.FOLDER_CREATOR_ICON_TRAILING_PADDING,
+            )
         )
-        self.folder_creator_button.setIconSize(QSize(18, 18))
+        self.folder_creator_button.setIconSize(
+            QSize(
+                self.FOLDER_CREATOR_ICON_SIZE
+                + self.FOLDER_CREATOR_ICON_TRAILING_PADDING,
+                self.FOLDER_CREATOR_ICON_SIZE,
+            )
+        )
 
     def folder_created(self, saved_names: list[str] | None = None) -> None:
         if saved_names is not None:
