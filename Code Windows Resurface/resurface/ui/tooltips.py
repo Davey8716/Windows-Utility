@@ -46,7 +46,7 @@ TOOLTIP_TEXT = {
     "folder_name_input": "Enter the name of the folder to create on the desktop.",
     "delete_name": "Deletes whichever the chosen drop down save folder name item is. ",
     "delete_all_names": "Deletes every saved folder name from the list.",
-    "backup_taskbar": "Backs up pinned taskbar shortcuts into the TaskBarApps folder.",
+    "backup_taskbar": "Backs up compatible pinned desktop-app shortcuts into the TaskBarApps folder.",
     "open_backup_folder": "Opens the TaskBarApps backup folder inside the master backup path, or closes it if already open.",
     "capture_desktop_layout": "Saves the current desktop icon layout to the master backup location.",
     "restore_desktop_layout": "Restores the saved desktop icon layout from the master backup location.",

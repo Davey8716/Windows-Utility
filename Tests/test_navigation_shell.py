@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QApplication, QScrollArea, QWidget
+from PySide6.QtWidgets import QApplication, QScrollArea, QToolButton, QWidget
 
 from resurface.ui import styles
 from resurface.ui.navigation_shell import NavigationShell
@@ -83,4 +83,29 @@ def test_apply_theme_refreshes_navigation_presentation():
             for row in range(shell.navigation_list.count())
         )
     finally:
+        shell.deleteLater()
+
+
+def test_organising_utilities_title_has_a_theme_aware_help_button():
+    shell = build_shell()
+    try:
+        button = shell.page_title_help_button("organising_utilities")
+
+        assert isinstance(button, QToolButton)
+        assert button.objectName() == "OrganisingUtilitiesHelpButton"
+        assert button.text() == "?"
+        assert button.size().width() == button.size().height() == 28
+        assert button.accessibleName() == "Organising Utilities help"
+        assert button.toolTip() == format_tooltip_text(
+            "About Organising Utilities backups"
+        )
+        assert button.parentWidget().findChild(
+            QWidget, "PageTitle"
+        ) is not None
+
+        styles.set_theme(False)
+        shell.apply_theme()
+        assert "#eef2f6" in button.styleSheet()
+    finally:
+        styles.set_theme(True)
         shell.deleteLater()

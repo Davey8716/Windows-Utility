@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 from types import SimpleNamespace
 
 from resurface.features.screen_mover.hotkeys import VALID_ACTIONS
@@ -10,6 +10,7 @@ from resurface.ui.application_pages import ApplicationPageComposer
 from resurface.ui.pages.external_drives_page import ExternalDrivesPage
 from resurface.ui.pages.folder_utilities_page import FolderUtilitiesPage
 from resurface.ui.pages.organising_utilities_page import OrganisingUtilitiesPage
+from resurface.ui.pages.organising_utilities_page import ORGANISING_UTILITIES_HELP_TEXT
 from resurface.ui.pages.recycle_bin_page import RecycleBinPage
 from resurface.ui.pages.screen_mover_settings_page import ScreenMoverSettingsPage
 from resurface.ui.pages.user_interface_page import UserInterfacePage
@@ -605,6 +606,27 @@ def test_external_drives_page_updates_status_through_its_api():
         assert combo.itemData(1) == "F:\\"
     finally:
         page.deleteLater()
+
+
+def test_organising_utilities_help_uses_the_reviewed_modal_copy():
+    calls = []
+    composer = object.__new__(ApplicationPageComposer)
+    composer.app = SimpleNamespace(
+        _show_modal_message=lambda *args, **kwargs: calls.append((args, kwargs))
+    )
+
+    composer._show_organising_utilities_help()
+
+    args, kwargs = calls[0]
+    assert args == (
+        QMessageBox.Icon.NoIcon,
+        "About Organising Utilities Backups",
+        ORGANISING_UTILITIES_HELP_TEXT,
+        QMessageBox.StandardButton.Ok,
+        QMessageBox.StandardButton.Ok,
+    )
+    assert kwargs["minimum_popup_width"] == 500
+    assert kwargs["text_minimum_width"] == 430
 
 
 def test_external_drives_page_uses_shared_control_spacing():

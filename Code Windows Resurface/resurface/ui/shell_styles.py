@@ -26,6 +26,26 @@ def title_bar_control_style(*, close_button: bool = False) -> str:
 def page_title_style() -> str:
     return H.label_style(font_size=24, bold=True, color=T.theme_text_color())
 
+def page_title_help_button_style() -> str:
+    return f"""
+        QToolButton#OrganisingUtilitiesHelpButton {{
+            color: {H.qcolor_css(T.theme_text_color())};
+            background-color: {H.qcolor_css(T.SURFACE_BG)};
+            border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
+            border-radius: 14px;
+            padding: 0px;
+            font-size: 16px;
+            font-weight: bold;
+        }}
+        QToolButton#OrganisingUtilitiesHelpButton:hover {{
+            background-color: {H.qcolor_css(T.SURFACE_HOVER)};
+            border-color: {H.qcolor_css(T.STATUS_ACCENT)};
+        }}
+        QToolButton#OrganisingUtilitiesHelpButton:pressed {{
+            background-color: {H.qcolor_css(T.STATUS_ACCENT)};
+        }}
+    """
+
 def page_description_style() -> str:
     return H.label_style(font_size=14, bold=False, color=T.theme_muted_text_color())
 

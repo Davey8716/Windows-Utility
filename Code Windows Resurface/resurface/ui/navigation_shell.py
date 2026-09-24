@@ -84,6 +84,7 @@ class NavigationShell(QWidget):
         self.page_content_layouts = {}
         self.page_content_widgets = {}
         self.page_scroll_areas = {}
+        self.page_title_help_buttons = {}
 
         body_layout = QHBoxLayout(self)
         body_layout.setContentsMargins(0, 0, 0, 0)
@@ -165,13 +166,33 @@ class NavigationShell(QWidget):
         layout.setSpacing(16)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        title = QLabel(definition.label, content)
+        title_row = QWidget(content)
+        title_layout = QHBoxLayout(title_row)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        title_layout.setSpacing(8)
+        title = QLabel(definition.label, title_row)
         title.setObjectName("PageTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        title.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         title.setStyleSheet(styles.page_title_style())
-        layout.addWidget(title)
+        title_layout.addStretch(1)
+        title_layout.addWidget(title)
+        if definition.page_id == "organising_utilities":
+            help_button = QToolButton(title_row)
+            help_button.setObjectName("OrganisingUtilitiesHelpButton")
+            help_button.setText("?")
+            help_button.setFixedSize(28, 28)
+            help_button.setAccessibleName("Organising Utilities help")
+            help_button.setToolTip(format_tooltip_text("About Organising Utilities backups"))
+            help_button.setStyleSheet(styles.page_title_help_button_style())
+            title_layout.addWidget(help_button, 0, Qt.AlignmentFlag.AlignVCenter)
+            self.page_title_help_buttons[definition.page_id] = help_button
+        title_layout.addStretch(1)
+        layout.addWidget(title_row)
         scroll.setWidget(content)
         return page, content, layout, scroll
+
+    def page_title_help_button(self, page_id: str) -> QToolButton | None:
+        return self.page_title_help_buttons.get(page_id)
 
     def _populate_navigation(self) -> None:
         self.navigation_list.clear()
@@ -265,6 +286,8 @@ class NavigationShell(QWidget):
         self.navigation_list.setStyleSheet(styles.navigation_list_style())
         self.version_label.setStyleSheet(styles.sidebar_version_label_style())
         self._refresh_navigation_icons()
+        for button in self.page_title_help_buttons.values():
+            button.setStyleSheet(styles.page_title_help_button_style())
         for button in self.findChildren(QToolButton, "MonitorRulesHelpButton"):
             button.setStyleSheet(styles.monitor_rules_help_button_style())
         for name in (

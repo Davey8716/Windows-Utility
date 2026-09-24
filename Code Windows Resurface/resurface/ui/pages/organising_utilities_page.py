@@ -6,6 +6,18 @@ from resurface.ui.pages.page_controls import PageControls
 from resurface.ui.tooltips import set_tooltip, tooltip_text
 
 
+ORGANISING_UTILITIES_HELP_TEXT = (
+    "Desktop Screenshot saves a visual record of your screens and Taskbar. "
+    "It cannot restore pinned Taskbar apps automatically.\n\n"
+    "Taskbar Actions backs up compatible pinned desktop-app shortcuts. Some "
+    "Windows and Microsoft Store apps, such as Settings and modern Notepad, "
+    "use Windows-managed app identities instead of shortcut files and are not "
+    "included in that backup.\n\n"
+    "Use the screenshot as a reference when manually restoring the arrangement "
+    "of those apps."
+)
+
+
 class OrganisingUtilitiesPage(PageControls):
     action_requested = Signal(str)
     master_backup_path_requested = Signal()

@@ -39,7 +39,10 @@ from resurface.ui.pages.external_drives_page import ExternalDrivesPage
 from resurface.ui.pages.folder_utilities_page import FolderUtilitiesPage
 from resurface.ui.pages.hover_window_controls_page import HoverWindowControlsPage
 from resurface.ui.pages.maintenance_page import MaintenancePage
-from resurface.ui.pages.organising_utilities_page import OrganisingUtilitiesPage
+from resurface.ui.pages.organising_utilities_page import (
+    ORGANISING_UTILITIES_HELP_TEXT,
+    OrganisingUtilitiesPage,
+)
 from resurface.ui.pages.recycle_bin_page import RecycleBinPage
 from resurface.ui.pages.screen_mover_settings_page import ScreenMoverSettingsPage
 from resurface.ui.pages.user_interface_page import UserInterfacePage
@@ -658,6 +661,9 @@ class ApplicationPageComposer:
             app.register_tooltip,
             shell.content_parent("organising_utilities"),
         )
+        shell.page_title_help_button("organising_utilities").clicked.connect(
+            self._show_organising_utilities_help
+        )
         self._wire_organising_page(organising_utilities_page)
         shell.mount_content("organising_utilities", organising_utilities_page)
 
@@ -1240,6 +1246,18 @@ class ApplicationPageComposer:
         app._taskbar_backup_folder_timer = QTimer(app)
         app._taskbar_backup_folder_timer.timeout.connect(app._refresh_taskbar_backup_folder_button)
         app._taskbar_backup_folder_timer.start(1000)
+
+    def _show_organising_utilities_help(self, _checked=False) -> None:
+        self.app._show_modal_message(
+            QMessageBox.Icon.NoIcon,
+            "About Organising Utilities Backups",
+            ORGANISING_UTILITIES_HELP_TEXT,
+            QMessageBox.StandardButton.Ok,
+            QMessageBox.StandardButton.Ok,
+            minimum_popup_width=500,
+            text_minimum_width=430,
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+        )
 
     def _wire_recycle_bin_page(self, page: RecycleBinPage) -> None:
         app = self.app
