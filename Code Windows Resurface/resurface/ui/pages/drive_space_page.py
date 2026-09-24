@@ -93,8 +93,11 @@ class DriveSpacePage(QWidget):
         self.page_layout.addWidget(button_row, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.drive_space_list = QListWidget()
-        self.drive_space_list.setFixedSize(self.CONTENT_WIDTH, 120)
-        self.drive_space_list.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.drive_space_list.setFixedWidth(self.CONTENT_WIDTH)
+        self.drive_space_list.setMinimumHeight(120)
+        self.drive_space_list.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
+        )
         self.drive_space_list.setSpacing(0)
         self.drive_space_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.drive_space_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)

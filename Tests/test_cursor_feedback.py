@@ -4,7 +4,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QSizePolicy, QWidget
 
 from resurface.features.system.command_runner import CommandRunner
 from resurface.features.system.maintenance_actions import MaintenanceActions
@@ -85,6 +85,10 @@ def test_interactive_controls_use_hand_cursors_and_folder_text_keeps_i_beam():
         assert external._notify_combo.cursor().shape() == hand
         assert hover.dwell_combo.cursor().shape() == hand
         assert maintenance.sidebar_output_clear_btn.cursor().shape() == hand
+        assert maintenance.sidebar_output_container.minimumHeight() == 285
+        assert maintenance.sidebar_output_container.sizePolicy().verticalPolicy() == (
+            QSizePolicy.Policy.Expanding
+        )
         assert all(combo.cursor().shape() == hand for combo, _title, _actions in maintenance.quick_action_dropdowns)
         assert screen_mover.reset_button.cursor().shape() == hand
         assert all(button.cursor().shape() == hand for button in screen_mover._clear_hotkey_buttons.values())
@@ -110,6 +114,10 @@ def test_title_bar_and_drive_actions_use_hand_cursors():
         assert host.window_close_btn.cursor().shape() == hand
         assert drive_page.btn_this_pc.cursor().shape() == hand
         assert drive_page.btn_storage_sense.cursor().shape() == hand
+        assert drive_page.drive_space_list.minimumHeight() == 120
+        assert drive_page.drive_space_list.sizePolicy().verticalPolicy() == (
+            QSizePolicy.Policy.Expanding
+        )
     finally:
         drive_page.deleteLater()
         host.deleteLater()

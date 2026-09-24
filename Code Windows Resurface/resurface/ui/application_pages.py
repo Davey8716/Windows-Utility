@@ -667,7 +667,9 @@ class ApplicationPageComposer:
         app.background_refresh.title_states_ready.connect(
             drive_space_page.apply_tracked_window_states
         )
-        shell.mount_content("external_drives", drive_space_page)
+        shell.mount_content(
+            "external_drives", drive_space_page, vertical_expanding=True
+        )
 
         organising_utilities_page = OrganisingUtilitiesPage(
             app._get_master_backup_dir(),
@@ -715,7 +717,7 @@ class ApplicationPageComposer:
             app._show_modal_message,
             shell.content_parent("maintenance"),
         )
-        shell.mount_content("maintenance", maintenance_page)
+        shell.mount_content("maintenance", maintenance_page, vertical_expanding=True)
         windows_utilities_page = WindowsUtilitiesPage(
             WindowsToolCatalog(),
             app.router_service,

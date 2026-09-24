@@ -224,19 +224,32 @@ class NavigationShell(QWidget):
     def content_parent(self, page_id: str) -> QWidget:
         return self.page_content_widgets[page_id]
 
-    def mount_content(self, page_id: str, content: QWidget) -> None:
+    def mount_content(
+        self, page_id: str, content: QWidget, *, vertical_expanding: bool = False
+    ) -> None:
         """Mount content that was constructed with this page's final parent."""
         if content.parentWidget() is not self.content_parent(page_id):
             raise ValueError(f"Content for {page_id!r} was not built with its final parent")
         content.setMaximumWidth(16777215)
         content.setMinimumWidth(0)
         content.setVisible(True)
-        content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        vertical_policy = (
+            QSizePolicy.Policy.Expanding
+            if vertical_expanding
+            else QSizePolicy.Policy.Fixed
+        )
+        content.setSizePolicy(QSizePolicy.Policy.Expanding, vertical_policy)
+        if vertical_expanding:
+            self.content_parent(page_id).setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            )
         content_layout = content.layout()
         if content_layout is not None:
             content_layout.setContentsMargins(0, 0, 0, 0)
             content_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
-        self.page_content_layouts[page_id].addWidget(content)
+        self.page_content_layouts[page_id].addWidget(
+            content, 1 if vertical_expanding else 0
+        )
 
     def add_subheading(self, page_id: str, text: str) -> None:
         label = QLabel(text, self.content_parent(page_id))

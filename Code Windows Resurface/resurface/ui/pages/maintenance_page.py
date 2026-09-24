@@ -136,13 +136,19 @@ class MaintenancePage(QWidget):
 
     def _build_output(self):
         self.sidebar_output_container = QWidget()
-        self.sidebar_output_container.setFixedSize(self.CONTENT_WIDTH, 285)
-        self.sidebar_output_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.sidebar_output_container.setFixedWidth(self.CONTENT_WIDTH)
+        self.sidebar_output_container.setMinimumHeight(285)
+        self.sidebar_output_container.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
+        )
         output_layout = QGridLayout(self.sidebar_output_container)
         output_layout.setContentsMargins(0, 0, 0, 0)
         output_layout.setSpacing(0)
         self.sidebar_output = QTextEdit()
         self.sidebar_output.setFixedWidth(self.CONTENT_WIDTH)
+        self.sidebar_output.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding
+        )
         self.sidebar_output.setReadOnly(True)
         self.sidebar_output.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.sidebar_output.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)

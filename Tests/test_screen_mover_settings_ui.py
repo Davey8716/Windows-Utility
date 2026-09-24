@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QWidget,
 )
 from Shared.app_state_defaults import WINDOWS_RESURFACE_DEFAULTS
@@ -1676,7 +1677,10 @@ def test_maintenance_controls_and_output_share_the_inner_frame_width(monkeypatch
         assert selector_grid.width() == 488
         assert panel.sidebar_output_container.width() == 488
         assert panel.sidebar_output.width() == 488
-        assert panel.sidebar_output_container.height() == 285
+        assert panel.sidebar_output_container.minimumHeight() == 285
+        assert panel.sidebar_output_container.sizePolicy().verticalPolicy() == (
+            QSizePolicy.Policy.Expanding
+        )
         assert panel.sidebar_output_clear_btn.text() == "Clear Log"
 
         grid_left = selector_grid.mapTo(maintenance_page, QPoint()).x()
@@ -1743,7 +1747,10 @@ def test_external_drive_controls_and_output_share_the_inner_frame_width(monkeypa
         assert panel.btn_storage_sense.width() == styles.EXTERNAL_DRIVES_CONTROL_WIDTH
         assert button_row.width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
         assert panel.drive_space_list.width() == styles.EXTERNAL_DRIVES_CONTENT_WIDTH
-        assert panel.drive_space_list.height() == 120
+        assert panel.drive_space_list.minimumHeight() == 120
+        assert panel.drive_space_list.sizePolicy().verticalPolicy() == (
+            QSizePolicy.Policy.Expanding
+        )
 
         button_row_left = button_row.mapTo(drive_page, QPoint()).x()
         output_left = panel.drive_space_list.mapTo(drive_page, QPoint()).x()
