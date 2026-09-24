@@ -42,7 +42,7 @@ class PageControls(QWidget):
         button = QPushButton(text)
         button.setCheckable(True)
         button.setChecked(checked)
-        button.setCursor(Qt.CursorShape.ArrowCursor)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(button)
         button.setProperty("styleFontSize", 14)
         button.setStyleSheet(styles.toggle_button_style(font_size=14))
@@ -143,7 +143,7 @@ class PageControls(QWidget):
 
     def style_action_button(self, button: QPushButton) -> QPushButton:
         button.setCheckable(False)
-        button.setCursor(Qt.CursorShape.ArrowCursor)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(button)
         button.setProperty("styleFontSize", 14)
         button.setStyleSheet(styles.organizing_button_style(14))
@@ -163,7 +163,7 @@ class PageControls(QWidget):
         combo.addItem(placeholder)
         combo.addItems(action_names)
         combo.view().setRowHidden(0, True)
-        combo.setCursor(Qt.CursorShape.ArrowCursor)
+        combo.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(combo)
         combo.setProperty("styleFontSize", 14)
         if power_action_style:
@@ -187,7 +187,7 @@ class PageControls(QWidget):
         combo = QComboBox()
         combo.addItems(values)
         combo.setCurrentText(current_value if current_value in values else values[0])
-        combo.setCursor(Qt.CursorShape.ArrowCursor)
+        combo.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(combo)
         combo.setProperty("styleFontSize", 14)
         combo.setStyleSheet(styles.organizing_combo_style(14))

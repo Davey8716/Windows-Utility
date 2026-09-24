@@ -26,7 +26,7 @@ class ExternalDrivesPage(PageControls):
         self._status_row = row
 
         self._drives = QComboBox()
-        self._drives.setCursor(Qt.CursorShape.ArrowCursor)
+        self._drives.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(self._drives, width=width, role="externalDrive")
         self._drives.setMinimumContentsLength(len("No Drives Connected"))
         self._drives.setProperty("connectedDrivesFieldStyle", True)
@@ -68,7 +68,7 @@ class ExternalDrivesPage(PageControls):
                 format_tooltip_text(self._notify_combo.itemText(index)),
                 Qt.ItemDataRole.ToolTipRole,
             )
-        self._notify_combo.setCursor(Qt.CursorShape.ArrowCursor)
+        self._notify_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self._notify_combo.setProperty("styleFontSize", 14)
         self._notify_combo.setProperty("plugUnplugNotificationCombo", True)
         self._notify_combo.setStyleSheet(styles.organizing_combo_style(14))

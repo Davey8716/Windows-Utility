@@ -76,6 +76,7 @@ def apply_default_button_size(
     height: int = T.DEFAULT_BUTTON_HEIGHT,
 ) -> None:
     button.setFixedSize(width, height)
+    button.setCursor(Qt.CursorShape.PointingHandCursor)
 
 def apply_page_control_size(
     widget,
@@ -86,6 +87,7 @@ def apply_page_control_size(
 ) -> None:
     widget.setFixedSize(int(width), int(height))
     widget.setProperty("pageControlRole", role)
+    widget.setCursor(Qt.CursorShape.PointingHandCursor)
 
 def fit_page_combo_width(
     combo,

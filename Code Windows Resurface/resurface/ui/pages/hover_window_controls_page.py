@@ -52,7 +52,7 @@ class HoverWindowControlsPage(PageControls):
         ):
             self.dwell_combo.addItem(f"{delay:,} ms dwell", delay)
         self.dwell_combo.setCurrentIndex(self.dwell_combo.findData(dwell_ms))
-        self.dwell_combo.setCursor(Qt.CursorShape.ArrowCursor)
+        self.dwell_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(self.dwell_combo)
         self.dwell_combo.setProperty("styleFontSize", 14)
         self.dwell_combo.setStyleSheet(styles.organizing_combo_style(14))
