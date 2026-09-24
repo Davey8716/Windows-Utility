@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFrame,
     QLabel,
+    QListView,
     QMessageBox,
     QPushButton,
     QToolButton,
@@ -1615,6 +1616,16 @@ def test_import_rules_dialog_is_non_native_and_tracks_current_theme(monkeypatch,
             assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
             assert isinstance(dialog, monitor_rules_ui.ImportRulesDialog)
             assert dialog.minimumSize() == dialog.maximumSize()
+            assert dialog.contentsMargins().top() == dialog.HEADER_HEIGHT
+            heading = dialog.findChild(QLabel, "ImportRulesDialogHeading")
+            assert heading is not None
+            assert heading.text() == "Import Rules"
+            assert heading.alignment() & Qt.AlignmentFlag.AlignHCenter
+            assert heading.styleSheet() == monitor_rules_ui.styles.page_title_style()
+            sidebar = dialog.findChild(QListView, "sidebar")
+            assert sidebar is not None
+            assert sidebar.minimumWidth() == dialog.PLACES_SIDEBAR_WIDTH
+            assert sidebar.maximumWidth() == dialog.PLACES_SIDEBAR_WIDTH
             stylesheet = dialog.styleSheet()
             assert monitor_rules_ui.styles.qcolor_css(
                 monitor_rules_ui.styles.WINDOW_BG
