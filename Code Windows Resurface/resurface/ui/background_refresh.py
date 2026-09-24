@@ -9,7 +9,7 @@ from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 class _RefreshWorker(QObject):
     drives_ready = Signal(object)
-    recycle_ready = Signal(bool, object)
+    recycle_ready = Signal(bool)
     folder_open_ready = Signal(str, bool)
     title_states_ready = Signal(object)
 
@@ -37,10 +37,9 @@ class _RefreshWorker(QObject):
     def scan_recycle_bin(self):
         try:
             has_items = bool(self._recycle_bin.has_items())
-            ages = self._recycle_bin.cleanup_age_rule_availability()
         except Exception:
-            has_items, ages = False, {}
-        self.recycle_ready.emit(has_items, ages)
+            has_items = False
+        self.recycle_ready.emit(has_items)
 
     @Slot(str)
     def check_folder_open(self, path):
@@ -76,7 +75,7 @@ class BackgroundRefreshService(QObject):
     _check_titles = Signal(object)
 
     drives_ready = Signal(object)
-    recycle_ready = Signal(bool, object)
+    recycle_ready = Signal(bool)
     folder_open_ready = Signal(str, bool)
     title_states_ready = Signal(object)
 
@@ -127,9 +126,9 @@ class BackgroundRefreshService(QObject):
         self._pending["drives"] = False
         self.drives_ready.emit(records)
 
-    def _on_recycle_ready(self, has_items, ages):
+    def _on_recycle_ready(self, has_items):
         self._pending["recycle"] = False
-        self.recycle_ready.emit(has_items, ages)
+        self.recycle_ready.emit(has_items)
 
     def _on_folder_open_ready(self, path, is_open):
         self._pending["folder"] = False

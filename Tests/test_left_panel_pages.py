@@ -214,44 +214,46 @@ def test_disable_all_confirmations_reverts_after_danger_confirmation_is_cancelle
         page.deleteLater()
 
 
-def test_recycle_bin_empty_action_is_disabled_when_no_items_exist():
+def test_recycle_bin_cleanup_actions_follow_auto_clean_state():
     _app()
     page = RecycleBinPage({}, lambda _widget, _text: None)
     try:
         assert page.actions_combo.property("lightModeBlackDisabledText") is True
         assert page.actions_combo.property("lightModeKeepEnabledBackground") is True
-        page.set_empty_action_availability_checker(lambda: False)
-        index = page.actions_combo.findText("Empty Recycle Bin")
-        assert not page.actions_combo.model().item(index).isEnabled()
+        open_index = page.actions_combo.findText("Open Recycle Bin")
+        run_index = page.actions_combo.findText("Run Auto-Clean Now")
+        empty_index = page.actions_combo.findText("Empty Recycle Bin")
+        assert page.actions_combo.model().item(open_index).isEnabled()
+        assert not page.actions_combo.model().item(run_index).isEnabled()
+        assert not page.actions_combo.model().item(empty_index).isEnabled()
 
-        page.set_empty_action_availability_checker(lambda: True)
-        assert page.actions_combo.model().item(index).isEnabled()
+        page.auto_clean_button.setChecked(True)
+        assert page.actions_combo.model().item(open_index).isEnabled()
+        assert page.actions_combo.model().item(run_index).isEnabled()
+        assert page.actions_combo.model().item(empty_index).isEnabled()
+
+        page.apply_empty_action_snapshot(False)
+        assert page.actions_combo.model().item(empty_index).isEnabled()
     finally:
         page.deleteLater()
 
 
-def test_recycle_bin_disables_unavailable_cleanup_age_choices():
+def test_recycle_bin_keeps_all_cleanup_age_choices_available():
     _app()
-    page = RecycleBinPage({}, lambda _widget, _text: None)
+    page = RecycleBinPage({"recycle_bin_auto_clean_enabled": True}, lambda _widget, _text: None)
     try:
         assert page.age_combo.property("lightModeBlackDisabledText") is True
-        page.set_cleanup_age_availability_checker(
-            lambda: {7: True, 14: False, 30: False}
-        )
         assert page.age_combo.isEnabled()
-        assert page.age_combo.property("unavailableCurrentValue") is True
-        assert page.age_combo.model().item(page.age_combo.findText("7 days")).isEnabled()
-        assert not page.age_combo.model().item(page.age_combo.findText("14 days")).isEnabled()
-        assert not page.age_combo.model().item(page.age_combo.findText("30 days")).isEnabled()
+        for label in ("7 days", "14 days", "30 days"):
+            assert page.age_combo.model().item(page.age_combo.findText(label)).isEnabled()
         run_index = page.actions_combo.findText("Run Auto-Clean Now")
-        page.age_combo.setCurrentText("7 days")
-        assert page.age_combo.property("unavailableCurrentValue") is False
         assert page.actions_combo.model().item(run_index).isEnabled()
-
-        page.set_cleanup_age_availability_checker(lambda: {7: False, 14: False, 30: False})
-        assert not page.age_combo.isEnabled()
-        assert page.age_combo.property("unavailableCurrentValue") is True
-        assert not page.actions_combo.model().item(run_index).isEnabled()
+        page.age_combo.setCurrentText("7 days")
+        assert page._settings["recycle_bin_age_rule_days"] == 7
+        assert page.actions_combo.model().item(run_index).isEnabled()
+        page.age_combo.setCurrentText("14 days")
+        assert page._settings["recycle_bin_age_rule_days"] == 14
+        assert page.actions_combo.model().item(run_index).isEnabled()
     finally:
         page.deleteLater()
 

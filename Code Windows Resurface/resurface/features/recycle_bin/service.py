@@ -176,27 +176,6 @@ class RecycleBinService:
                 return True
         return False
 
-    def cleanup_age_rule_availability(
-        self, days: tuple[int, ...] = (7, 14, 30)
-    ) -> dict[int, bool]:
-        """Return the currently actionable cleanup ages in one metadata scan."""
-        requested_days = tuple(sorted({day for day in days if day > 0}))
-        available = {day: False for day in requested_days}
-        if not requested_days:
-            return available
-        now = datetime.now(timezone.utc)
-        for metadata_path in iter_recycle_bin_metadata_files():
-            deleted_at = read_recycle_bin_deleted_at(metadata_path)
-            if deleted_at is None:
-                continue
-            age = now - deleted_at
-            for day in requested_days:
-                if age >= timedelta(days=day):
-                    available[day] = True
-            if all(available.values()):
-                break
-        return available
-
     def cleanup_items_older_than(self, days: int) -> int:
         if days <= 0:
             return 0

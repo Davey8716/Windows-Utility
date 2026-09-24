@@ -430,15 +430,6 @@ def _modern_combo_style(
             background-color: {H.qcolor_css(background)};
             border-left: 1px solid {H.qcolor_css(border)};
         }}
-        QComboBox[lightModeBlackDisabledText="true"][unavailableCurrentValue="true"] {{
-            color: {H.qcolor_css(T.theme_text_color())};
-            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
-            border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
-        }}
-        QComboBox[lightModeBlackDisabledText="true"][unavailableCurrentValue="true"]::drop-down {{
-            background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
-            border-left: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
-        }}
         QComboBox[lightModeBlackDisabledText="true"] QAbstractItemView::item:disabled {{
             color: {H.qcolor_css(T.theme_text_color())};
             background-color: {H.qcolor_css(T.themed_button_disabled_bg())};

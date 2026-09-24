@@ -53,7 +53,7 @@ def test_has_items_uses_the_windows_recycle_bin_count(monkeypatch):
     assert RecycleBinService(FakeWindows()).has_items() is True
 
 
-def test_cleanup_age_rule_availability_uses_recycle_metadata(tmp_path, monkeypatch):
+def test_has_items_older_than_uses_recycle_metadata(tmp_path, monkeypatch):
     now = datetime.now(timezone.utc)
     old = tmp_path / "$IOLD"
     old.write_bytes(b"\0" * 16 + _filetime(now - timedelta(days=20)).to_bytes(8, "little"))
@@ -62,6 +62,5 @@ def test_cleanup_age_rule_availability_uses_recycle_metadata(tmp_path, monkeypat
     monkeypatch.setattr(recycle_module, "iter_recycle_bin_metadata_files", lambda: iter((old, recent)))
 
     service = RecycleBinService(FakeWindows())
-    assert service.cleanup_age_rule_availability() == {7: True, 14: True, 30: False}
     assert service.has_items_older_than(14) is True
     assert service.has_items_older_than(30) is False

@@ -29,7 +29,6 @@ class RecycleBinPage(PageControls):
         actions.setProperty("lightModeKeepEnabledBackground", True)
         actions.setStyleSheet(styles.organizing_combo_style(14))
         self._has_items_checker: Callable[[], bool] | None = None
-        self._cleanup_age_availability_checker: Callable[[], dict[int, bool]] | None = None
         self._background_refresh = None
         self._empty_action_timer = QTimer(self)
         self._empty_action_timer.setInterval(2_000)
@@ -60,6 +59,7 @@ class RecycleBinPage(PageControls):
         controls.setFixedWidth(self.CONTROL_ROW_WIDTH); self.content_layout.addWidget(controls)
         self._settings = {"recycle_bin_auto_clean_enabled": enabled, "recycle_bin_age_rule_days": days}
         self._age_row.setVisible(enabled)
+        self._set_cleanup_actions_enabled(enabled)
         toggle.toggled.connect(self._enabled_changed)
         age.currentTextChanged.connect(self._age_changed)
 
@@ -71,27 +71,15 @@ class RecycleBinPage(PageControls):
         self.refresh_empty_action_availability()
         self._empty_action_timer.start()
 
-    def set_cleanup_age_availability_checker(
-        self, availability: Callable[[], dict[int, bool]]
-    ) -> None:
-        """Disable cleanup choices for ages with no qualifying bin entries."""
-        self._cleanup_age_availability_checker = availability
-        self.refresh_cleanup_age_availability()
-
     def set_background_refresh(self, refresh) -> None:
         self._background_refresh = refresh
-        refresh.recycle_ready.connect(self.apply_availability_snapshot)
+        refresh.recycle_ready.connect(self.apply_empty_action_snapshot)
         self._empty_action_timer.timeout.disconnect(self.refresh_empty_action_availability)
         self._empty_action_timer.timeout.connect(refresh.request_recycle_scan)
         refresh.request_recycle_scan()
 
-    def apply_availability_snapshot(self, has_items: bool, available: dict[int, bool]) -> None:
-        index = self.actions_combo.findText("Empty Recycle Bin")
-        item = self.actions_combo.model().item(index)
-        if item is not None:
-            item.setEnabled(bool(has_items))
+    def apply_empty_action_snapshot(self, has_items: bool) -> None:
         self.availability_changed.emit(bool(has_items))
-        self.apply_cleanup_age_availability(available)
 
     def refresh_empty_action_availability(self) -> None:
         if self._has_items_checker is None:
@@ -100,56 +88,23 @@ class RecycleBinPage(PageControls):
             has_items = bool(self._has_items_checker())
         except Exception:
             has_items = False
-        index = self.actions_combo.findText("Empty Recycle Bin")
-        item = self.actions_combo.model().item(index)
-        if item is not None:
-            item.setEnabled(has_items)
-        self.refresh_cleanup_age_availability()
+        self.availability_changed.emit(has_items)
 
-    def refresh_cleanup_age_availability(self) -> None:
-        if self._background_refresh is not None:
-            self._background_refresh.request_recycle_scan()
-            return
-        if self._cleanup_age_availability_checker is None:
-            return
-        try:
-            available = self._cleanup_age_availability_checker()
-        except Exception:
-            available = {}
-
-        self.apply_cleanup_age_availability(available)
-
-    def apply_cleanup_age_availability(self, available: dict[int, bool]) -> None:
-        has_eligible_items = False
-        for days in (7, 14, 30):
-            is_available = bool(available.get(days, False))
-            has_eligible_items |= is_available
-            index = self.age_combo.findText(f"{days} days")
-            item = self.age_combo.model().item(index)
+    def _set_cleanup_actions_enabled(self, enabled: bool) -> None:
+        for label in ("Run Auto-Clean Now", "Empty Recycle Bin"):
+            index = self.actions_combo.findText(label)
+            item = self.actions_combo.model().item(index)
             if item is not None:
-                item.setEnabled(is_available)
-
-        selected_days = self._settings["recycle_bin_age_rule_days"]
-        self.age_combo.setProperty(
-            "unavailableCurrentValue", not bool(available.get(selected_days, False))
-        )
-        self.age_combo.setEnabled(has_eligible_items)
-        self.age_combo.style().unpolish(self.age_combo)
-        self.age_combo.style().polish(self.age_combo)
-        run_index = self.actions_combo.findText("Run Auto-Clean Now")
-        run_item = self.actions_combo.model().item(run_index)
-        if run_item is not None:
-            run_item.setEnabled(
-                bool(available.get(self._settings["recycle_bin_age_rule_days"], False))
-            )
+                item.setEnabled(enabled)
 
     def _enabled_changed(self, enabled: bool) -> None:
         self._settings["recycle_bin_auto_clean_enabled"] = bool(enabled)
-        self._age_row.setVisible(enabled); self.settings_changed.emit(dict(self._settings))
+        self._age_row.setVisible(enabled)
+        self._set_cleanup_actions_enabled(enabled)
+        self.settings_changed.emit(dict(self._settings))
 
     def _age_changed(self, text: str) -> None:
         try: days = int(text.split()[0])
         except (IndexError, ValueError): return
         self._settings["recycle_bin_age_rule_days"] = days
-        self.refresh_cleanup_age_availability()
         self.settings_changed.emit(dict(self._settings))
