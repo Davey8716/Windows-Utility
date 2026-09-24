@@ -33,15 +33,31 @@ class TaskbarBackupService:
         except Exception as exc:
             print("[BACKUP] ERROR: Cannot create backup folder:", exc)
             return BackupResult(0, False)
+        shortcut_names = [
+            name for name in os.listdir(pinned_path) if name.lower().endswith(".lnk")
+        ]
         count = 0
-        for name in os.listdir(pinned_path):
-            if not name.lower().endswith(".lnk"):
-                continue
+        copy_failed = False
+        for name in shortcut_names:
             try:
                 shutil.copy2(os.path.join(pinned_path, name), os.path.join(backup_folder, name))
                 count += 1
             except Exception as exc:
+                copy_failed = True
                 print(f"[BACKUP] Failed to copy {name}: {exc}")
+        if not copy_failed:
+            current_shortcuts = {name.casefold() for name in shortcut_names}
+            for name in os.listdir(backup_folder):
+                backup_path = os.path.join(backup_folder, name)
+                if (
+                    name.lower().endswith(".lnk")
+                    and name.casefold() not in current_shortcuts
+                    and os.path.isfile(backup_path)
+                ):
+                    try:
+                        os.unlink(backup_path)
+                    except Exception as exc:
+                        print(f"[BACKUP] Failed to remove stale shortcut {name}: {exc}")
         print(f"[BACKUP] Completed. {count} shortcuts copied.")
         return BackupResult(count, True)
 
