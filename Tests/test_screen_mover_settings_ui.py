@@ -1325,19 +1325,32 @@ def test_page_controls_use_standard_sizes_centering_and_fitted_combo_text(monkey
         folder_utilities = window.pages.folder_utilities_page
         folder_name = folder_utilities._names
         save_name = folder_utilities._save_name
+        delete_name = folder_utilities._delete_name
+        delete_all = folder_utilities._delete_all_names
         folder_row = folder_name.parentWidget()
         assert all(
             control.width() == 250
-            for control in (folder_name, folder_desktop, save_name, folder_creator)
+            for control in (folder_name, folder_desktop, save_name, delete_name)
+        )
+        assert all(
+            control.width() == 512 for control in (delete_all, folder_creator)
         )
         assert folder_name.mapTo(folder_page, QPoint()).x() == save_name.mapTo(
             folder_page, QPoint()
         ).x()
-        assert folder_desktop.mapTo(folder_page, QPoint()).x() == folder_creator.mapTo(
+        assert folder_desktop.mapTo(folder_page, QPoint()).x() == delete_name.mapTo(
             folder_page, QPoint()
         ).x()
+        assert delete_all.mapTo(folder_page, QPoint()).y() == (
+            folder_row.mapTo(folder_page, QPoint()).y()
+            + folder_row.height()
+            + save_name.height()
+            + 24
+        )
         assert folder_creator.mapTo(folder_page, QPoint()).y() == (
-            folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
+            delete_all.mapTo(folder_page, QPoint()).y()
+            + delete_all.height()
+            + 12
         )
     finally:
         window._quit_requested = True
@@ -1365,23 +1378,66 @@ def test_folder_utilities_places_creator_below_quick_folder_action(monkeypatch):
         folder_utilities = window.pages.folder_utilities_page
         folder_name = folder_utilities._names
         save_name = folder_utilities._save_name
+        delete_name = folder_utilities._delete_name
+        delete_all = folder_utilities._delete_all_names
         folder_row = folder_name.parentWidget()
         folder_desktop = folder_row.findChild(QPushButton)
 
         assert folder_desktop is not None
         assert all(
             control.width() == 250
-            for control in (folder_name, folder_desktop, save_name, folder_creator)
+            for control in (folder_name, folder_desktop, save_name, delete_name)
+        )
+        assert all(
+            control.width() == 512 for control in (delete_all, folder_creator)
         )
         assert folder_name.mapTo(folder_page, QPoint()).x() == save_name.mapTo(
             folder_page, QPoint()
         ).x()
-        assert folder_desktop.mapTo(folder_page, QPoint()).x() == folder_creator.mapTo(
+        assert folder_desktop.mapTo(folder_page, QPoint()).x() == delete_name.mapTo(
             folder_page, QPoint()
         ).x()
-        assert folder_creator.mapTo(folder_page, QPoint()).y() == (
-            folder_row.mapTo(folder_page, QPoint()).y() + folder_row.height() + 16
+        assert delete_all.mapTo(folder_page, QPoint()).y() == (
+            folder_row.mapTo(folder_page, QPoint()).y()
+            + folder_row.height()
+            + save_name.height()
+            + 24
         )
+        assert folder_creator.mapTo(folder_page, QPoint()).y() == (
+            delete_all.mapTo(folder_page, QPoint()).y()
+            + delete_all.height()
+            + 12
+        )
+    finally:
+        window._quit_requested = True
+        window.close()
+        window.deleteLater()
+        qt_app.processEvents()
+
+
+def test_folder_creator_button_icon_tracks_theme(monkeypatch):
+    qt_app = QApplication.instance() or QApplication([])
+    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
+    window = _build_offscreen_window(monkeypatch, state)
+
+    try:
+        creator = window.pages.folder_utilities_page.folder_creator_button
+
+        window.apply_theme(True)
+        qt_app.processEvents()
+        dark_icon_key = creator.icon().cacheKey()
+
+        assert creator.text() == "Folder Creator"
+        assert creator.width() == 512
+        assert not creator.icon().isNull()
+        assert creator.iconSize().width() == 18
+
+        window.apply_theme(False)
+        qt_app.processEvents()
+
+        assert creator.text() == "Folder Creator"
+        assert creator.width() == 512
+        assert creator.icon().cacheKey() != dark_icon_key
     finally:
         window._quit_requested = True
         window.close()

@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtWidgets import QComboBox, QHBoxLayout, QPushButton, QSizePolicy, QWidget
 
 from resurface.core.saved_folder_names import load_saved_folder_names
@@ -8,6 +8,8 @@ from resurface.ui.tooltips import tooltip_text
 
 
 class FolderUtilitiesPage(PageControls):
+    FOLDER_UTILITIES_GLYPH = "\ue8b7"
+
     create_folder_requested = Signal(str)
     save_name_requested = Signal(str)
     delete_name_requested = Signal(str)
@@ -21,6 +23,7 @@ class FolderUtilitiesPage(PageControls):
         creator = self.style_action_button(QPushButton("Folder Creator"))
         creator.clicked.connect(self.folder_creator_requested.emit)
         self.folder_creator_button = creator
+        self.refresh_icons()
         self.register_tooltip(creator, tooltip_text("folder_creator_launcher"))
         create = self.style_action_button(QPushButton("Folder To Desktop"))
         self._create_folder = create
@@ -53,12 +56,14 @@ class FolderUtilitiesPage(PageControls):
         layout.addWidget(self._names); layout.addWidget(create)
         self.content_layout.addWidget(row, 0, Qt.AlignmentFlag.AlignHCenter)
         secondary, secondary_layout = self.make_two_column_control_row()
-        secondary_layout.setVerticalSpacing(self.content_layout.spacing())
         secondary_layout.addWidget(self._save_name, 0, 0)
-        secondary_layout.addWidget(creator, 0, 1)
-        secondary_layout.addWidget(self._delete_name, 1, 0)
-        secondary_layout.addWidget(self._delete_all_names, 1, 1)
+        secondary_layout.addWidget(self._delete_name, 0, 1)
         self.content_layout.addWidget(secondary, 0, Qt.AlignmentFlag.AlignHCenter)
+        for button in (self._delete_all_names, creator):
+            styles.apply_page_control_size(
+                button, width=self.CONTROL_ROW_WIDTH, role="fullRow"
+            )
+            self.content_layout.addWidget(button, 0, Qt.AlignmentFlag.AlignHCenter)
         self.refresh_saved_names()
         self._input.textChanged.connect(self._set_name_action_state)
         create.clicked.connect(self._request_create)
@@ -83,6 +88,12 @@ class FolderUtilitiesPage(PageControls):
 
     def focus_name_input(self) -> None:
         self._input.setFocus(Qt.FocusReason.ShortcutFocusReason)
+
+    def refresh_icons(self) -> None:
+        self.folder_creator_button.setIcon(
+            self.create_fluent_icon(self.FOLDER_UTILITIES_GLYPH, 18)
+        )
+        self.folder_creator_button.setIconSize(QSize(18, 18))
 
     def folder_created(self, saved_names: list[str] | None = None) -> None:
         if saved_names is not None:
