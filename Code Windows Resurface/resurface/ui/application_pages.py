@@ -251,6 +251,10 @@ class QuickActionsGrid(WindowMessageMixin, QWidget):
         elif len(specs) > self.VISIBLE_LIMIT:
             more = QPushButton("Show Less" if self.expanded else "Show More", self)
             more.setObjectName("QuickActionsShowMore")
+            more.setCursor(Qt.CursorShape.PointingHandCursor)
+            styles.apply_page_control_size(more)
+            more.setProperty("styleFontSize", 13)
+            more.setStyleSheet(styles.organizing_button_style(13))
             more.clicked.connect(self._toggle_expanded)
             self.layout.addWidget(
                 more,

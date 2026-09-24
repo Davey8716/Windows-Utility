@@ -58,11 +58,14 @@ class FolderUtilitiesPage(PageControls):
         layout = QHBoxLayout(row); layout.setContentsMargins(0, 0, 0, 0); layout.setSpacing(self.CONTROL_COLUMN_GAP)
         layout.addWidget(self._names); layout.addWidget(create)
         self.content_layout.addWidget(row, 0, Qt.AlignmentFlag.AlignHCenter)
-        secondary, secondary_layout = self.make_two_column_control_row()
-        secondary_layout.addWidget(self._save_name, 0, 0)
-        secondary_layout.addWidget(self._delete_name, 0, 1)
-        self.content_layout.addWidget(secondary, 0, Qt.AlignmentFlag.AlignHCenter)
-        for button in (self._delete_all_names, creator):
+        save_row, save_layout = self.make_two_column_control_row()
+        save_layout.addWidget(self._save_name, 0, 0)
+        self.content_layout.addWidget(save_row, 0, Qt.AlignmentFlag.AlignHCenter)
+        delete_row, delete_layout = self.make_two_column_control_row()
+        delete_layout.addWidget(self._delete_name, 0, 0)
+        delete_layout.addWidget(self._delete_all_names, 0, 1)
+        self.content_layout.addWidget(delete_row, 0, Qt.AlignmentFlag.AlignHCenter)
+        for button in (creator,):
             styles.apply_page_control_size(
                 button, width=self.CONTROL_ROW_WIDTH, role="fullRow"
             )

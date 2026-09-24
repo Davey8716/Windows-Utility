@@ -131,9 +131,19 @@ def test_grid_limits_to_eight_and_expands_inline():
     grid = QuickActionsGrid(registry, lambda widget, text: None)
 
     assert list(grid.buttons) == ids[:8]
+    more = grid.findChild(QPushButton, "QuickActionsShowMore")
+    assert more is not None
+    assert more.size().width() == styles.PAGE_CONTROL_WIDTH
+    assert more.size().height() == styles.PAGE_CONTROL_HEIGHT
+    assert more.cursor().shape() == Qt.CursorShape.PointingHandCursor
+    assert more.styleSheet() == styles.organizing_button_style(13)
     grid._toggle_expanded()
     app.processEvents()
     assert list(grid.buttons) == ids
+    assert any(
+        button.text() == "Show Less"
+        for button in grid.findChildren(QPushButton, "QuickActionsShowMore")
+    )
     grid.deleteLater()
 
 

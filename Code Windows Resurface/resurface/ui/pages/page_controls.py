@@ -65,7 +65,8 @@ class PageControls(QWidget):
         layout = QGridLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setHorizontalSpacing(self.CONTROL_COLUMN_GAP)
-        layout.setVerticalSpacing(0)
+        layout.setVerticalSpacing(styles.PAGE_CONTROL_ROW_GAP)
+        layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         layout.setColumnMinimumWidth(0, self.LEFT_CONTROL_COLUMN_WIDTH)
         layout.setColumnMinimumWidth(1, self.RIGHT_CONTROL_COLUMN_WIDTH)
         return row, layout
