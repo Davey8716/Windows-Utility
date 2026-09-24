@@ -495,6 +495,9 @@ class UtilityControlApp(
 
         self.sidebar_navigation_mode = True
         self.navigation_shell.page_changed.connect(self._on_page_changed)
+        self.navigation_shell.about_licensing_requested.connect(
+            self._show_about_licensing
+        )
         saved_page = self.state.get("last_opened_page", "overview")
         self.navigate_to_page(saved_page, persist=False)
         self.navigation_shell.apply_theme()
@@ -518,6 +521,21 @@ class UtilityControlApp(
             save_state(self.state)
         if page_id == "overview":
             self.refresh_overview()
+
+    def _show_about_licensing(self) -> None:
+        close_button = self._message_box_button("Close")
+        self._show_modal_message(
+            self._message_box_icon("NoIcon"),
+            "About & Licensing",
+            "Windows Resurface\n"
+            f"Version {self.APP_VERSION}\n\n"
+            "Licensing information will be added in a future release.",
+            close_button,
+            close_button,
+            center_text_block=True,
+            fixed_popup_width=410,
+            popup_corner_radius=6,
+        )
 
     def _open_folder_utilities(self) -> None:
         self.navigate_to_page("folder_utilities")

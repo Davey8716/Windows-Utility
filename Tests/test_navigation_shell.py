@@ -1,6 +1,8 @@
-from PySide6.QtWidgets import QApplication, QScrollArea, QToolButton, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QFrame, QScrollArea, QToolButton, QWidget
 
 from resurface.ui import styles
+from resurface.ui.application_window import UtilityControlApp
 from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.tooltips import format_tooltip_text
 
@@ -77,6 +79,12 @@ def test_apply_theme_refreshes_navigation_presentation():
     try:
         shell.apply_theme()
         assert shell.navigation_list.styleSheet() == styles.navigation_list_style()
+        assert (
+            shell.about_licensing_button.styleSheet()
+            == styles.sidebar_about_licensing_button_style()
+        )
+        assert shell.footer_divider.styleSheet() == styles.sidebar_footer_divider_style()
+        assert not shell.about_licensing_button.icon().isNull()
         assert shell.version_label.styleSheet() == styles.sidebar_version_label_style()
         assert all(
             not shell.navigation_list.item(row).icon().isNull()
@@ -84,6 +92,74 @@ def test_apply_theme_refreshes_navigation_presentation():
         )
     finally:
         shell.deleteLater()
+
+
+def test_about_licensing_footer_control_emits_without_changing_navigation():
+    shell = build_shell()
+    requests = []
+    shell.about_licensing_requested.connect(lambda: requests.append(True))
+    try:
+        shell.navigate_to("maintenance", emit_signal=False)
+        shell.about_licensing_button.click()
+
+        assert requests == [True]
+        assert shell.page_stack.currentWidget() is shell.page_by_id["maintenance"]
+        assert shell.about_licensing_button.accessibleName() == "About and licensing"
+        assert shell.about_licensing_button.sizePolicy().horizontalPolicy() == (
+            shell.about_licensing_button.sizePolicy().Policy.Expanding
+        )
+    finally:
+        shell.deleteLater()
+
+
+def test_about_licensing_footer_is_divided_and_uses_a_shield_icon():
+    shell = build_shell()
+    try:
+        layout = shell.navigation_sidebar.layout()
+        divider_index = layout.indexOf(shell.footer_divider)
+        button_index = layout.indexOf(shell.about_licensing_button)
+        version_index = layout.indexOf(shell.version_label)
+
+        assert isinstance(shell.footer_divider, QFrame)
+        assert shell.footer_divider.frameShape() == QFrame.Shape.HLine
+        assert divider_index < button_index < version_index
+        assert shell.about_licensing_button.toolButtonStyle() == (
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+    finally:
+        shell.deleteLater()
+
+
+def test_about_licensing_dialog_uses_current_version_and_close_button():
+    class Window:
+        APP_VERSION = "2.4.6"
+
+        def _message_box_button(self, name):
+            return f"button:{name}"
+
+        def _message_box_icon(self, name):
+            return f"icon:{name}"
+
+        def _show_modal_message(self, *args, **kwargs):
+            self.message = (args, kwargs)
+
+    window = Window()
+    UtilityControlApp._show_about_licensing(window)
+
+    args, kwargs = window.message
+    assert args == (
+        "icon:NoIcon",
+        "About & Licensing",
+        "Windows Resurface\nVersion 2.4.6\n\n"
+        "Licensing information will be added in a future release.",
+        "button:Close",
+        "button:Close",
+    )
+    assert kwargs == {
+        "center_text_block": True,
+        "fixed_popup_width": 410,
+        "popup_corner_radius": 6,
+    }
 
 
 def test_organising_utilities_title_has_a_theme_aware_help_button():

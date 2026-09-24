@@ -44,6 +44,7 @@ class RecycleBinPage(PageControls):
         age = self.make_value_dropdown(["7 days", "14 days", "30 days"], f"{days} days")
         self.age_combo = age
         age.setProperty("lightModeBlackDisabledText", True)
+        age.setProperty("lightModeKeepEnabledBackground", True)
         age.setStyleSheet(styles.organizing_combo_style(14))
         age.setFixedWidth(self.RIGHT_CONTROL_COLUMN_WIDTH)
         self.register_tooltip(age, tooltip_text("recycle_bin_age_rule"))

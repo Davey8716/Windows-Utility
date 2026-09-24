@@ -56,7 +56,10 @@ class RecycleBinActionsController:
             recycle_page.refresh_empty_action_availability()
 
     def run_auto_cleanup(self) -> None:
-        if self.app.state.get("recycle_bin_auto_clean_enabled", False):
+        if (
+            self.app.state.get("recycle_bin_auto_clean_enabled", False)
+            and self.service.has_items()
+        ):
             self._run_age_cleanup(automatic=True)
 
     def run_cleanup_now(self) -> None:

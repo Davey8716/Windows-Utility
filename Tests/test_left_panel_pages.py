@@ -243,6 +243,7 @@ def test_recycle_bin_keeps_all_cleanup_age_choices_available():
     page = RecycleBinPage({"recycle_bin_auto_clean_enabled": True}, lambda _widget, _text: None)
     try:
         assert page.age_combo.property("lightModeBlackDisabledText") is True
+        assert page.age_combo.property("lightModeKeepEnabledBackground") is True
         assert page.age_combo.isEnabled()
         for label in ("7 days", "14 days", "30 days"):
             assert page.age_combo.model().item(page.age_combo.findText(label)).isEnabled()

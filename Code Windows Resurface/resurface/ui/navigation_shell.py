@@ -35,6 +35,7 @@ class NavigationShell(QWidget):
     """Own the main navigation controls and the final hosts for page content."""
 
     page_changed = Signal(str)
+    about_licensing_requested = Signal()
     _RESERVED_SCROLLBAR_GUTTER_PAGES = frozenset({"monitor_rules"})
 
     PAGE_DEFINITIONS = (
@@ -108,6 +109,30 @@ class NavigationShell(QWidget):
         self.navigation_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.navigation_list.setAccessibleName("Sections")
         navigation_layout.addWidget(self.navigation_list, 1)
+
+        self.footer_divider = QFrame(self.navigation_sidebar)
+        self.footer_divider.setObjectName("SidebarFooterDivider")
+        self.footer_divider.setFrameShape(QFrame.Shape.HLine)
+        self.footer_divider.setFixedHeight(1)
+        navigation_layout.addWidget(self.footer_divider)
+
+        self.about_licensing_button = QToolButton(self.navigation_sidebar)
+        self.about_licensing_button.setObjectName("SidebarAboutLicensingButton")
+        self.about_licensing_button.setText("About & Licensing")
+        self.about_licensing_button.setAccessibleName("About and licensing")
+        self.about_licensing_button.setIcon(self._footer_icon("\ue72e"))
+        self.about_licensing_button.setIconSize(QSize(18, 18))
+        self.about_licensing_button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+        self.about_licensing_button.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self.about_licensing_button.setToolTip(
+            format_tooltip_text("View application and licensing information.")
+        )
+        self.about_licensing_button.clicked.connect(self.about_licensing_requested)
+        navigation_layout.addWidget(self.about_licensing_button)
 
         self.version_label = QLabel(
             f"Windows Resurface  ·  v{app_version}", self.navigation_sidebar
@@ -306,6 +331,19 @@ class NavigationShell(QWidget):
             icon.addPixmap(pixmap, mode)
         return icon
 
+    def _footer_icon(self, glyph: str) -> QIcon:
+        pixmap = QPixmap(20, 20)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        font = QFont("Segoe Fluent Icons")
+        font.setPixelSize(16)
+        painter.setFont(font)
+        painter.setPen(styles.theme_text_color())
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
+        painter.end()
+        return QIcon(pixmap)
+
     def _refresh_navigation_icons(self) -> None:
         for row, entry in enumerate(self.page_registry):
             item = self.navigation_list.item(row)
@@ -314,6 +352,11 @@ class NavigationShell(QWidget):
 
     def apply_theme(self) -> None:
         self.navigation_list.setStyleSheet(styles.navigation_list_style())
+        self.footer_divider.setStyleSheet(styles.sidebar_footer_divider_style())
+        self.about_licensing_button.setStyleSheet(
+            styles.sidebar_about_licensing_button_style()
+        )
+        self.about_licensing_button.setIcon(self._footer_icon("\ue72e"))
         self.version_label.setStyleSheet(styles.sidebar_version_label_style())
         self._refresh_navigation_icons()
         for button in self.page_title_help_buttons.values():

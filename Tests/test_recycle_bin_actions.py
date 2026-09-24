@@ -33,11 +33,14 @@ class Service:
         self.emptied = emptied
         self.deleted = deleted
         self.closed = 0
+        self.cleanup_calls = 0
 
     def open(self): return True
     def has_items(self): return self.has_items_result
     def empty(self): return self.emptied
-    def cleanup_items_older_than(self, _days): return self.deleted
+    def cleanup_items_older_than(self, _days):
+        self.cleanup_calls += 1
+        return self.deleted
     def close(self):
         self.closed += 1
         return True
@@ -91,6 +94,24 @@ def test_auto_cleanup_persists_popup_day_once(monkeypatch):
     assert app.messages[0][1]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
     assert app.state["recycle_bin_last_auto_clean_popup_days"] == 14
     assert len(saved) == 1
+
+
+def test_auto_cleanup_skips_empty_recycle_bin(monkeypatch):
+    app = App({
+        "recycle_bin_auto_clean_enabled": True,
+        "recycle_bin_age_rule_days": 14,
+        "recycle_bin_last_auto_clean_popup_days": None,
+    })
+    service = Service(has_items=False)
+    saved = []
+    monkeypatch.setattr(recycle_bin_actions, "save_state", lambda state: saved.append(dict(state)))
+
+    RecycleBinActionsController(app, service, immediate).run_auto_cleanup()
+
+    assert service.cleanup_calls == 0
+    assert app.messages == []
+    assert app.state["recycle_bin_last_auto_clean_popup_days"] is None
+    assert saved == []
 
 
 def test_auto_cleanup_no_matches_uses_rounded_popup(monkeypatch):

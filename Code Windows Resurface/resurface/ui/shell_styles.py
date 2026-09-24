@@ -181,6 +181,35 @@ def sidebar_version_label_style() -> str:
         }}
     """
 
+def sidebar_about_licensing_button_style() -> str:
+    return f"""
+        QToolButton#SidebarAboutLicensingButton {{
+            background-color: {H.qcolor_css(T.SURFACE_BG)};
+            color: {H.qcolor_css(T.theme_text_color())};
+            border: none;
+            border-right: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
+            padding: 12px 16px 6px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: left;
+        }}
+        QToolButton#SidebarAboutLicensingButton:hover {{
+            background-color: {H.qcolor_css(T.SURFACE_HOVER)};
+        }}
+        QToolButton#SidebarAboutLicensingButton:pressed {{
+            background-color: {H.qcolor_css(T.SURFACE_BORDER)};
+        }}
+    """
+
+def sidebar_footer_divider_style() -> str:
+    return f"""
+        QFrame#SidebarFooterDivider {{
+            background-color: {H.qcolor_css(T.SURFACE_BORDER)};
+            border: none;
+            border-right: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
+        }}
+    """
+
 def arrow_button_style(text_color: QColor, hover_color: QColor, font_size: int = 18) -> str:
     font_size = H.coerce_font_size(font_size, 18) or 18
     return f"""
