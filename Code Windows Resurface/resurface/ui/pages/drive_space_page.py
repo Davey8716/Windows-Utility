@@ -5,6 +5,7 @@ import os
 from collections.abc import Callable
 
 from PySide6.QtCore import QPoint, QSize, Qt, QTimer
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QListWidget,
@@ -99,12 +100,34 @@ class DriveSpacePage(QWidget):
         self.drive_space_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.drive_space_list.setTextElideMode(Qt.TextElideMode.ElideNone)
         self.drive_space_list.setWordWrap(False)
-        self.drive_space_list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.drive_space_list.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.drive_space_list.setAccessibleName("Drive space")
+        self.drive_space_list.setAccessibleDescription(
+            "Use the arrow keys to select a drive. Press Enter to open it. "
+            "For removable drives, press the Menu key or Shift+F10 to safely remove it."
+        )
         self.drive_space_list.setProperty("surfaceFieldStyle", True)
         self.apply_theme()
-        self.drive_space_list.itemDoubleClicked.connect(self._open_drive_from_item)
+        self.drive_space_list.itemActivated.connect(self._open_drive_from_item)
         self.drive_space_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.drive_space_list.customContextMenuRequested.connect(self._show_drive_context_menu)
+        self.safe_remove_selected_action = QAction(
+            "Safely Remove Selected Drive", self.drive_space_list
+        )
+        self.safe_remove_selected_action.setShortcuts(
+            [QKeySequence(Qt.Key.Key_Menu), QKeySequence("Shift+F10")]
+        )
+        self.safe_remove_selected_action.setShortcutContext(
+            Qt.ShortcutContext.WidgetShortcut
+        )
+        self.safe_remove_selected_action.triggered.connect(
+            self._safely_remove_selected_drive
+        )
+        self.drive_space_list.addAction(self.safe_remove_selected_action)
+        self.drive_space_list.currentItemChanged.connect(
+            self._update_safe_remove_action
+        )
+        self._update_safe_remove_action()
         self.page_layout.addWidget(self.drive_space_list, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._refresh_tracked_window_button_labels()
@@ -180,6 +203,7 @@ class DriveSpacePage(QWidget):
             item.setToolTip(format_tooltip_text(tooltip))
             item.setSizeHint(QSize(0, 20))
             self.drive_space_list.addItem(item)
+        self._update_safe_remove_action()
 
     def _open_drive_from_item(self, item: QListWidgetItem):
         path = item.data(Qt.ItemDataRole.UserRole)
@@ -188,8 +212,12 @@ class DriveSpacePage(QWidget):
 
     def _show_drive_context_menu(self, pos: QPoint):
         item = self.drive_space_list.itemAt(pos)
+        if item is None and hasattr(self.drive_space_list, "currentItem"):
+            item = self.drive_space_list.currentItem()
         if item is None or not item.data(Qt.ItemDataRole.UserRole + 1):
             return
+        if hasattr(self.drive_space_list, "setCurrentItem"):
+            self.drive_space_list.setCurrentItem(item)
         path = item.data(Qt.ItemDataRole.UserRole)
         if not path:
             return
@@ -197,6 +225,20 @@ class DriveSpacePage(QWidget):
         styles.apply_popup_menu_style(menu, radius=styles.BUTTON_CORNER_RADIUS)
         remove_action = menu.addAction(f"Safely Remove {path}")
         if menu.exec(self.drive_space_list.mapToGlobal(pos)) is remove_action:
+            self._safely_remove_drive(path)
+
+    def _update_safe_remove_action(self, *_args) -> None:
+        item = self.drive_space_list.currentItem()
+        self.safe_remove_selected_action.setEnabled(
+            item is not None and bool(item.data(Qt.ItemDataRole.UserRole + 1))
+        )
+
+    def _safely_remove_selected_drive(self) -> None:
+        item = self.drive_space_list.currentItem()
+        if item is None or not item.data(Qt.ItemDataRole.UserRole + 1):
+            return
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if path:
             self._safely_remove_drive(path)
 
     def _safely_remove_drive(self, path: str):
