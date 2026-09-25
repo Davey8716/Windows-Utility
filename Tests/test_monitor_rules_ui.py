@@ -385,6 +385,11 @@ def test_monitor_rule_cards_titles_and_details_refresh_for_each_theme(monkeypatc
                 monitor_rules_ui.StateIndicatorCheckBox, "MonitorRuleTitle"
             )
             details = page.rule_list.findChild(QLabel, "MonitorRuleDetails")
+            delete_button = next(
+                button
+                for button in card.findChildren(QToolButton)
+                if button.accessibleName() == "Delete monitor rule"
+            )
             assert card is not None
             assert title is not None
             assert details is not None
@@ -406,6 +411,10 @@ def test_monitor_rule_cards_titles_and_details_refresh_for_each_theme(monkeypatc
             assert (
                 f"color: {muted_color}; text-decoration: underline;"
                 in details.text()
+            )
+            assert (
+                f"color: {monitor_rules_ui.styles.power_action_color('red').name()};"
+                in delete_button.styleSheet()
             )
     finally:
         monitor_rules_ui.styles.set_theme(True)

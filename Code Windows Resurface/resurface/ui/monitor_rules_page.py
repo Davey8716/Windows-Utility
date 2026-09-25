@@ -70,6 +70,14 @@ RULES_FRAME_LAYOUT_MARGIN = styles.PAGE_CONTROL_GAP - 1
 RULES_FRAME_VISIBLE_INSET = styles.PAGE_CONTROL_GAP
 
 
+def _delete_rule_button_style() -> str:
+    """Return the theme-aware destructive styling for a rule-card delete control."""
+    return (
+        "QToolButton { border: none; background: transparent; font-size: 20px; "
+        f"color: {styles.power_action_color('red').name()}; }}"
+    )
+
+
 class ImportRulesDialog(QFileDialog):
     """Opaque, themed file picker with the shared rounded popup frame."""
 
@@ -276,6 +284,8 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             detail_label = card.findChild(QLabel, "MonitorRuleDetails")
             if detail_label is not None and index < len(self.rules):
                 self._set_rule_detail_text(detail_label, self.rules[index])
+            for delete_button in card.findChildren(QToolButton):
+                delete_button.setStyleSheet(_delete_rule_button_style())
         for title in self.rule_list.findChildren(
             StateIndicatorCheckBox, "MonitorRuleTitle"
         ):
@@ -437,9 +447,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             delete_button.setAccessibleName("Delete monitor rule")
             set_tooltip(delete_button, "Delete this monitor rule")
             delete_button.setFixedSize(24, 24)
-            delete_button.setStyleSheet(
-                "QToolButton { border: none; background: transparent; font-size: 20px; }"
-            )
+            delete_button.setStyleSheet(_delete_rule_button_style())
             delete_button.clicked.connect(
                 lambda _checked=False, idx=index: self._delete_rule(idx)
             )
