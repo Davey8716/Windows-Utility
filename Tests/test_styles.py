@@ -26,7 +26,7 @@ def restore_dark_theme():
     ("is_dark", "window_color", "surface_color", "button_color", "button_text"),
     [
         (True, "#171b24", "#222a36", "#1c66c4", "#ffffff"),
-        (False, "#dde3ea", "#eef2f6", "#2d73c8", "#000000"),
+        (False, "#dde3ea", "#eef2f6", "#2d73c8", "#ffffff"),
     ],
 )
 def test_shared_palette_uses_darker_canvas_and_blue_controls(
@@ -108,7 +108,7 @@ def test_message_box_style_can_omit_its_outer_frame_for_custom_painting():
 
 @pytest.mark.parametrize(
     ("is_dark", "link_color"),
-    [(True, "#ffffff"), (False, "#000000")],
+    [(True, "#ffffff"), (False, "#111820")],
 )
 def test_message_box_links_are_white_in_dark_mode_and_black_in_light_mode(
     is_dark,
@@ -130,7 +130,7 @@ def test_message_box_links_are_white_in_dark_mode_and_black_in_light_mode(
 )
 @pytest.mark.parametrize(
     ("is_dark", "button_color", "text_color"),
-    [(True, "#1c66c4", "#ffffff"), (False, "#2d73c8", "#111820")],
+    [(True, "#1c66c4", "#ffffff"), (False, "#2d73c8", "#ffffff")],
 )
 def test_standard_dropdown_categories_share_modern_blue_treatment(
     style_factory,
@@ -266,27 +266,27 @@ def test_styles_facade_exposes_live_theme_tokens_after_theme_changes():
     assert 'QPushButton[lightModePlaceholderButton="true"]:disabled' not in dark_style
 
 
-def test_light_mode_buttons_use_black_text_when_enabled_and_opted_in_when_disabled():
+def test_light_mode_buttons_use_light_text_while_preserving_disabled_overrides():
     styles.set_theme(False)
     light_style = styles.organizing_button_style(14)
     enabled_rules, disabled_rules = light_style.split("QPushButton:disabled", 1)
 
-    assert "color: #000000;" in enabled_rules
+    assert "color: #ffffff;" in enabled_rules
     assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' in light_style
-    assert "color: #000000;" in disabled_rules
+    assert "color: #ffffff;" in disabled_rules
 
     styles.set_theme(True)
     dark_style = styles.organizing_button_style(14)
     assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' not in dark_style
 
 
-def test_light_mode_opt_in_keeps_power_action_text_black_in_both_states():
+def test_light_mode_opt_in_uses_light_text_for_standard_power_action_states():
     styles.set_theme(False)
     light_style = styles.power_action_button_style(14, "red", "Delete All")
 
     assert 'QPushButton[lightModeBlackText="true"]:enabled' in light_style
     assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' in light_style
-    assert "color: #000000;" in light_style
+    assert "color: #ffffff;" in light_style
 
     styles.set_theme(True)
     dark_style = styles.power_action_button_style(14, "red", "Delete All")
@@ -303,7 +303,7 @@ def test_light_mode_opt_in_keeps_disabled_dropdown_text_black():
     assert 'QComboBox[lightModeBlackDisabledText="true"] QAbstractItemView::item:disabled' in light_style
     assert 'QComboBox[lightModeKeepEnabledBackground="true"]:enabled' in light_style
     assert 'QComboBox[lightModeKeepEnabledBackground="true"]:enabled::drop-down' in light_style
-    assert "color: #111820;" in light_style
+    assert "color: #ffffff;" in light_style
     assert f"background-color: {disabled_background};" in light_style
     assert f"border: 1px solid {disabled_border};" in light_style
     assert f"border-left: 1px solid {disabled_border};" in light_style
@@ -368,7 +368,7 @@ def test_folder_creator_user_templates_dropdown_style_matches_add_blank_treatmen
     assert f"border-left: 1px solid {disabled_border};" in stylesheet
 
 
-@pytest.mark.parametrize(("is_dark", "text_color"), [(True, "#ffffff"), (False, "#000000")])
+@pytest.mark.parametrize(("is_dark", "text_color"), [(True, "#ffffff"), (False, "#ffffff")])
 def test_folder_creator_date_stamp_dropdown_style_matches_theme_when_disabled(
     is_dark,
     text_color,
@@ -457,7 +457,7 @@ def test_dropdown_chevron_asset_is_available():
     styles.set_theme(False)
     assert styles.dropdown_chevron_path().name == "Dropdown Chevron Light.svg"
     assert styles.dropdown_chevron_path().is_file()
-    assert "#000000" in styles.dropdown_chevron_path().read_text(encoding="utf-8")
+    assert "#FFFFFF" in styles.dropdown_chevron_path().read_text(encoding="utf-8")
 
 
 def test_folder_creator_uses_shared_palette_and_modern_combo_rules():

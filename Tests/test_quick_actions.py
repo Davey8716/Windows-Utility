@@ -37,7 +37,7 @@ def test_power_action_palette_is_shared_and_theme_aware(is_dark, expected_colors
             styles.TEXT_LIGHT if is_dark else styles.contrasting_text_color(sleep)
         )
         assert styles.power_action_item_foreground("Shutdown", shutdown) == (
-            styles.contrasting_text_color(shutdown) if is_dark else QColor(0, 0, 0)
+            styles.contrasting_text_color(shutdown) if is_dark else styles.TEXT_DARK
         )
     finally:
         styles.set_theme(True)

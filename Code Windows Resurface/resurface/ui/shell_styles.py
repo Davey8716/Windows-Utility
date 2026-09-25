@@ -24,12 +24,12 @@ def title_bar_control_style(*, close_button: bool = False) -> str:
     """
 
 def page_title_style() -> str:
-    return H.label_style(font_size=24, bold=True, color=T.theme_text_color())
+    return H.label_style(font_size=24, bold=True, color=T.TEXT_LIGHT)
 
 def page_title_help_button_style() -> str:
     return f"""
         QToolButton#OrganisingUtilitiesHelpButton {{
-            color: {H.qcolor_css(T.theme_text_color())};
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
             background-color: {H.qcolor_css(T.SURFACE_BG)};
             border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             border-radius: 14px;
@@ -47,15 +47,15 @@ def page_title_help_button_style() -> str:
     """
 
 def page_description_style() -> str:
-    return H.label_style(font_size=14, bold=False, color=T.theme_muted_text_color())
+    return H.label_style(font_size=14, bold=False, color=T.TEXT_LIGHT)
 
 def page_section_heading_style() -> str:
-    return H.label_style(font_size=17, bold=True, color=T.theme_text_color())
+    return H.label_style(font_size=17, bold=True, color=T.TEXT_LIGHT)
 
 def monitor_rules_help_button_style() -> str:
     return f"""
         QToolButton#MonitorRulesHelpButton {{
-            color: {H.qcolor_css(T.theme_text_color())};
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
             background-color: {H.qcolor_css(T.SURFACE_BG)};
             border: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             border-radius: 14px;
@@ -73,10 +73,10 @@ def monitor_rules_help_button_style() -> str:
     """
 
 def summary_label_style() -> str:
-    return H.label_style(font_size=13, bold=False, color=T.theme_muted_text_color())
+    return H.label_style(font_size=13, bold=False, color=T.TEXT_LIGHT)
 
 def summary_value_style() -> str:
-    return H.label_style(font_size=13, bold=True, color=T.theme_text_color())
+    return H.label_style(font_size=13, bold=True, color=T.TEXT_LIGHT)
 
 def summary_frame_style() -> str:
     return f"""
@@ -129,7 +129,7 @@ def monitor_rule_title_style() -> str:
     return f"""
         QCheckBox#MonitorRuleTitle {{
             background: transparent;
-            color: {H.qcolor_css(T.theme_text_color())};
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
             font-size: 13px;
             font-weight: bold;
         }}
@@ -141,7 +141,7 @@ def navigation_list_style() -> str:
     return f"""
         QListWidget#NavigationList {{
             background-color: {H.qcolor_css(T.SURFACE_BG)};
-            color: {H.qcolor_css(T.theme_text_color())};
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
             border: none;
             border-top: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             border-right: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
@@ -163,7 +163,7 @@ def navigation_list_style() -> str:
         }}
         QListWidget#NavigationList::item:selected {{
             background-color: {H.qcolor_css(selected)};
-            color: {H.qcolor_css(T.theme_text_color())};
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
             border-left: 3px solid {H.qcolor_css(T.STATUS_ACCENT)};
         }}
     """
@@ -172,7 +172,7 @@ def sidebar_version_label_style() -> str:
     return f"""
         QLabel#SidebarVersionLabel {{
             background-color: {H.qcolor_css(T.SURFACE_BG)};
-            color: {H.qcolor_css(T.theme_muted_text_color())};
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
             border: none;
             border-right: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             padding: 12px 16px 16px;
@@ -185,7 +185,7 @@ def sidebar_about_licensing_button_style() -> str:
     return f"""
         QToolButton#SidebarAboutLicensingButton {{
             background-color: {H.qcolor_css(T.SURFACE_BG)};
-            color: {H.qcolor_css(T.theme_text_color())};
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
             border: none;
             border-right: 1px solid {H.qcolor_css(T.SURFACE_BORDER)};
             padding: 12px 16px 6px;
@@ -272,7 +272,7 @@ def message_box_style(
 
 
 def message_box_link_color() -> QColor:
-    return T.TEXT_LIGHT if T.THEME_IS_DARK else QColor(0, 0, 0)
+    return T.TEXT_LIGHT if T.THEME_IS_DARK else T.TEXT_DARK
 
 def message_popup_menu_style(radius: int = 10) -> str:
     radius = max(0, int(radius))

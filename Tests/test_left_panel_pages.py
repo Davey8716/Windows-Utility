@@ -308,7 +308,7 @@ def test_recycle_bin_destructive_rows_render_red_with_theme_specific_text():
         row = page.actions_combo.findText("Run Auto-Clean Now")
         index = page.actions_combo.model().index(row, 0)
         delegate = page.actions_combo.view().itemDelegate()
-        for is_dark, expected_text in ((True, styles.TEXT_LIGHT), (False, QColor(0, 0, 0))):
+        for is_dark, expected_text in ((True, styles.TEXT_LIGHT), (False, styles.TEXT_LIGHT)):
             styles.set_theme(is_dark)
             option = QStyleOptionViewItem()
             option.rect = page.actions_combo.rect().adjusted(0, 0, 0, -1)

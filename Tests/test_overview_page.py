@@ -46,8 +46,8 @@ def test_master_backup_path_is_theme_aware_clickable_explorer_link():
 
         styles.set_theme(False)
         page.refresh(state, set())
-        assert "color: #000000" in backup_label.text()
-        assert "color: #000000" in app_data_label.text()
+        assert "color: #111820" in backup_label.text()
+        assert "color: #111820" in app_data_label.text()
     finally:
         styles.set_theme(True)
         page.deleteLater()

@@ -403,13 +403,13 @@ def test_monitor_rule_cards_titles_and_details_refresh_for_each_theme(monkeypatc
             )
             assert "background: transparent" in title.styleSheet()
             assert (
-                f"color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.theme_text_color())}"
+                f"color: {monitor_rules_ui.styles.qcolor_css(monitor_rules_ui.styles.TEXT_LIGHT)}"
                 in title.styleSheet()
             )
-            muted_color = monitor_rules_ui.styles.theme_muted_text_color().name()
-            assert muted_color in details.styleSheet()
+            text_color = monitor_rules_ui.styles.TEXT_LIGHT.name()
+            assert text_color in details.styleSheet()
             assert (
-                f"color: {muted_color}; text-decoration: underline;"
+                f"color: {text_color}; text-decoration: underline;"
                 in details.text()
             )
             assert (
@@ -1180,7 +1180,7 @@ def test_export_rules_dialog_is_frameless_and_tracks_current_theme(monkeypatch, 
             )
             app.processEvents()
             assert not confirmation.mask().isEmpty()
-            link_color = "#ffffff" if is_dark else "#000000"
+            link_color = "#ffffff" if is_dark else "#111820"
             assert label.palette().color(QPalette.ColorRole.Link).name() == link_color
             assert label.palette().color(QPalette.ColorRole.LinkVisited).name() == link_color
             assert (

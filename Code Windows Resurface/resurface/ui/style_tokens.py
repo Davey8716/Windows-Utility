@@ -83,11 +83,16 @@ def control_text_color() -> QColor:
 
 def dropdown_text_color() -> QColor:
     """Return the selected-value color used by shared combo-box controls."""
-    return TEXT_LIGHT if THEME_IS_DARK else theme_text_color()
+    # Dropdowns use the same blue control surface in both themes, so their
+    # foreground should remain the calm light control colour rather than the
+    # high-contrast light-theme text colour.
+    return TEXT_LIGHT
 
 def button_text_color() -> QColor:
     """Return the enabled text color for standard action buttons."""
-    return TEXT_LIGHT if THEME_IS_DARK else QColor(0, 0, 0)
+    # Standard actions use blue surfaces in both themes.  Keeping their text
+    # light avoids the stark black-on-blue treatment in light mode.
+    return TEXT_LIGHT
 
 def contrasting_text_color(background: QColor) -> QColor:
     def linear_channel(channel: int) -> float:
@@ -152,7 +157,7 @@ def power_action_item_foreground(label: str, background: QColor) -> QColor:
     if THEME_IS_DARK and label in {"Sleep", "Log out"}:
         return TEXT_LIGHT
     if not THEME_IS_DARK and label == "Shutdown":
-        return QColor(0, 0, 0)
+        return TEXT_DARK
     return contrasting_text_color(background)
 
 def tooltip_border() -> QColor:

@@ -862,7 +862,7 @@ def test_live_theme_switch_preserves_blue_and_power_dropdown_roles(monkeypatch):
                 assert power_combo.itemData(
                     shutdown_row,
                     Qt.ItemDataRole.ForegroundRole,
-                ) == QColor(0, 0, 0)
+                ) == main.styles.TEXT_DARK
                 assert power_combo.itemData(
                     sleep_row,
                     Qt.ItemDataRole.ForegroundRole,

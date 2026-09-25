@@ -290,7 +290,7 @@ def test_page_registers_export_and_clear_history_tooltips():
         app.processEvents()
 
 
-def test_empty_history_actions_use_black_disabled_text_in_light_mode():
+def test_empty_history_actions_use_light_disabled_text_in_light_mode():
     app = QApplication.instance() or QApplication([])
     service, _saves = make_service()
     styles.set_theme(False)
@@ -305,7 +305,7 @@ def test_empty_history_actions_use_black_disabled_text_in_light_mode():
             assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' in (
                 button.styleSheet()
             )
-            assert "color: #000000;" in button.styleSheet()
+            assert "color: #ffffff;" in button.styleSheet()
 
         assert not page.delete_exports_button.isEnabled()
         assert page.delete_exports_button.property("quickActionSeverity") == "red"
@@ -536,7 +536,7 @@ def test_provenance_link_color_tracks_theme():
             label for label in page.findChildren(QLabel)
             if 'href="https://example.com"' in label.text()
         ][-1]
-        assert "color: #000000" in light_link.text()
+        assert "color: #111820" in light_link.text()
     finally:
         styles.set_theme(True)
         page.deleteLater()

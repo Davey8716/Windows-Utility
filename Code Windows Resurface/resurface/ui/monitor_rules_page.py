@@ -320,7 +320,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         detail_label.setStyleSheet(styles.page_description_style())
         executable_path = str(rule["executable_path"])
         if rule["match_exact_path"] and executable_path:
-            link_color = styles.theme_muted_text_color().name()
+            link_color = styles.TEXT_LIGHT.name()
             details[0] = (
                 'Application: <a href="open-application-directory" '
                 f'style="color: {link_color}; text-decoration: underline;">'
