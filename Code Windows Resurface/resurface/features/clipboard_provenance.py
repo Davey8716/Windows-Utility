@@ -210,6 +210,33 @@ class ClipboardProvenanceRepository:
         raw = str(self._get_master_backup_dir() or "").strip() if callable(self._get_master_backup_dir) else ""
         return Path(raw) if raw else None
 
+    def export_paths(self) -> list[Path]:
+        """Return the app-managed provenance exports in the master backup."""
+        backup_dir = self.backup_directory()
+        if backup_dir is None:
+            return []
+        folder = backup_dir / "Clipboard Provenance"
+        try:
+            return sorted(
+                (
+                    path for path in folder.glob("clipboard_provenance_*.json")
+                    if path.is_file()
+                    and re.fullmatch(
+                        r"clipboard_provenance_\d{8}_\d{6}_\d{6}\.json", path.name
+                    )
+                ),
+                reverse=True,
+            )
+        except OSError:
+            return []
+
+    def delete_exports(self) -> int:
+        """Permanently delete every app-managed provenance export."""
+        paths = self.export_paths()
+        for path in paths:
+            path.unlink()
+        return len(paths)
+
     @staticmethod
     def _fingerprint(history: list[dict]) -> str:
         normalized = normalize_history(copy.deepcopy(history))
@@ -221,17 +248,7 @@ class ClipboardProvenanceRepository:
         backup_dir = self.backup_directory()
         if backup_dir is None:
             return True
-        candidates = sorted(
-            (
-                path for path in (backup_dir / "Clipboard Provenance").glob(
-                    "clipboard_provenance_*.json"
-                )
-                if re.fullmatch(
-                    r"clipboard_provenance_\d{8}_\d{6}_\d{6}\.json", path.name
-                )
-            ),
-            reverse=True,
-        )
+        candidates = self.export_paths()
         for path in candidates:
             try:
                 payload = json.loads(path.read_text(encoding="utf-8"))

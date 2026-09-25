@@ -40,35 +40,6 @@ def _copy_source_icon(path: Path) -> Path:
     return path
 
 
-def test_tray_hover_controls_action_syncs_and_dispatches() -> None:
-    _app()
-
-    class FakeWindow(QObject):
-        def __init__(self):
-            super().__init__()
-            self.hover_window_controls = SimpleNamespace(enabled=False)
-            self.enabled_calls = []
-
-        def set_hover_window_controls_enabled(self, enabled):
-            self.enabled_calls.append(enabled)
-            self.hover_window_controls.enabled = enabled
-
-    window = FakeWindow()
-    manager = TrayIconManager(window)
-    manager.hover_controls_action = QAction(
-        "Turn Hover Window Controls On", window
-    )
-
-    manager.sync_hover_controls_action()
-    assert not manager.hover_controls_action.isCheckable()
-    assert manager.hover_controls_action.text() == "Turn Hover Window Controls On"
-
-    manager.toggle_hover_controls()
-
-    assert window.enabled_calls == [True]
-    assert manager.hover_controls_action.text() == "Turn Hover Window Controls Off"
-
-
 def test_tray_folder_creator_action_opens_or_closes_and_precedes_toggles(monkeypatch) -> None:
     _app()
 
@@ -107,6 +78,10 @@ def test_tray_folder_creator_action_opens_or_closes_and_precedes_toggles(monkeyp
     manager.create_tray_icon()
 
     assert manager.menu.actions()[0] is manager.folder_creator_action
+    assert all(
+        "Hover Window Controls" not in action.text()
+        for action in manager.menu.actions()
+    )
     assert manager.folder_creator_action.text() == "Turn Folder Creator On"
     assert not manager.folder_creator_action.isCheckable()
     manager.folder_creator_action.trigger()

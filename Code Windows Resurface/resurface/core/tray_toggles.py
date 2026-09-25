@@ -27,7 +27,6 @@ class TrayIconManager(QObject):
         self.folder_creator_action = None
         self.theme_action = None
         self.zen_mode_action = None
-        self.hover_controls_action = None
         self.monitor_rules_action = None
 
     def _resolve_tray_icon(self):
@@ -63,12 +62,6 @@ class TrayIconManager(QObject):
         self.zen_mode_action = QAction("Zen Mode", self.app)
         self.zen_mode_action.triggered.connect(self.toggle_zen_mode)
         menu.addAction(self.zen_mode_action)
-
-        self.hover_controls_action = QAction(
-            "Turn Hover Window Controls On", self.app
-        )
-        self.hover_controls_action.triggered.connect(self.toggle_hover_controls)
-        menu.addAction(self.hover_controls_action)
 
         self.monitor_rules_action = QAction("Turn Monitor Rules On", self.app)
         self.monitor_rules_action.triggered.connect(self.toggle_monitor_rules)
@@ -149,7 +142,6 @@ class TrayIconManager(QObject):
         self.sync_theme_action()
         self.sync_zen_mode_action()
         self.sync_folder_creator_action()
-        self.sync_hover_controls_action()
         self.sync_monitor_rules_action()
 
     def sync_theme_action(self):
@@ -184,25 +176,6 @@ class TrayIconManager(QObject):
             )
         except Exception:
             return []
-
-    def sync_hover_controls_action(self):
-        if not self.hover_controls_action:
-            return
-        service = getattr(self.app, "hover_window_controls", None)
-        enabled = bool(
-            getattr(
-                service,
-                "enabled",
-                getattr(self.app, "state", {}).get(
-                    "hover_window_controls_enabled", True
-                ),
-            )
-        )
-        self.hover_controls_action.setText(
-            "Turn Hover Window Controls Off"
-            if enabled
-            else "Turn Hover Window Controls On"
-        )
 
     def sync_monitor_rules_action(self):
         if not self.monitor_rules_action:
@@ -240,24 +213,6 @@ class TrayIconManager(QObject):
             return
 
         self.sync_zen_mode_action()
-
-    def toggle_hover_controls(self, _checked: bool = False):
-        service = getattr(self.app, "hover_window_controls", None)
-        enabled = not bool(
-            getattr(
-                service,
-                "enabled",
-                getattr(self.app, "state", {}).get(
-                    "hover_window_controls_enabled", True
-                ),
-            )
-        )
-        setter = getattr(self.app, "set_hover_window_controls_enabled", None)
-        if callable(setter):
-            setter(enabled)
-            self.sync_hover_controls_action()
-        else:
-            self.sync_hover_controls_action()
 
     def toggle_monitor_rules(self, _checked: bool = False):
         rules = getattr(self.app, "state", {}).get("monitor_rules", [])

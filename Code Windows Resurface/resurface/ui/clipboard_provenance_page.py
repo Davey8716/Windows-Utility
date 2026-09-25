@@ -68,6 +68,23 @@ class ClipboardClearConfirmationDialog(QMessageBox):
         )
 
 
+class ClipboardExportDeleteConfirmationDialog(ClipboardClearConfirmationDialog):
+    """Confirmation for permanently deleting exported provenance files."""
+
+    def __init__(self, export_count: int, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Delete Clipboard Provenance Exports")
+        noun = "file" if export_count == 1 else "files"
+        self.setText(
+            f"Permanently delete {export_count} exported Clipboard Provenance {noun}?\n\n"
+            "This cannot be undone. Local Clipboard Provenance history will be kept."
+        )
+        self.setMinimumSize(0, 0)
+        self.setMaximumSize(16777215, 16777215)
+        self.adjustSize()
+        self.setFixedSize(self.sizeHint())
+
+
 class ClipboardProvenancePage(WindowMessageMixin, QWidget):
     def __init__(
         self,
@@ -103,18 +120,27 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         controls.setSpacing(styles.PAGE_CONTROL_GAP)
         self.recording_button = QPushButton(self.panel)
         self.export_button = QPushButton("Export History", self.panel)
+        self.delete_exports_button = QPushButton("Delete All", self.panel)
         self.clear_button = QPushButton("Clear All", self.panel)
-        for button in (self.export_button, self.clear_button):
+        for button in (self.export_button, self.delete_exports_button, self.clear_button):
             button.setProperty("lightModeBlackDisabledText", True)
-        for button in (self.recording_button, self.export_button, self.clear_button):
+        for button in (self.recording_button, self.export_button, self.delete_exports_button, self.clear_button):
             style_button(button)
             controls.addWidget(button)
+        self.delete_exports_button.setProperty("quickActionSeverity", "red")
+        self.delete_exports_button.setStyleSheet(
+            styles.power_action_button_style(12, "red", self.delete_exports_button.text())
+        )
         if register_tooltip is not None:
             register_tooltip(
                 self.export_button, tooltip_text("clipboard_provenance_export")
             )
             register_tooltip(
                 self.clear_button, tooltip_text("clipboard_provenance_clear")
+            )
+            register_tooltip(
+                self.delete_exports_button,
+                tooltip_text("clipboard_provenance_delete_exports"),
             )
         layout.addLayout(controls)
         self.status_label = QLabel(self.panel)
@@ -128,6 +154,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
 
         self.recording_button.clicked.connect(lambda: self._service.set_enabled(not self._service.enabled))
         self.export_button.clicked.connect(self._export_history)
+        self.delete_exports_button.clicked.connect(self._delete_exports)
         self.clear_button.clicked.connect(self._clear_history)
         self._service.history_changed.connect(self._render_history)
         self._service.recording_changed.connect(self._sync_recording)
@@ -153,6 +180,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         except (OSError, TypeError, ValueError):
             has_export_changes = True
         self.export_button.setEnabled(bool(history) and has_export_changes)
+        self.delete_exports_button.setEnabled(bool(self._repository.export_paths()))
         self.clear_button.setEnabled(bool(history))
         self.status_label.setText(
             f"{len(history)} of 100 saved records. Recording is {'on' if self._service.enabled else 'off'}."
@@ -239,6 +267,25 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         answer = ClipboardClearConfirmationDialog(self).exec()
         if answer == QMessageBox.StandardButton.Yes:
             self._service.clear()
+
+    def _delete_exports(self) -> None:
+        paths = self._repository.export_paths()
+        if not paths:
+            self._render_history(self._service.history)
+            return
+        answer = ClipboardExportDeleteConfirmationDialog(len(paths), self).exec()
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self._repository.delete_exports()
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                "Clipboard Provenance",
+                f"Could not delete all exported clipboard provenance files:\n{exc}",
+            )
+        finally:
+            self._render_history(self._service.history)
 
     def _open_export_directory(self, directory: Path) -> None:
         directory.mkdir(parents=True, exist_ok=True)

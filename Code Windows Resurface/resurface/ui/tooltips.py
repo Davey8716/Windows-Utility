@@ -75,6 +75,7 @@ TOOLTIP_TEXT = {
     "maintenance_stop_task": "Stops the currently running maintenance command. Repair or cleanup work may be left incomplete.",
     "clipboard_provenance_export": "Exports the recorded clipboard provenance history to the Clipboard Provenance folder in the master backup path.",
     "clipboard_provenance_clear": "Permanently clears every locally recorded clipboard provenance entry. Exported backup files are kept.",
+    "clipboard_provenance_delete_exports": "Permanently deletes every exported clipboard provenance backup file from the Clipboard Provenance folder in the master backup path.",
 }
 
 def tooltip_text(key: str) -> str:

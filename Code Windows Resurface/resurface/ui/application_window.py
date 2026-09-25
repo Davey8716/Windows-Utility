@@ -273,9 +273,6 @@ class UtilityControlApp(
         self.external_drive_controller.start()
         self.tray_manager.create_tray_icon()
         self.hover_window_controls.settings_changed.connect(
-            lambda *_settings: self.tray_manager.sync_hover_controls_action()
-        )
-        self.hover_window_controls.settings_changed.connect(
             lambda *_settings: self.refresh_overview()
         )
         self.hover_window_controls.start()

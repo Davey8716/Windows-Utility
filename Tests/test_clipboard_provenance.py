@@ -16,6 +16,7 @@ from resurface.features import clipboard_provenance as provenance
 from resurface.ui import styles
 from resurface.ui.clipboard_provenance_page import (
     ClipboardClearConfirmationDialog,
+    ClipboardExportDeleteConfirmationDialog,
     ClipboardProvenancePage,
 )
 from resurface.ui.tooltips import tooltip_text
@@ -175,6 +176,41 @@ def test_repository_ignores_invalid_newer_backup(tmp_path):
     assert not repository.has_export_changes(history)
 
 
+def test_repository_deletes_only_app_managed_exports(tmp_path):
+    repository = provenance.ClipboardProvenanceRepository(
+        lambda: str(tmp_path), now=lambda: datetime(2025, 1, 2, 3, 4, 5, 6)
+    )
+    exported = repository.export_history([])
+    folder = exported.parent
+    unrelated = folder / "notes.json"
+    unrelated.write_text("keep me", encoding="utf-8")
+    nested = folder / "clipboard_provenance_20250103_030405_000006.json"
+    nested.mkdir()
+
+    assert repository.export_paths() == [exported]
+    assert repository.delete_exports() == 1
+    assert not exported.exists()
+    assert unrelated.read_text(encoding="utf-8") == "keep me"
+    assert nested.is_dir()
+
+
+def test_delete_exports_button_reflects_matching_backup_files(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    page = ClipboardProvenancePage(
+        None, service=service, get_master_backup_dir=lambda: str(tmp_path)
+    )
+    try:
+        assert not page.delete_exports_button.isEnabled()
+        repository = provenance.ClipboardProvenanceRepository(lambda: str(tmp_path))
+        repository.export_history([])
+        page._render_history(service.history)
+        assert page.delete_exports_button.isEnabled()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
 def test_page_exports_history_renders_inline_links_and_top_right_delete(monkeypatch, tmp_path):
     app = QApplication.instance() or QApplication([])
     service, _saves = make_service()
@@ -242,6 +278,9 @@ def test_page_registers_export_and_clear_history_tooltips():
     try:
         assert registered[page.export_button] == tooltip_text("clipboard_provenance_export")
         assert registered[page.clear_button] == tooltip_text("clipboard_provenance_clear")
+        assert registered[page.delete_exports_button] == tooltip_text(
+            "clipboard_provenance_delete_exports"
+        )
     finally:
         page.deleteLater()
         app.processEvents()
@@ -263,6 +302,14 @@ def test_empty_history_actions_use_black_disabled_text_in_light_mode():
                 button.styleSheet()
             )
             assert "color: #000000;" in button.styleSheet()
+
+        assert not page.delete_exports_button.isEnabled()
+        assert page.delete_exports_button.property("quickActionSeverity") == "red"
+        assert (
+            f"background-color: {styles.power_action_color('red').name()};"
+            in page.delete_exports_button.styleSheet()
+        )
+        assert "QPushButton:disabled" in page.delete_exports_button.styleSheet()
 
         styles.set_theme(True)
         assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' not in (
@@ -345,6 +392,80 @@ def test_clear_confirmation_only_clears_history_after_yes(monkeypatch):
         )
         page._clear_history()
         assert service.history == []
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_delete_exports_confirmation_and_action_keep_local_history(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    service._append({"content_type": "text", "text": "local record"})
+    repository = provenance.ClipboardProvenanceRepository(lambda: str(tmp_path))
+    first = repository.export_history([])
+    second = repository.export_history([])
+    unrelated = first.parent / "readme.txt"
+    unrelated.write_text("keep", encoding="utf-8")
+    page = ClipboardProvenancePage(
+        None, service=service, get_master_backup_dir=lambda: str(tmp_path)
+    )
+    try:
+        dialog_text = []
+        monkeypatch.setattr(
+            ClipboardExportDeleteConfirmationDialog,
+            "exec",
+            lambda dialog: dialog_text.append(dialog.text()) or QMessageBox.StandardButton.Cancel,
+        )
+        page._delete_exports()
+        assert first.exists() and second.exists()
+        assert "2 exported Clipboard Provenance files" in dialog_text[0]
+
+        monkeypatch.setattr(
+            ClipboardExportDeleteConfirmationDialog,
+            "exec",
+            lambda _dialog: QMessageBox.StandardButton.Yes,
+        )
+        page._delete_exports()
+        assert not first.exists() and not second.exists()
+        assert unrelated.read_text(encoding="utf-8") == "keep"
+        assert service.history[0]["text"] == "local record"
+        assert not page.delete_exports_button.isEnabled()
+    finally:
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_delete_exports_reports_filesystem_failure(monkeypatch, tmp_path):
+    app = QApplication.instance() or QApplication([])
+    service, _saves = make_service()
+    repository = provenance.ClipboardProvenanceRepository(lambda: str(tmp_path))
+    exported = repository.export_history([])
+    page = ClipboardProvenancePage(
+        None, service=service, get_master_backup_dir=lambda: str(tmp_path)
+    )
+    warnings = []
+    try:
+        monkeypatch.setattr(
+            ClipboardExportDeleteConfirmationDialog,
+            "exec",
+            lambda _dialog: QMessageBox.StandardButton.Yes,
+        )
+        monkeypatch.setattr(
+            page._repository,
+            "delete_exports",
+            lambda: (_ for _ in ()).throw(OSError("access denied")),
+        )
+        monkeypatch.setattr(
+            "resurface.ui.clipboard_provenance_page.QMessageBox.warning",
+            lambda *_args: warnings.append(_args),
+        )
+
+        page._delete_exports()
+
+        assert exported.exists()
+        assert warnings
+        assert "Could not delete all exported clipboard provenance files" in warnings[0][2]
+        assert page.delete_exports_button.isEnabled()
     finally:
         page.deleteLater()
         app.processEvents()
