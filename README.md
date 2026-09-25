@@ -6,11 +6,11 @@ Windows Resurface is a Windows 11 desktop utility hub built with Python and PySi
 
 It brings a set of everyday Windows actions into one always-available app: window moving, desktop cleanup, backup helpers, bookmark export, recycle bin cleanup, external drive reminders, and quick access to deeper Windows tools. The app runs as a single instance, stays available in the system tray, and remembers its state between launches.
 
-> If you just want to use it, download the packaged release, extract it, and run `Windows Resurface.exe`. You do not need to set up Python unless you want to inspect or modify the source.
+> To use Windows Resurface, download the licensed packaged release, extract it, and run `Windows Resurface.exe`.
 
-Windows Resurface is already usable as-is, and you are welcome to run with it. It is still a work in progress, and I will keep refining it over time, but the current build is here to be used, tested, and built on.
+Windows Resurface is proprietary commercial software. It is still a work in progress, and it will continue to be refined over time.
 
-Feel free to clone the repo, explore the code, adapt it to your own setup, and make it part of your own workflow.
+The source code is not licensed for public use, copying, modification, or redistribution. See [LICENSE](LICENSE) for the applicable terms.
 
 ## Features
 
@@ -51,6 +51,8 @@ When you close the main window, the app hides to the system tray instead of full
 
 ## Run From Source
 
+This section is for authorised development and maintenance only. It does not grant permission to use, copy, modify, or distribute the source code.
+
 From the repository root:
 
 ```powershell
@@ -60,6 +62,10 @@ python -m venv .venv
 pip install -r requirements.txt
 python main.py
 ```
+
+## Licence
+
+Windows Resurface is proprietary commercial software. Copyright © 2026 David Saunders. All rights reserved. Use is permitted only under a valid licence granted by David Saunders. See [LICENSE](LICENSE) for the full terms.
 
 ## How It Is Organised
 
