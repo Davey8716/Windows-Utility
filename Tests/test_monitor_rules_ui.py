@@ -179,6 +179,13 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         assert page.add_button.isEnabled()
         assert page.turn_off_all_button.isEnabled()
         assert page.turn_off_all_button.text() == "Turn Off All"
+        for button in (
+            page.turn_off_all_button,
+            page.delete_all_button,
+            page.alphabet_sort_button,
+        ):
+            assert button.property("lightModeBlackText") is True
+            assert button.property("lightModeBlackDisabledText") is True
         assert page.delete_all_button.isEnabled()
         assert page.delete_all_button.text() == "Delete All"
         assert page.delete_all_button.property("quickActionSeverity") == "red"

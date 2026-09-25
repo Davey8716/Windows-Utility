@@ -281,6 +281,7 @@ def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():
         assert page._delete_all_names.property("lightModeBlackDisabledText") is True
         for button in (page._delete_name, page._delete_all_names):
             assert button.property("quickActionSeverity") == "red"
+            assert button.property("lightModeBlackText") is True
             assert (
                 f"background-color: {styles.power_action_color('red').name()};"
                 in button.styleSheet()

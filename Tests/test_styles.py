@@ -280,6 +280,19 @@ def test_light_mode_buttons_use_black_text_when_enabled_and_opted_in_when_disabl
     assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' not in dark_style
 
 
+def test_light_mode_opt_in_keeps_power_action_text_black_in_both_states():
+    styles.set_theme(False)
+    light_style = styles.power_action_button_style(14, "red", "Delete All")
+
+    assert 'QPushButton[lightModeBlackText="true"]:enabled' in light_style
+    assert 'QPushButton[lightModeBlackDisabledText="true"]:disabled' in light_style
+    assert "color: #000000;" in light_style
+
+    styles.set_theme(True)
+    dark_style = styles.power_action_button_style(14, "red", "Delete All")
+    assert 'QPushButton[lightModeBlackText="true"]:enabled' not in dark_style
+
+
 def test_light_mode_opt_in_keeps_disabled_dropdown_text_black():
     styles.set_theme(False)
     light_style = styles.organizing_combo_style(14)

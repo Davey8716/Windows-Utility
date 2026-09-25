@@ -305,6 +305,7 @@ def test_empty_history_actions_use_black_disabled_text_in_light_mode():
 
         assert not page.delete_exports_button.isEnabled()
         assert page.delete_exports_button.property("quickActionSeverity") == "red"
+        assert page.delete_exports_button.property("lightModeBlackText") is True
         assert (
             f"background-color: {styles.power_action_color('red').name()};"
             in page.delete_exports_button.styleSheet()

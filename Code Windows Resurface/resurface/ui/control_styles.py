@@ -5,11 +5,29 @@ from PySide6.QtGui import QColor
 from resurface.ui import style_helpers as H
 from resurface.ui import style_tokens as T
 
+
+def _light_mode_black_text_overrides() -> str:
+    """Return opt-in black text rules for light-mode action buttons."""
+    if T.THEME_IS_DARK:
+        return ""
+    black = H.qcolor_css(T.button_text_color())
+    return f"""
+        QPushButton[lightModeBlackText=\"true\"]:enabled,
+        QPushButton[lightModeBlackText=\"true\"]:enabled:hover,
+        QPushButton[lightModeBlackText=\"true\"]:enabled:pressed {{
+            color: {black};
+        }}
+        QPushButton[lightModeBlackDisabledText=\"true\"]:disabled {{
+            color: {black};
+        }}
+        """
+
 def organizing_button_style(font_size: int | None = None) -> str:
     font_size = H.coerce_font_size(font_size)
     font_rule = f"font-size: {font_size}px;" if font_size is not None else ""
     placeholder_disabled_override = ""
     black_disabled_text_override = ""
+    black_text_overrides = ""
     if not T.THEME_IS_DARK:
         placeholder_disabled_override = f"""
         QPushButton[lightModePlaceholderButton=\"true\"]:disabled {{
@@ -21,6 +39,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             color: {H.qcolor_css(T.button_text_color())};
         }}
         """
+        black_text_overrides = _light_mode_black_text_overrides()
     return f"""
         QPushButton {{
             text-align: center;
@@ -55,6 +74,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
         }}
         {placeholder_disabled_override}
         {black_disabled_text_override}
+        {black_text_overrides}
     """
 
 def toggle_button_style(font_size: int | None = None) -> str:
@@ -120,7 +140,7 @@ def power_action_button_style(
             border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
             background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
         }}
-    """
+    """ + _light_mode_black_text_overrides()
 
 def hotkey_edit_style(font_size: int = 13) -> str:
     """Style the Screen Mover shortcut editor as a persistent surface field."""

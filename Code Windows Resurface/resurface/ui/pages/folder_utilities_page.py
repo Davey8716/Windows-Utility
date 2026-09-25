@@ -85,6 +85,7 @@ class FolderUtilitiesPage(PageControls):
     def _style_destructive_action(button: QPushButton) -> None:
         """Keep delete actions red through shared theme refreshes."""
         button.setProperty("quickActionSeverity", "red")
+        button.setProperty("lightModeBlackText", True)
         button.setStyleSheet(
             styles.power_action_button_style(14, "red", button.text())
         )

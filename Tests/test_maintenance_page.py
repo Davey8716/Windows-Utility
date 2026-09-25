@@ -125,6 +125,8 @@ def test_stop_task_button_confirms_before_cancelling_the_running_command(monkeyp
     runner.running_changed.emit(True)
     assert page.stop_task_button.isEnabled()
     assert page.stop_task_button.property("quickActionSeverity") == "red"
+    assert page.stop_task_button.property("lightModeBlackText") is True
+    assert page.stop_task_button.property("lightModeBlackDisabledText") is True
     runner.stopping_changed.emit(True)
     assert page.stop_task_button.text() == "Stopping…"
     assert not page.stop_task_button.isEnabled()

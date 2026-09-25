@@ -176,6 +176,8 @@ class MaintenancePage(QWidget):
         styles.apply_default_button_size(self.stop_task_button)
         self.stop_task_button.setProperty("styleFontSize", 14)
         self.stop_task_button.setProperty("quickActionSeverity", "red")
+        self.stop_task_button.setProperty("lightModeBlackText", True)
+        self.stop_task_button.setProperty("lightModeBlackDisabledText", True)
         self.stop_task_button.setStyleSheet(
             styles.power_action_button_style(14, "red", "Stop Task")
         )

@@ -128,6 +128,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
             style_button(button)
             controls.addWidget(button)
         self.delete_exports_button.setProperty("quickActionSeverity", "red")
+        self.delete_exports_button.setProperty("lightModeBlackText", True)
         self.delete_exports_button.setStyleSheet(
             styles.power_action_button_style(12, "red", self.delete_exports_button.text())
         )
