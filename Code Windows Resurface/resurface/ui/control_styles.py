@@ -349,7 +349,7 @@ def _modern_combo_style(
             padding: 4px 34px 4px 38px;
         }}
         QComboBox#FolderCreatorAddBlankDropdown:disabled {{
-            color: {H.qcolor_css(T.button_text_color())};
+            color: {H.qcolor_css(T.themed_button_disabled_text())};
             background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
             border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
         }}
@@ -369,7 +369,7 @@ def _modern_combo_style(
             border-left: 1px solid {H.qcolor_css(border)};
         }}
         QComboBox#FolderCreatorUserTemplatesDropdown:disabled {{
-            color: {H.qcolor_css(T.button_text_color())};
+            color: {H.qcolor_css(T.themed_button_disabled_text())};
             background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
             border: 1px solid {H.qcolor_css(T.themed_button_disabled_border())};
         }}

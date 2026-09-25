@@ -300,15 +300,15 @@ def test_light_mode_opt_in_keeps_disabled_dropdown_text_black():
     assert 'QComboBox[lightModeBlackDisabledText="true"]:disabled' not in dark_style
 
 
-@pytest.mark.parametrize(("is_dark", "text_color"), [(True, "#ffffff"), (False, "#000000")])
+@pytest.mark.parametrize("is_dark", [True, False])
 def test_folder_creator_add_blank_dropdown_style_matches_theme_when_disabled(
     is_dark,
-    text_color,
 ):
     styles.set_theme(is_dark)
     stylesheet = styles.organizing_combo_style(14)
     disabled_background = styles.qcolor_css(styles.themed_button_disabled_bg())
     disabled_border = styles.qcolor_css(styles.themed_button_disabled_border())
+    disabled_text = styles.qcolor_css(styles.themed_button_disabled_text())
 
     assert 'QComboBox#FolderCreatorAddBlankDropdown:disabled' in stylesheet
     assert (
@@ -317,21 +317,24 @@ def test_folder_creator_add_blank_dropdown_style_matches_theme_when_disabled(
     )
     assert 'QComboBox#FolderCreatorAddBlankDropdown:enabled' in stylesheet
     assert 'QComboBox#FolderCreatorAddBlankDropdown::drop-down:enabled' in stylesheet
-    assert f"color: {text_color};" in stylesheet
+    disabled_rule = stylesheet.split(
+        "QComboBox#FolderCreatorAddBlankDropdown:disabled {", 1
+    )[1].split("}", 1)[0]
+    assert f"color: {disabled_text};" in disabled_rule
     assert f"background-color: {disabled_background};" in stylesheet
     assert f"border: 1px solid {disabled_border};" in stylesheet
     assert f"border-left: 1px solid {disabled_border};" in stylesheet
 
 
-@pytest.mark.parametrize(("is_dark", "text_color"), [(True, "#ffffff"), (False, "#000000")])
+@pytest.mark.parametrize("is_dark", [True, False])
 def test_folder_creator_user_templates_dropdown_style_matches_add_blank_treatment(
     is_dark,
-    text_color,
 ):
     styles.set_theme(is_dark)
     stylesheet = styles.organizing_combo_style(14)
     disabled_background = styles.qcolor_css(styles.themed_button_disabled_bg())
     disabled_border = styles.qcolor_css(styles.themed_button_disabled_border())
+    disabled_text = styles.qcolor_css(styles.themed_button_disabled_text())
 
     assert 'QComboBox#FolderCreatorUserTemplatesDropdown:disabled' in stylesheet
     assert (
@@ -343,7 +346,10 @@ def test_folder_creator_user_templates_dropdown_style_matches_add_blank_treatmen
         'QComboBox#FolderCreatorUserTemplatesDropdown::drop-down:enabled'
         in stylesheet
     )
-    assert f"color: {text_color};" in stylesheet
+    disabled_rule = stylesheet.split(
+        "QComboBox#FolderCreatorUserTemplatesDropdown:disabled {", 1
+    )[1].split("}", 1)[0]
+    assert f"color: {disabled_text};" in disabled_rule
     assert f"background-color: {disabled_background};" in stylesheet
     assert f"border: 1px solid {disabled_border};" in stylesheet
     assert f"border-left: 1px solid {disabled_border};" in stylesheet
