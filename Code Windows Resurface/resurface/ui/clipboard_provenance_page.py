@@ -122,9 +122,9 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         self.export_button = QPushButton("Export History", self.panel)
         self.delete_exports_button = QPushButton("Delete All", self.panel)
         self.clear_button = QPushButton("Clear All", self.panel)
-        for button in (self.export_button, self.delete_exports_button, self.clear_button):
+        for button in (self.export_button, self.clear_button, self.delete_exports_button):
             button.setProperty("lightModeBlackDisabledText", True)
-        for button in (self.recording_button, self.export_button, self.delete_exports_button, self.clear_button):
+        for button in (self.recording_button, self.export_button, self.clear_button, self.delete_exports_button):
             style_button(button)
             controls.addWidget(button)
         self.delete_exports_button.setProperty("quickActionSeverity", "red")

@@ -62,7 +62,11 @@ def test_clipboard_provenance_uses_shared_control_and_card_spacing():
         assert controls.spacing() == styles.PAGE_CONTROL_GAP
         assert page.history_layout.spacing() == styles.PAGE_CONTROL_ROW_GAP
         assert page.recording_button.x() == styles.PAGE_CONTROL_GAP
-        assert page.panel.width() - page.clear_button.geometry().right() - 1 == (
+        assert [
+            controls.itemAt(index).widget().text()
+            for index in range(controls.count())
+        ] == ["Recording: Off", "Export History", "Clear All", "Delete All"]
+        assert page.panel.width() - page.delete_exports_button.geometry().right() - 1 == (
             styles.PAGE_CONTROL_GAP
         )
     finally:
