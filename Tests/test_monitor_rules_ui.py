@@ -181,6 +181,11 @@ def test_monitor_rules_page_enables_reorders_and_reports_unavailable_target(monk
         assert page.turn_off_all_button.text() == "Turn Off All"
         assert page.delete_all_button.isEnabled()
         assert page.delete_all_button.text() == "Delete All"
+        assert page.delete_all_button.property("quickActionSeverity") == "red"
+        assert (
+            f"background-color: {monitor_rules_ui.styles.power_action_color('red').name()};"
+            in page.delete_all_button.styleSheet()
+        )
         assert page.alphabet_sort_button.isEnabled()
         assert page.alphabet_sort_button.text() == "A–Z"
         page.resize(760, page.sizeHint().height())
@@ -910,7 +915,8 @@ def test_delete_all_rules_confirms_and_updates_empty_state(monkeypatch):
         assert commits == []
         assert dialogs[-1].windowTitle() == "Delete All Monitor Rules"
         assert dialogs[-1].text() == (
-            "Delete all 2 monitor rules? This cannot be undone."
+            "Delete all 2 monitor rules? This cannot be undone.\n\n"
+            "Previously exported monitor rules will not be deleted and can be imported again."
         )
 
         page.delete_all_button.click()

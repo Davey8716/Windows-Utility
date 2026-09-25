@@ -188,6 +188,10 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         _style_button(self.add_button)
         _style_button(self.turn_off_all_button)
         _style_button(self.delete_all_button)
+        self.delete_all_button.setProperty("quickActionSeverity", "red")
+        self.delete_all_button.setStyleSheet(
+            styles.power_action_button_style(12, "red", self.delete_all_button.text())
+        )
         _style_button(self.alphabet_sort_button)
         self.add_button.clicked.connect(self._add_rule)
         self.turn_off_all_button.clicked.connect(self._toggle_all)
@@ -522,7 +526,8 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         answer = self._show_modal_message(
             QMessageBox.Icon.Question,
             "Delete All Monitor Rules",
-            f"Delete all {len(self.rules)} monitor rules? This cannot be undone.",
+            f"Delete all {len(self.rules)} monitor rules? This cannot be undone.\n\n"
+            "Previously exported monitor rules will not be deleted and can be imported again.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
             popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
