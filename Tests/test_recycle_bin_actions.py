@@ -76,6 +76,8 @@ def test_manual_cleanup_closes_and_reports_no_matches():
     RecycleBinActionsController(app, service, immediate).run_cleanup_now()
     assert service.closed == 1
     assert "No Recycle Bin items older than 30 days" in app.messages[0][0][2]
+    assert app.modal_options == [{"popup_corner_radius": styles.BUTTON_CORNER_RADIUS}]
+    assert app.messages[0][1]["popup_corner_radius"] == styles.BUTTON_CORNER_RADIUS
 
 
 def test_auto_cleanup_persists_popup_day_once(monkeypatch):

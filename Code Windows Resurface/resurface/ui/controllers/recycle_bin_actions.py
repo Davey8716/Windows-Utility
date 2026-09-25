@@ -79,6 +79,7 @@ class RecycleBinActionsController:
                 self.app._show_timed_message(
                     self.app._message_box_icon("Warning"), "Recycle Bin Cleanup",
                     "Choose a valid age rule before running cleanup.",
+                    popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
                 )
             return
         if not automatic:
@@ -87,6 +88,7 @@ class RecycleBinActionsController:
                 f"Permanently delete Recycle Bin items older than {days} days?",
                 self.app._message_box_button("Yes") | self.app._message_box_button("Cancel"),
                 self.app._message_box_button("Cancel"),
+                popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
             )
             if answer != self.app._message_box_button("Yes"):
                 return
@@ -116,6 +118,7 @@ class RecycleBinActionsController:
                         self.app._message_box_icon("Information"), "Recycle Bin Cleanup",
                         f"No Recycle Bin items older than {days} days were found.",
                         show_close_now_button=True,
+                        popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
                     )
                 if automatic and show_auto_popup:
                     self.app.state["recycle_bin_last_auto_clean_popup_days"] = days
