@@ -74,6 +74,22 @@ def test_cleanup_quick_actions_excludes_task_manager():
     _runner.deleteLater()
 
 
+def test_maintenance_page_excludes_display_and_sound_dropdown():
+    page, _actions, runner = _make_page(lambda *_args, **_kwargs: None)
+
+    titles = [title for _combo, title, _actions in page.quick_action_dropdowns]
+
+    assert "Display And Sound" not in titles
+    assert "Display Settings" not in {
+        label for _combo, _title, actions in page.quick_action_dropdowns for label in actions
+    }
+    assert "Sound Devices" not in {
+        label for _combo, _title, actions in page.quick_action_dropdowns for label in actions
+    }
+    page.deleteLater()
+    runner.deleteLater()
+
+
 def test_chkdsk_blocker_warnings_are_rounded_and_keep_diagnostics_distinct():
     calls = []
     page, _actions, runner = _make_page(

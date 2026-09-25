@@ -64,9 +64,9 @@ class WindowsUtilitiesPage(QWidget):
             columns.append((column, layout))
 
         groups = self.catalog.groups()
-        for index in (0, 1, 2):
+        for index in (0, 1, 2, 3):
             self._add_dropdown(columns[0][1], groups[index])
-        for index in (3, 4, 5):
+        for index in (4, 5, 6):
             self._add_dropdown(columns[1][1], groups[index])
 
         widths = []
@@ -116,7 +116,15 @@ class WindowsUtilitiesPage(QWidget):
 
     @staticmethod
     def tool_availability(tool: WindowsToolSpec) -> tuple[bool, str]:
-        if tool.launch_kind in {"router", "maintenance", "folder", "shell_open"}:
+        if tool.launch_kind in {
+            "router",
+            "maintenance",
+            "folder",
+            "shell_open",
+            "advanced_display_settings",
+            "display_settings",
+            "sound_settings",
+        }:
             return True, ""
         target = tool.target.strip()
         if not target or ":" in target and not Path(target).is_absolute():
@@ -129,6 +137,15 @@ class WindowsUtilitiesPage(QWidget):
     def launch(self, tool: WindowsToolSpec):
         if tool.launch_kind == "maintenance":
             self.maintenance_actions.show_ip_config()
+            return
+        if tool.launch_kind == "advanced_display_settings":
+            self.maintenance_actions.open_advanced_display_settings()
+            return
+        if tool.launch_kind == "display_settings":
+            self.maintenance_actions.open_display_settings()
+            return
+        if tool.launch_kind == "sound_settings":
+            self.maintenance_actions.open_sound_settings()
             return
         if tool.launch_kind == "router":
             self.router_service.open_router_page()

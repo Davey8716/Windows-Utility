@@ -46,7 +46,6 @@ class MaintenancePage(QWidget):
     TOOLTIP_KEYS = {
         "Network / Sys Quick Fix": "sidebar_dropdown_network_fix",
         "Cleanup / Quick Actions": "sidebar_dropdown_cleanup",
-        "Display And Sound": "sidebar_dropdown_quick_open",
         "Sys Integrity / Disk": "sidebar_dropdown_integrity",
     }
 
@@ -105,11 +104,6 @@ class MaintenancePage(QWidget):
             "Open Startup Folder": lambda: self.run_with_optional_minimize(self.actions.open_startup_folder),
             "Open Temp Folder": lambda: self.run_with_optional_minimize(self.actions.open_temp_folder),
         }
-        quick_open = {
-            "Advanced Display Settings": lambda: self.run_with_optional_minimize(self.actions.open_advanced_display_settings),
-            "Display Settings": lambda: self.run_with_optional_minimize(self.actions.open_display_settings),
-            "Sound Devices": lambda: self.run_with_optional_minimize(self.actions.open_sound_settings),
-        }
         self._add_dropdown(layout, 0, 0, "Cleanup / Quick Actions", dict(sorted(cleanup.items(), key=lambda item: item[0].casefold())))
         self._add_dropdown(
             layout,
@@ -123,11 +117,10 @@ class MaintenancePage(QWidget):
                 "Restart Bluetooth Service": self.actions.restart_bluetooth,
             },
         )
-        self._add_dropdown(layout, 1, 0, "Display And Sound", dict(sorted(quick_open.items(), key=lambda item: item[0].casefold())))
         self._add_dropdown(
             layout,
             1,
-            1,
+            0,
             "Sys Integrity / Disk",
             {
                 "Run DISM Repair": self.actions.run_dism_restorehealth,

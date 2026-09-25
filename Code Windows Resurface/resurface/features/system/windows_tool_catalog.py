@@ -59,6 +59,15 @@ class WindowsToolCatalog:
                 ),
             ),
             WindowsToolGroup(
+                "Display And Sound",
+                "windows_dropdown_display_sound",
+                (
+                    _tool("advanced_display_settings", "Advanced Display Settings", kind="advanced_display_settings"),
+                    _tool("display_settings", "Display Settings", kind="display_settings"),
+                    _tool("sound_devices", "Sound Devices", kind="sound_settings"),
+                ),
+            ),
+            WindowsToolGroup(
                 "Services & Logs",
                 "windows_dropdown_services_logs",
                 (
