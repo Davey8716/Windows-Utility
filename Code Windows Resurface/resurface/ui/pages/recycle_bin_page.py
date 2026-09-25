@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QGridLayout, QLabel, QWidget, QVBoxLayout, QSizePolicy
 
 from resurface.ui import styles
+from resurface.ui.controllers.theme_controller import apply_recycle_bin_actions_dropdown_style
 from resurface.ui.pages.page_controls import PageControls
 from resurface.ui.tooltips import tooltip_text
 
@@ -19,22 +20,22 @@ class RecycleBinPage(PageControls):
         controls.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         layout = QGridLayout(controls); layout.setContentsMargins(0, 0, 0, 0)
         layout.setHorizontalSpacing(self.CONTROL_COLUMN_GAP); layout.setVerticalSpacing(styles.PAGE_CONTROL_ROW_GAP)
+        enabled = bool(settings.get("recycle_bin_auto_clean_enabled", False))
         actions = self.make_action_dropdown(
             " Cleanup Actions ", ["Open Recycle Bin", "Run Auto-Clean Now", "Empty Recycle Bin"],
             lambda name: self.action_requested.emit({"Open Recycle Bin": "open", "Run Auto-Clean Now": "run", "Empty Recycle Bin": "empty"}[name]),
         )
         layout.addWidget(actions, 0, 0)
         self.actions_combo = actions
-        actions.setProperty("lightModeBlackDisabledText", True)
-        actions.setProperty("lightModeKeepEnabledBackground", True)
-        actions.setStyleSheet(styles.organizing_combo_style(14))
+        actions.setProperty("recycleBinActionsStyle", True)
+        actions.setProperty("recycleBinAutoCleanEnabled", enabled)
+        apply_recycle_bin_actions_dropdown_style(actions)
         self._has_items_checker: Callable[[], bool] | None = None
         self._background_refresh = None
         self._empty_action_timer = QTimer(self)
         self._empty_action_timer.setInterval(2_000)
         self._empty_action_timer.timeout.connect(self.refresh_empty_action_availability)
         self.register_tooltip(actions, tooltip_text("cleanup_actions"))
-        enabled = bool(settings.get("recycle_bin_auto_clean_enabled", False))
         toggle = self.make_toggle_button("Auto-clean", enabled)
         self.auto_clean_button = toggle
         self.bind_toggle_state_text(toggle, "Auto-clean")
@@ -92,11 +93,13 @@ class RecycleBinPage(PageControls):
         self.availability_changed.emit(has_items)
 
     def _set_cleanup_actions_enabled(self, enabled: bool) -> None:
+        self.actions_combo.setProperty("recycleBinAutoCleanEnabled", enabled)
         for label in ("Run Auto-Clean Now", "Empty Recycle Bin"):
             index = self.actions_combo.findText(label)
             item = self.actions_combo.model().item(index)
             if item is not None:
                 item.setEnabled(enabled)
+        apply_recycle_bin_actions_dropdown_style(self.actions_combo)
 
     def _enabled_changed(self, enabled: bool) -> None:
         self._settings["recycle_bin_auto_clean_enabled"] = bool(enabled)

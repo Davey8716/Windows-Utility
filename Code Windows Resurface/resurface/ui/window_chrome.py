@@ -2,7 +2,7 @@
 
 from resurface.ui import styles
 from resurface.ui.tooltips import tooltip_text
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QEvent, QObject, QSize, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QComboBox,
@@ -69,6 +69,86 @@ class SeverityComboItemDelegate(QStyledItemDelegate):
             index.data(Qt.ItemDataRole.DisplayRole) or "",
         )
         painter.restore()
+
+
+class RecycleBinActionsItemDelegate(QStyledItemDelegate):
+    """Paint enabled, destructive Recycle Bin actions with an unambiguous red."""
+
+    _DESTRUCTIVE_ACTIONS = frozenset({"Run Auto-Clean Now", "Empty Recycle Bin"})
+    _OPEN_ACTION = "Open Recycle Bin"
+
+    def __init__(self, combo: QComboBox):
+        super().__init__(combo.view())
+        self._combo = combo
+
+    def paint(self, painter, option, index):
+        label = index.data(Qt.ItemDataRole.DisplayRole) or ""
+        is_enabled = bool(index.flags() & Qt.ItemFlag.ItemIsEnabled)
+        if label == self._OPEN_ACTION:
+            background = styles.power_action_color("blue")
+        elif (
+            self._combo.property("recycleBinAutoCleanEnabled")
+            and is_enabled
+            and label in self._DESTRUCTIVE_ACTIONS
+        ):
+            background = styles.power_action_color("red")
+        else:
+            return super().paint(painter, option, index)
+
+        is_hovered = self._combo.property("recycleBinHoveredRow") == index.row()
+        if is_hovered or option.state & (
+            QStyle.StateFlag.State_Selected | QStyle.StateFlag.State_MouseOver
+        ):
+            background = background.lighter(112)
+        painter.save()
+        painter.fillRect(option.rect, background)
+        painter.setPen(styles.button_text_color())
+        font = option.font
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(
+            option.rect.adjusted(10, 0, -8, 0),
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+            label,
+        )
+        painter.restore()
+
+
+class RecycleBinPopupHoverTracker(QObject):
+    """Request a repaint when the Recycle Bin popup hover row changes."""
+
+    def __init__(self, combo: QComboBox):
+        super().__init__(combo.view())
+        self._combo = combo
+        self._view = combo.view()
+        self._hovered_row = -1
+        self._view.setMouseTracking(True)
+        self._view.viewport().setMouseTracking(True)
+        self._view.viewport().installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        if watched is self._view.viewport():
+            if event.type() == QEvent.Type.MouseMove:
+                index = self._view.indexAt(event.position().toPoint())
+                self._set_hovered_row(index.row() if index.isValid() else -1)
+            elif event.type() == QEvent.Type.Leave:
+                self._set_hovered_row(-1)
+        return super().eventFilter(watched, event)
+
+    def _set_hovered_row(self, row: int) -> None:
+        if row == self._hovered_row:
+            return
+        self._repaint_row(self._hovered_row)
+        self._hovered_row = row
+        self._combo.setProperty("recycleBinHoveredRow", row)
+        self._repaint_row(row)
+
+    def _repaint_row(self, row: int) -> None:
+        if row < 0:
+            return
+        rect = self._view.visualRect(self._combo.model().index(row, 0))
+        if rect.isValid():
+            self._view.viewport().update(rect)
 
 
 class TitleBarDragRegion(QWidget):

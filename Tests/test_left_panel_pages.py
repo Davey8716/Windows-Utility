@@ -1,12 +1,15 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, QPointF, Qt
+from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPixmap
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QStyle, QStyleOptionViewItem, QWidget
 from types import SimpleNamespace
 
 from resurface.features.screen_mover.hotkeys import VALID_ACTIONS
 from resurface.ui import styles
 from resurface.ui import application_pages
 from resurface.ui.application_pages import ApplicationPageComposer
+from resurface.ui.controllers.theme_controller import ApplicationThemeController
+from resurface.ui.window_chrome import RecycleBinActionsItemDelegate
 from resurface.ui.pages.external_drives_page import ExternalDrivesPage
 from resurface.ui.pages.folder_utilities_page import FolderUtilitiesPage
 from resurface.ui.pages.organising_utilities_page import OrganisingUtilitiesPage
@@ -218,19 +221,22 @@ def test_recycle_bin_cleanup_actions_follow_auto_clean_state():
     _app()
     page = RecycleBinPage({}, lambda _widget, _text: None)
     try:
-        assert page.actions_combo.property("lightModeBlackDisabledText") is True
-        assert page.actions_combo.property("lightModeKeepEnabledBackground") is True
+        assert page.actions_combo.property("recycleBinActionsStyle") is True
+        assert page.actions_combo.property("recycleBinAutoCleanEnabled") is False
         open_index = page.actions_combo.findText("Open Recycle Bin")
         run_index = page.actions_combo.findText("Run Auto-Clean Now")
         empty_index = page.actions_combo.findText("Empty Recycle Bin")
         assert page.actions_combo.model().item(open_index).isEnabled()
         assert not page.actions_combo.model().item(run_index).isEnabled()
         assert not page.actions_combo.model().item(empty_index).isEnabled()
+        assert isinstance(page.actions_combo.view().itemDelegate(), RecycleBinActionsItemDelegate)
 
         page.auto_clean_button.setChecked(True)
+        assert page.actions_combo.property("recycleBinAutoCleanEnabled") is True
         assert page.actions_combo.model().item(open_index).isEnabled()
         assert page.actions_combo.model().item(run_index).isEnabled()
         assert page.actions_combo.model().item(empty_index).isEnabled()
+        assert isinstance(page.actions_combo.view().itemDelegate(), RecycleBinActionsItemDelegate)
 
         page.apply_empty_action_snapshot(False)
         assert page.actions_combo.model().item(empty_index).isEnabled()
@@ -257,6 +263,136 @@ def test_recycle_bin_keeps_all_cleanup_age_choices_available():
         assert page.actions_combo.model().item(run_index).isEnabled()
     finally:
         page.deleteLater()
+
+
+def test_recycle_bin_cleanup_action_colours_survive_live_theme_refresh():
+    app = _app()
+    root = QWidget()
+    page = RecycleBinPage(
+        {"recycle_bin_auto_clean_enabled": True}, lambda _widget, _text: None, root
+    )
+
+    class ThemeTarget:
+        def apply_theme(self):
+            pass
+
+    controller = ApplicationThemeController(
+        root=root,
+        window_chrome=ThemeTarget(),
+        navigation_shell=ThemeTarget(),
+        refresh_master_backup_path=lambda: None,
+        refresh_connected_drives_style=lambda: None,
+    )
+    try:
+        run_index = page.actions_combo.findText("Run Auto-Clean Now")
+        open_index = page.actions_combo.findText("Open Recycle Bin")
+        for is_dark in (False, True):
+            controller.apply_theme(is_dark)
+            assert isinstance(page.actions_combo.view().itemDelegate(), RecycleBinActionsItemDelegate)
+            assert page.actions_combo.itemData(run_index, Qt.ItemDataRole.BackgroundRole) is None
+            assert page.actions_combo.itemData(open_index, Qt.ItemDataRole.BackgroundRole) is None
+            assert page.auto_clean_button.property("dangerToggle") is None
+            assert f"background-color: {styles.themed_button_bg().name()};" in page.auto_clean_button.styleSheet()
+    finally:
+        styles.set_theme(True)
+        root.deleteLater()
+        app.processEvents()
+
+
+def test_recycle_bin_destructive_rows_render_red_with_theme_specific_text():
+    app = _app()
+    page = RecycleBinPage(
+        {"recycle_bin_auto_clean_enabled": True}, lambda _widget, _text: None
+    )
+    try:
+        row = page.actions_combo.findText("Run Auto-Clean Now")
+        index = page.actions_combo.model().index(row, 0)
+        delegate = page.actions_combo.view().itemDelegate()
+        for is_dark, expected_text in ((True, styles.TEXT_LIGHT), (False, QColor(0, 0, 0))):
+            styles.set_theme(is_dark)
+            option = QStyleOptionViewItem()
+            option.rect = page.actions_combo.rect().adjusted(0, 0, 0, -1)
+            option.state = QStyle.StateFlag.State_Enabled
+            pixmap = QPixmap(option.rect.size())
+            pixmap.fill()
+            painter = QPainter(pixmap)
+            delegate.paint(painter, option, index)
+            painter.end()
+            image = pixmap.toImage()
+            assert image.pixelColor(2, 2) == styles.power_action_color("red")
+            assert styles.button_text_color() == expected_text
+            assert any(
+                image.pixelColor(x, y) == expected_text
+                for y in range(image.height())
+                for x in range(image.width())
+            )
+    finally:
+        styles.set_theme(True)
+        page.deleteLater()
+        app.processEvents()
+
+
+def test_recycle_bin_open_action_always_renders_blue():
+    app = _app()
+    for auto_clean_enabled in (False, True):
+        page = RecycleBinPage(
+            {"recycle_bin_auto_clean_enabled": auto_clean_enabled}, lambda _widget, _text: None
+        )
+        try:
+            row = page.actions_combo.findText("Open Recycle Bin")
+            index = page.actions_combo.model().index(row, 0)
+            option = QStyleOptionViewItem()
+            option.rect = page.actions_combo.rect().adjusted(0, 0, 0, -1)
+            option.state = QStyle.StateFlag.State_Enabled
+            pixmap = QPixmap(option.rect.size())
+            pixmap.fill()
+            painter = QPainter(pixmap)
+            page.actions_combo.view().itemDelegate().paint(painter, option, index)
+            painter.end()
+            assert pixmap.toImage().pixelColor(2, 2) == styles.power_action_color("blue")
+        finally:
+            page.deleteLater()
+            app.processEvents()
+
+
+def test_recycle_bin_popup_hover_uses_a_lighter_red():
+    app = _app()
+    styles.set_theme(True)
+    page = RecycleBinPage(
+        {"recycle_bin_auto_clean_enabled": True}, lambda _widget, _text: None
+    )
+    try:
+        page.show()
+        app.processEvents()
+        page.actions_combo.showPopup()
+        app.processEvents()
+        view = page.actions_combo.view()
+        row = page.actions_combo.findText("Run Auto-Clean Now")
+        rect = view.visualRect(page.actions_combo.model().index(row, 0))
+        normal = view.viewport().grab().toImage().pixelColor(rect.x() + 2, rect.y() + 2)
+        QApplication.sendEvent(
+            view.viewport(),
+            QMouseEvent(
+                QEvent.Type.MouseMove,
+                QPointF(rect.center()),
+                QPointF(rect.center()),
+                QPointF(rect.center()),
+                Qt.MouseButton.NoButton,
+                Qt.MouseButton.NoButton,
+                Qt.KeyboardModifier.NoModifier,
+            ),
+        )
+        app.processEvents()
+        hovered = view.viewport().grab().toImage().pixelColor(rect.x() + 2, rect.y() + 2)
+        assert normal == styles.power_action_color("red")
+        assert hovered.name() == styles.power_action_color("red").lighter(112).name()
+        assert page.actions_combo.property("recycleBinHoveredRow") == row
+    finally:
+        page.actions_combo.hidePopup()
+        page.hide()
+        styles.set_theme(True)
+        page.deleteLater()
+        app.processEvents()
 
 
 def test_folder_utilities_delete_requests_current_name_and_is_left_aligned():

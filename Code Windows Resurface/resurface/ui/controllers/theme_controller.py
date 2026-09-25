@@ -16,7 +16,11 @@ from PySide6.QtWidgets import (
 
 from resurface.ui import styles
 from resurface.ui.tooltips import refresh_visible_tooltip
-from resurface.ui.window_chrome import SeverityComboItemDelegate
+from resurface.ui.window_chrome import (
+    RecycleBinActionsItemDelegate,
+    RecycleBinPopupHoverTracker,
+    SeverityComboItemDelegate,
+)
 
 
 def apply_power_action_dropdown_style(combo: QComboBox) -> None:
@@ -40,6 +44,18 @@ def apply_power_action_dropdown_style(combo: QComboBox) -> None:
 
     if not isinstance(combo.itemDelegate(), SeverityComboItemDelegate):
         combo.setItemDelegate(SeverityComboItemDelegate(combo))
+
+
+def apply_recycle_bin_actions_dropdown_style(combo: QComboBox) -> None:
+    """Apply the stateful destructive-action colours to Recycle Bin actions."""
+    font_size = styles.coerce_font_size(combo.property("styleFontSize"), 14) or 14
+    combo.setStyleSheet(styles.power_combo_style(font_size))
+    for row in range(combo.count()):
+        combo.setItemData(row, None, Qt.ItemDataRole.BackgroundRole)
+        combo.setItemData(row, None, Qt.ItemDataRole.ForegroundRole)
+    combo.view().setItemDelegate(RecycleBinActionsItemDelegate(combo))
+    if not hasattr(combo, "_recycle_bin_hover_tracker"):
+        combo._recycle_bin_hover_tracker = RecycleBinPopupHoverTracker(combo)
 
 
 class ApplicationThemeController:
@@ -165,6 +181,8 @@ class ApplicationThemeController:
             ) or 14
             if combo.property("connectedDrivesFieldStyle"):
                 self._refresh_connected_drives_style()
+            elif combo.property("recycleBinActionsStyle"):
+                apply_recycle_bin_actions_dropdown_style(combo)
             elif combo.property("powerActionStyle"):
                 apply_power_action_dropdown_style(combo)
             elif combo.property("surfaceFieldStyle"):
