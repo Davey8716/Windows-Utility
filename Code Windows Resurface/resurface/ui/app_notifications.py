@@ -205,7 +205,10 @@ class WindowMessageMixin:
         message_box.setWindowFlag(Qt.WindowType.Tool, tool_window)
         popup_corner_radius = getattr(message_box, "_popup_corner_radius", None)
         message_box.setStyleSheet(
-            styles.message_box_style(radius=popup_corner_radius)
+            styles.message_box_style(
+                radius=popup_corner_radius,
+                text_color=getattr(message_box, "_text_color", None),
+            )
         )
         return message_box
 
@@ -552,6 +555,7 @@ class WindowMessageMixin:
         popup_corner_radius: int | None = None,
         timeout_verb: str = "close",
         link_activated=None,
+        text_color: QColor | None = None,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
         grouped_boxes = self._get_grouped_timed_message_boxes()
@@ -578,6 +582,7 @@ class WindowMessageMixin:
                             accessory_leading_spacer_width
                         )
                 self._apply_message_box_icon(active_grouped_box, icon)
+                active_grouped_box._text_color = text_color
                 active_grouped_box._timeout_verb = timeout_verb
                 self._refresh_grouped_timed_message(
                     active_grouped_box,
@@ -613,6 +618,7 @@ class WindowMessageMixin:
         self._apply_message_box_icon(message_box, icon)
         message_box.setWindowTitle(title)
         message_box._link_activated = link_activated
+        message_box._text_color = text_color
         if link_activated is not None:
             message_box.setTextFormat(Qt.TextFormat.RichText)
         if merge_group:

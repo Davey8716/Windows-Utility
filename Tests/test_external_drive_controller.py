@@ -112,6 +112,7 @@ def test_snapshot_updates_page_overview_and_connection_notification():
         "merge_group": "external_drive_changes",
         "merge_title": "External Drives",
         "replace_grouped_entries": True,
+        "text_color": styles.TEXT_LIGHT,
     }
 
 
@@ -130,6 +131,7 @@ def test_removed_drive_notification_uses_the_shared_status_options():
         "merge_group": "external_drive_changes",
         "merge_title": "External Drives",
         "replace_grouped_entries": True,
+        "text_color": styles.TEXT_LIGHT,
     }
 
 

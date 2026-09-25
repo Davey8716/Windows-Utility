@@ -65,6 +65,17 @@ def test_all_button_styles_share_the_standard_corner_radius():
     )
 
 
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_title_bar_controls_keep_white_foregrounds_in_both_themes(is_dark):
+    styles.set_theme(is_dark)
+
+    for stylesheet in (
+        styles.title_bar_control_style(),
+        styles.title_bar_control_style(close_button=True),
+    ):
+        assert "color: #ffffff;" in stylesheet
+
+
 @pytest.mark.parametrize(
     ("is_dark", "background", "text", "border"),
     [
@@ -104,6 +115,15 @@ def test_message_box_style_can_omit_its_outer_frame_for_custom_painting():
 
     assert "QMessageBox {" in stylesheet
     assert "border: none;" in stylesheet
+
+
+def test_message_box_style_accepts_a_white_foreground_override():
+    styles.set_theme(False)
+
+    stylesheet = styles.message_box_style(text_color=styles.TEXT_LIGHT)
+
+    assert "QMessageBox QLabel" in stylesheet
+    assert "color: #ffffff;" in stylesheet
 
 
 @pytest.mark.parametrize(
@@ -202,8 +222,8 @@ def test_dropdown_popups_use_valid_point_sized_fonts_without_qt_warning(
 @pytest.mark.parametrize(
     ("is_dark", "power_color", "standard_color", "popup_color", "text_color"),
     [
-        (True, "#2b313c", "#1c66c4", "#222a36", "#ffffff"),
-        (False, "#46515f", "#2d73c8", "#eef2f6", "#111820"),
+        (True, "#1a76d6", "#1c66c4", "#222a36", "#ffffff"),
+        (False, "#2a86e6", "#2d73c8", "#eef2f6", "#ffffff"),
     ],
 )
 def test_power_dropdown_is_charcoal_with_modern_popup_geometry(
@@ -225,11 +245,11 @@ def test_power_dropdown_is_charcoal_with_modern_popup_geometry(
     assert "padding: 6px 10px;" in stylesheet
 
 
-def test_light_mode_placeholder_button_overrides_only_its_disabled_text_color():
+def test_light_mode_placeholder_button_keeps_its_disabled_text_white():
     styles.set_theme(False)
     light_style = styles.organizing_button_style(14)
     assert 'QPushButton[lightModePlaceholderButton="true"]:disabled' in light_style
-    assert "color: #111820;" in light_style
+    assert "color: #ffffff;" in light_style
     assert f"color: {styles.qcolor_css(styles.themed_button_disabled_text())};" in light_style
 
     styles.set_theme(True)
@@ -446,6 +466,17 @@ def test_maintenance_output_and_connected_drives_use_theme_surface_frames(is_dar
     drive_stylesheet = styles.connected_drives_combo_style(14)
     assert f"selection-background-color: {styles.qcolor_css(styles.SURFACE_HOVER)};" in drive_stylesheet
     assert f"border-left: 3px solid {styles.qcolor_css(styles.STATUS_ACCENT)};" in drive_stylesheet
+
+
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_external_drive_output_can_use_white_item_text(is_dark):
+    styles.set_theme(is_dark)
+
+    stylesheet = styles.frame_list_widget_style(
+        "Consolas", 15, text_color=styles.TEXT_LIGHT
+    )
+
+    assert "color: #ffffff;" in stylesheet
 
 
 def test_dropdown_chevron_asset_is_available():

@@ -39,8 +39,11 @@ class ExternalDrivesPage(PageControls):
 
         self._empty_label = QLabel("No Drives Connected")
         self._empty_label.setProperty("surfaceLabelStyle", True)
+        self._empty_label.setProperty("whiteSurfaceLabelStyle", True)
         self._empty_label.setProperty("styleFontSize", 14)
-        self._empty_label.setStyleSheet(styles.surfaced_label_style(14))
+        self._empty_label.setStyleSheet(
+            styles.surfaced_label_style(14, text_color=styles.TEXT_LIGHT)
+        )
         self._empty_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self._empty_label.setFixedSize(width, styles.PAGE_CONTROL_HEIGHT)
 
@@ -56,8 +59,11 @@ class ExternalDrivesPage(PageControls):
 
         label = QLabel("Plug/unplug notifications:")
         label.setProperty("surfaceLabelStyle", True)
+        label.setProperty("whiteSurfaceLabelStyle", True)
         label.setProperty("styleFontSize", 14)
-        label.setStyleSheet(styles.surfaced_label_style(14))
+        label.setStyleSheet(
+            styles.surfaced_label_style(14, text_color=styles.TEXT_LIGHT)
+        )
         label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         label.setFixedSize(width, styles.PAGE_CONTROL_HEIGHT)
         self._notify_combo = QComboBox()

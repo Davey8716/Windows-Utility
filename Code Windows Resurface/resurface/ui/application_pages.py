@@ -469,7 +469,7 @@ class OverviewPage(QWidget):
         backup_path_display = backup_path.replace("\\", "/")
         backup_label = self.status_labels["backup_path"]
         if backup_path:
-            link_color = styles.message_box_link_color().name()
+            link_color = styles.TEXT_LIGHT.name()
             backup_label.setText(
                 f'<a href="open-master-backup" '
                 f'style="color: {link_color}; text-decoration: underline;">'
@@ -483,7 +483,7 @@ class OverviewPage(QWidget):
         app_data_path_display = app_data_path.replace("\\", "/")
         app_data_label = self.status_labels["app_data_path"]
         if app_data_path:
-            link_color = styles.message_box_link_color().name()
+            link_color = styles.TEXT_LIGHT.name()
             app_data_label.setText(
                 f'<a href="open-app-data" '
                 f'style="color: {link_color}; text-decoration: underline;">'

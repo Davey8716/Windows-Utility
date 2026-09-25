@@ -510,6 +510,8 @@ def test_page_renders_text_and_file_records_as_rounded_cards():
             assert f"background-color: {styles.qcolor_css(styles.WINDOW_BG)}" in card.styleSheet()
             assert "border: 1px solid" in card.styleSheet()
             assert "border-radius: 8px" in card.styleSheet()
+            assert "color: #ffffff;" in card.styleSheet()
+        assert "color: #ffffff;" in page.status_label.styleSheet()
     finally:
         page.deleteLater()
         app.processEvents()
@@ -536,7 +538,7 @@ def test_provenance_link_color_tracks_theme():
             label for label in page.findChildren(QLabel)
             if 'href="https://example.com"' in label.text()
         ][-1]
-        assert "color: #111820" in light_link.text()
+        assert "color: #ffffff" in light_link.text()
     finally:
         styles.set_theme(True)
         page.deleteLater()

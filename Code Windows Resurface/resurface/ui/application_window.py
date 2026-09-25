@@ -557,7 +557,7 @@ class UtilityControlApp(
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(QPen(styles.theme_text_color(), 2))
+        painter.setPen(QPen(styles.TEXT_LIGHT, 2))
         if action == "minimize":
             painter.drawLine(3, 11, 13, 11)
         else:

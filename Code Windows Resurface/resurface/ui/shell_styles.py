@@ -6,7 +6,7 @@ from resurface.ui import style_helpers as H
 from resurface.ui import style_tokens as T
 
 def title_bar_control_style(*, close_button: bool = False) -> str:
-    text = H.qcolor_css(T.CURRENT_TEXT)
+    text = H.qcolor_css(T.TEXT_LIGHT)
     hover = H.qcolor_css(QColor(190, 57, 47) if close_button else T.SURFACE_HOVER)
     pressed = H.qcolor_css(QColor(151, 42, 35) if close_button else T.SURFACE_BG)
     return f"""
@@ -101,6 +101,7 @@ def clipboard_provenance_record_card_style() -> str:
         QFrame#ClipboardProvenanceRecordCard QLabel {{
             border: none;
             background: transparent;
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
         }}
     """
 
@@ -229,12 +230,13 @@ def message_box_style(
     radius: int | None = None,
     *,
     outer_frame: bool = True,
+    text_color: QColor | None = None,
 ) -> str:
     radius = T.POPUP_CORNER_RADIUS if radius is None else max(0, int(radius))
     border = H.qcolor_css(T.SURFACE_BORDER)
     background = H.qcolor_css(T.SURFACE_BG)
     hover = H.qcolor_css(T.SURFACE_HOVER)
-    text = H.qcolor_css(T.CURRENT_TEXT)
+    text = H.qcolor_css(text_color or T.CURRENT_TEXT)
     outer_border = (
         f"border: {T.POPUP_BORDER_WIDTH}px solid {border};\n"
         f"            border-radius: {radius}px;"

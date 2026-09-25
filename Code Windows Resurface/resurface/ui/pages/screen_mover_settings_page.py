@@ -131,7 +131,7 @@ class ScreenMoverSettingsPage(PageControls):
         header_layout.setContentsMargins(0, 0, 0, 0)
         title = QLabel("Keyboard Shortcuts", self.shortcuts_header)
         title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        title.setStyleSheet(styles.label_style(font_size=14))
+        title.setStyleSheet(styles.label_style(font_size=14, color=styles.TEXT_LIGHT))
         header_layout.addStretch()
         header_layout.addWidget(title)
         header_layout.addStretch()
@@ -159,7 +159,9 @@ class ScreenMoverSettingsPage(PageControls):
         for row, (action, label_text) in enumerate(ACTION_LABELS.items()):
             label = QLabel(label_text, self.shortcuts_container)
             label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            label.setStyleSheet(styles.label_style(font_size=12))
+            label.setStyleSheet(
+                styles.label_style(font_size=12, color=styles.TEXT_LIGHT)
+            )
             labels.append(label)
             edit = ScreenMoverShortcutEdit(self.shortcuts_container)
             edit.setObjectName("ScreenMoverShortcutEdit")

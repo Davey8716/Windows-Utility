@@ -31,7 +31,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
     if not T.THEME_IS_DARK:
         placeholder_disabled_override = f"""
         QPushButton[lightModePlaceholderButton=\"true\"]:disabled {{
-            color: {H.qcolor_css(T.theme_text_color())};
+            color: {H.qcolor_css(T.button_text_color())};
         }}
         """
         black_disabled_text_override = f"""
@@ -323,13 +323,18 @@ def plain_theme_label_style(font_size: int) -> str:
         }}
     """
 
-def surfaced_label_style(font_size: int = 14) -> str:
+def surfaced_label_style(
+    font_size: int = 14,
+    *,
+    text_color: QColor | None = None,
+) -> str:
+    text_color = text_color or T.theme_text_color()
     return f"""
         QLabel {{
             {H.label_style(
                 font_size=font_size,
                 bold=True,
-                color=T.theme_text_color(),
+                color=text_color,
             )}
             background-color: {H.qcolor_css(T.SURFACE_BG)};
             border: none;
@@ -570,7 +575,7 @@ def connected_drives_combo_style(font_size: int, font_family: str = "Segoe UI") 
         pressed=T.STATUS_ACCENT,
         pressed_hover=T.STATUS_ACCENT,
         border=T.SURFACE_BORDER,
-        text=T.theme_text_color(),
+        text=T.TEXT_LIGHT,
         font_family=font_family,
     )
 
@@ -688,8 +693,14 @@ def surfaced_list_widget_style(font_family: str, font_size: int) -> str:
         )
     )
 
-def frame_list_widget_style(font_family: str, font_size: int) -> str:
+def frame_list_widget_style(
+    font_family: str,
+    font_size: int,
+    *,
+    text_color: QColor | None = None,
+) -> str:
     """Style an interactive list as a standard theme surface frame."""
+    text_color = text_color or T.theme_text_color()
     return (
         """
         QListWidget {
@@ -734,16 +745,16 @@ def frame_list_widget_style(font_family: str, font_size: int) -> str:
             H.label_style(
                 font_size=font_size,
                 bold=True,
-                color=T.theme_text_color(),
+                color=text_color,
                 font_family=font_family,
             ),
             H.qcolor_css(T.SURFACE_BG),
-            H.qcolor_css(T.theme_text_color()),
+            H.qcolor_css(text_color),
             H.qcolor_css(T.SURFACE_BORDER),
             H.qcolor_css(T.SURFACE_HOVER),
-            H.qcolor_css(T.theme_text_color()),
+            H.qcolor_css(text_color),
             H.qcolor_css(T.SURFACE_HOVER),
-            H.qcolor_css(T.theme_text_color()),
+            H.qcolor_css(text_color),
         )
     )
 

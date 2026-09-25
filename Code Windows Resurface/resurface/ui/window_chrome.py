@@ -234,7 +234,9 @@ class WindowChrome:
     def apply_theme(self) -> None:
         app = self.app
         app.window_title_bar.setStyleSheet("QFrame#WindowTitleBar " f"{{ background-color: {styles.qcolor_css(styles.WINDOW_BG)}; }}")
-        app.window_title_label.setStyleSheet(styles.label_style(font_size=25))
+        app.window_title_label.setStyleSheet(
+            styles.label_style(font_size=25, color=styles.TEXT_LIGHT)
+        )
         app.window_minimize_btn.setStyleSheet(styles.title_bar_control_style())
         app.window_minimize_btn.setIcon(app._title_bar_icon("minimize"))
         app.window_close_btn.setStyleSheet(styles.title_bar_control_style(close_button=True))

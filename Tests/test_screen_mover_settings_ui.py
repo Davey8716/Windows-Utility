@@ -753,6 +753,7 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         )
         assert window.window_title_label.text() == "Windows Resurface"
         assert "font-size: 25px" in window.window_title_label.styleSheet()
+        assert "color: #ffffff" in window.window_title_label.styleSheet()
         assert window.window_minimize_btn.parent() is window.window_title_bar
         assert window.window_close_btn.parent() is window.window_title_bar
         assert not window.window_minimize_btn.icon().isNull()
@@ -780,6 +781,8 @@ def test_borderless_title_bar_controls_preserve_window_lifecycle(monkeypatch):
         assert "font-size: 25px" in window.window_title_label.styleSheet()
         assert "font-size: 18px" in window.window_minimize_btn.styleSheet()
         assert "font-size: 18px" in window.window_close_btn.styleSheet()
+        assert "color: #ffffff" in window.window_minimize_btn.styleSheet()
+        assert "color: #ffffff" in window.window_close_btn.styleSheet()
 
         window.window_close_btn.click()
         qt_app.processEvents()
@@ -1438,9 +1441,10 @@ def test_loose_labels_use_sidebar_surface_style_across_themes(monkeypatch):
             expected_border = styles.qcolor_css(styles.SURFACE_BORDER)
             for label, original_size in zip(surfaced, original_sizes):
                 assert f"background-color: {expected_background};" in label.styleSheet()
+                assert "color: #ffffff;" in label.styleSheet()
                 assert "border: none;" in label.styleSheet()
                 assert f"border-bottom: 1px solid {expected_border};" in label.styleSheet()
-                assert "border-radius:" not in label.styleSheet()
+                assert "border-radius: 6px;" in label.styleSheet()
                 assert "padding: 0px 10px;" in label.styleSheet()
                 assert (label.width(), label.height()) == original_size
     finally:
@@ -1738,6 +1742,13 @@ def test_screen_mover_shortcut_controls_align_without_primary_row(monkeypatch):
             if button.text() == "Clear"
         ]
         assert len(shortcut_labels) == len(ACTION_LABELS)
+        assert all("color: #ffffff;" in label.styleSheet() for label in shortcut_labels)
+        shortcut_heading = next(
+            label
+            for label in shortcuts_header.findChildren(QLabel)
+            if label.text() == "Keyboard Shortcuts"
+        )
+        assert "color: #ffffff;" in shortcut_heading.styleSheet()
         assert len(shortcut_edits) == len(ACTION_LABELS)
         assert len(clear_buttons) == len(ACTION_LABELS)
         assert all(

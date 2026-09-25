@@ -148,7 +148,14 @@ class ApplicationThemeController:
                 font_size = styles.coerce_font_size(
                     label.property("styleFontSize"), 14
                 ) or 14
-                label.setStyleSheet(styles.surfaced_label_style(font_size))
+                text_color = (
+                    styles.TEXT_LIGHT
+                    if label.property("whiteSurfaceLabelStyle")
+                    else None
+                )
+                label.setStyleSheet(
+                    styles.surfaced_label_style(font_size, text_color=text_color)
+                )
 
         self._refresh_master_backup_path()
 

@@ -147,6 +147,9 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         self.status_label = QLabel(self.panel)
         self.status_label.setWordWrap(True)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setStyleSheet(
+            styles.label_style(font_size=13, color=styles.TEXT_LIGHT)
+        )
         layout.addWidget(self.status_label)
         self.history_layout = QVBoxLayout()
         self.history_layout.setSpacing(styles.PAGE_CONTROL_ROW_GAP)
@@ -244,7 +247,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
 
     @staticmethod
     def _link_label(url: str, parent: QWidget) -> QLabel:
-        color = styles.message_box_link_color().name()
+        color = styles.TEXT_LIGHT.name()
         label = QLabel(
             f'<a href="{escape(url, quote=True)}" '
             f'style="color: {color}; text-decoration: underline;">{escape(url)}</a>',

@@ -21,8 +21,8 @@ def _app():
 @pytest.mark.parametrize(
     ("is_dark", "expected_colors"),
     [
-        (True, {"blue": "#2468c4", "yellow": "#c4a220", "orange": "#d25f1a", "orange_red": "#c64323", "red": "#b02626"}),
-        (False, {"blue": "#448eec", "yellow": "#e0c44a", "orange": "#ea762a", "orange_red": "#dc5830", "red": "#cc3434"}),
+        (True, {"blue": "#2468c4", "yellow": "#786300", "orange": "#a94b00", "orange_red": "#c64323", "red": "#b02626"}),
+        (False, {"blue": "#2468c4", "yellow": "#786300", "orange": "#a94b00", "orange_red": "#c64323", "red": "#cc3434"}),
     ],
 )
 def test_power_action_palette_is_shared_and_theme_aware(is_dark, expected_colors):
@@ -31,14 +31,11 @@ def test_power_action_palette_is_shared_and_theme_aware(is_dark, expected_colors
         for severity, expected_color in expected_colors.items():
             assert styles.power_action_color(severity).name() == expected_color
 
-        sleep = styles.power_action_color("yellow")
-        shutdown = styles.power_action_color("red")
-        assert styles.power_action_item_foreground("Sleep", sleep) == (
-            styles.TEXT_LIGHT if is_dark else styles.contrasting_text_color(sleep)
-        )
-        assert styles.power_action_item_foreground("Shutdown", shutdown) == (
-            styles.contrasting_text_color(shutdown) if is_dark else styles.TEXT_DARK
-        )
+        for severity in expected_colors:
+            background = styles.power_action_color(severity)
+            assert styles.power_action_item_foreground(severity, background) == (
+                styles.TEXT_LIGHT
+            )
     finally:
         styles.set_theme(True)
 

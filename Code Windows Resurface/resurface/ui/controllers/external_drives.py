@@ -134,6 +134,7 @@ class ExternalDriveController:
             "merge_group": "external_drive_changes",
             "merge_title": "External Drives",
             "replace_grouped_entries": True,
+            "text_color": styles.TEXT_LIGHT,
         }
 
     def open_drive(self, drive_path: str) -> None:
