@@ -24,6 +24,7 @@ def test_shell_owns_ordered_scrollable_page_hosts():
         assert list(shell.page_by_id) == expected_ids
         assert shell.navigation_list.count() == len(expected_ids)
         assert shell.page_stack.count() == len(expected_ids)
+        assert "hover_window_controls" not in expected_ids
         assert shell.navigation_list.item(0).toolTip() == format_tooltip_text(
             shell.page_registry[0]["description"]
         )

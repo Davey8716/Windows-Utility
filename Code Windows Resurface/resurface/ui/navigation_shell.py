@@ -62,12 +62,6 @@ class NavigationShell(QWidget):
         PageDefinition("recycle_bin", "Recycle Bin", "\ue74d", "Open, empty, and automatically clean the Recycle Bin."),
         PageDefinition("windows_utilities", "Windows Utilities", "\ue770", "Open useful Windows settings and management tools."),
         PageDefinition("maintenance", "Maintenance", "\ue90f", "Run quick maintenance, repair, and networking actions."),
-        PageDefinition(
-            "hover_window_controls",
-            "Hover Window Controls",
-            "\ue7f4",
-            "Dwell over window buttons or a taskbar icon to activate its action.",
-        ),
     )
 
     def __init__(

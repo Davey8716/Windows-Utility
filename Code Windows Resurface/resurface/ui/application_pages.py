@@ -37,7 +37,6 @@ from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.pages.drive_space_page import DriveSpacePage
 from resurface.ui.pages.external_drives_page import ExternalDrivesPage
 from resurface.ui.pages.folder_utilities_page import FolderUtilitiesPage
-from resurface.ui.pages.hover_window_controls_page import HoverWindowControlsPage
 from resurface.ui.pages.maintenance_page import MaintenancePage
 from resurface.ui.pages.organising_utilities_page import (
     ORGANISING_UTILITIES_HELP_TEXT,
@@ -565,7 +564,6 @@ class ApplicationPages:
     recycle_bin_page: RecycleBinPage
     windows_utilities_page: WindowsUtilitiesPage
     maintenance_page: MaintenancePage
-    hover_window_controls_page: HoverWindowControlsPage
 
 
 class ApplicationPageComposer:
@@ -735,38 +733,6 @@ class ApplicationPageComposer:
         )
         shell.mount_content("windows_utilities", windows_utilities_page)
 
-        hover_service = app.hover_window_controls
-        hover_page = HoverWindowControlsPage(
-            self.state,
-            app.register_tooltip,
-            taskbar_restore_available=hover_service.taskbar_restore_available,
-            enabled=hover_service.enabled,
-            taskbar_restore_enabled=hover_service.taskbar_restore_enabled,
-            dwell_ms=hover_service.dwell_ms,
-            has_export_changes=hover_service.has_export_changes,
-            clear_available=getattr(
-                hover_service, "clear_learned_buttons_available", True
-            ),
-            parent=shell.content_parent("hover_window_controls"),
-        )
-        hover_page.enabled_changed.connect(hover_service.set_enabled)
-        hover_page.taskbar_restore_enabled_changed.connect(
-            hover_service.set_taskbar_restore_enabled
-        )
-        hover_page.dwell_changed.connect(hover_service.set_dwell_ms)
-        hover_page.calibration_requested.connect(self._calibrate_hover_controls)
-        hover_page.export_requested.connect(self._export_hover_controls)
-        hover_page.import_requested.connect(self._import_hover_controls)
-        hover_page.clear_requested.connect(self._clear_hover_controls_cache)
-        hover_service.settings_changed.connect(hover_page.sync_settings)
-        clear_availability_changed = getattr(
-            hover_service,
-            "clear_learned_buttons_availability_changed",
-            None,
-        )
-        if clear_availability_changed is not None:
-            clear_availability_changed.connect(hover_page.set_clear_available)
-        shell.mount_content("hover_window_controls", hover_page)
         shell.finish_page_layouts()
 
         pages = ApplicationPages(
@@ -783,7 +749,6 @@ class ApplicationPageComposer:
             recycle_bin_page=recycle_bin_page,
             windows_utilities_page=windows_utilities_page,
             maintenance_page=maintenance_page,
-            hover_window_controls_page=hover_page,
         )
         self._register_quick_actions(pages)
         self.quick_actions.finalize()
@@ -924,17 +889,6 @@ class ApplicationPageComposer:
                 for label, callback in recycle_callbacks.items()
             ],
         )
-
-        hover = pages.hover_window_controls_page
-        for action_id, label, widget in (
-            ("hover.enabled", "Hover Controls", hover.enabled_button),
-            ("hover.taskbar_restore", "Taskbar Restoration", hover.taskbar_restore_button),
-            ("hover.calibrate", "Calibrate Application", hover.calibrate_button),
-            ("hover.export", "Export Hover Data", hover.export_button),
-            ("hover.import", "Import Hover Data", hover.import_button),
-            ("hover.clear", "Clear Learned Buttons", hover.clear_button),
-        ):
-            button(action_id, label, widget)
 
         monitor = pages.monitor_rules_page
         for action_id, widget in (

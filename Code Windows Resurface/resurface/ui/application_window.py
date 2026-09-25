@@ -233,7 +233,7 @@ class UtilityControlApp(
                 self.external_drive_controller.apply_connected_drives_style
             ),
             screen_mover_settings_page=self.pages.screen_mover_settings_page,
-            hover_window_controls_page=self.pages.hover_window_controls_page,
+            hover_window_controls_page=None,
             user_interface_page=self.pages.user_interface_page,
             quick_actions_grid=self.pages.quick_actions_page.quick_actions_grid,
             folder_utilities_page=self.pages.folder_utilities_page,

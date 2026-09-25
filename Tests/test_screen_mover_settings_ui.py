@@ -347,7 +347,7 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
             "recycle_bin",
             "windows_utilities",
             "maintenance",
-            "hover_window_controls",
+            "clipboard_provenance",
         ]
         assert len(shell.page_scroll_areas) == 12
         assert all(
@@ -388,213 +388,8 @@ def test_fixed_sidebar_shell_builds_scrollable_pages(monkeypatch):
             shell.page_by_id[page_id].isAncestorOf(content)
             for page_id, content in mounted_content.items()
         )
-        hover_item = shell.navigation_list.item(11)
-        assert hover_item.text() == "Hover Window Controls"
-        assert hover_item.data(Qt.ItemDataRole.UserRole) == "hover_window_controls"
-        window.navigate_to_page("hover_window_controls")
-        hover_page = window.pages.hover_window_controls_page
-        assert hover_page.enabled_button.text() == "Hover Controls On"
-        assert hover_page.taskbar_restore_button.text() == "Taskbar Restoration On"
-        assert not hasattr(hover_page, "caption_controls_button")
-        assert hover_page.dwell_combo.currentData() == 750
-        assert hover_page.calibrate_button.text() == "Calibrate Application…"
-        assert hover_page.import_button.text() == "Import Hover Data…"
-        assert not hasattr(hover_page, "taskbar_status")
-        assert not hover_page.taskbar_restore_button.isEnabled()
-    finally:
-        window._quit_requested = True
-        window.close()
-        window.deleteLater()
-        qt_app.processEvents()
-
-
-def test_hover_controls_primary_toggle_paints_complete_edges_and_keeps_alignment(
-    monkeypatch,
-):
-    qt_app = QApplication.instance() or QApplication([])
-    state = copy.deepcopy(WINDOWS_RESURFACE_DEFAULTS)
-    window = _build_offscreen_window(monkeypatch, state)
-
-    try:
-        window.navigate_to_page("hover_window_controls")
-        window.show()
-        qt_app.processEvents()
-
-        page = window.pages.hover_window_controls_page
-        toggle_row = page.enabled_button.parentWidget()
-        assert toggle_row.width() == page.CONTROL_ROW_WIDTH
-        assert page.enabled_button.x() == 0
-        assert page.taskbar_restore_button.x() == (
-            page.enabled_button.x()
-            + page.enabled_button.width()
-            + page.CONTROL_COLUMN_GAP
-        )
-        assert type(page.enabled_button) is QPushButton
-        assert type(page.taskbar_restore_button) is QPushButton
-        assert page.enabled_button.property("customPaintedButton") is None
-        assert page.taskbar_restore_button.property("customPaintedButton") is None
-        assert page.enabled_button.styleSheet() == page.taskbar_restore_button.styleSheet()
-
-        hover_content = window.navigation_shell.page_by_id["hover_window_controls"]
-        toggle_left = page.enabled_button.mapTo(hover_content, QPoint()).x()
-        toggle_right = (
-            page.taskbar_restore_button.mapTo(hover_content, QPoint()).x()
-            + page.taskbar_restore_button.width()
-        )
-        action_left = page.calibrate_button.mapTo(hover_content, QPoint()).x()
-        action_right = (
-            page.export_button.mapTo(hover_content, QPoint()).x()
-            + page.export_button.width()
-        )
-        assert toggle_left == action_left
-        assert toggle_right == action_right
-
-        def assert_matching_toggle_paint(
-            expected_background: QColor | None,
-            *,
-            is_dark: bool,
-        ) -> None:
-            hover_image = page.enabled_button.grab().toImage()
-            taskbar_image = page.taskbar_restore_button.grab().toImage()
-            center_y = hover_image.height() // 2
-            hover_sample = hover_image.pixelColor(18, center_y)
-            taskbar_sample = taskbar_image.pixelColor(18, center_y)
-            artifact_color = QColor(0, 0, 0) if is_dark else QColor(255, 255, 255)
-            assert page.enabled_button.styleSheet() == page.taskbar_restore_button.styleSheet()
-            assert hover_sample == taskbar_sample
-            if expected_background is not None:
-                assert hover_sample == expected_background
-            assert [
-                hover_image.pixelColor(0, y)
-                for y in range(hover_image.height())
-            ] == [
-                taskbar_image.pixelColor(0, y)
-                for y in range(taskbar_image.height())
-            ]
-            hover_guarded_left_edge = [
-                hover_image.pixelColor(x, y)
-                for x in range(8)
-                for y in range(hover_image.height())
-            ]
-            taskbar_guarded_left_edge = [
-                taskbar_image.pixelColor(x, y)
-                for x in range(8)
-                for y in range(taskbar_image.height())
-            ]
-            assert artifact_color not in hover_guarded_left_edge
-            assert artifact_color not in taskbar_guarded_left_edge
-
-        for is_dark in (False, True):
-            window.apply_theme(is_dark)
-            page.taskbar_restore_button.setEnabled(True)
-            assert page.enabled_button.styleSheet() == page.taskbar_restore_button.styleSheet()
-            page.enabled_button.setAttribute(
-                Qt.WidgetAttribute.WA_UnderMouse,
-                False,
-            )
-            page.taskbar_restore_button.setAttribute(
-                Qt.WidgetAttribute.WA_UnderMouse,
-                False,
-            )
-            page.enabled_button.setChecked(True)
-            page.taskbar_restore_button.setChecked(True)
-            page.enabled_button.setDown(False)
-            page.taskbar_restore_button.setDown(False)
-            page.enabled_button.setEnabled(True)
-            qt_app.processEvents()
-            assert_matching_toggle_paint(styles.themed_button_pressed(), is_dark=is_dark)
-
-            page.enabled_button.setAttribute(
-                Qt.WidgetAttribute.WA_UnderMouse,
-                True,
-            )
-            page.taskbar_restore_button.setAttribute(
-                Qt.WidgetAttribute.WA_UnderMouse,
-                True,
-            )
-            qt_app.processEvents()
-            assert_matching_toggle_paint(
-                None,
-                is_dark=is_dark,
-            )
-
-            page.enabled_button.setChecked(False)
-            page.taskbar_restore_button.setChecked(False)
-            qt_app.processEvents()
-            assert_matching_toggle_paint(None, is_dark=is_dark)
-
-            page.enabled_button.setAttribute(
-                Qt.WidgetAttribute.WA_UnderMouse,
-                False,
-            )
-            page.taskbar_restore_button.setAttribute(
-                Qt.WidgetAttribute.WA_UnderMouse,
-                False,
-            )
-            qt_app.processEvents()
-            assert_matching_toggle_paint(styles.themed_button_bg(), is_dark=is_dark)
-
-            page.enabled_button.setDown(True)
-            page.taskbar_restore_button.setDown(True)
-            qt_app.processEvents()
-            assert_matching_toggle_paint(styles.themed_button_pressed(), is_dark=is_dark)
-            page.enabled_button.setDown(False)
-            page.taskbar_restore_button.setDown(False)
-
-            page.enabled_button.setEnabled(False)
-            page.taskbar_restore_button.setEnabled(False)
-            qt_app.processEvents()
-            disabled_hover_image = page.enabled_button.grab().toImage()
-            disabled_taskbar_image = page.taskbar_restore_button.grab().toImage()
-            center_y = disabled_hover_image.height() // 2
-            disabled_artifact_color = (
-                QColor(0, 0, 0) if is_dark else QColor(255, 255, 255)
-            )
-            disabled_hover_guarded_left_edge = [
-                disabled_hover_image.pixelColor(x, y)
-                for x in range(8)
-                for y in range(disabled_hover_image.height())
-            ]
-            disabled_taskbar_guarded_left_edge = [
-                disabled_taskbar_image.pixelColor(x, y)
-                for x in range(8)
-                for y in range(disabled_taskbar_image.height())
-            ]
-            assert disabled_artifact_color not in disabled_hover_guarded_left_edge
-            assert disabled_artifact_color not in disabled_taskbar_guarded_left_edge
-            assert disabled_hover_image.pixelColor(18, center_y) == (
-                styles.themed_button_disabled_bg()
-            )
-            assert disabled_taskbar_image.pixelColor(18, center_y) == (
-                styles.themed_button_disabled_bg()
-            )
-            assert [
-                disabled_hover_image.pixelColor(0, y)
-                for y in range(disabled_hover_image.height())
-            ] == [
-                disabled_taskbar_image.pixelColor(0, y)
-                for y in range(disabled_taskbar_image.height())
-            ]
-            page.enabled_button.setEnabled(True)
-            page.taskbar_restore_button.setEnabled(True)
-
-            page.enabled_button.setChecked(True)
-            assert page.enabled_button.isChecked()
-            assert page.enabled_button.width() == styles.PAGE_CONTROL_WIDTH
-            assert page.enabled_button.height() == styles.PAGE_CONTROL_HEIGHT
-            assert page.enabled_button.mapTo(hover_content, QPoint()).x() == action_left
-
-        emitted = []
-        page.enabled_changed.connect(emitted.append)
-        page.enabled_button.setChecked(False)
-        QTest.mouseClick(
-            page.enabled_button,
-            Qt.MouseButton.LeftButton,
-            pos=page.enabled_button.rect().center(),
-        )
-        qt_app.processEvents()
-        assert emitted[-1] is True
-        assert page.enabled_button.text() == "Hover Controls On"
+        assert "hover_window_controls" not in shell.page_by_id
+        assert not hasattr(window.pages, "hover_window_controls_page")
     finally:
         window._quit_requested = True
         window.close()
@@ -620,7 +415,6 @@ def test_page_composer_builds_widgets_in_their_final_hosts(monkeypatch):
         "recycle_bin_page": "recycle_bin",
         "windows_utilities_page": "windows_utilities",
         "maintenance_page": "maintenance",
-        "hover_window_controls_page": "hover_window_controls",
     }
     try:
         assert not hasattr(window, "left_page_contents")

@@ -76,6 +76,8 @@ class MaintenancePage(QWidget):
         self._build_output()
         runner.output_reset.connect(self._reset_output)
         runner.output_appended.connect(self._append_output)
+        runner.running_changed.connect(self._set_task_stoppable)
+        runner.stopping_changed.connect(self._set_task_stopping)
         actions.temp_cleanup_admin_required.connect(self._confirm_temp_elevation)
         actions.admin_access_required.connect(self._confirm_integrity_elevation)
         actions.chkdsk_blocked_by_vanguard.connect(self._show_vanguard_chkdsk_warning)
@@ -176,6 +178,21 @@ class MaintenancePage(QWidget):
         )
         self.sidebar_output_clear_btn.clicked.connect(self.clear_output)
         clear_layout.addWidget(self.sidebar_output_clear_btn, 0, Qt.AlignmentFlag.AlignLeft)
+        clear_layout.addSpacing(styles.PAGE_CONTROL_GAP)
+        self.stop_task_button = QPushButton("Stop Task")
+        styles.apply_default_button_size(self.stop_task_button)
+        self.stop_task_button.setProperty("styleFontSize", 14)
+        self.stop_task_button.setProperty("quickActionSeverity", "red")
+        self.stop_task_button.setStyleSheet(
+            styles.power_action_button_style(14, "red", "Stop Task")
+        )
+        self.stop_task_button.setEnabled(self.runner.is_running)
+        self.register_tooltip(
+            self.stop_task_button, tooltip_text("maintenance_stop_task")
+        )
+        self.stop_task_button.clicked.connect(self._confirm_stop_task)
+        clear_layout.addWidget(self.stop_task_button, 0, Qt.AlignmentFlag.AlignLeft)
+        clear_layout.addStretch(1)
         self.page_layout.addWidget(clear_row, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def _add_dropdown(self, layout, row, column, title, action_map):
@@ -233,6 +250,33 @@ class MaintenancePage(QWidget):
     def _set_output_clearable(self, clearable: bool):
         self._has_output_to_clear = bool(clearable)
         self.sidebar_output_clear_btn.setEnabled(self._has_output_to_clear)
+
+    def _set_task_stoppable(self, running: bool):
+        self.stop_task_button.setEnabled(bool(running) and not self.runner.is_stopping)
+
+    def _set_task_stopping(self, stopping: bool):
+        self.stop_task_button.setText("Stopping…" if stopping else "Stop Task")
+        self.stop_task_button.setEnabled(
+            self.runner.is_running and not bool(stopping)
+        )
+
+    def _confirm_stop_task(self):
+        if not self.runner.is_running:
+            return
+        result = self.show_modal_message(
+            QMessageBox.Icon.Warning,
+            "Stop Running Task?",
+            (
+                "Stopping a maintenance task can leave repair or cleanup work incomplete.\n\n"
+                "Stop the current task?"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+            affirmative_button_text="Stop Task",
+            popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+        )
+        if result == QMessageBox.StandardButton.Yes:
+            self.runner.cancel()
 
     def apply_theme(self):
         self.sidebar_output.setStyleSheet(
