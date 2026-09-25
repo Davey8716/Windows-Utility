@@ -46,9 +46,11 @@ class FolderUtilitiesPage(PageControls):
         self._save_name.setProperty("lightModeBlackDisabledText", True)
         self._delete_name = self.style_action_button(QPushButton("Delete Name"))
         self._delete_name.setProperty("lightModeBlackDisabledText", True)
+        self._style_destructive_action(self._delete_name)
         self.register_tooltip(self._delete_name, tooltip_text("delete_name"))
         self._delete_all_names = self.style_action_button(QPushButton("Delete All"))
         self._delete_all_names.setProperty("lightModeBlackDisabledText", True)
+        self._style_destructive_action(self._delete_all_names)
         self.register_tooltip(self._delete_all_names, tooltip_text("delete_all_names"))
 
         self.register_tooltip(self._save_name, "Save this folder name for future use.")
@@ -78,6 +80,14 @@ class FolderUtilitiesPage(PageControls):
         self._delete_all_names.clicked.connect(self.delete_all_names_requested.emit)
         create.setEnabled(False)
         self._save_name.setEnabled(False)
+
+    @staticmethod
+    def _style_destructive_action(button: QPushButton) -> None:
+        """Keep delete actions red through shared theme refreshes."""
+        button.setProperty("quickActionSeverity", "red")
+        button.setStyleSheet(
+            styles.power_action_button_style(14, "red", button.text())
+        )
 
     def refresh_saved_names(self, names: list[str] | None = None) -> None:
         if names is None:
