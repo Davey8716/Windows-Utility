@@ -115,7 +115,7 @@ def test_requested_light_theme_content_keeps_white_foregrounds(is_dark):
     ("is_dark", "background", "text", "border"),
     [
         (True, "#222a36", "#ffffff", "#5d6b7d"),
-        (False, "#e5ecf2", "#111820", "#787878"),
+        (False, "#6a7480", "#ffffff", "#787878"),
     ],
 )
 def test_tooltips_use_rounded_corners_and_theme_colors(
@@ -152,20 +152,30 @@ def test_message_box_style_can_omit_its_outer_frame_for_custom_painting():
     assert "border: none;" in stylesheet
 
 
-def test_message_box_style_accepts_a_white_foreground_override():
+def test_message_box_style_defaults_to_a_white_foreground():
     styles.set_theme(False)
 
-    stylesheet = styles.message_box_style(text_color=styles.TEXT_LIGHT)
+    stylesheet = styles.message_box_style()
 
     assert "QMessageBox QLabel" in stylesheet
     assert "color: #ffffff;" in stylesheet
 
 
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_popup_menus_use_the_shared_surface_and_white_text(is_dark):
+    styles.set_theme(is_dark)
+
+    stylesheet = styles.message_popup_menu_style()
+    surface = styles.qcolor_css(styles.SURFACE_BG)
+    assert f"background-color: {surface};" in stylesheet
+    assert "color: #ffffff;" in stylesheet
+
+
 @pytest.mark.parametrize(
     ("is_dark", "link_color"),
-    [(True, "#ffffff"), (False, "#111820")],
+    [(True, "#ffffff"), (False, "#ffffff")],
 )
-def test_message_box_links_are_white_in_dark_mode_and_black_in_light_mode(
+def test_message_box_links_are_white_in_both_themes(
     is_dark,
     link_color,
 ):

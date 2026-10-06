@@ -247,7 +247,7 @@ def message_box_style(
     border = H.qcolor_css(T.SURFACE_BORDER)
     background = H.qcolor_css(T.SURFACE_BG)
     hover = H.qcolor_css(T.SURFACE_HOVER)
-    text = H.qcolor_css(text_color or T.CURRENT_TEXT)
+    text = H.qcolor_css(text_color or T.TEXT_LIGHT)
     outer_border = (
         f"border: {T.POPUP_BORDER_WIDTH}px solid {border};\n"
         f"            border-radius: {radius}px;"
@@ -285,14 +285,14 @@ def message_box_style(
 
 
 def message_box_link_color() -> QColor:
-    return T.TEXT_LIGHT if T.THEME_IS_DARK else T.TEXT_DARK
+    return T.TEXT_LIGHT
 
 def message_popup_menu_style(radius: int = 10) -> str:
     radius = max(0, int(radius))
     border = H.qcolor_css(T.SURFACE_BORDER)
     background = H.qcolor_css(T.SURFACE_BG)
     hover = H.qcolor_css(T.SURFACE_HOVER)
-    text = H.qcolor_css(T.CURRENT_TEXT)
+    text = H.qcolor_css(T.TEXT_LIGHT)
     return f"""
         QMenu {{
             background-color: {background};

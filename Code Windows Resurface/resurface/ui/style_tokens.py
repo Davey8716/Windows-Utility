@@ -128,10 +128,10 @@ def themed_surface_field_border() -> QColor:
     return PANEL_BORDER if THEME_IS_DARK else SURFACE_BORDER
 
 def tooltip_bg() -> QColor:
-    return SURFACE_BG if THEME_IS_DARK else OFF_WHITE_FIELD_BG
+    return SURFACE_BG
 
 def tooltip_text_color() -> QColor:
-    return CURRENT_TEXT
+    return TEXT_LIGHT
 
 def power_action_title_background_color() -> QColor:
     return QColor(42, 134, 230) if not THEME_IS_DARK else QColor(26, 118, 214)
