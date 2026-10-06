@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from resurface.core.state_manager import save_state
 from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
 from resurface.features.desktop.desktop_icon_layout import (
+    alphabetise_desktop_icon_groups,
     restore_desktop_icon_layout,
     save_desktop_icon_layout,
 )
@@ -599,6 +600,41 @@ class OrganisingActionsController:
                 show_close_now_button=True,
                 text_block_width=360 if count > 0 else None,
             )
+        self.run_with_optional_minimize(action)
+
+    def alphabetise_desktop_groups(self) -> None:
+        answer = self.show_modal_message(
+            self.app._message_box_icon("Question"),
+            "Alphabetise Desktop Groups",
+            "Alphabetise icons within each detected desktop group?\n"
+            "Their groups will stay in place, but icon positions will change.",
+            self.app._message_box_button("Yes") | self.app._message_box_button("Cancel"),
+            self.app._message_box_button("Cancel"),
+        )
+        if answer != self.app._message_box_button("Yes"):
+            return
+
+        def action():
+            try:
+                group_count, icon_count = alphabetise_desktop_icon_groups()
+            except Exception as exc:
+                print(f"[DESKTOP ICONS] Group alphabetisation failed: {exc}")
+                group_count, icon_count = 0, 0
+            icon = "Information" if icon_count > 0 else "Warning"
+            text = (
+                f"Alphabetised {icon_count} icon(s) within {group_count} desktop group(s)."
+                if icon_count > 0
+                else "Could not alphabetise the detected desktop groups."
+            )
+            self.show_timed_message(
+                self.app._message_box_icon(icon),
+                "Desktop Groups",
+                text,
+                show_close_now_button=True,
+                text_block_width=360,
+                center_text_block=True,
+            )
+
         self.run_with_optional_minimize(action)
 
     def export_bookmarks(self) -> None:

@@ -843,6 +843,7 @@ class ApplicationPageComposer:
         organising_callbacks = {
             "Capture Layout": self.app.organising_actions.capture_desktop_layout,
             "Restore Layout": self.app.organising_actions.restore_desktop_layout,
+            "Alphabetise Groups": self.app.organising_actions.alphabetise_desktop_groups,
         }
         registry.register_dropdown(
             organising.desktop_actions_combo,
@@ -1229,6 +1230,7 @@ class ApplicationPageComposer:
             "desktop_screenshot": app.organising_actions.take_desktop_screenshot,
             "capture_layout": app.organising_actions.capture_desktop_layout,
             "restore_layout": app.organising_actions.restore_desktop_layout,
+            "alphabetise_groups": app.organising_actions.alphabetise_desktop_groups,
             "export_bookmarks": app.organising_actions.export_bookmarks,
             "run_bookmark_auto_export_now": app.organising_actions.run_bookmarks_auto_export_now,
             "set_bookmark_auto_export": app.organising_actions.set_bookmark_auto_export,

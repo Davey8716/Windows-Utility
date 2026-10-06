@@ -37,8 +37,12 @@ class OrganisingUtilitiesPage(PageControls):
         self.register_tooltip(screenshot, tooltip_text("desktop_screenshot"))
         self.screenshot_button = screenshot
         desktop = self.make_action_dropdown(
-            " Desktop Actions ", ["Capture Layout", "Restore Layout"],
-            lambda name: self.action_requested.emit({"Capture Layout": "capture_layout", "Restore Layout": "restore_layout"}[name]),
+            " Desktop Actions ", ["Capture Layout", "Restore Layout", "Alphabetise Groups"],
+            lambda name: self.action_requested.emit({
+                "Capture Layout": "capture_layout",
+                "Restore Layout": "restore_layout",
+                "Alphabetise Groups": "alphabetise_groups",
+            }[name]),
         )
         self.register_tooltip(desktop, tooltip_text("capture_desktop_layout"))
         self.desktop_actions_combo = desktop

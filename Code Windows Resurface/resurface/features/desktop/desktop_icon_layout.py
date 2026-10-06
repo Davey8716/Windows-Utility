@@ -195,6 +195,141 @@ def capture_desktop_icon_layout() -> list[dict]:
         except Exception:
             pass
 
+
+def _grid_pitch(coordinates: list[int]) -> int | None:
+    """Return the smallest observed spacing on one Desktop grid axis."""
+    unique_coordinates = sorted(set(coordinates))
+    gaps = [
+        right - left
+        for left, right in zip(unique_coordinates, unique_coordinates[1:])
+        if right > left
+    ]
+    return min(gaps) if gaps else None
+
+
+def desktop_icon_groups(layout: list[dict]) -> list[list[dict]]:
+    """Split positioned icons into clusters separated by at least one grid cell.
+
+    The Desktop has no native concept of manually arranged groups.  We infer
+    them from the blank grid space between icons, which keeps a user's visual
+    clusters intact without inventing persistent group metadata.
+    """
+    if not layout:
+        return []
+
+    x_pitch = _grid_pitch([int(item["x"]) for item in layout])
+    y_pitch = _grid_pitch([int(item["y"]) for item in layout])
+    x_limit = x_pitch * 1.5 if x_pitch is not None else 0
+    y_limit = y_pitch * 1.5 if y_pitch is not None else 0
+    parent = list(range(len(layout)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def join(left: int, right: int) -> None:
+        left_root, right_root = find(left), find(right)
+        if left_root != right_root:
+            parent[right_root] = left_root
+
+    for left_index, left in enumerate(layout):
+        for right_index in range(left_index + 1, len(layout)):
+            right = layout[right_index]
+            if (
+                abs(int(left["x"]) - int(right["x"])) <= x_limit
+                and abs(int(left["y"]) - int(right["y"])) <= y_limit
+            ):
+                join(left_index, right_index)
+
+    groups: dict[int, list[dict]] = {}
+    for index, item in enumerate(layout):
+        groups.setdefault(find(index), []).append(item)
+    return list(groups.values())
+
+
+def grouped_alphabetical_positions(layout: list[dict]) -> list[tuple[int, int]]:
+    """Return target positions that alphabetise each detected group in-place.
+
+    Desktop columns are read from top to bottom before moving to the next
+    column.  The returned list deliberately follows the input ListView order,
+    making it safe to apply directly to the captured icon list.
+    """
+    target_positions: dict[int, tuple[int, int]] = {}
+    item_indices = {id(item): index for index, item in enumerate(layout)}
+    for group in desktop_icon_groups(layout):
+        slots = sorted(group, key=lambda item: (int(item["x"]), int(item["y"])))
+        names = sorted((str(item["name"]) for item in group), key=str.casefold)
+        for slot, name in zip(slots, names):
+            # Match duplicate visible names deterministically in their current
+            # ListView order, rather than collapsing them into one dictionary key.
+            source = next(
+                item for item in group
+                if str(item["name"]) == name and id(item) not in target_positions
+            )
+            target_positions[id(source)] = (int(slot["x"]), int(slot["y"]))
+    return [target_positions[id(item)] for item in layout]
+
+
+def _apply_positions_by_index(positions: list[tuple[int, int]]) -> int:
+    """Apply positions to the current Desktop ListView items in index order."""
+    lv_hwnd = _find_desktop_listview_hwnd()
+    if not lv_hwnd:
+        raise RuntimeError("Desktop ListView not found")
+
+    _, pid = win32process.GetWindowThreadProcessId(lv_hwnd)
+    h_process = win32api.OpenProcess(
+        win32con.PROCESS_VM_OPERATION | win32con.PROCESS_VM_WRITE,
+        False,
+        pid,
+    )
+    remote_point = None
+    applied = 0
+    try:
+        remote_point = kernel32.VirtualAllocEx(
+            h_process.handle, 0, ctypes.sizeof(wintypes.POINT), 0x3000, 0x04
+        )
+        if not remote_point:
+            raise RuntimeError("VirtualAllocEx failed while arranging Desktop icons.")
+
+        count = min(
+            len(positions), win32gui.SendMessage(lv_hwnd, LVM_GETITEMCOUNT, 0, 0)
+        )
+        win32gui.SendMessage(lv_hwnd, win32con.WM_SETREDRAW, 0, 0)
+        for index, (x, y) in enumerate(positions[:count]):
+            point = wintypes.POINT(x, y)
+            if kernel32.WriteProcessMemory(
+                h_process.handle, remote_point, ctypes.byref(point),
+                ctypes.sizeof(point), None,
+            ):
+                win32gui.SendMessage(lv_hwnd, LVM_SETITEMPOSITION32, index, remote_point)
+                applied += 1
+    finally:
+        try:
+            win32gui.SendMessage(lv_hwnd, win32con.WM_SETREDRAW, 1, 0)
+            win32gui.InvalidateRect(lv_hwnd, None, True)
+            win32gui.UpdateWindow(lv_hwnd)
+        except Exception:
+            pass
+        if remote_point:
+            kernel32.VirtualFreeEx(h_process.handle, remote_point, 0, 0x8000)
+        try:
+            win32api.CloseHandle(h_process)
+        except Exception:
+            pass
+    return applied
+
+
+def alphabetise_desktop_icon_groups() -> tuple[int, int]:
+    """Alphabetise each visually separated Desktop icon group in place.
+
+    Returns the number of groups detected and icons repositioned.
+    """
+    layout = capture_desktop_icon_layout()
+    groups = desktop_icon_groups(layout)
+    return len(groups), _apply_positions_by_index(grouped_alphabetical_positions(layout))
+
 def save_desktop_icon_layout(out_path: str) -> int:
     """
     Saves layout to JSON. Returns count of icons captured.

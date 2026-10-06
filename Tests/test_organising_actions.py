@@ -230,6 +230,61 @@ def test_restore_layout_success_uses_a_360px_text_block(monkeypatch):
     ]
 
 
+def test_alphabetise_desktop_groups_confirms_before_rearranging(monkeypatch):
+    app = App()
+    calls = []
+    monkeypatch.setattr(
+        organising_actions,
+        "alphabetise_desktop_icon_groups",
+        lambda: calls.append(True) or (2, 6),
+    )
+    controller = OrganisingActionsController(app, None, None, None)
+    controller.run_with_optional_minimize = lambda action: action()
+
+    controller.alphabetise_desktop_groups()
+
+    assert calls == []
+    assert app.modals == [
+        (
+            "Question",
+            "Alphabetise Desktop Groups",
+            "Alphabetise icons within each detected desktop group?\n"
+            "Their groups will stay in place, but icon positions will change.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+            controller.POPUP_CORNER_RADIUS,
+        )
+    ]
+
+
+def test_alphabetise_desktop_groups_reports_completed_sort(monkeypatch):
+    app = App(answer=QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(
+        organising_actions, "alphabetise_desktop_icon_groups", lambda: (3, 12)
+    )
+    controller = OrganisingActionsController(app, None, None, None)
+    controller.run_with_optional_minimize = lambda action: action()
+
+    controller.alphabetise_desktop_groups()
+
+    assert app.timed_messages == [
+        (
+            (
+                "Information",
+                "Desktop Groups",
+                "Alphabetised 12 icon(s) within 3 desktop group(s).",
+            ),
+            {
+                "timeout_ms": 10_000,
+                "show_close_now_button": True,
+                "text_block_width": 360,
+                "center_text_block": True,
+                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
+            },
+        )
+    ]
+
+
 def test_backup_taskbar_cancelled_before_minimize_or_backup():
     app = App(answer=QMessageBox.StandardButton.Cancel)
     taskbar_service = TaskbarService(BackupResult(count=1, completed=True))
