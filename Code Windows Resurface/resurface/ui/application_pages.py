@@ -677,6 +677,7 @@ class ApplicationPageComposer:
             app._get_master_backup_dir(),
             app.register_tooltip,
             shell.content_parent("organising_utilities"),
+            auto_export_interval=app.state.get("bookmark_auto_export_interval", "off"),
         )
         shell.page_title_help_button("organising_utilities").clicked.connect(
             self._show_organising_utilities_help
@@ -1229,11 +1230,20 @@ class ApplicationPageComposer:
             "capture_layout": app.organising_actions.capture_desktop_layout,
             "restore_layout": app.organising_actions.restore_desktop_layout,
             "export_bookmarks": app.organising_actions.export_bookmarks,
+            "run_bookmark_auto_export_now": app.organising_actions.run_bookmarks_auto_export_now,
+            "set_bookmark_auto_export": app.organising_actions.set_bookmark_auto_export,
             "backup_taskbar": app.organising_actions.backup_taskbar_apps,
             "open_backup_folder": app.organising_actions.open_taskbar_backup_folder,
         }
-        page.action_requested.connect(lambda name: actions[name]())
+        page.action_requested.connect(
+            lambda name: (
+                actions["set_bookmark_auto_export"](name.partition(":")[2])
+                if name.startswith("set_bookmark_auto_export:")
+                else actions[name]()
+            )
+        )
         page.master_backup_path_requested.connect(app._choose_master_backup_dir)
+        app.organising_actions._update_auto_export_page_status()
         app._taskbar_backup_folder_timer = QTimer(app)
         app._taskbar_backup_folder_timer.timeout.connect(app._refresh_taskbar_backup_folder_button)
         app._taskbar_backup_folder_timer.start(1000)

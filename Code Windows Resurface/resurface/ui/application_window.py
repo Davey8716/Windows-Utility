@@ -289,6 +289,7 @@ class UtilityControlApp(
         self._apply_fixed_window_style()
         self.session_event_adapter.register()
         QTimer.singleShot(0, self.recycle_bin_actions.run_auto_cleanup)
+        self.organising_actions.start_bookmark_auto_export_scheduler()
 
     def _apply_fixed_window_style(self):
         hwnd = int(self.winId())
@@ -435,6 +436,7 @@ class UtilityControlApp(
         master_backup_timer = getattr(self, "_master_backup_path_check_timer", None)
         if master_backup_timer is not None:
             master_backup_timer.stop()
+        self.organising_actions.stop_bookmark_auto_export_scheduler()
         self.session_event_adapter.unregister()
         self.external_drive_controller.shutdown()
 

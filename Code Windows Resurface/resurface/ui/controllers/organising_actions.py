@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import inspect
 import os
+from calendar import monthrange
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
@@ -41,12 +43,204 @@ class OrganisingActionsController:
     # to calculate the line breaks.
     MODAL_PATH_TEXT_WIDTH = 280
     TIMED_PATH_TEXT_WIDTH = 270
+    AUTO_EXPORT_INTERVALS = frozenset(("off", "daily", "weekly", "monthly"))
+    AUTO_EXPORT_TIMER_INTERVAL_MS = 60_000
+    AUTO_EXPORT_RETENTION = 10
 
     def __init__(self, app, screenshot_service: ScreenshotService, taskbar_service, explorer_service):
         self.app = app
         self.screenshot_service = screenshot_service
         self.taskbar_service = taskbar_service
         self.explorer_service = explorer_service
+        self._bookmark_auto_export_timer: QTimer | None = None
+        self._bookmark_auto_export_error_shown = False
+
+    @staticmethod
+    def _now_utc() -> datetime:
+        return datetime.now(timezone.utc)
+
+    @staticmethod
+    def _parse_utc_timestamp(value) -> datetime | None:
+        if not isinstance(value, str):
+            return None
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    @staticmethod
+    def _add_calendar_month(value: datetime) -> datetime:
+        month = value.month + 1
+        year = value.year + (month > 12)
+        month = 1 if month > 12 else month
+        day = min(value.day, monthrange(year, month)[1])
+        return value.replace(year=year, month=month, day=day)
+
+    def _bookmark_auto_export_interval(self) -> str:
+        interval = self.app.state.get("bookmark_auto_export_interval", "off")
+        return interval if interval in self.AUTO_EXPORT_INTERVALS else "off"
+
+    def _bookmark_auto_export_is_due(self, now: datetime | None = None) -> bool:
+        interval = self._bookmark_auto_export_interval()
+        if interval == "off":
+            return False
+        last_success = self._parse_utc_timestamp(
+            self.app.state.get("bookmark_auto_export_last_checked_at")
+            or self.app.state.get("bookmark_auto_export_last_success_at")
+        )
+        if last_success is None:
+            return True
+        now = now or self._now_utc()
+        if interval == "daily":
+            return now >= last_success + timedelta(days=1)
+        if interval == "weekly":
+            return now >= last_success + timedelta(days=7)
+        return now >= self._add_calendar_month(last_success)
+
+    def _update_auto_export_page_status(self) -> None:
+        page = getattr(getattr(self.app, "pages", None), "organising_utilities_page", None)
+        if page is not None:
+            page.set_auto_export_status(
+                self._bookmark_auto_export_interval(),
+                self.app.state.get("bookmark_auto_export_last_success_at"),
+            )
+
+    def set_bookmark_auto_export(self, interval: str) -> None:
+        interval = interval if interval in self.AUTO_EXPORT_INTERVALS else "off"
+        self.app.state["bookmark_auto_export_interval"] = interval
+        self._save_state_safely()
+        self._update_auto_export_page_status()
+        if interval != "off":
+            self._run_bookmark_auto_export_if_due()
+
+    def start_bookmark_auto_export_scheduler(self) -> None:
+        if self._bookmark_auto_export_timer is None:
+            timer = QTimer(self.app)
+            timer.setInterval(self.AUTO_EXPORT_TIMER_INTERVAL_MS)
+            timer.timeout.connect(self._run_bookmark_auto_export_if_due)
+            self._bookmark_auto_export_timer = timer
+            timer.start()
+        QTimer.singleShot(0, self._run_bookmark_auto_export_if_due)
+
+    def stop_bookmark_auto_export_scheduler(self) -> None:
+        if self._bookmark_auto_export_timer is not None:
+            self._bookmark_auto_export_timer.stop()
+
+    def _run_bookmark_auto_export_if_due(self) -> None:
+        if self._bookmark_auto_export_is_due():
+            self.run_bookmarks_auto_export()
+
+    def run_bookmarks_auto_export_now(self) -> list[str] | bool:
+        """Force one unattended snapshot without changing the saved schedule."""
+        try:
+            return self.run_bookmarks_auto_export(force=True)
+        finally:
+            self._update_auto_export_page_status()
+
+    def _automatic_bookmark_filename(self, exporter, now: datetime) -> str:
+        local_timestamp = now.astimezone().strftime("%Y-%m-%d_%H-%M-%S")
+        return f"{exporter.export_stem}_Bookmarks_Auto_{local_timestamp}.html"
+
+    def _prune_automatic_bookmark_exports(self, output_dir: Path, exporter) -> None:
+        pattern = f"{exporter.export_stem}_Bookmarks_Auto_*.html"
+        snapshots = sorted(
+            output_dir.glob(pattern), key=lambda path: path.stat().st_mtime, reverse=True
+        )
+        for snapshot in snapshots[self.AUTO_EXPORT_RETENTION:]:
+            try:
+                snapshot.unlink()
+            except OSError:
+                pass
+
+    def _show_bookmark_auto_export_error(self, detail: str) -> None:
+        if self._bookmark_auto_export_error_shown:
+            return
+        self._bookmark_auto_export_error_shown = True
+        self.show_timed_message(
+            self.app._message_box_icon("Warning"), "Bookmark Auto-Export",
+            f"Automatic bookmark export could not run.\n{detail}",
+            show_close_now_button=True,
+        )
+
+    def _show_bookmark_auto_export_success(
+        self, exported: list[str], output_dir: Path
+    ) -> None:
+        count = len(exported)
+        noun = "snapshot" if count == 1 else "snapshots"
+        self.show_timed_message(
+            self.app._message_box_icon("Information"), "Bookmark Auto-Export",
+            f"{count} bookmark {noun} saved to:\n{output_dir}",
+            timeout_ms=5_000,
+            show_close_now_button=True,
+            fixed_popup_width=380,
+            center_text_block=True,
+            anchor_to_tray=True,
+        )
+
+    def run_bookmarks_auto_export(self, *, force: bool = False) -> list[str] | bool:
+        if not getattr(self.app, "has_master_backup_path", lambda: True)():
+            self._show_bookmark_auto_export_error("Set a Master Backup Path and try again.")
+            return False
+        try:
+            output_dir = Path(self.app.get_default_bookmarks_export_dir())
+            output_dir.mkdir(parents=True, exist_ok=True)
+            exporters = BraveBookmarksExporter.supported_exporters()
+            fingerprints = {}
+            for exporter in exporters:
+                fingerprint = exporter.bookmark_fingerprint()
+                if fingerprint is not None:
+                    fingerprints[exporter.export_stem] = fingerprint
+            if not fingerprints:
+                self._show_bookmark_auto_export_error("No supported browser bookmarks were found.")
+                return False
+            now = self._now_utc()
+            previous_fingerprints = self.app.state.get(
+                "bookmark_auto_export_fingerprints", {}
+            )
+            if not isinstance(previous_fingerprints, dict):
+                previous_fingerprints = {}
+            changed_exporters = (
+                [
+                    exporter for exporter in exporters
+                    if exporter.export_stem in fingerprints
+                ]
+                if force
+                else [
+                    exporter for exporter in exporters
+                    if exporter.export_stem in fingerprints
+                    and fingerprints[exporter.export_stem]
+                    != previous_fingerprints.get(exporter.export_stem)
+                ]
+            )
+            if not changed_exporters:
+                self.app.state["bookmark_auto_export_last_checked_at"] = now.isoformat()
+                self._save_state_safely()
+                return []
+            exported: list[str] = []
+            saved_fingerprints = dict(previous_fingerprints)
+            for exporter in changed_exporters:
+                path = output_dir / self._automatic_bookmark_filename(exporter, now)
+                if exporter.export_to_file(str(path)):
+                    exported.append(str(path))
+                    saved_fingerprints[exporter.export_stem] = fingerprints[exporter.export_stem]
+                    self._prune_automatic_bookmark_exports(output_dir, exporter)
+            if not exported:
+                self._show_bookmark_auto_export_error("No bookmark files could be created.")
+                return False
+        except Exception as exc:
+            self._show_bookmark_auto_export_error(str(exc))
+            return False
+        self.app.state["bookmark_auto_export_last_success_at"] = now.isoformat()
+        self.app.state["bookmark_auto_export_last_checked_at"] = now.isoformat()
+        self.app.state["bookmark_auto_export_fingerprints"] = saved_fingerprints
+        self._bookmark_auto_export_error_shown = False
+        self._save_state_safely()
+        self._update_auto_export_page_status()
+        self._show_bookmark_auto_export_success(exported, output_dir)
+        return exported
 
     def should_minimize_after_use(self) -> bool:
         return bool(self.app.state.get("minimize_after_use_enabled", True))
@@ -85,6 +279,7 @@ class OrganisingActionsController:
         text_block_width: int | None = None,
         fixed_popup_width: int | None = None,
         center_text_block: bool = False,
+        anchor_to_tray: bool = False,
     ):
         show_message = self.app._show_timed_message
         try:
@@ -95,15 +290,23 @@ class OrganisingActionsController:
             "timeout_ms": timeout_ms,
             "show_close_now_button": show_close_now_button,
         }
-        if text_block_width is not None and "text_block_width" in params:
+        accepts_kwargs = any(
+            parameter.kind == inspect.Parameter.VAR_KEYWORD
+            for parameter in params.values()
+        )
+        def accepts(name: str) -> bool:
+            return name in params or accepts_kwargs
+        if text_block_width is not None and accepts("text_block_width"):
             options["text_block_width"] = text_block_width
-        if fixed_popup_width is not None and "fixed_popup_width" in params:
+        if fixed_popup_width is not None and accepts("fixed_popup_width"):
             options["fixed_popup_width"] = fixed_popup_width
-        if center_text_block and "center_text_block" in params:
+        if center_text_block and accepts("center_text_block"):
             options["center_text_block"] = True
-        if "popup_corner_radius" in params:
+        if accepts("popup_corner_radius"):
             options["popup_corner_radius"] = self.POPUP_CORNER_RADIUS
-        if "merge_group" in params and "merge_title" in params:
+        if anchor_to_tray and accepts("anchor_to_tray"):
+            options["anchor_to_tray"] = True
+        if not anchor_to_tray and accepts("merge_group") and accepts("merge_title"):
             options.update(
                 merge_group="organizing_utilities",
                 merge_title="General Organising Utilities",

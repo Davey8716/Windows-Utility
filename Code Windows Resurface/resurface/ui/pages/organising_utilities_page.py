@@ -22,7 +22,15 @@ class OrganisingUtilitiesPage(PageControls):
     action_requested = Signal(str)
     master_backup_path_requested = Signal()
 
-    def __init__(self, backup_path: str, register_tooltip, parent=None):
+    AUTO_EXPORT_LABELS = {
+        "off": "Auto-Export: Off",
+        "daily": "Auto-Export: Daily",
+        "weekly": "Auto-Export: Weekly",
+        "monthly": "Auto-Export: Monthly",
+    }
+    AUTO_EXPORT_NOW_LABEL = "Auto-Export: Now"
+
+    def __init__(self, backup_path: str, register_tooltip, parent=None, *, auto_export_interval="off"):
         super().__init__("organising_utilities", register_tooltip, parent)
         screenshot = self.style_action_button(QPushButton("Desktop Screenshot"))
         screenshot.clicked.connect(lambda: self.action_requested.emit("desktop_screenshot"))
@@ -39,6 +47,13 @@ class OrganisingUtilitiesPage(PageControls):
         bookmarks.clicked.connect(lambda: self.action_requested.emit("export_bookmarks"))
         self.register_tooltip(bookmarks, tooltip_text("export_bookmarks"))
         self.bookmarks_button = bookmarks
+        auto_export = self.make_value_dropdown(
+            [self.AUTO_EXPORT_NOW_LABEL, *self.AUTO_EXPORT_LABELS.values()],
+            self.AUTO_EXPORT_LABELS.get(auto_export_interval, self.AUTO_EXPORT_LABELS["off"]),
+        )
+        auto_export.currentTextChanged.connect(self._auto_export_selected)
+        self.register_tooltip(auto_export, tooltip_text("bookmark_auto_export"))
+        self.auto_export_combo = auto_export
         taskbar = self.make_action_dropdown(
             " Taskbar Actions ", ["Backup Taskbar", "Open Backup Folder"],
             lambda name: self.action_requested.emit({"Backup Taskbar": "backup_taskbar", "Open Backup Folder": "open_backup_folder"}[name]),
@@ -46,6 +61,17 @@ class OrganisingUtilitiesPage(PageControls):
         self.register_tooltip(taskbar, tooltip_text("backup_taskbar"))
         self.taskbar_actions_combo = taskbar
         self.add_two_column_control_row(self.content_layout, bookmarks, taskbar)
+        self._auto_export_label = QLabel("Automatic bookmark export:")
+        self.add_two_column_control_row(
+            self.content_layout, self._auto_export_label, auto_export
+        )
+        self._auto_export_label.setProperty("surfaceLabelStyle", True)
+        self._auto_export_label.setProperty("whiteSurfaceLabelStyle", True)
+        self._auto_export_label.setProperty("styleFontSize", 14)
+        self._auto_export_label.setStyleSheet(
+            styles.surfaced_label_style(14, text_color=styles.TEXT_LIGHT)
+        )
+        self._auto_export_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         choose = self.style_action_button(QPushButton("Master Backup Path"))
         choose.clicked.connect(self.master_backup_path_requested.emit)
         self.register_tooltip(choose, tooltip_text("master_backup_path"))
@@ -75,3 +101,25 @@ class OrganisingUtilitiesPage(PageControls):
 
     def path_display_font(self):
         return self._path_label.font()
+
+    def set_auto_export_status(self, interval: str, last_success: str | None) -> None:
+        self.auto_export_combo.blockSignals(True)
+        self.auto_export_combo.setCurrentText(
+            self.AUTO_EXPORT_LABELS.get(interval, self.AUTO_EXPORT_LABELS["off"])
+        )
+        self.auto_export_combo.blockSignals(False)
+        detail = "No automatic export has completed yet."
+        if last_success:
+            detail = f"Last successful automatic export: {last_success}"
+        self.auto_export_combo.setToolTip(
+            tooltip_text("bookmark_auto_export") + "\n\n" + detail
+        )
+
+    def _auto_export_selected(self, text: str) -> None:
+        if text == self.AUTO_EXPORT_NOW_LABEL:
+            self.action_requested.emit("run_bookmark_auto_export_now")
+            return
+        interval = next(
+            key for key, label in self.AUTO_EXPORT_LABELS.items() if label == text
+        )
+        self.action_requested.emit("set_bookmark_auto_export:" + interval)

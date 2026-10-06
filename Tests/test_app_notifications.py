@@ -2,7 +2,7 @@ import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QRect, Qt
 from PySide6.QtWidgets import (
     QApplication,
     QDialogButtonBox,
@@ -22,6 +22,14 @@ from resurface.ui.external_drive_popups import (
 
 class _MessageBoxHost(QWidget, WindowMessageMixin):
     pass
+
+
+class _Screen:
+    def __init__(self, available_geometry):
+        self._available_geometry = available_geometry
+
+    def availableGeometry(self):
+        return self._available_geometry
 
 
 def test_disable_all_confirmation_policy_requires_an_explicit_enabled_preference():
@@ -240,6 +248,28 @@ def test_grouped_timed_message_reapplies_the_usb_accessory_icon():
         button_box = dialog.findChild(QDialogButtonBox)
         assert [button.text() for button in button_box.buttons()] == ["Close now"]
         assert button_box.geometry().center().x() == dialog.rect().center().x()
+    finally:
+        dialog.close()
+        app.processEvents()
+        host.deleteLater()
+
+
+def test_tray_anchored_popup_is_positioned_above_the_tray_and_clamped():
+    app = QApplication.instance() or QApplication([])
+    host = _MessageBoxHost()
+    dialog = QMessageBox(host)
+    dialog.resize(240, 120)
+    screen = _Screen(QRect(0, 0, 1_000, 800))
+    try:
+        host._position_message_above_tray(
+            dialog, QRect(900, 760, 24, 24), screen
+        )
+        assert dialog.pos().x() == 684
+        assert dialog.pos().y() == 632
+
+        host._position_message_above_tray(dialog, QRect(), screen)
+        assert dialog.pos().x() == 747
+        assert dialog.pos().y() == 667
     finally:
         dialog.close()
         app.processEvents()

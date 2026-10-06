@@ -3,7 +3,7 @@ import re
 from typing import Callable
 
 from resurface.ui import styles
-from PySide6.QtCore import QRectF, QSize, Qt, QTimer
+from PySide6.QtCore import QRect, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QPainter,
@@ -12,6 +12,7 @@ from PySide6.QtGui import (
     QPen,
     QPixmap,
     QRegion,
+    QGuiApplication,
 )
 from PySide6.QtWidgets import (
     QDialogButtonBox,
@@ -24,6 +25,35 @@ from PySide6.QtWidgets import (
 
 
 class WindowMessageMixin:
+    def _position_message_above_tray(
+        self,
+        message_box: QMessageBox,
+        tray_geometry: QRect | None = None,
+        screen=None,
+    ) -> None:
+        """Anchor a themed non-modal popup above the app's notification icon."""
+        if tray_geometry is None:
+            tray = getattr(getattr(self, "tray_manager", None), "tray", None)
+            geometry = getattr(tray, "geometry", None)
+            tray_geometry = geometry() if callable(geometry) else QRect()
+        if screen is None and tray_geometry.isValid():
+            screen = QGuiApplication.screenAt(tray_geometry.center())
+        screen = screen or QGuiApplication.primaryScreen()
+        if screen is None:
+            return
+
+        available = screen.availableGeometry()
+        width, height = message_box.width(), message_box.height()
+        if tray_geometry.isValid():
+            x = tray_geometry.right() - width + 1
+            y = tray_geometry.top() - height - 8
+        else:
+            x = available.right() - width - 12
+            y = available.bottom() - height - 12
+        x = max(available.left(), min(x, available.right() - width + 1))
+        y = max(available.top(), min(y, available.bottom() - height + 1))
+        message_box.move(x, y)
+
     def _confirmation_state(self) -> dict:
         """Find the application state for this widget or one of its parents."""
         widget = self
@@ -556,6 +586,7 @@ class WindowMessageMixin:
         timeout_verb: str = "close",
         link_activated=None,
         text_color: QColor | None = None,
+        anchor_to_tray: bool = False,
     ) -> QMessageBox:
         timeout_seconds = max(1, timeout_ms // 1000)
         grouped_boxes = self._get_grouped_timed_message_boxes()
@@ -604,8 +635,11 @@ class WindowMessageMixin:
                 if close_timer is not None:
                     close_timer.start(timeout_ms)
                 active_grouped_box.show()
-                active_grouped_box.raise_()
-                active_grouped_box.activateWindow()
+                if anchor_to_tray:
+                    self._position_message_above_tray(active_grouped_box)
+                else:
+                    active_grouped_box.raise_()
+                    active_grouped_box.activateWindow()
                 QTimer.singleShot(
                     0,
                     lambda box=active_grouped_box: self._apply_rounded_window_mask(box),
@@ -648,6 +682,7 @@ class WindowMessageMixin:
         message_box._show_close_now_button = show_close_now_button
         message_box._popup_corner_radius = popup_corner_radius
         message_box._timeout_verb = timeout_verb
+        message_box._anchor_to_tray = anchor_to_tray
         if accessory_leading_spacer_width:
             message_box._accessory_leading_spacer_width = accessory_leading_spacer_width
         message_box.setStandardButtons(self._message_box_button("NoButton"))
@@ -687,6 +722,8 @@ class WindowMessageMixin:
             message_box.setFixedWidth(fixed_popup_width)
             layout.activate()
             message_box.adjustSize()
+        if anchor_to_tray:
+            self._position_message_above_tray(message_box)
         self._apply_rounded_window_mask(message_box)
         close_timer.start(timeout_ms)
         return message_box

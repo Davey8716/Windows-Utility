@@ -48,6 +48,10 @@ WINDOWS_RESURFACE_DEFAULTS = {
     "master_backup_output_path": str(Path.home()),
     "master_backup_path_unavailable": False,
     "desktop_screenshot_last_dir": str(Path.home()),
+    "bookmark_auto_export_interval": "off",
+    "bookmark_auto_export_last_success_at": None,
+    "bookmark_auto_export_last_checked_at": None,
+    "bookmark_auto_export_fingerprints": {},
 }
 
 # These keys are persisted by Windows Resurface but are intentionally not all

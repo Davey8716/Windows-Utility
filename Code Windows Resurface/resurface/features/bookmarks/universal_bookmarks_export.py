@@ -1,4 +1,5 @@
 import json
+import hashlib
 import os
 import shutil
 import sqlite3
@@ -112,6 +113,30 @@ class BraveBookmarksExporter:
 
     def has_bookmarks(self):
         return bool(self._find_bookmark_sources())
+
+    def bookmark_fingerprint(self):
+        """Return a digest of exportable bookmarks, ignoring unrelated browser data."""
+        sources = self._find_bookmark_sources()
+        if not sources:
+            return None
+
+        lines = [self._netscape_header()]
+        exported_any = False
+        for source_path in sources:
+            try:
+                if self._config.source_kind == "firefox":
+                    exported_any = self._export_firefox_bookmarks(source_path, lines) or exported_any
+                else:
+                    with open(source_path, "r", encoding="utf-8") as bookmarks_file:
+                        data = json.load(bookmarks_file)
+                    exported_any = self._export_chromium_bookmarks(data, lines) or exported_any
+            except Exception:
+                continue
+
+        if not exported_any:
+            return None
+        lines.append("</DL><p>\n")
+        return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
 
     def _netscape_header(self):
         return (

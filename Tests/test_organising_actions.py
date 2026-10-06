@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime, timezone
 
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -94,6 +95,21 @@ class TaskbarService:
     def backup(self, path):
         self.backup_paths.append(path)
         return self.result
+
+
+class BookmarkExporter:
+    export_stem = "TestBrowser"
+    output_filename = "TestBrowser_Bookmarks.html"
+
+    def has_bookmarks(self):
+        return True
+
+    def bookmark_fingerprint(self):
+        return "bookmark-fingerprint"
+
+    def export_to_file(self, path):
+        Path(path).write_text("bookmarks", encoding="utf-8")
+        return True
 
 
 def test_capture_layout_requires_rounded_confirmation(monkeypatch):
@@ -467,6 +483,125 @@ def test_successful_bookmark_export_uses_a_centered_380px_popup():
         <= controller.TIMED_PATH_TEXT_WIDTH
         for line in message_lines[1:]
     )
+
+
+def test_bookmark_auto_export_due_times_are_calendar_based():
+    controller = OrganisingActionsController(App(), None, None, None)
+    now = datetime(2026, 2, 28, 12, tzinfo=timezone.utc)
+    controller.app.state.update({
+        "bookmark_auto_export_interval": "monthly",
+        "bookmark_auto_export_last_success_at": "2026-01-31T12:00:00+00:00",
+    })
+    assert controller._bookmark_auto_export_is_due(now)
+
+    controller.app.state.update({
+        "bookmark_auto_export_interval": "daily",
+        "bookmark_auto_export_last_success_at": "2026-02-27T12:00:01+00:00",
+    })
+    assert not controller._bookmark_auto_export_is_due(now)
+
+    controller.app.state.update({
+        "bookmark_auto_export_interval": "weekly",
+        "bookmark_auto_export_last_success_at": "2026-02-21T12:00:00+00:00",
+    })
+    assert controller._bookmark_auto_export_is_due(now)
+
+
+def test_bookmark_auto_export_creates_snapshot_and_prunes_history(monkeypatch, tmp_path):
+    app = App()
+    app.get_default_bookmarks_export_dir = lambda: str(tmp_path)
+    controller = OrganisingActionsController(app, None, None, None)
+    controller._now_utc = lambda: datetime(2026, 10, 6, 12, tzinfo=timezone.utc)
+    for number in range(10):
+        (tmp_path / f"TestBrowser_Bookmarks_Auto_2026-01-{number + 1:02d}_00-00-00.html").write_text("old")
+    monkeypatch.setattr(
+        organising_actions.BraveBookmarksExporter, "supported_exporters", lambda: [BookmarkExporter()]
+    )
+    monkeypatch.setattr(organising_actions, "save_state", lambda _state: None)
+
+    exported = controller.run_bookmarks_auto_export()
+
+    assert len(exported) == 1
+    snapshots = list(tmp_path.glob("TestBrowser_Bookmarks_Auto_*.html"))
+    assert len(snapshots) == 10
+    assert Path(exported[0]).exists()
+    assert app.state["bookmark_auto_export_last_success_at"] == "2026-10-06T12:00:00+00:00"
+    assert not app.modals
+    assert app.timed_messages[-1] == (
+        (
+            "Information",
+            "Bookmark Auto-Export",
+            f"1 bookmark snapshot saved to:\n{tmp_path}",
+        ),
+        {
+            "timeout_ms": 5_000,
+            "show_close_now_button": True,
+            "fixed_popup_width": 380,
+            "center_text_block": True,
+            "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
+            "anchor_to_tray": True,
+        },
+    )
+
+
+def test_bookmark_auto_export_skips_unchanged_bookmarks(monkeypatch, tmp_path):
+    app = App()
+    app.get_default_bookmarks_export_dir = lambda: str(tmp_path)
+    app.state["bookmark_auto_export_fingerprints"] = {
+        "TestBrowser": "bookmark-fingerprint"
+    }
+    app.state["bookmark_auto_export_last_success_at"] = "2026-10-01T12:00:00+00:00"
+    controller = OrganisingActionsController(app, None, None, None)
+    controller._now_utc = lambda: datetime(2026, 10, 6, 12, tzinfo=timezone.utc)
+    monkeypatch.setattr(
+        organising_actions.BraveBookmarksExporter, "supported_exporters", lambda: [BookmarkExporter()]
+    )
+    monkeypatch.setattr(organising_actions, "save_state", lambda _state: None)
+
+    assert controller.run_bookmarks_auto_export() == []
+    assert not list(tmp_path.glob("TestBrowser_Bookmarks_Auto_*.html"))
+    assert app.state["bookmark_auto_export_last_success_at"] == "2026-10-01T12:00:00+00:00"
+    assert app.state["bookmark_auto_export_last_checked_at"] == "2026-10-06T12:00:00+00:00"
+
+
+def test_bookmark_auto_export_failure_notifies_once_per_session(monkeypatch, tmp_path):
+    app = App()
+    app.get_default_bookmarks_export_dir = lambda: str(tmp_path)
+    controller = OrganisingActionsController(app, None, None, None)
+    monkeypatch.setattr(
+        organising_actions.BraveBookmarksExporter, "supported_exporters", lambda: []
+    )
+
+    assert controller.run_bookmarks_auto_export() is False
+    assert controller.run_bookmarks_auto_export() is False
+
+    assert len(app.timed_messages) == 1
+    assert "bookmark_auto_export_last_success_at" not in app.state
+
+
+def test_selecting_bookmark_auto_export_persists_and_runs_initial_export(monkeypatch):
+    app = App()
+    controller = OrganisingActionsController(app, None, None, None)
+    calls = []
+    controller._run_bookmark_auto_export_if_due = lambda: calls.append(True)
+    monkeypatch.setattr(organising_actions, "save_state", lambda _state: None)
+
+    controller.set_bookmark_auto_export("weekly")
+
+    assert app.state["bookmark_auto_export_interval"] == "weekly"
+    assert calls == [True]
+
+
+def test_bookmark_auto_export_now_does_not_change_saved_schedule():
+    app = App()
+    app.state["bookmark_auto_export_interval"] = "weekly"
+    controller = OrganisingActionsController(app, None, None, None)
+    force_values = []
+    controller.run_bookmarks_auto_export = lambda *, force: force_values.append(force) or ["snapshot.html"]
+
+    assert controller.run_bookmarks_auto_export_now() == ["snapshot.html"]
+    assert force_values == [True]
+    assert app.state["bookmark_auto_export_interval"] == "weekly"
 
 
 def test_successful_screenshot_wraps_long_directory_and_filename_paths(monkeypatch):
