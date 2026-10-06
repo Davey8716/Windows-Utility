@@ -45,7 +45,9 @@ class OrganisingUtilitiesPage(PageControls):
         self.add_two_column_control_row(self.content_layout, screenshot, desktop)
         bookmarks = self.style_action_button(QPushButton("Export Bookmarks"))
         bookmarks.clicked.connect(lambda: self.action_requested.emit("export_bookmarks"))
-        self.register_tooltip(bookmarks, tooltip_text("export_bookmarks"))
+        self._bookmarks_tooltip_manager = self.register_tooltip(
+            bookmarks, tooltip_text("export_bookmarks")
+        )
         self.bookmarks_button = bookmarks
         auto_export = self.make_value_dropdown(
             [self.AUTO_EXPORT_NOW_LABEL, *self.AUTO_EXPORT_LABELS.values()],
@@ -87,6 +89,7 @@ class OrganisingUtilitiesPage(PageControls):
         self._path_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         self.add_two_column_control_row(self.content_layout, choose, self._path_label)
         self.set_backup_path(backup_path)
+        self.set_auto_export_status(auto_export_interval, None)
 
     def set_backup_path(self, path: str, *, unavailable: bool = False) -> None:
         self._path_label.setText(path)
@@ -114,6 +117,19 @@ class OrganisingUtilitiesPage(PageControls):
         self.auto_export_combo.setToolTip(
             tooltip_text("bookmark_auto_export") + "\n\n" + detail
         )
+        automatic_export_enabled = interval in {"daily", "weekly", "monthly"}
+        self.bookmarks_button.setEnabled(not automatic_export_enabled)
+        bookmark_tooltip = (
+            "Manual bookmark export is disabled while Auto-Export is active. "
+            "Choose Auto-Export: Now to create a forced test snapshot."
+            if automatic_export_enabled
+            else tooltip_text("export_bookmarks")
+        )
+        manager = self._bookmarks_tooltip_manager
+        if manager is not None and hasattr(manager, "set_text"):
+            manager.set_text(bookmark_tooltip)
+        else:
+            self.bookmarks_button.setToolTip(bookmark_tooltip)
 
     def _auto_export_selected(self, text: str) -> None:
         if text == self.AUTO_EXPORT_NOW_LABEL:

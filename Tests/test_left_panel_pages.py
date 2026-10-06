@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 from resurface.features.screen_mover.hotkeys import VALID_ACTIONS
 from resurface.ui import styles
+from resurface.ui.tooltips import tooltip_text
 from resurface.ui import application_pages
 from resurface.ui.application_pages import ApplicationPageComposer
 from resurface.ui.controllers.theme_controller import ApplicationThemeController
@@ -61,6 +62,23 @@ def test_master_backup_path_display_never_has_a_tooltip():
         page.set_backup_path("C:\\Updated Backups")
 
         assert page._path_label.toolTip() == ""
+    finally:
+        page.deleteLater()
+
+
+def test_bookmark_manual_export_is_disabled_when_auto_export_is_enabled():
+    _app()
+    page = OrganisingUtilitiesPage(
+        "C:\\Backups", lambda _widget, _text: None, auto_export_interval="weekly"
+    )
+    try:
+        assert not page.bookmarks_button.isEnabled()
+        assert "Auto-Export: Now" in page.bookmarks_button.toolTip()
+
+        page.set_auto_export_status("off", None)
+
+        assert page.bookmarks_button.isEnabled()
+        assert page.bookmarks_button.toolTip() == tooltip_text("export_bookmarks")
     finally:
         page.deleteLater()
 
