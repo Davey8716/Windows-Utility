@@ -4,7 +4,10 @@ from PySide6.QtGui import QColor
 
 TEXT_LIGHT = QColor(255, 255, 255)
 TEXT_DARK = QColor(17, 24, 32)
-OFF_WHITE_FIELD_BG = QColor(245, 245, 240)
+# The light theme uses quiet blue-grey surfaces instead of pure/off-white.
+# This keeps the app comfortable to look at over long sessions, while fields
+# still have a clear, slightly lighter separation from their containers.
+OFF_WHITE_FIELD_BG = QColor(229, 236, 242)
 
 WINDOW_BG = QColor(23, 27, 36)
 SURFACE_BG = QColor(34, 42, 54)
@@ -64,9 +67,9 @@ def set_theme(is_dark: bool) -> None:
         CURRENT_TEXT = TEXT_LIGHT
     else:
         THEME_IS_DARK = False
-        WINDOW_BG = QColor(221, 227, 234)
-        SURFACE_BG = QColor(238, 242, 246)
-        SURFACE_HOVER = QColor(203, 216, 231)
+        WINDOW_BG = QColor(91, 101, 112)
+        SURFACE_BG = QColor(106, 116, 128)
+        SURFACE_HOVER = QColor(120, 131, 143)
         SURFACE_BORDER = QColor(126, 142, 160)
         CURRENT_TEXT = TEXT_DARK
 

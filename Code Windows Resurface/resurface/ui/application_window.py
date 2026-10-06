@@ -534,6 +534,7 @@ class UtilityControlApp(
             center_text_block=True,
             fixed_popup_width=410,
             popup_corner_radius=6,
+            text_color=styles.TEXT_LIGHT,
         )
 
     def _open_folder_utilities(self) -> None:

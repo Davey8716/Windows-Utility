@@ -6,7 +6,7 @@ from resurface.ui import style_helpers as H
 from resurface.ui import style_tokens as T
 
 def title_bar_control_style(*, close_button: bool = False) -> str:
-    text = H.qcolor_css(T.TEXT_LIGHT)
+    text = H.qcolor_css(T.theme_text_color())
     hover = H.qcolor_css(QColor(190, 57, 47) if close_button else T.SURFACE_HOVER)
     pressed = H.qcolor_css(QColor(151, 42, 35) if close_button else T.SURFACE_BG)
     return f"""
@@ -47,7 +47,7 @@ def page_title_help_button_style() -> str:
     """
 
 def page_description_style() -> str:
-    return H.label_style(font_size=14, bold=False, color=T.TEXT_LIGHT)
+    return H.label_style(font_size=14, bold=False, color=T.theme_text_color())
 
 def page_section_heading_style() -> str:
     return H.label_style(font_size=17, bold=True, color=T.TEXT_LIGHT)
@@ -101,9 +101,13 @@ def clipboard_provenance_record_card_style() -> str:
         QFrame#ClipboardProvenanceRecordCard QLabel {{
             border: none;
             background: transparent;
-            color: {H.qcolor_css(T.TEXT_LIGHT)};
+            color: {H.qcolor_css(T.theme_text_color())};
         }}
     """
+
+def clipboard_provenance_empty_state_style() -> str:
+    """Keep the Clipboard Provenance empty-state message visible in light mode."""
+    return H.label_style(font_size=14, bold=False, color=T.TEXT_LIGHT)
 
 def monitor_rule_card_style() -> str:
     return f"""
@@ -136,9 +140,16 @@ def monitor_rule_title_style() -> str:
         }}
     """
 
+def monitor_rule_detail_style() -> str:
+    """Style monitor-rule card details independently of general descriptions."""
+    return H.label_style(font_size=14, bold=False, color=T.TEXT_LIGHT)
+
 def navigation_list_style() -> str:
-    selected = QColor(43, 68, 98) if T.THEME_IS_DARK else QColor(202, 222, 244)
-    hover = QColor(38, 48, 63) if T.THEME_IS_DARK else QColor(226, 234, 243)
+    selected = QColor(43, 68, 98) if T.THEME_IS_DARK else QColor(93, 104, 116)
+    selected_border = (
+        T.STATUS_ACCENT if T.THEME_IS_DARK else QColor(80, 90, 101)
+    )
+    hover = QColor(38, 48, 63) if T.THEME_IS_DARK else T.SURFACE_HOVER
     return f"""
         QListWidget#NavigationList {{
             background-color: {H.qcolor_css(T.SURFACE_BG)};
@@ -165,7 +176,7 @@ def navigation_list_style() -> str:
         QListWidget#NavigationList::item:selected {{
             background-color: {H.qcolor_css(selected)};
             color: {H.qcolor_css(T.TEXT_LIGHT)};
-            border-left: 3px solid {H.qcolor_css(T.STATUS_ACCENT)};
+            border-left: 3px solid {H.qcolor_css(selected_border)};
         }}
     """
 

@@ -192,6 +192,7 @@ class ClipboardProvenancePage(WindowMessageMixin, QWidget):
         if not history:
             empty = QLabel("No clipboard provenance has been recorded yet.", self.panel)
             empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty.setStyleSheet(styles.clipboard_provenance_empty_state_style())
             self.history_layout.addWidget(empty)
             return
         for record in reversed(history):

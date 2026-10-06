@@ -815,6 +815,7 @@ def test_organising_utilities_help_uses_the_reviewed_modal_copy():
     )
     assert kwargs["minimum_popup_width"] == 500
     assert kwargs["text_minimum_width"] == 430
+    assert kwargs["text_color"] == styles.TEXT_LIGHT
 
 
 def test_external_drives_page_uses_shared_control_spacing():

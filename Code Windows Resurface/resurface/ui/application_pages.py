@@ -1260,6 +1260,7 @@ class ApplicationPageComposer:
             minimum_popup_width=500,
             text_minimum_width=430,
             popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+            text_color=styles.TEXT_LIGHT,
         )
 
     def _wire_recycle_bin_page(self, page: RecycleBinPage) -> None:

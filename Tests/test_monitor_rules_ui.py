@@ -85,7 +85,7 @@ def test_monitor_rules_help_button_opens_reviewed_theme_aware_dialog(
         on_rules_changed=lambda _rules: None,
     )
     try:
-        for is_dark, expected_surface in ((True, "#222a36"), (False, "#eef2f6")):
+        for is_dark, expected_surface in ((True, "#222a36"), (False, "#6a7480")):
             monitor_rules_ui.styles.set_theme(is_dark)
             page.apply_theme()
             assert expected_surface in page.help_button.styleSheet()
@@ -106,7 +106,8 @@ def test_monitor_rules_help_button_opens_reviewed_theme_aware_dialog(
                 == monitor_rules_ui.styles.BUTTON_CORNER_RADIUS
             )
             assert dialog.styleSheet() == monitor_rules_ui.styles.message_box_style(
-                radius=monitor_rules_ui.styles.BUTTON_CORNER_RADIUS
+                radius=monitor_rules_ui.styles.BUTTON_CORNER_RADIUS,
+                text_color=monitor_rules_ui.styles.TEXT_LIGHT,
             )
             app.processEvents()
             assert not dialog.mask().isEmpty()
@@ -465,7 +466,7 @@ def test_exact_application_path_is_clickable_escaped_and_uses_existing_color(
             .findChild(QLabel, "MonitorRuleDetails")
         )
         detail_text = detail_label.text()
-        muted_color = monitor_rules_ui.styles.theme_muted_text_color().name()
+        link_color = monitor_rules_ui.styles.TEXT_LIGHT.name()
         displayed_path = page.rules[0]["executable_path"]
 
         assert detail_label.textFormat() == Qt.TextFormat.RichText
@@ -476,8 +477,8 @@ def test_exact_application_path_is_clickable_escaped_and_uses_existing_color(
         assert detail_label.textInteractionFlags() & Qt.TextInteractionFlag.TextSelectableByMouse
         assert 'href="open-application-directory"' in detail_text
         assert escape(displayed_path) in detail_text
-        assert f"color: {muted_color}; text-decoration: underline;" in detail_text
-        assert muted_color in detail_label.styleSheet()
+        assert f"color: {link_color}; text-decoration: underline;" in detail_text
+        assert link_color in detail_label.styleSheet()
         assert "<br>Target: Monitor 2<br>Placement: Keep current size" in detail_text
         assert "<br>Reapply if moved: Disabled" in detail_text
 

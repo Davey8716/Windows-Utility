@@ -26,7 +26,7 @@ def restore_dark_theme():
     ("is_dark", "window_color", "surface_color", "button_color", "button_text"),
     [
         (True, "#171b24", "#222a36", "#1c66c4", "#ffffff"),
-        (False, "#dde3ea", "#eef2f6", "#2d73c8", "#ffffff"),
+        (False, "#5b6570", "#6a7480", "#2d73c8", "#ffffff"),
     ],
 )
 def test_shared_palette_uses_darker_canvas_and_blue_controls(
@@ -66,12 +66,47 @@ def test_all_button_styles_share_the_standard_corner_radius():
 
 
 @pytest.mark.parametrize("is_dark", [True, False])
-def test_title_bar_controls_keep_white_foregrounds_in_both_themes(is_dark):
+def test_title_bar_controls_use_the_current_theme_foreground(is_dark):
     styles.set_theme(is_dark)
 
     for stylesheet in (
         styles.title_bar_control_style(),
         styles.title_bar_control_style(close_button=True),
+    ):
+        assert f"color: {styles.qcolor_css(styles.theme_text_color())};" in stylesheet
+
+
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_primary_page_titles_keep_white_foregrounds_in_both_themes(is_dark):
+    styles.set_theme(is_dark)
+
+    assert "color: #ffffff;" in styles.page_title_style()
+
+
+def test_light_theme_sidebar_uses_white_text_and_a_subtle_selected_tab():
+    styles.set_theme(False)
+
+    navigation = styles.navigation_list_style()
+    assert "color: #ffffff;" in navigation
+    assert "background-color: #5d6874;" in navigation
+    assert "border-left: 3px solid #505a65;" in navigation
+    assert "color: #ffffff;" in styles.sidebar_about_licensing_button_style()
+    assert "color: #ffffff;" in styles.sidebar_version_label_style()
+
+
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_requested_light_theme_content_keeps_white_foregrounds(is_dark):
+    styles.set_theme(is_dark)
+
+    for stylesheet in (
+        styles.page_section_heading_style(),
+        styles.page_title_help_button_style(),
+        styles.monitor_rules_help_button_style(),
+        styles.summary_label_style(),
+        styles.summary_value_style(),
+        styles.monitor_rule_title_style(),
+        styles.monitor_rule_detail_style(),
+        styles.clipboard_provenance_empty_state_style(),
     ):
         assert "color: #ffffff;" in stylesheet
 
@@ -80,7 +115,7 @@ def test_title_bar_controls_keep_white_foregrounds_in_both_themes(is_dark):
     ("is_dark", "background", "text", "border"),
     [
         (True, "#222a36", "#ffffff", "#5d6b7d"),
-        (False, "#f5f5f0", "#111820", "#787878"),
+        (False, "#e5ecf2", "#111820", "#787878"),
     ],
 )
 def test_tooltips_use_rounded_corners_and_theme_colors(
@@ -243,7 +278,7 @@ def test_dropdown_popups_use_valid_point_sized_fonts_without_qt_warning(
     ("is_dark", "power_color", "standard_color", "popup_color", "text_color"),
     [
         (True, "#1a76d6", "#1c66c4", "#222a36", "#ffffff"),
-        (False, "#2a86e6", "#2d73c8", "#eef2f6", "#ffffff"),
+        (False, "#2a86e6", "#2d73c8", "#6a7480", "#ffffff"),
     ],
 )
 def test_power_dropdown_is_charcoal_with_modern_popup_geometry(
@@ -295,7 +330,7 @@ def test_styles_facade_exposes_live_theme_tokens_after_theme_changes():
 
     assert styles.THEME_IS_DARK is False
     assert styles.WINDOW_BG is style_tokens.WINDOW_BG
-    assert "background-color: #dde3ea;" in styles.window_style()
+    assert "background-color: #5b6570;" in styles.window_style()
 
     styles.set_theme(True)
 
@@ -524,7 +559,7 @@ def test_folder_creator_uses_shared_palette_and_modern_combo_rules():
         folder_styles.set_theme(False)
         stylesheet = folder_styles._application_stylesheet()
 
-        assert "background-color: #dde3ea;" in stylesheet
+        assert "background-color: #5b6570;" in stylesheet
         assert "background-color: #2d73c8;" in stylesheet
         assert "border-radius: 6px;" in stylesheet
         assert "width: 28px;" in stylesheet

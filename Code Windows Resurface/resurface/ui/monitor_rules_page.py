@@ -317,7 +317,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
     @staticmethod
     def _set_rule_detail_text(detail_label: QLabel, rule: dict) -> None:
         details = MonitorRulesPage._rule_detail_lines(rule)
-        detail_label.setStyleSheet(styles.page_description_style())
+        detail_label.setStyleSheet(styles.monitor_rule_detail_style())
         executable_path = str(rule["executable_path"])
         if rule["match_exact_path"] and executable_path:
             link_color = styles.TEXT_LIGHT.name()
@@ -358,6 +358,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             minimum_popup_width=520,
             text_minimum_width=450,
             popup_corner_radius=styles.BUTTON_CORNER_RADIUS,
+            text_color=styles.TEXT_LIGHT,
         )
 
     def _available_devices(self) -> set[str]:

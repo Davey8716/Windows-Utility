@@ -160,6 +160,7 @@ def test_about_licensing_dialog_uses_current_version_and_close_button():
         "center_text_block": True,
         "fixed_popup_width": 410,
         "popup_corner_radius": 6,
+        "text_color": styles.TEXT_LIGHT,
     }
 
 
@@ -182,7 +183,7 @@ def test_organising_utilities_title_has_a_theme_aware_help_button():
 
         styles.set_theme(False)
         shell.apply_theme()
-        assert "#eef2f6" in button.styleSheet()
+        assert "#6a7480" in button.styleSheet()
     finally:
         styles.set_theme(True)
         shell.deleteLater()

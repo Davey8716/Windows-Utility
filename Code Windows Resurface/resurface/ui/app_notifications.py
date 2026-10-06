@@ -520,6 +520,7 @@ class WindowMessageMixin:
         popup_corner_radius: int | None = None,
         link_activated: Callable[[str], None] | None = None,
         affirmative_button_text: str | None = None,
+        text_color: QColor | None = None,
     ) -> int:
         suppressed_result = self._affirmative_confirmation_result(buttons)
         if suppressed_result is not None:
@@ -531,6 +532,7 @@ class WindowMessageMixin:
         self._apply_message_box_icon(message_box, icon)
         message_box.setWindowTitle(title)
         message_box._link_activated = link_activated
+        message_box._text_color = text_color
         if link_activated is not None:
             message_box.setTextFormat(Qt.TextFormat.RichText)
         message_box.setText(text)
