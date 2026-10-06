@@ -330,12 +330,16 @@ def test_folder_creator_path_displays_use_surfaced_labels_in_both_themes(tmp_pat
         "assert output_left >= 0 and output_left + window.base_path_line.width() <= window.width(); "
         "assert window.build_buttons_frame.isVisible() and window.base_path_column.isVisible(); "
         "assert all(path.property('surfaceLabelStyle') for path in paths); "
+        "assert all(path.property('whiteSurfaceLabelStyle') for path in paths); "
         "assert not any(path.property('plainThemeLabelStyle') for path in paths); "
         "assert all(path.property('styleFontSize') == 14 for path in paths)\n"
+        "titles = (window.template_path_title, window.base_path_title)\n"
+        "assert all(title.property('whiteThemeLabelStyle') for title in titles)\n"
         "for is_dark in (True, False):\n"
         " window.apply_theme(is_dark)\n"
         " app.processEvents()\n"
-        " assert all(path.styleSheet() == styles.surfaced_label_style(14) for path in paths)\n"
+        " assert all(path.styleSheet() == styles.surfaced_label_style(14, force_white=True) for path in paths)\n"
+        " assert all(title.styleSheet() == styles.white_theme_label_style(14) for title in titles)\n"
         "print('FOLDER_CREATOR_SURFACED_PATHS_READY')"
     )
 
@@ -436,6 +440,70 @@ def test_folder_creator_uses_black_disabled_control_text_in_light_mode(tmp_path)
 
     assert result.returncode == 0, result.stderr
     assert "FOLDER_CREATOR_LIGHT_DISABLED_TEXT_READY" in result.stdout
+
+
+def test_folder_creator_keeps_requested_light_theme_foregrounds_white(tmp_path):
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env["LOCALAPPDATA"] = str(tmp_path)
+    env["USERPROFILE"] = str(tmp_path)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    command = (
+        "from PySide6.QtWidgets import QApplication\n"
+        "from folder_creator.ui import styles\n"
+        "from folder_creator.ui.main_window import MainWindow\n"
+        "app = QApplication([])\n"
+        "window = MainWindow()\n"
+        "window.apply_theme(False)\n"
+        "assert '#ffffff' in window.title_label.styleSheet()\n"
+        "assert '#ffffff' in window.section_navigation.styleSheet()\n"
+        "assert all(not window.section_navigation.item(index).icon().isNull() for index in range(window.section_navigation.count()))\n"
+        "targets = (window.add_folder_btn, window.add_subfolder_btn, window.expand_tree_btn, window.return_to_resurface_btn)\n"
+        "assert all(button.property('fluentIconForceWhite') is True for button in targets)\n"
+        "assert window.file_dropdown.property('fluentItemIcons')[0][2] is True\n"
+        "assert '#ffffff' in window.base_path_title.styleSheet()\n"
+        "assert '#ffffff' in window.template_path_title.styleSheet()\n"
+        "assert '#ffffff' in window.base_path_line.styleSheet()\n"
+        "assert '#ffffff' in window.template_path_line.styleSheet()\n"
+        "window_action_targets = (window.minimize_after_build_toggle, window.close_app_after_build_toggle)\n"
+        "assert all(button.property('windowActionIconForceWhite') is True for button in window_action_targets)\n"
+        "title_bar_targets = (window.window_minimize_btn, window.window_close_btn)\n"
+        "for button in targets:\n"
+        " image = button.icon().pixmap(button.iconSize()).toImage()\n"
+        " colors = [image.pixelColor(x, y) for x in range(image.width()) for y in range(image.height()) if image.pixelColor(x, y).alpha() > 0]\n"
+        " assert colors and all(color.red() == 255 and color.green() == 255 and color.blue() == 255 for color in colors)\n"
+        "for button in window_action_targets:\n"
+        " image = button.icon().pixmap(button.iconSize()).toImage()\n"
+        " colors = [image.pixelColor(x, y) for x in range(image.width()) for y in range(image.height()) if image.pixelColor(x, y).alpha() > 0]\n"
+        " assert colors and all(color.red() == 255 and color.green() == 255 and color.blue() == 255 for color in colors)\n"
+        "for button in title_bar_targets:\n"
+        " image = button.icon().pixmap(button.iconSize()).toImage()\n"
+        " colors = [image.pixelColor(x, y) for x in range(image.width()) for y in range(image.height()) if image.pixelColor(x, y).alpha() > 0]\n"
+        " assert colors and all(color.red() == 255 and color.green() == 255 and color.blue() == 255 for color in colors)\n"
+        "image = window.file_dropdown.itemIcon(0).pixmap(window.file_dropdown.iconSize()).toImage()\n"
+        "colors = [image.pixelColor(x, y) for x in range(image.width()) for y in range(image.height()) if image.pixelColor(x, y).alpha() > 0]\n"
+        "assert colors and all(color.red() == 255 and color.green() == 255 and color.blue() == 255 for color in colors)\n"
+        "window.apply_theme(True)\n"
+        "window.apply_theme(False)\n"
+        "assert all(button.property('fluentIconForceWhite') is True for button in targets)\n"
+        "assert all(button.property('windowActionIconForceWhite') is True for button in window_action_targets)\n"
+        "assert all('#ffffff' in path.styleSheet() for path in (window.base_path_line, window.template_path_line))\n"
+        "assert '#ffffff' in styles.title_label_style() and '#ffffff' in styles.navigation_list_style()\n"
+        "print('FOLDER_CREATOR_WHITE_LIGHT_THEME_FOREGROUNDS_READY')"
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", command],
+        cwd=FOLDER_CREATOR_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "FOLDER_CREATOR_WHITE_LIGHT_THEME_FOREGROUNDS_READY" in result.stdout
 
 
 def test_folder_creator_top_control_buttons_keep_12px_font_across_themes(tmp_path):

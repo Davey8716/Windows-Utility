@@ -142,14 +142,20 @@ class OutputOptionsPanel:
         self.base_path_title.setFixedSize(PATH_DISPLAY_WIDTH, 40)
         self.base_path_title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.base_path_title.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        self.base_path_title.setProperty("whiteThemeLabelStyle", True)
+        self.base_path_title.setProperty("styleFontSize", 14)
+        self.base_path_title.setStyleSheet(styles.white_theme_label_style(14))
         self.base_path_line = PathDisplayLabel()
         self.base_path_line.setPlaceholderText(
             "Select base directory for output folder location"
         )
         self.base_path_line.setFixedSize(PATH_DISPLAY_WIDTH, 40)
         self.base_path_line.setProperty("surfaceLabelStyle", True)
+        self.base_path_line.setProperty("whiteSurfaceLabelStyle", True)
         self.base_path_line.setProperty("styleFontSize", 14)
-        self.base_path_line.setStyleSheet(styles.surfaced_label_style(14))
+        self.base_path_line.setStyleSheet(
+            styles.surfaced_label_style(14, force_white=True)
+        )
         self.base_path_line.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.base_path_line.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         path_layout.addWidget(self.base_path_title)

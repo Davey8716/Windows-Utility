@@ -437,7 +437,9 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         self.return_to_resurface_btn.setAccessibleName("Return to Windows Resurface")
         self.return_to_resurface_btn.setProperty("styleFontSize", self.CONTROL_FONT_SIZE)
         self.return_to_resurface_btn.setFixedHeight(40)
-        styles.apply_fluent_icon(self.return_to_resurface_btn, "\ue72b")
+        styles.apply_fluent_icon(
+            self.return_to_resurface_btn, "\ue72b", force_white=True
+        )
         self.return_to_resurface_btn.clicked.connect(self._return_to_windows_resurface)
         sidebar_layout.addWidget(self.return_to_resurface_btn)
 
@@ -623,7 +625,7 @@ class MainWindow(WindowMessageMixin, QMainWindow):
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(QPen(styles.theme_text_color(), 2))
+        painter.setPen(QPen(styles.resurface_styles.TEXT_LIGHT, 2))
         if action == "minimize":
             painter.drawLine(3, 11, 13, 11)
         else:
@@ -773,7 +775,19 @@ class MainWindow(WindowMessageMixin, QMainWindow):
                 font_size = styles.resurface_styles.coerce_font_size(
                     label.property("styleFontSize"), 14
                 ) or 14
-                label.setStyleSheet(styles.surfaced_label_style(font_size))
+                label.setStyleSheet(
+                    styles.surfaced_label_style(
+                        font_size,
+                        force_white=bool(
+                            label.property("whiteSurfaceLabelStyle")
+                        ),
+                    )
+                )
+            elif label.property("whiteThemeLabelStyle"):
+                font_size = styles.resurface_styles.coerce_font_size(
+                    label.property("styleFontSize"), 14
+                ) or 14
+                label.setStyleSheet(styles.white_theme_label_style(font_size))
             elif label.property("plainThemeLabelStyle"):
                 label.setStyleSheet(styles.plain_theme_label_style(15))
         for combo in self.findChildren(QComboBox):

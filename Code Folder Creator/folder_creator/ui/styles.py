@@ -54,8 +54,10 @@ def theme_text_color() -> QColor:
     return QColor(TEXT_COLOR)
 
 
-def create_fluent_icon(glyph: str, icon_size: int = 16) -> QIcon:
-    """Create a theme-aware Windows Fluent icon for a control."""
+def create_fluent_icon(
+    glyph: str, icon_size: int = 16, *, force_white: bool = False
+) -> QIcon:
+    """Create a Windows Fluent icon, optionally with a fixed white foreground."""
     pixmap = QPixmap(icon_size, icon_size)
     pixmap.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pixmap)
@@ -63,19 +65,16 @@ def create_fluent_icon(glyph: str, icon_size: int = 16) -> QIcon:
     font = QFont("Segoe Fluent Icons")
     font.setPixelSize(icon_size)
     painter.setFont(font)
-    painter.setPen(theme_text_color())
+    painter.setPen(resurface_styles.TEXT_LIGHT if force_white else theme_text_color())
     painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
     painter.end()
     return QIcon(pixmap)
 
 
 def create_navigation_icon(glyph: str, icon_size: int = 18) -> QIcon:
-    """Create normal and selected variants for a navigation-list glyph."""
+    """Create white normal and selected variants for a navigation-list glyph."""
     icon = QIcon()
-    for mode, color in (
-        (QIcon.Mode.Normal, resurface_styles.theme_muted_text_color()),
-        (QIcon.Mode.Selected, resurface_styles.STATUS_ACCENT),
-    ):
+    for mode in (QIcon.Mode.Normal, QIcon.Mode.Selected):
         pixmap = QPixmap(icon_size + 4, icon_size + 4)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
@@ -83,7 +82,7 @@ def create_navigation_icon(glyph: str, icon_size: int = 18) -> QIcon:
         font = QFont("Segoe Fluent Icons")
         font.setPixelSize(icon_size)
         painter.setFont(font)
-        painter.setPen(color)
+        painter.setPen(resurface_styles.TEXT_LIGHT)
         painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, glyph)
         painter.end()
         icon.addPixmap(pixmap, mode)
@@ -105,7 +104,7 @@ def navigation_list_style() -> str:
     return f"""
         QListWidget#FolderCreatorNavigationList {{
             background: transparent;
-            color: {qcolor_css(TEXT_COLOR)};
+            color: {qcolor_css(resurface_styles.TEXT_LIGHT)};
             border: none;
             outline: none;
             padding: 8px 6px;
@@ -125,7 +124,7 @@ def navigation_list_style() -> str:
         }}
         QListWidget#FolderCreatorNavigationList::item:selected {{
             background-color: {qcolor_css(selected)};
-            color: {qcolor_css(TEXT_COLOR)};
+            color: {qcolor_css(resurface_styles.TEXT_LIGHT)};
             border-left: 3px solid {qcolor_css(resurface_styles.STATUS_ACCENT)};
         }}
     """
@@ -166,21 +165,32 @@ def control_page_style() -> str:
     """
 
 
-def apply_fluent_icon(button: QPushButton, glyph: str, icon_size: int = 16) -> None:
+def apply_fluent_icon(
+    button: QPushButton,
+    glyph: str,
+    icon_size: int = 16,
+    *,
+    force_white: bool = False,
+) -> None:
     """Attach an icon and retain its metadata for theme refreshes."""
     button.setProperty("fluentIconGlyph", glyph)
     button.setProperty("fluentIconSize", icon_size)
+    button.setProperty("fluentIconForceWhite", force_white)
     button.setIconSize(QSize(icon_size, icon_size))
-    button.setIcon(create_fluent_icon(glyph, icon_size))
+    button.setIcon(create_fluent_icon(glyph, icon_size, force_white=force_white))
 
 
-def create_window_action_icon(action: str, icon_size: int = 16) -> QIcon:
+def create_window_action_icon(
+    action: str, icon_size: int = 16, *, force_white: bool = False
+) -> QIcon:
     """Create consistently sized minimize and close glyphs for action buttons."""
     pixmap = QPixmap(icon_size, icon_size)
     pixmap.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-    pen = QPen(theme_text_color())
+    pen = QPen(
+        resurface_styles.TEXT_LIGHT if force_white else theme_text_color()
+    )
     pen.setWidthF(max(1.25, icon_size / 10))
     pen.setCapStyle(Qt.PenCapStyle.SquareCap)
     painter.setPen(pen)
@@ -201,24 +211,40 @@ def create_window_action_icon(action: str, icon_size: int = 16) -> QIcon:
 
 
 def apply_window_action_icon(
-    button: QPushButton, action: str, icon_size: int = 16
+    button: QPushButton,
+    action: str,
+    icon_size: int = 16,
+    *,
+    force_white: bool = False,
 ) -> None:
     """Attach a fixed-bounds window action icon that survives theme refreshes."""
     button.setProperty("windowActionIcon", action)
     button.setProperty("windowActionIconSize", icon_size)
+    button.setProperty("windowActionIconForceWhite", force_white)
     button.setIconSize(QSize(icon_size, icon_size))
-    button.setIcon(create_window_action_icon(action, icon_size))
+    button.setIcon(
+        create_window_action_icon(
+            action, icon_size, force_white=force_white
+        )
+    )
 
 
 def apply_fluent_item_icon(
-    combo: QComboBox, index: int, glyph: str, icon_size: int = 16
+    combo: QComboBox,
+    index: int,
+    glyph: str,
+    icon_size: int = 16,
+    *,
+    force_white: bool = False,
 ) -> None:
     """Attach a Fluent icon to a combo-box item and preserve it across themes."""
     item_icons = dict(combo.property("fluentItemIcons") or {})
-    item_icons[index] = (glyph, icon_size)
+    item_icons[index] = (glyph, icon_size, force_white)
     combo.setProperty("fluentItemIcons", item_icons)
     combo.setIconSize(QSize(icon_size, icon_size))
-    combo.setItemIcon(index, create_fluent_icon(glyph, icon_size))
+    combo.setItemIcon(
+        index, create_fluent_icon(glyph, icon_size, force_white=force_white)
+    )
 
 
 def refresh_fluent_icons(widget) -> None:
@@ -227,16 +253,34 @@ def refresh_fluent_icons(widget) -> None:
         window_action = button.property("windowActionIcon")
         if window_action:
             icon_size = int(button.property("windowActionIconSize") or 16)
-            apply_window_action_icon(button, str(window_action), icon_size)
+            apply_window_action_icon(
+                button,
+                str(window_action),
+                icon_size,
+                force_white=bool(button.property("windowActionIconForceWhite")),
+            )
             continue
         glyph = button.property("fluentIconGlyph")
         if glyph:
             icon_size = int(button.property("fluentIconSize") or 16)
-            apply_fluent_icon(button, glyph, icon_size)
+            apply_fluent_icon(
+                button,
+                glyph,
+                icon_size,
+                force_white=bool(button.property("fluentIconForceWhite")),
+            )
     for combo in widget.findChildren(QComboBox):
         item_icons = combo.property("fluentItemIcons") or {}
-        for index, (glyph, icon_size) in item_icons.items():
-            combo.setItemIcon(index, create_fluent_icon(glyph, int(icon_size)))
+        for index, icon_details in item_icons.items():
+            glyph, icon_size, *force_white = icon_details
+            combo.setItemIcon(
+                index,
+                create_fluent_icon(
+                    glyph,
+                    int(icon_size),
+                    force_white=bool(force_white and force_white[0]),
+                ),
+            )
 
 
 def tree_placeholder_color() -> QColor:
@@ -248,7 +292,7 @@ def title_label_style() -> str:
         QLabel {{
             background: transparent;
             border: none;
-            color: {qcolor_css(TEXT_COLOR)};
+            color: {qcolor_css(resurface_styles.TEXT_LIGHT)};
             font-family: "Segoe UI";
             font-size: 20px;
             font-weight: 1000;
@@ -270,12 +314,27 @@ def status_label_style() -> str:
     )
 
 
+def white_theme_label_style(font_size: int) -> str:
+    """Return a transparent label style with a fixed white foreground."""
+    return resurface_styles.label_style(
+        font_size=font_size,
+        bold=True,
+        color=resurface_styles.TEXT_LIGHT,
+        font_family="Segoe UI",
+    )
+
+
 def plain_theme_label_style(font_size: int) -> str:
     return resurface_styles.plain_theme_label_style(font_size)
 
 
-def surfaced_label_style(font_size: int = 14) -> str:
-    return resurface_styles.surfaced_label_style(font_size)
+def surfaced_label_style(
+    font_size: int = 14, *, force_white: bool = False
+) -> str:
+    return resurface_styles.surfaced_label_style(
+        font_size,
+        text_color=resurface_styles.TEXT_LIGHT if force_white else None,
+    )
 
 
 def plain_display_line_edit_style(font_size: int) -> str:

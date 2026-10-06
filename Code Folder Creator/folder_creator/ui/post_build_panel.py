@@ -24,8 +24,12 @@ class PostBuildPanel:
         self.open_folder_build_toggle = QPushButton("Open Dir After Build")
         self.minimize_after_build_toggle = QPushButton("Minmize After Build")
         self.close_app_after_build_toggle = QPushButton("Close After Build")
-        styles.apply_window_action_icon(self.minimize_after_build_toggle, "minimize")
-        styles.apply_window_action_icon(self.close_app_after_build_toggle, "close")
+        styles.apply_window_action_icon(
+            self.minimize_after_build_toggle, "minimize", force_white=True
+        )
+        styles.apply_window_action_icon(
+            self.close_app_after_build_toggle, "close", force_white=True
+        )
         self.minimize_after_build_toggle.setProperty("postBuildActionButton", True)
         self.close_app_after_build_toggle.setProperty("postBuildActionButton", True)
         for button in (

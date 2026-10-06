@@ -88,8 +88,10 @@ class TreeEditorPanel:
 
         self.add_folder_btn = QPushButton("Add Folder")
         self.add_subfolder_btn = QPushButton("Add Subfolder")
-        styles.apply_fluent_icon(self.add_folder_btn, "\ue710")
-        styles.apply_fluent_icon(self.add_subfolder_btn, "\ue8b7")
+        styles.apply_fluent_icon(self.add_folder_btn, "\ue710", force_white=True)
+        styles.apply_fluent_icon(
+            self.add_subfolder_btn, "\ue8b7", force_white=True
+        )
         self.remove_btn = QPushButton("Remove Selected")
         self.remove_all_btn = QPushButton("Remove All")
         for button in (
@@ -133,7 +135,7 @@ class TreeEditorPanel:
         self.expand_folders_collapse_btn = QPushButton("Expand Folders")
         self.sort_btn = QPushButton("Sort A/Z")
         self.find_btn = QPushButton("Find")
-        styles.apply_fluent_icon(self.expand_tree_btn, "\ue740")
+        styles.apply_fluent_icon(self.expand_tree_btn, "\ue740", force_white=True)
         styles.apply_fluent_icon(self.expand_folders_collapse_btn, "\ue70d")
         styles.apply_fluent_icon(self.sort_btn, "\ue8cb")
         styles.apply_fluent_icon(self.find_btn, "\ue721")
@@ -207,7 +209,7 @@ class TreeEditorPanel:
         )
         dropdown.setFixedSize(180, styles.DEFAULT_BUTTON_HEIGHT)
         dropdown.setObjectName("FolderCreatorAddBlankDropdown")
-        styles.apply_fluent_item_icon(dropdown, 0, "\ue8a5")
+        styles.apply_fluent_item_icon(dropdown, 0, "\ue8a5", force_white=True)
         dropdown.setProperty("styleFontSize", 12)
         # Keep the active blue treatment, but use the button palette across
         # both disabled segments when no folder is available to receive a file.
