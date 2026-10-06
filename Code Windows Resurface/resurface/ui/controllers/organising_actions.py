@@ -14,6 +14,8 @@ from resurface.core.state_manager import save_state
 from resurface.features.bookmarks.universal_bookmarks_export import BraveBookmarksExporter
 from resurface.features.desktop.desktop_icon_layout import (
     alphabetise_desktop_icon_groups,
+    capture_desktop_icon_layout,
+    desktop_icon_groups_are_alphabetised,
     restore_desktop_icon_layout,
     save_desktop_icon_layout,
 )
@@ -55,6 +57,7 @@ class OrganisingActionsController:
         self.explorer_service = explorer_service
         self._bookmark_auto_export_timer: QTimer | None = None
         self._bookmark_auto_export_error_shown = False
+        self._alphabetise_groups_monitor_timer: QTimer | None = None
 
     @staticmethod
     def _now_utc() -> datetime:
@@ -108,6 +111,44 @@ class OrganisingActionsController:
                 self._bookmark_auto_export_interval(),
                 self.app.state.get("bookmark_auto_export_last_success_at"),
             )
+
+    def _set_alphabetise_groups_available(self, available: bool) -> bool:
+        page = getattr(getattr(self.app, "pages", None), "organising_utilities_page", None)
+        if page is None or not hasattr(page, "set_alphabetise_groups_available"):
+            return False
+        page.set_alphabetise_groups_available(available)
+        return True
+
+    def _start_alphabetise_groups_monitor(self) -> None:
+        if self._alphabetise_groups_monitor_timer is not None:
+            return
+        if not self._set_alphabetise_groups_available(False):
+            return
+        timer = QTimer()
+        timer.setInterval(1_000)
+        timer.timeout.connect(self._check_alphabetise_groups_state)
+        self._alphabetise_groups_monitor_timer = timer
+        timer.start()
+
+    def _stop_alphabetise_groups_monitor(self, *, make_available: bool) -> None:
+        timer = self._alphabetise_groups_monitor_timer
+        if timer is not None:
+            timer.stop()
+        self._alphabetise_groups_monitor_timer = None
+        if make_available:
+            self._set_alphabetise_groups_available(True)
+
+    def _check_alphabetise_groups_state(self) -> None:
+        try:
+            is_alphabetised = desktop_icon_groups_are_alphabetised(
+                capture_desktop_icon_layout()
+            )
+        except Exception as exc:
+            print(f"[DESKTOP ICONS] Could not check group alphabetisation: {exc}")
+            self._stop_alphabetise_groups_monitor(make_available=True)
+            return
+        if not is_alphabetised:
+            self._stop_alphabetise_groups_monitor(make_available=True)
 
     def set_bookmark_auto_export(self, interval: str) -> None:
         interval = interval if interval in self.AUTO_EXPORT_INTERVALS else "off"
@@ -626,6 +667,8 @@ class OrganisingActionsController:
                 if icon_count > 0
                 else "Could not alphabetise the detected desktop groups."
             )
+            if icon_count > 0:
+                self._start_alphabetise_groups_monitor()
             self.show_timed_message(
                 self.app._message_box_icon(icon),
                 "Desktop Groups",
@@ -635,7 +678,7 @@ class OrganisingActionsController:
                 center_text_block=True,
             )
 
-        self.run_with_optional_minimize(action)
+        action()
 
     def export_bookmarks(self) -> None:
         if not self._require_master_backup_path():

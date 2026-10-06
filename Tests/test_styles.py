@@ -177,6 +177,26 @@ def test_standard_dropdown_categories_share_modern_blue_treatment(
     assert "font-size: 14px;" not in stylesheet
 
 
+def test_dark_dropdown_marks_applied_alphabetisation_with_a_charcoal_disabled_row():
+    styles.set_theme(True)
+
+    stylesheet = styles.organizing_combo_style(14)
+
+    assert 'QComboBox[alphabetiseGroupsApplied="true"] QAbstractItemView::item:disabled' in stylesheet
+    assert "background-color: #5A5A5A;" in stylesheet
+    assert "color: #ffffff;" in stylesheet
+
+
+def test_light_dropdown_marks_applied_alphabetisation_with_grey_wording():
+    styles.set_theme(False)
+
+    stylesheet = styles.organizing_combo_style(14)
+
+    assert 'QComboBox[alphabetiseGroupsApplied="true"] QAbstractItemView::item:disabled' in stylesheet
+    assert "background-color: #D6D6D6;" in stylesheet
+    assert "color: #666666;" in stylesheet
+
+
 @pytest.mark.parametrize(
     "style_factory",
     [

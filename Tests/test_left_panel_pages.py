@@ -83,6 +83,29 @@ def test_bookmark_manual_export_is_disabled_when_auto_export_is_enabled():
         page.deleteLater()
 
 
+def test_alphabetise_groups_dropdown_entry_can_be_disabled_independently():
+    _app()
+    page = OrganisingUtilitiesPage("C:\\Backups", lambda _widget, _text: None)
+    try:
+        combo = page.desktop_actions_combo
+        alphabetise_row = combo.findText("Alphabetise Groups")
+        assert combo.model().item(alphabetise_row).isEnabled()
+
+        page.set_alphabetise_groups_available(False)
+
+        assert not combo.model().item(alphabetise_row).isEnabled()
+        assert combo.model().item(combo.findText("Capture Layout")).isEnabled()
+        assert combo.model().item(combo.findText("Restore Layout")).isEnabled()
+        assert combo.property("alphabetiseGroupsApplied") is True
+
+        page.set_alphabetise_groups_available(True)
+
+        assert combo.model().item(alphabetise_row).isEnabled()
+        assert combo.property("alphabetiseGroupsApplied") is False
+    finally:
+        page.deleteLater()
+
+
 def test_disable_all_confirmations_defaults_off_and_emits_changes():
     _app()
     changes = []

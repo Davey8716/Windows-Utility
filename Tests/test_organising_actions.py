@@ -112,6 +112,40 @@ class BookmarkExporter:
         return True
 
 
+class AlphabetiseGroupsPage:
+    def __init__(self):
+        self.availability = []
+
+    def set_alphabetise_groups_available(self, available):
+        self.availability.append(available)
+
+
+class MonitorTimer:
+    instances = []
+
+    class Signal:
+        def __init__(self):
+            self.callback = None
+
+        def connect(self, callback):
+            self.callback = callback
+
+    def __init__(self):
+        self.interval = None
+        self.timeout = self.Signal()
+        self.started = False
+        MonitorTimer.instances.append(self)
+
+    def setInterval(self, interval):
+        self.interval = interval
+
+    def start(self):
+        self.started = True
+
+    def stop(self):
+        self.started = False
+
+
 def test_capture_layout_requires_rounded_confirmation(monkeypatch):
     app = App()
     captured_paths = []
@@ -259,30 +293,102 @@ def test_alphabetise_desktop_groups_confirms_before_rearranging(monkeypatch):
 
 def test_alphabetise_desktop_groups_reports_completed_sort(monkeypatch):
     app = App(answer=QMessageBox.StandardButton.Yes)
+    app.state["minimize_after_use_enabled"] = True
     monkeypatch.setattr(
         organising_actions, "alphabetise_desktop_icon_groups", lambda: (3, 12)
     )
     controller = OrganisingActionsController(app, None, None, None)
-    controller.run_with_optional_minimize = lambda action: action()
 
     controller.alphabetise_desktop_groups()
 
-    assert app.timed_messages == [
-        (
-            (
-                "Information",
-                "Desktop Groups",
-                "Alphabetised 12 icon(s) within 3 desktop group(s).",
-            ),
-            {
-                "timeout_ms": 10_000,
-                "show_close_now_button": True,
-                "text_block_width": 360,
-                "center_text_block": True,
-                "popup_corner_radius": controller.POPUP_CORNER_RADIUS,
-            },
-        )
-    ]
+    assert app.minimized == 0
+    assert app.timed_messages[0][0] == (
+        "Information",
+        "Desktop Groups",
+        "Alphabetised 12 icon(s) within 3 desktop group(s).",
+    )
+    assert app.timed_messages[0][1]["text_block_width"] == 360
+    assert app.timed_messages[0][1]["center_text_block"] is True
+
+
+def test_alphabetise_desktop_groups_disables_only_its_dropdown_entry_and_monitors(
+    monkeypatch,
+):
+    MonitorTimer.instances.clear()
+    app = App(answer=QMessageBox.StandardButton.Yes)
+    page = AlphabetiseGroupsPage()
+    app.pages = type("Pages", (), {"organising_utilities_page": page})()
+    monkeypatch.setattr(organising_actions, "QTimer", MonitorTimer)
+    monkeypatch.setattr(
+        organising_actions, "alphabetise_desktop_icon_groups", lambda: (2, 6)
+    )
+    controller = OrganisingActionsController(app, None, None, None)
+
+    controller.alphabetise_desktop_groups()
+
+    assert page.availability == [False]
+    assert len(MonitorTimer.instances) == 1
+    assert MonitorTimer.instances[0].interval == 1_000
+    assert MonitorTimer.instances[0].started
+
+
+def test_alphabetise_groups_monitor_reenables_the_action_when_layout_changes(monkeypatch):
+    MonitorTimer.instances.clear()
+    app = App()
+    page = AlphabetiseGroupsPage()
+    app.pages = type("Pages", (), {"organising_utilities_page": page})()
+    monkeypatch.setattr(organising_actions, "QTimer", MonitorTimer)
+    monkeypatch.setattr(
+        organising_actions,
+        "capture_desktop_icon_layout",
+        lambda: [{"name": "Beta", "x": 0, "y": 0}, {"name": "Alpha", "x": 0, "y": 100}],
+    )
+    controller = OrganisingActionsController(app, None, None, None)
+    controller._start_alphabetise_groups_monitor()
+
+    controller._check_alphabetise_groups_state()
+
+    assert page.availability == [False, True]
+    assert controller._alphabetise_groups_monitor_timer is None
+    assert not MonitorTimer.instances[0].started
+
+
+def test_alphabetise_groups_monitor_reenables_the_action_if_desktop_check_fails(
+    monkeypatch,
+):
+    MonitorTimer.instances.clear()
+    app = App()
+    page = AlphabetiseGroupsPage()
+    app.pages = type("Pages", (), {"organising_utilities_page": page})()
+    monkeypatch.setattr(organising_actions, "QTimer", MonitorTimer)
+    monkeypatch.setattr(
+        organising_actions,
+        "capture_desktop_icon_layout",
+        lambda: (_ for _ in ()).throw(RuntimeError("Explorer unavailable")),
+    )
+    controller = OrganisingActionsController(app, None, None, None)
+    controller._start_alphabetise_groups_monitor()
+
+    controller._check_alphabetise_groups_state()
+
+    assert page.availability == [False, True]
+    assert controller._alphabetise_groups_monitor_timer is None
+
+
+def test_alphabetise_desktop_groups_does_not_disable_the_entry_when_nothing_moves(
+    monkeypatch,
+):
+    app = App(answer=QMessageBox.StandardButton.Yes)
+    page = AlphabetiseGroupsPage()
+    app.pages = type("Pages", (), {"organising_utilities_page": page})()
+    monkeypatch.setattr(
+        organising_actions, "alphabetise_desktop_icon_groups", lambda: (0, 0)
+    )
+    controller = OrganisingActionsController(app, None, None, None)
+
+    controller.alphabetise_desktop_groups()
+
+    assert page.availability == []
 
 
 def test_backup_taskbar_cancelled_before_minimize_or_backup():

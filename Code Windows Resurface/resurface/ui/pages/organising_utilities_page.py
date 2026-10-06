@@ -103,6 +103,16 @@ class OrganisingUtilitiesPage(PageControls):
             + ("QLabel { color: #c53030; }" if unavailable else "")
         )
 
+    def set_alphabetise_groups_available(self, available: bool) -> None:
+        """Enable or disable only the Alphabetise Groups dropdown entry."""
+        row = self.desktop_actions_combo.findText("Alphabetise Groups")
+        item = self.desktop_actions_combo.model().item(row)
+        if item is not None:
+            item.setEnabled(available)
+        self.desktop_actions_combo.setProperty("alphabetiseGroupsApplied", not available)
+        self.desktop_actions_combo.style().unpolish(self.desktop_actions_combo)
+        self.desktop_actions_combo.style().polish(self.desktop_actions_combo)
+
     def path_display_width(self) -> int:
         return self._path_label.width()
 

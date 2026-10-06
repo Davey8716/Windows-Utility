@@ -272,6 +272,14 @@ def grouped_alphabetical_positions(layout: list[dict]) -> list[tuple[int, int]]:
     return [target_positions[id(item)] for item in layout]
 
 
+def desktop_icon_groups_are_alphabetised(layout: list[dict]) -> bool:
+    """Return whether every detected Desktop group is already alphabetised."""
+    return all(
+        (int(item["x"]), int(item["y"])) == target_position
+        for item, target_position in zip(layout, grouped_alphabetical_positions(layout))
+    )
+
+
 def _apply_positions_by_index(positions: list[tuple[int, int]]) -> int:
     """Apply positions to the current Desktop ListView items in index order."""
     lv_hwnd = _find_desktop_listview_hwnd()

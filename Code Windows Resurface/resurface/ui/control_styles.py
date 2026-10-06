@@ -435,6 +435,7 @@ def _modern_combo_style(
         }}
     """
     light_mode_disabled_content_override = ""
+    alphabetise_groups_disabled_item_override = ""
     if not T.THEME_IS_DARK:
         light_mode_disabled_content_override = f"""
         QComboBox[lightModeBlackDisabledText="true"]:disabled {{
@@ -458,6 +459,19 @@ def _modern_combo_style(
         QComboBox[lightModeBlackDisabledText="true"] QAbstractItemView::item:disabled {{
             color: {H.qcolor_css(T.theme_text_color())};
             background-color: {H.qcolor_css(T.themed_button_disabled_bg())};
+        }}
+        """
+        alphabetise_groups_disabled_item_override = """
+        QComboBox[alphabetiseGroupsApplied="true"] QAbstractItemView::item:disabled {
+            color: #666666;
+            background-color: #D6D6D6;
+        }
+        """
+    else:
+        alphabetise_groups_disabled_item_override = f"""
+        QComboBox[alphabetiseGroupsApplied="true"] QAbstractItemView::item:disabled {{
+            color: {H.qcolor_css(popup_text)};
+            background-color: #5A5A5A;
         }}
         """
     return f"""
@@ -554,6 +568,7 @@ def _modern_combo_style(
         }}
         {folder_creator_file_dropdown_override}
         {light_mode_disabled_content_override}
+        {alphabetise_groups_disabled_item_override}
     """
 
 def surfaced_combo_style(font_size: int) -> str:
