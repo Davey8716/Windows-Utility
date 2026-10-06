@@ -1,0 +1,13 @@
+Legal Liability stuff
+
+For this app, the liability profile is moderate for a small desktop utility because it can change Windows state and locally process potentially sensitive user content.
+The biggest risks are:
+- Data loss / system impact: emptying the Recycle Bin, temporary-file cleanup, backup/restore, drive ejection, shutdown actions, and maintenance commands can delete data, interrupt work, or alter a system.
+- Accidental or unsuitable actions: system-repair and cleanup options may be used on the wrong machine, drive, or situation. Clear warnings, confirmations, and safe defaults are important.
+- Misleading product claims: what you promise on the site, store listing, README, screenshots, and UI matters. In the UK, paid digital content must meet reasonable quality expectations, match its description, and be fit for a disclosed purpose. Consumer Rights Act 2015
+- Local privacy and security: Clipboard Provenance may retain copied text or file details locally, including sensitive content. Since Windows Resurface sends no telemetry, analytics, crash reports, clipboard data, or usage data externally, this is primarily a local-device security concern—not a central data-collection operation.
+- Personal exposure: selling as an individual generally leaves your personal assets closer to the risk than selling through a properly run limited company.
+Your licence helps establish ownership and restrict redistribution, but it does not eliminate liability. In the UK, you cannot exclude liability for death or personal injury caused by negligence, and other negligence exclusions must satisfy a reasonableness test. Unfair Contract Terms Act 1977
+
+
+Local-first software. No account required. No telemetry, analytics, or cloud tracking.

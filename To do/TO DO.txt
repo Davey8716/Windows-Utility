@@ -11,3 +11,7 @@ Folder to Do
 
 Make sure all the Folder Creator fonts match for the buttons and use same font size etc relative to each other and the main app GUI
 
+Add in alphabetical ordering for the icon grouping of desktop icons
+
+Add a search function for maintenance and utilities to find things quicker?
+
