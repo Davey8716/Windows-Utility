@@ -67,17 +67,7 @@ class OrganisingUtilitiesPage(PageControls):
         self.register_tooltip(taskbar, tooltip_text("backup_taskbar"))
         self.taskbar_actions_combo = taskbar
         self.add_two_column_control_row(self.content_layout, bookmarks, taskbar)
-        self._auto_export_label = QLabel("Automatic bookmark export:")
-        self.add_two_column_control_row(
-            self.content_layout, self._auto_export_label, auto_export
-        )
-        self._auto_export_label.setProperty("surfaceLabelStyle", True)
-        self._auto_export_label.setProperty("whiteSurfaceLabelStyle", True)
-        self._auto_export_label.setProperty("styleFontSize", 14)
-        self._auto_export_label.setStyleSheet(
-            styles.surfaced_label_style(14, text_color=styles.TEXT_LIGHT)
-        )
-        self._auto_export_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        self.content_layout.addWidget(auto_export, 0, Qt.AlignmentFlag.AlignLeft)
         choose = self.style_action_button(QPushButton("Master Backup Path"))
         choose.clicked.connect(self.master_backup_path_requested.emit)
         self.register_tooltip(choose, tooltip_text("master_backup_path"))
