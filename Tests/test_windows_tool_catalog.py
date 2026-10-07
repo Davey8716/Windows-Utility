@@ -40,6 +40,19 @@ def test_catalog_preserves_special_launch_and_minimize_metadata():
     assert tools["router_login"].launch_kind == "router"
 
 
+def test_control_panel_launches_the_control_panel_home_view():
+    tools = {
+        tool.key: tool
+        for group in WindowsToolCatalog.groups()
+        for tool in group.tools
+    }
+
+    control_panel = tools["control_panel"]
+    assert control_panel.launch_kind == "explorer_title"
+    assert control_panel.target == "control.exe"
+    assert control_panel.parameters is None
+
+
 def test_display_and_sound_dropdown_is_in_the_left_column_and_dispatches_existing_actions():
     _application()
     calls = []

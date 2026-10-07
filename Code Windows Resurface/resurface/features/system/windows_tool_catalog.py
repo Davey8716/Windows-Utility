@@ -41,7 +41,7 @@ class WindowsToolCatalog:
                 "System",
                 "windows_dropdown_system",
                 (
-                    _tool("control_panel", "Control Panel", ("Control Panel",), "explorer_title", "explorer.exe", "shell:ControlPanelFolder"),
+                    _tool("control_panel", "Control Panel", ("Control Panel",), "explorer_title", "control.exe"),
                     _tool("credential_manager", "Credential Manager", ("Credential Manager",), "shell_execute", "control.exe", "/name Microsoft.CredentialManager"),
                     _tool("local_users", "Local Users and Groups", ("Local Users and Groups", "lusrmgr"), "shell_execute", "lusrmgr.msc"),
                     _tool("system_restore", "System Restore", ("System Restore", "System Restore Properties"), "shell_execute", "rstrui.exe"),
