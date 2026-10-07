@@ -3,10 +3,36 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QKeyEvent, QKeySequence, QPainter
-from PySide6.QtWidgets import QApplication, QAbstractItemView, QTreeWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QAbstractItemView,
+    QLineEdit,
+    QStyle,
+    QStyledItemDelegate,
+    QTreeWidget,
+)
 
 from folder_creator.ui import styles
 from folder_creator.features.tree.outline_parser import parse_indented_text
+
+
+class _FramelessTreeEditorDelegate(QStyledItemDelegate):
+    """Create an inline tree editor without the global text-field frame."""
+
+    def paint(self, painter, option, index):
+        # Qt otherwise draws a native focus rectangle tightly around the item
+        # label.  The row's selected background is the intended focus cue.
+        option.state &= ~QStyle.StateFlag.State_HasFocus
+        super().paint(painter, option, index)
+
+    def createEditor(self, parent, option, index):
+        editor = super().createEditor(parent, option, index)
+        if isinstance(editor, QLineEdit):
+            editor.setFrame(False)
+            editor.setStyleSheet(
+                "background: transparent; border: none; border-radius: 0; padding: 0;"
+            )
+        return editor
 
 
 class SmartTreeWidget(QTreeWidget):
@@ -22,6 +48,7 @@ class SmartTreeWidget(QTreeWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setItemDelegate(_FramelessTreeEditorDelegate(self))
         
         # Animation method for the drag and drop functionality
         self.setAnimated(True)

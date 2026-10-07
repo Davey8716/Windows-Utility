@@ -406,6 +406,23 @@ def surfaced_tree_widget_style(font_size: int = 14) -> str:
             background-color: {selection_bg};
             color: {surface_text};
         }}
+
+        /* The native focus rectangle appears around the inline-edited name.
+           Selection colour remains the indication of the current folder. */
+        QTreeWidget::item:focus {{
+            outline: none;
+        }}
+
+        /* Inline folder-name editing uses a QLineEdit.  Keep it visually
+           integrated with the selected tree row instead of inheriting the
+           framed application-wide input style. */
+        QTreeWidget QLineEdit {{
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
+            color: {surface_text};
+        }}
     """
 
 
