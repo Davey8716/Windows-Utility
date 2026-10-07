@@ -146,8 +146,8 @@ class PageControls(QWidget):
         button.setCheckable(False)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(button)
-        button.setProperty("styleFontSize", 14)
-        button.setStyleSheet(styles.organizing_button_style(14))
+        button.setProperty("styleFontSize", 13)
+        button.setStyleSheet(styles.organizing_button_style(13))
         return self.install_green_flash(button)
 
     def make_action_dropdown(
@@ -166,7 +166,7 @@ class PageControls(QWidget):
         combo.view().setRowHidden(0, True)
         combo.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(combo)
-        combo.setProperty("styleFontSize", 14)
+        combo.setProperty("styleFontSize", 13)
         if power_action_style:
             combo.setProperty("powerActionStyle", True)
             combo.setProperty("powerActionPlaceholder", placeholder)
@@ -174,8 +174,8 @@ class PageControls(QWidget):
             if style_power_action:
                 style_power_action(combo)
         else:
-            combo.setStyleSheet(styles.organizing_combo_style(14))
-        styles.fit_page_combo_width(combo, placeholder=placeholder, font_size=14)
+            combo.setStyleSheet(styles.organizing_combo_style(13))
+        styles.fit_page_combo_width(combo, placeholder=placeholder, font_size=13)
         def selected(text: str) -> None:
             if text != placeholder:
                 on_action(text)
@@ -190,7 +190,7 @@ class PageControls(QWidget):
         combo.setCurrentText(current_value if current_value in values else values[0])
         combo.setCursor(Qt.CursorShape.PointingHandCursor)
         styles.apply_page_control_size(combo)
-        combo.setProperty("styleFontSize", 14)
-        combo.setStyleSheet(styles.organizing_combo_style(14))
-        styles.fit_page_combo_width(combo, font_size=14)
+        combo.setProperty("styleFontSize", 13)
+        combo.setStyleSheet(styles.organizing_combo_style(13))
+        styles.fit_page_combo_width(combo, font_size=13)
         return combo

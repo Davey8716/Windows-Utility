@@ -45,7 +45,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
             text-align: center;
             padding: 4px 8px;
             {font_rule}
-            font-weight: bold;
+            font-weight: normal;
             color: {H.qcolor_css(T.button_text_color())};
             border: 1px solid {H.qcolor_css(T.themed_button_border())};
             border-radius: {T.BUTTON_CORNER_RADIUS}px;
@@ -123,7 +123,7 @@ def power_action_button_style(
             text-align: center;
             padding: 4px 8px;
             {font_rule}
-            font-weight: bold;
+            font-weight: normal;
             color: {H.qcolor_css(foreground)};
             border: 1px solid {H.qcolor_css(border)};
             border-radius: {T.BUTTON_CORNER_RADIUS}px;
@@ -309,11 +309,12 @@ def plain_theme_line_edit_style(font_size: int) -> str:
     """
 
 def plain_theme_label_style(font_size: int) -> str:
+    font_size = 13
     return f"""
         QLabel {{
             {H.label_style(
                 font_size=font_size,
-                bold=True,
+                bold=False,
                 color=T.theme_text_color(),
             )}
             background-color: {H.qcolor_css(T.WINDOW_BG)};
@@ -328,12 +329,13 @@ def surfaced_label_style(
     *,
     text_color: QColor | None = None,
 ) -> str:
+    font_size = 13
     text_color = text_color or T.theme_text_color()
     return f"""
         QLabel {{
             {H.label_style(
                 font_size=font_size,
-                bold=True,
+                bold=False,
                 color=text_color,
             )}
             background-color: {H.qcolor_css(T.SURFACE_BG)};
@@ -359,7 +361,8 @@ def _modern_combo_style(
     disabled_border: QColor | None = None,
     font_family: str | None = None,
 ) -> str:
-    font_size = H.coerce_font_size(font_size, 14) or 14
+    # Keep dropdowns aligned with the app's standard action-button typography.
+    font_size = 13
     font_point_size = font_size * 72 / 96
     font_point_rule = f"font-size: {font_point_size:g}pt;"
     popup_background = popup_background or background
@@ -478,7 +481,7 @@ def _modern_combo_style(
         QComboBox {{
             {H.label_style(
                 font_size=None,
-                bold=True,
+                bold=False,
                 color=text,
                 font_family=font_family,
             )}
@@ -759,7 +762,7 @@ def frame_list_widget_style(
         % (
             H.label_style(
                 font_size=font_size,
-                bold=True,
+                bold=False,
                 color=text_color,
                 font_family=font_family,
             ),

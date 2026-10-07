@@ -178,7 +178,7 @@ class DriveSpacePage(QWidget):
     def apply_theme(self):
         self.drive_space_list.setStyleSheet(
             styles.frame_list_widget_style(
-                "Consolas", 15, text_color=styles.TEXT_LIGHT
+                "Segoe UI", 13, text_color=styles.TEXT_LIGHT
             )
             + "QListWidget { padding: 6px; } QListWidget::item { padding: 0px; margin: 0px; }"
         )

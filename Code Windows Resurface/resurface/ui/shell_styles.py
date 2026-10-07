@@ -76,7 +76,7 @@ def summary_label_style() -> str:
     return H.label_style(font_size=13, bold=False, color=T.TEXT_LIGHT)
 
 def summary_value_style() -> str:
-    return H.label_style(font_size=13, bold=True, color=T.TEXT_LIGHT)
+    return H.label_style(font_size=13, bold=False, color=T.TEXT_LIGHT)
 
 def summary_frame_style() -> str:
     return f"""
@@ -161,7 +161,6 @@ def navigation_list_style() -> str:
             outline: none;
             padding: 12px 8px;
             font-size: 13px;
-            font-weight: 600;
         }}
         QListWidget#NavigationList::item {{
             border: none;

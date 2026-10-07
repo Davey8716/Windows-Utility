@@ -218,7 +218,7 @@ def test_standard_dropdown_categories_share_modern_blue_treatment(
     assert "padding: 6px 10px;" in stylesheet
     assert "QComboBox:disabled" in stylesheet
     assert "QComboBox:disabled::drop-down" in stylesheet
-    assert "font-size: 10.5pt;" in stylesheet
+    assert "font-size: 9.75pt;" in stylesheet
     assert "font-size: 14px;" not in stylesheet
 
 

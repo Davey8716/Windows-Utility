@@ -36,7 +36,7 @@ class CenteredTitleComboBox(QComboBox):
         )
         painter.setPen(styles.power_action_title_color())
         font = self.font()
-        font.setBold(True)
+        font.setBold(False)
         painter.setFont(font)
         painter.drawText(
             text_rect,
@@ -61,7 +61,7 @@ class SeverityComboItemDelegate(QStyledItemDelegate):
             painter.fillRect(option.rect, fill_color)
         painter.setPen(fg_color)
         font = option.font
-        font.setBold(True)
+        font.setBold(False)
         painter.setFont(font)
         painter.drawText(
             option.rect.adjusted(10, 0, -8, 0),

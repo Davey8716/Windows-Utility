@@ -198,11 +198,12 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
         self.turn_off_all_button.setProperty("lightModeBlackText", True)
         self.turn_off_all_button.setProperty("lightModeBlackDisabledText", True)
         _style_button(self.delete_all_button)
+        self.delete_all_button.setProperty("styleFontSize", 13)
         self.delete_all_button.setProperty("quickActionSeverity", "red")
         self.delete_all_button.setProperty("lightModeBlackText", True)
         self.delete_all_button.setProperty("lightModeBlackDisabledText", True)
         self.delete_all_button.setStyleSheet(
-            styles.power_action_button_style(12, "red", self.delete_all_button.text())
+            styles.power_action_button_style(13, "red", self.delete_all_button.text())
         )
         _style_button(self.alphabet_sort_button)
         self.alphabet_sort_button.setProperty("lightModeBlackText", True)
