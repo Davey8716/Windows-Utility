@@ -102,9 +102,9 @@ class RecycleBinActionsItemDelegate(QStyledItemDelegate):
             background = background.lighter(112)
         painter.save()
         painter.fillRect(option.rect, background)
-        painter.setPen(styles.button_text_color())
+        painter.setPen(styles.dropdown_text_color())
         font = option.font
-        font.setBold(True)
+        font.setBold(False)
         painter.setFont(font)
         painter.drawText(
             option.rect.adjusted(10, 0, -8, 0),
