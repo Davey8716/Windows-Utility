@@ -1748,6 +1748,10 @@ def test_master_backup_directory_dialog_is_themed_and_non_native(is_dark):
         assert dialog.acceptMode() == QFileDialog.AcceptMode.AcceptOpen
         assert dialog.windowFlags() & Qt.WindowType.FramelessWindowHint
         assert dialog.minimumSize() == dialog.maximumSize()
+        assert dialog.windowTitle() == "Choose Master Backup Folder"
+        assert dialog.heading_label.text() == "Choose Master Backup Folder"
+        assert dialog.heading_label.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert dialog.contentsMargins().top() == dialog.HEADER_HEIGHT
         assert monitor_rules_ui.styles.qcolor_css(
             monitor_rules_ui.styles.WINDOW_BG
         ) in dialog.styleSheet()

@@ -12,7 +12,7 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtGui import QFontMetrics
-from PySide6.QtWidgets import QDialog, QFileDialog
+from PySide6.QtWidgets import QDialog, QFileDialog, QLabel
 
 from resurface.core.state_manager import save_state
 from resurface.core.saved_folder_names import (
@@ -34,6 +34,7 @@ class MasterBackupDirectoryDialog(QFileDialog):
     """Themed, frameless PySide folder picker for the master backup path."""
 
     FRAME_WIDTH = 2
+    HEADER_HEIGHT = 42
 
     def __init__(self, parent, directory: str) -> None:
         super().__init__(parent, "Choose Master Backup Folder", directory)
@@ -44,7 +45,29 @@ class MasterBackupDirectoryDialog(QFileDialog):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         self.setStyleSheet(styles.file_dialog_style())
         self.setSizeGripEnabled(False)
+        self.setContentsMargins(
+            self.FRAME_WIDTH,
+            self.HEADER_HEIGHT,
+            self.FRAME_WIDTH,
+            self.FRAME_WIDTH,
+        )
+        self.heading_label = QLabel("Choose Master Backup Folder", self)
+        self.heading_label.setObjectName("MasterBackupDirectoryDialogHeading")
+        self.heading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.heading_label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
+        )
+        self.heading_label.setStyleSheet(styles.page_title_style())
         self.setFixedSize(self.sizeHint())
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self.heading_label.setGeometry(
+            self.FRAME_WIDTH,
+            self.FRAME_WIDTH,
+            self.width() - (self.FRAME_WIDTH * 2),
+            self.HEADER_HEIGHT - self.FRAME_WIDTH,
+        )
 
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
