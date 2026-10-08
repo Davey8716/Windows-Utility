@@ -530,6 +530,7 @@ class MonitorRulesPage(WindowMessageMixin, QWidget):
             f"Delete the rule ‘{self.rules[index]['name']}’?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
+            center_text_block=True,
             popup_corner_radius=MONITOR_RULES_POPUP_CORNER_RADIUS,
         )
         if result == QMessageBox.StandardButton.Yes:

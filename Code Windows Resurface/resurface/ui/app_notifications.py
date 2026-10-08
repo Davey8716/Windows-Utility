@@ -379,6 +379,24 @@ class WindowMessageMixin:
         text_label.setAlignment(
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
         )
+        layout = message_box.layout()
+        if not isinstance(layout, QGridLayout):
+            return
+
+        index = layout.indexOf(text_label)
+        if index < 0:
+            return
+
+        row, _, row_span, _ = layout.getItemPosition(index)
+        layout.removeWidget(text_label)
+        layout.addWidget(
+            text_label,
+            row,
+            0,
+            row_span,
+            max(1, layout.columnCount()),
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
+        )
 
     def _apply_message_box_accessory(self, message_box: QMessageBox) -> None:
         accessory_path = getattr(message_box, "_accessory_icon_path", None)

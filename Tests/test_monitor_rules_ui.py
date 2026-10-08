@@ -12,6 +12,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QFrame,
     QLabel,
@@ -887,6 +888,8 @@ def test_delete_rule_uses_borderless_confirmation_and_only_commits_yes(monkeypat
         assert dialog.icon() == monitor_rules_ui.QMessageBox.Icon.NoIcon
         assert dialog.windowTitle() == "Delete Monitor Rule"
         assert dialog.text() == "Delete the rule ‘Discord’?"
+        text_label = dialog.findChild(QLabel, "qt_msgbox_label")
+        assert text_label is not None
         assert dialog.standardButtons() == (
             monitor_rules_ui.QMessageBox.StandardButton.Yes
             | monitor_rules_ui.QMessageBox.StandardButton.Cancel
@@ -894,6 +897,15 @@ def test_delete_rule_uses_borderless_confirmation_and_only_commits_yes(monkeypat
         assert dialog.standardButton(dialog.defaultButton()) == (
             monitor_rules_ui.QMessageBox.StandardButton.Cancel
         )
+        button_box = dialog.findChild(QDialogButtonBox)
+        assert button_box is not None
+        assert button_box.centerButtons()
+        dialog.adjustSize()
+        dialog.show()
+        app.processEvents()
+        dialog.layout().activate()
+        assert text_label.geometry().center().x() == dialog.rect().center().x()
+        assert button_box.geometry().center().x() == dialog.rect().center().x()
         assert len(page.rules) == 1
         assert commits == []
 
