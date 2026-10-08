@@ -485,3 +485,35 @@ def test_dropdown_context_menu_groups_individual_commands():
     refreshed.actions()[0].menu().actions()[1].trigger()
     assert registry.pinned_ids() == ["first"]
     combo.deleteLater()
+
+
+def test_auto_export_daily_dropdown_action_can_be_pinned_and_invoked():
+    _app()
+    combo = QComboBox()
+    state = {"quick_action_ids": []}
+    saved_ids = []
+    selected_intervals = []
+    registry = QuickActionRegistry(
+        state, lambda value: saved_ids.append(list(value["quick_action_ids"]))
+    )
+    registry.register_dropdown(
+        combo,
+        [
+            QuickActionSpec(
+                "organising.auto_export_daily",
+                "Auto-Export: Daily",
+                lambda: selected_intervals.append("daily"),
+            )
+        ],
+    )
+    registry.finalize()
+
+    menu = registry.dropdown_menu(combo, ("organising.auto_export_daily",))
+    assert menu.actions()[0].text() == "Pin to Quick Actions"
+    menu.actions()[0].menu().actions()[0].trigger()
+
+    assert registry.pinned_ids() == ["organising.auto_export_daily"]
+    assert saved_ids[-1] == ["organising.auto_export_daily"]
+    registry.spec("organising.auto_export_daily").invoke()
+    assert selected_intervals == ["daily"]
+    combo.deleteLater()

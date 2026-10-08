@@ -840,6 +840,16 @@ class ApplicationPageComposer:
         button("organising.desktop_screenshot", "Desktop Screenshot", organising.screenshot_button)
         button("organising.export_bookmarks", "Export Bookmarks", organising.bookmarks_button)
         button("organising.master_backup_path", "Master Backup Path", organising.master_backup_button)
+        registry.register_dropdown(
+            organising.auto_export_combo,
+            [
+                QuickActionSpec(
+                    "organising.auto_export_daily",
+                    "Auto-Export: Daily",
+                    lambda: self.app.organising_actions.set_bookmark_auto_export("daily"),
+                )
+            ],
+        )
         organising_callbacks = {
             "Capture Layout": self.app.organising_actions.capture_desktop_layout,
             "Restore Layout": self.app.organising_actions.restore_desktop_layout,

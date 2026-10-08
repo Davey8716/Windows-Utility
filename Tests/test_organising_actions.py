@@ -753,6 +753,19 @@ def test_selecting_bookmark_auto_export_persists_and_runs_initial_export(monkeyp
     assert calls == [True]
 
 
+def test_selecting_daily_bookmark_auto_export_persists_and_runs_initial_export(monkeypatch):
+    app = App()
+    controller = OrganisingActionsController(app, None, None, None)
+    calls = []
+    controller._run_bookmark_auto_export_if_due = lambda: calls.append(True)
+    monkeypatch.setattr(organising_actions, "save_state", lambda _state: None)
+
+    controller.set_bookmark_auto_export("daily")
+
+    assert app.state["bookmark_auto_export_interval"] == "daily"
+    assert calls == [True]
+
+
 def test_bookmark_auto_export_now_does_not_change_saved_schedule():
     app = App()
     app.state["bookmark_auto_export_interval"] = "weekly"
