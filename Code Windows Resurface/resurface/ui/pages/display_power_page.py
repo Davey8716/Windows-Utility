@@ -1,6 +1,6 @@
 """Controls for Windows display output and individual DDC/CI monitors."""
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from resurface.features.system import display_power
@@ -22,6 +22,7 @@ class DisplayPowerPage(PageControls):
         note.setWordWrap(True)
         note.setAlignment(Qt.AlignmentFlag.AlignCenter)
         note.setFixedWidth(self.CONTROL_ROW_WIDTH)
+        note.installEventFilter(self)
         self.content_layout.addWidget(note, 0, Qt.AlignmentFlag.AlignHCenter)
 
         actions = QWidget(self)
@@ -64,35 +65,85 @@ class DisplayPowerPage(PageControls):
         while self.monitor_layout.count():
             item = self.monitor_layout.takeAt(0)
             if item.widget() is not None:
+                item.widget().hide()
                 item.widget().deleteLater()
         try:
             displays = display_power.connected_displays()
         except Exception as error:
             self.status.setText(f"Could not list monitors: {error}")
-            return
-        if not displays:
-            self.status.setText("No active monitors were found.")
-            return
-        self.status.setText("")
-        for display in displays:
-            label = QLabel(display.label, self.monitor_container)
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.monitor_layout.addWidget(label)
-            row = QWidget(self.monitor_container)
-            controls = QHBoxLayout(row)
-            controls.setContentsMargins(0, 0, 0, 0)
-            controls.setSpacing(self.CONTROL_COLUMN_GAP)
-            standby = self._button("Standby")
-            wake = self._button("Wake")
-            standby.clicked.connect(
-                lambda _checked=False, device=display.device: self._set_power(device, False)
-            )
-            wake.clicked.connect(
-                lambda _checked=False, device=display.device: self._set_power(device, True)
-            )
-            controls.addWidget(standby)
-            controls.addWidget(wake)
-            self.monitor_layout.addWidget(row)
+        else:
+            if displays:
+                self.status.setText("")
+                for display in displays:
+                    label = QLabel(display.label, self.monitor_container)
+                    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    label.installEventFilter(self)
+                    self.monitor_layout.addWidget(label)
+                    row = QWidget(self.monitor_container)
+                    row.setMinimumHeight(styles.PAGE_CONTROL_HEIGHT)
+                    controls = QHBoxLayout(row)
+                    controls.setContentsMargins(0, 0, 0, 0)
+                    controls.setSpacing(self.CONTROL_COLUMN_GAP)
+                    standby = self._button("Standby")
+                    wake = self._button("Wake")
+                    standby.clicked.connect(
+                        lambda _checked=False, device=display.device: self._set_power(device, False)
+                    )
+                    wake.clicked.connect(
+                        lambda _checked=False, device=display.device: self._set_power(device, True)
+                    )
+                    controls.addWidget(standby)
+                    controls.addWidget(wake)
+                    self.monitor_layout.addWidget(row)
+            else:
+                self.status.setText("No active monitors were found.")
+
+        self._refresh_layout_geometry()
+
+    def _refresh_layout_geometry(self) -> None:
+        widgets = [
+            self.monitor_layout.itemAt(index).widget()
+            for index in range(self.monitor_layout.count())
+        ]
+        margins = self.monitor_layout.contentsMargins()
+        required_height = margins.top() + margins.bottom()
+        required_height += sum(widget.sizeHint().height() for widget in widgets)
+        required_height += max(0, len(widgets) - 1) * self.monitor_layout.spacing()
+        self.monitor_container.setMinimumHeight(required_height)
+        self.monitor_layout.invalidate()
+        self.monitor_container.updateGeometry()
+
+        page_widgets = [
+            self.content_layout.itemAt(index).widget()
+            for index in range(self.content_layout.count())
+        ]
+        page_margins = self.content_layout.contentsMargins()
+        page_height = page_margins.top() + page_margins.bottom()
+        for widget in page_widgets:
+            hint = widget.sizeHint().height()
+            if widget.hasHeightForWidth():
+                hint = max(hint, widget.heightForWidth(widget.width()))
+            page_height += max(hint, widget.minimumHeight())
+        page_height += max(0, len(page_widgets) - 1) * self.content_layout.spacing()
+        self.setMinimumHeight(page_height)
+        self.content_layout.invalidate()
+        self.updateGeometry()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        QTimer.singleShot(0, self._refresh_layout_geometry)
+
+    def changeEvent(self, event) -> None:
+        super().changeEvent(event)
+        if event.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange) and hasattr(
+            self, "monitor_layout"
+        ):
+            QTimer.singleShot(0, self._refresh_layout_geometry)
+
+    def eventFilter(self, watched, event):
+        if event.type() in (QEvent.Type.FontChange, QEvent.Type.StyleChange):
+            QTimer.singleShot(0, self._refresh_layout_geometry)
+        return super().eventFilter(watched, event)
 
     def _set_power(self, device: str, awake: bool) -> None:
         try:

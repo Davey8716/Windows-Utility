@@ -2,9 +2,13 @@ import ctypes
 from types import SimpleNamespace
 
 import pytest
+from PySide6.QtCore import QPoint
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication
 
 from resurface.features.system import display_power
+from resurface.ui import styles
+from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.pages.display_power_page import DisplayPowerPage
 
 
@@ -219,3 +223,117 @@ def test_disconnected_iiyama_keeps_one_wake_row(monkeypatch):
     assert displays[-1] == display_power.Display(
         device, "Monitor 3 - disconnected (iiyama)"
     )
+
+
+@pytest.mark.parametrize("styled", [False, True])
+def test_monitor_buttons_keep_full_height_after_font_and_monitor_refresh(
+    monkeypatch, styled
+):
+    app = QApplication.instance() or QApplication([])
+    original_font = QFont(app.font())
+    displays = [
+        display_power.Display(
+            f"DISPLAY{number}", f"Monitor {number} - 1920 x 1080"
+        )
+        for number in range(1, 4)
+    ]
+    monkeypatch.setattr(display_power, "connected_displays", lambda: list(displays))
+    shell = NavigationShell(
+        app_version="test", sidebar_width=220, page_title_top_inset=40
+    )
+    if styled:
+        shell.setStyleSheet(styles.window_style())
+    page = DisplayPowerPage(lambda *_args: None, shell.content_parent("display_power"))
+    shell.mount_content("display_power", page)
+    shell.finish_page_layouts()
+    shell.resize(821, 533)
+    shell.show()
+    shell.navigate_to("display_power")
+    try:
+        app.processEvents()
+        scroll = shell.page_scroll_areas["display_power"]
+        last_row = page.monitor_layout.itemAt(5).widget()
+        assert last_row.mapTo(page, QPoint(0, last_row.height())).y() <= page.height()
+        assert last_row.mapTo(scroll.viewport(), QPoint(0, last_row.height())).y() <= (
+            scroll.viewport().height()
+        )
+        shell.resize(821, 320)
+        font = QFont(original_font)
+        font.setPointSize(max(14, original_font.pointSize() + 5))
+        app.setFont(font)
+        app.processEvents()
+        app.processEvents()
+
+        def assert_full_rows():
+            for index in range(1, page.monitor_layout.count(), 2):
+                row = page.monitor_layout.itemAt(index).widget()
+                for button_index in range(2):
+                    button = row.layout().itemAt(button_index).widget()
+                    assert row.height() >= button.height() == 34
+                    assert button.geometry().bottom() < row.height()
+                assert row.mapTo(
+                    page.monitor_container, QPoint(0, row.height())
+                ).y() <= page.monitor_container.height()
+                assert row.mapTo(page, QPoint(0, row.height())).y() <= page.height()
+            assert page.monitor_container.height() >= page.monitor_container.sizeHint().height()
+            assert page.height() >= page.sizeHint().height()
+
+        scrollbar = scroll.verticalScrollBar()
+
+        def assert_last_row_scrolls_into_view():
+            assert scrollbar.maximum() > 0
+            scrollbar.setValue(scrollbar.maximum())
+            app.processEvents()
+            last_row = page.monitor_layout.itemAt(page.monitor_layout.count() - 1).widget()
+            assert last_row.mapTo(scroll.viewport(), QPoint(0, last_row.height())).y() <= (
+                scroll.viewport().height()
+            )
+
+        assert_full_rows()
+        assert_last_row_scrolls_into_view()
+
+        page.refresh()
+        app.processEvents()
+        assert_full_rows()
+
+        displays[:] = displays[:1]
+        page.refresh()
+        app.processEvents()
+        assert page.monitor_layout.count() == 2
+        assert_full_rows()
+
+        displays[:] = [
+            display_power.Display(f"DISPLAY{number}", f"Monitor {number}")
+            for number in range(1, 5)
+        ]
+        page.refresh()
+        app.processEvents()
+        assert page.monitor_layout.count() == 8
+        assert_full_rows()
+        assert_last_row_scrolls_into_view()
+
+        page.refresh()
+        app.processEvents()
+        assert page.monitor_layout.count() == 8
+        assert_full_rows()
+
+        displays.clear()
+        page.refresh()
+        app.processEvents()
+        assert page.monitor_layout.count() == 0
+        assert page.monitor_container.minimumHeight() == 0
+        assert "No active monitors" in page.status.text()
+
+        def fail_to_list():
+            raise OSError("Display enumeration failed")
+
+        monkeypatch.setattr(display_power, "connected_displays", fail_to_list)
+        page.refresh()
+        app.processEvents()
+        assert page.monitor_layout.count() == 0
+        assert page.monitor_container.minimumHeight() == 0
+        assert "Display enumeration failed" in page.status.text()
+    finally:
+        app.setFont(original_font)
+        shell.deleteLater()
+        app.processEvents()
