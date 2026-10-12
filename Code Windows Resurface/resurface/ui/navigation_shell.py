@@ -51,6 +51,12 @@ class NavigationShell(QWidget):
             "Rules are checked from top to bottom. The first complete match wins.",
         ),
         PageDefinition(
+            "display_power",
+            "Displays",
+            "\ue7f8",
+            "Turn off all screens or control supported monitors individually.",
+        ),
+        PageDefinition(
             "clipboard_provenance",
             "Clipboard Provenance",
             "\ue8a5",

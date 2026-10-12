@@ -35,6 +35,7 @@ from resurface.ui.monitor_rules_page import MonitorRulesPage
 from resurface.ui.clipboard_provenance_page import ClipboardProvenancePage
 from resurface.ui.navigation_shell import NavigationShell
 from resurface.ui.pages.drive_space_page import DriveSpacePage
+from resurface.ui.pages.display_power_page import DisplayPowerPage
 from resurface.ui.pages.external_drives_page import ExternalDrivesPage
 from resurface.ui.pages.folder_utilities_page import FolderUtilitiesPage
 from resurface.ui.pages.maintenance_page import MaintenancePage
@@ -556,6 +557,7 @@ class ApplicationPages:
     user_interface_page: UserInterfacePage
     screen_mover_settings_page: ScreenMoverSettingsPage
     monitor_rules_page: MonitorRulesPage
+    display_power_page: DisplayPowerPage
     clipboard_provenance_page: ClipboardProvenancePage
     external_drives_page: ExternalDrivesPage
     drive_space_page: DriveSpacePage
@@ -640,6 +642,11 @@ class ApplicationPageComposer:
             set_import_baseline=app.set_monitor_rules_import_baseline,
         )
         shell.mount_content("monitor_rules", monitor_rules_page)
+
+        display_power_page = DisplayPowerPage(
+            app.register_tooltip, shell.content_parent("display_power")
+        )
+        shell.mount_content("display_power", display_power_page)
 
         clipboard_provenance_page = ClipboardProvenancePage(
             shell.content_parent("clipboard_provenance"),
@@ -742,6 +749,7 @@ class ApplicationPageComposer:
             user_interface_page=user_interface_page,
             screen_mover_settings_page=screen_mover_settings_page,
             monitor_rules_page=monitor_rules_page,
+            display_power_page=display_power_page,
             clipboard_provenance_page=clipboard_provenance_page,
             external_drives_page=external_drives_page,
             drive_space_page=drive_space_page,

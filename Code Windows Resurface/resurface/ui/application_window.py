@@ -520,6 +520,8 @@ class UtilityControlApp(
             save_state(self.state)
         if page_id == "overview":
             self.refresh_overview()
+        elif page_id == "display_power":
+            self.pages.display_power_page.refresh()
 
     def _show_about_licensing(self) -> None:
         close_button = self._message_box_button("Close")

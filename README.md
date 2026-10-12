@@ -20,6 +20,7 @@ The source code is not licensed for public use, copying, modification, or redist
 - Warn before lock, log out, restart, or shutdown when external drives are still connected
 - Show plug and unplug notifications for removable drives
 - Capture desktop screenshots per monitor into a backup folder
+- Turn off all display output while the PC stays awake, control supported DDC/CI monitors individually, or temporarily disconnect a monitor without DDC power support
 - Save and restore desktop icon layouts
 - Back up pinned taskbar shortcuts
 - Export bookmarks to HTML from Brave, Chrome, Edge, Firefox, Opera, Opera GX, Vivaldi, and Chromium
@@ -77,6 +78,7 @@ The left side is the everyday tools area:
 - `Screen Mover`: configurable global keyboard shortcuts for moving, minimizing, or maximizing the foreground window
 - `Hover Window Controls`: enable dwell actions, choose the delay, calibrate custom title bars, export hover data, and clear learned buttons
 - `Monitor Rules`: automatically place newly opened application windows on an assigned display, preserving their current size, restoring captured geometry, or maximizing them
+- `Displays`: turn off all screens, send individual DDC/CI power commands, or temporarily disconnect and restore a monitor without DDC power support
 - `External Drive Reminder Options`: connected drive display plus leave and plug/unplug reminders
 - `General Organising Utilities`: screenshots, desktop layout backup/restore, bookmarks export, taskbar backup, master backup path
 - `Folder Utilities`: launch Folder Creator or create a named desktop folder
