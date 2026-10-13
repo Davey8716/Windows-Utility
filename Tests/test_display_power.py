@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QLabel
 
 from resurface.features.system import display_power
 from resurface.ui import styles
@@ -38,6 +38,25 @@ def test_displays_page_lists_each_monitor_and_dispatches_its_device(monkeypatch)
         ]
     finally:
         page.deleteLater()
+        app.processEvents()
+
+
+def test_displays_page_keeps_instructions_and_monitor_labels_white_in_grey_theme(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(
+        display_power,
+        "connected_displays",
+        lambda: [display_power.Display(r"\\.\DISPLAY1", "Monitor 1")],
+    )
+    styles.set_theme(False)
+    page = DisplayPowerPage(lambda *_args: None)
+    try:
+        labels = page.findChildren(QLabel)
+        assert any(label.text() == "Monitor 1" for label in labels)
+        assert "color: #ffffff;" in page.styleSheet()
+    finally:
+        page.deleteLater()
+        styles.set_theme(True)
         app.processEvents()
 
 

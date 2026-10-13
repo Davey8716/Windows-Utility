@@ -11,6 +11,10 @@ from resurface.ui.pages.page_controls import PageControls
 class DisplayPowerPage(PageControls):
     def __init__(self, register_tooltip, parent=None):
         super().__init__("display_power", register_tooltip, parent)
+        # The grey theme's standard content foreground is dark, which lacks
+        # contrast on this page's blue-grey display controls.  Keep all display
+        # copy—including dynamically-created monitor names—consistently white.
+        self.setStyleSheet("QLabel { color: #ffffff; }")
 
         note = QLabel(
             "Turn off all screens while the PC stays awake, or put one supported "
