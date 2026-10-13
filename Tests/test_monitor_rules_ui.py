@@ -1758,6 +1758,12 @@ def test_import_rules_dialog_is_non_native_and_tracks_current_theme(monkeypatch,
             assert monitor_rules_ui.styles.qcolor_css(
                 monitor_rules_ui.styles.SURFACE_BORDER
             ) in stylesheet
+            if not is_dark:
+                white = monitor_rules_ui.styles.qcolor_css(
+                    monitor_rules_ui.styles.TEXT_LIGHT
+                )
+                assert f"QFileDialog QLabel {{ color: {white}; }}" in stylesheet
+                assert f"selection-color: {white};" in stylesheet
     finally:
         monitor_rules_ui.styles.set_theme(True)
         page.deleteLater()

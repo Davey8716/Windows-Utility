@@ -78,6 +78,28 @@ def _delete_rule_button_style() -> str:
     )
 
 
+def import_rules_dialog_style() -> str:
+    """Return Import Rules styling with readable grey-theme copy."""
+    base_style = styles.file_dialog_style()
+    if styles.THEME_IS_DARK:
+        return base_style
+
+    white = styles.qcolor_css(styles.TEXT_LIGHT)
+    return base_style + f"""
+        QFileDialog {{ color: {white}; }}
+        QFileDialog QLabel {{ color: {white}; }}
+        QFileDialog QLineEdit,
+        QFileDialog QComboBox,
+        QFileDialog QAbstractItemView {{
+            color: {white};
+            selection-color: {white};
+        }}
+        QFileDialog QAbstractItemView::item:selected {{ color: {white}; }}
+        QFileDialog QToolButton {{ color: {white}; }}
+        QFileDialog QHeaderView::section {{ color: {white}; }}
+    """
+
+
 class ImportRulesDialog(QFileDialog):
     """Opaque, themed file picker with the shared rounded popup frame."""
 
@@ -96,7 +118,7 @@ class ImportRulesDialog(QFileDialog):
         self.setFileMode(QFileDialog.FileMode.ExistingFile)
         self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
-        self.setStyleSheet(styles.file_dialog_style())
+        self.setStyleSheet(import_rules_dialog_style())
         self.setSizeGripEnabled(False)
         self.setContentsMargins(
             self.FRAME_WIDTH,

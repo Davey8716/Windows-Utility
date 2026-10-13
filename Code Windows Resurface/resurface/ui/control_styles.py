@@ -28,6 +28,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
     placeholder_disabled_override = ""
     black_disabled_text_override = ""
     black_text_overrides = ""
+    force_white_disabled_override = ""
     if not T.THEME_IS_DARK:
         placeholder_disabled_override = f"""
         QPushButton[lightModePlaceholderButton=\"true\"]:disabled {{
@@ -40,6 +41,11 @@ def organizing_button_style(font_size: int | None = None) -> str:
         }}
         """
         black_text_overrides = _light_mode_black_text_overrides()
+        force_white_disabled_override = f"""
+        QPushButton[forceWhiteDisabledText="true"]:disabled {{
+            color: {H.qcolor_css(T.TEXT_LIGHT)};
+        }}
+        """
     return f"""
         QPushButton {{
             text-align: center;
@@ -75,6 +81,7 @@ def organizing_button_style(font_size: int | None = None) -> str:
         {placeholder_disabled_override}
         {black_disabled_text_override}
         {black_text_overrides}
+        {force_white_disabled_override}
     """
 
 def toggle_button_style(font_size: int | None = None) -> str:
