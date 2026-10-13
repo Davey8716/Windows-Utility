@@ -637,7 +637,7 @@ def test_rule_editor_is_frameless_fixed_size_and_uses_active_theme(is_dark, monk
         )
         assert (
             monitor_rule_editor_dialog.styles.qcolor_css(
-                monitor_rule_editor_dialog.styles.theme_text_color()
+                monitor_rule_editor_dialog.styles.TEXT_LIGHT
             )
             in dialog.styleSheet()
         )
@@ -647,6 +647,35 @@ def test_rule_editor_is_frameless_fixed_size_and_uses_active_theme(is_dark, monk
             )
             in dialog.styleSheet()
         )
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        monitor_rule_editor_dialog.styles.set_theme(original_theme)
+        app.processEvents()
+
+
+def test_rule_editor_grey_theme_uses_white_text_on_dark_controls(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    original_theme = monitor_rule_editor_dialog.styles.THEME_IS_DARK
+    monkeypatch.setattr(monitor_rule_editor_dialog, "enumerate_monitors", monitors)
+    monitor_rule_editor_dialog.styles.set_theme(False)
+    dialog = monitor_rule_editor_dialog.MonitorRuleEditorDialog(None)
+    try:
+        stylesheet = dialog.styleSheet()
+        white = monitor_rule_editor_dialog.styles.qcolor_css(
+            monitor_rule_editor_dialog.styles.TEXT_LIGHT
+        )
+        surface = monitor_rule_editor_dialog.styles.qcolor_css(
+            monitor_rule_editor_dialog.styles.PANEL_BG
+        )
+
+        assert f"color: {white};" in stylesheet
+        assert f"background-color: {surface};" in stylesheet
+        assert "QLineEdit," in stylesheet
+        assert "QComboBox" in stylesheet
+        assert "QAbstractItemView" in stylesheet
+        assert "QComboBox::down-arrow" in stylesheet
+        assert white in dialog.capture_status.styleSheet()
     finally:
         dialog.close()
         dialog.deleteLater()

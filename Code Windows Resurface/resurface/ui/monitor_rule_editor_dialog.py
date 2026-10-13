@@ -147,12 +147,21 @@ def style_button(button: QPushButton) -> None:
 def monitor_rule_editor_dialog_style() -> str:
     """Return the active-theme surface styling for the frameless rule editor."""
     background = styles.qcolor_css(styles.WINDOW_BG)
-    surface = styles.qcolor_css(styles.themed_surface_field_bg())
+    # Grey mode uses a mid-grey dialog surface.  Keep its editor copy white and
+    # give controls the same dark blue-grey surface used by dark mode so the
+    # selected values remain legible.
+    field_background = (
+        styles.PANEL_BG
+        if not styles.THEME_IS_DARK
+        else styles.themed_surface_field_bg()
+    )
+    surface = styles.qcolor_css(field_background)
     border = styles.qcolor_css(styles.themed_surface_field_border())
-    text = styles.qcolor_css(styles.theme_text_color())
-    field_text = styles.qcolor_css(styles.themed_surface_field_text())
+    text = styles.qcolor_css(styles.TEXT_LIGHT)
+    field_text = styles.qcolor_css(styles.TEXT_LIGHT)
     hover = styles.qcolor_css(styles.SURFACE_HOVER)
     selected = styles.qcolor_css(styles.PANEL_HOVER)
+    chevron_path = styles.dropdown_chevron_path().as_posix()
     return f"""
         QDialog#MonitorRuleEditorDialog {{
             background-color: {background};
@@ -181,6 +190,12 @@ def monitor_rule_editor_dialog_style() -> str:
         }}
         QDialog#MonitorRuleEditorDialog QComboBox QAbstractItemView::item:hover {{
             background-color: {hover};
+            color: {field_text};
+        }}
+        QDialog#MonitorRuleEditorDialog QComboBox::down-arrow {{
+            image: url("{chevron_path}");
+            width: 10px;
+            height: 6px;
         }}
     """
 
@@ -272,7 +287,9 @@ class MonitorRuleEditorDialog(QDialog):
         self.capture_button = QPushButton("Capture size and position", self)
         self.capture_status = QLabel(self)
         self.capture_status.setWordWrap(True)
-        self.capture_status.setStyleSheet(styles.page_description_style())
+        self.capture_status.setStyleSheet(
+            f"color: {styles.qcolor_css(styles.TEXT_LIGHT)};"
+        )
         style_button(self.capture_button)
         self.capture_button.clicked.connect(self._capture_geometry)
         geometry_row.addWidget(self.capture_button)
